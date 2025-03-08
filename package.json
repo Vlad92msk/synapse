@@ -1,11 +1,18 @@
 {
   "name": "@vlad92msk/synapse",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Библиотека для управления состоянием и апи-запросами",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist"],
-  "keywords": ["state-management", "typescript", "state", "api-requests"],
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "state-management",
+    "typescript",
+    "state",
+    "api-requests"
+  ],
   "author": "Vlad Firsov",
   "license": "MIT",
   "private": false,
@@ -17,11 +24,9 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "fix": "yarn format && yarn lint:fix",
     "prepublishOnly": "yarn fix && yarn build",
-
     "release:patch": "npm version patch && npm publish --tag beta --access public",
     "release:minor": "npm version minor && npm publish --tag beta --access public",
     "release:major": "npm version major && npm publish --tag beta --access public",
-
     "release:patch:stable": "npm version patch && npm publish --access public",
     "release:minor:stable": "npm version minor && npm publish --access public",
     "release:major:stable": "npm version major && npm publish --access public"
