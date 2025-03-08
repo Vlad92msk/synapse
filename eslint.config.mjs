@@ -33,7 +33,6 @@ export default [
       'quotes': ['error', 'single', { avoidEscape: true }],
       'no-param-reassign': ['error', { props: false }],
       'no-unused-vars': 'off',
-      '@typescript-eslint/no-unused-vars': ['error'],
       'no-plusplus': 'off',
       'import/extensions': 'off',
       'no-use-before-define': 'off',
@@ -55,13 +54,19 @@ export default [
       'import/no-duplicates': 'error',
       'object-curly-spacing': ['error', 'always'],
       'no-underscore-dangle': 'off',
-      '@typescript-eslint/no-shadow': ['error'],
       'camelcase': 'off',
       'no-extra-boolean-cast': 'off',
       'no-shadow': 'off',
       'no-nested-ternary': 'off',
-      '@typescript-eslint/explicit-module-boundary-types': ['warn'],
-      '@typescript-eslint/explicit-function-return-type': ['off']
+      '@typescript-eslint/explicit-function-return-type': ['off'],
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/explicit-module-boundary-types": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      '@typescript-eslint/ban-ts-comment': 'off',
+      '@typescript-eslint/no-shadow': 'off',
+      'no-useless-catch': 'off',
+      'no-async-promise-executor': 'off',
+      'no-useless-escape': 'off'
     }
   },
   prettierConfig

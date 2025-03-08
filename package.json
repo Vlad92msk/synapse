@@ -1,18 +1,30 @@
 {
-  "name": "synapse",
-  "version": "1.0.0",
-  "description": "",
+  "name": "@vlad92msk/synapse",
+  "version": "0.1.0",
+  "description": "Библиотека для управления состоянием и апи-запросами",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "keywords": ["state-management", "typescript", "state", "api-requests"],
+  "author": "Vlad Firsov",
+  "license": "MIT",
+  "private": false,
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
-    "fix": "yarn format && yarn lint:fix"
-  },
-  "dependencies": {
-    "node": "^23.9.0"
+    "fix": "yarn format && yarn lint:fix",
+    "prepublishOnly": "yarn fix && yarn build",
+
+    "release:patch": "npm version patch && npm publish --tag beta --access public",
+    "release:minor": "npm version minor && npm publish --tag beta --access public",
+    "release:major": "npm version major && npm publish --tag beta --access public",
+
+    "release:patch:stable": "npm version patch && npm publish --access public",
+    "release:minor:stable": "npm version minor && npm publish --access public",
+    "release:major:stable": "npm version major && npm publish --access public"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
@@ -27,6 +39,5 @@
     "prettier": "^3.5.3",
     "typescript": "^5.8.2",
     "typescript-eslint": "^7.7.3"
-  },
-  "private": true
+  }
 }
