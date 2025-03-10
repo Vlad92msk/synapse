@@ -1,6 +1,6 @@
 {
   "name": "@vlad92msk/synapse",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Библиотека для управления состоянием и апи-запросами",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
