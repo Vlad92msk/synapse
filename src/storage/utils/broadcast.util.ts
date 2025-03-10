@@ -63,14 +63,11 @@ export class SyncBroadcastChannel<T = unknown> {
       return
     }
 
-    this.log('Received message:', message)
-
     // Обработка запроса на синхронизацию
     if (message.type === 'SYNC_REQUEST') {
       if (this.syncHandler) {
         try {
           const state = await this.syncHandler()
-          this.log('Sync handler returned state:', state)
           this.postMessage('SYNC_RESPONSE', state, message.senderId)
         } catch (error) {
           this.error('Error handling sync request:', error)
@@ -81,15 +78,12 @@ export class SyncBroadcastChannel<T = unknown> {
 
     // Обработка ответа на запрос синхронизации
     if (message.type === 'SYNC_RESPONSE') {
-      const request = this.pendingSyncRequests.get(this.tabId) // Изменено: ищем по своему tabId
+      const request = this.pendingSyncRequests.get(this.tabId)
       if (request) {
-        this.log('Found pending sync request, resolving with:', message.payload)
         clearTimeout(request.timeout)
         this.pendingSyncRequests.delete(this.tabId)
         //@ts-ignore
         request.resolve(message.payload)
-      } else {
-        this.log('No pending sync request found for tabId:', this.tabId)
       }
       return
     }
@@ -116,7 +110,6 @@ export class SyncBroadcastChannel<T = unknown> {
       timestamp: Date.now(),
     }
 
-    this.log('Sending message:', message)
     this.channel.postMessage(message)
   }
 
@@ -149,15 +142,13 @@ export class SyncBroadcastChannel<T = unknown> {
   public async requestSync(): Promise<T | null> {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        this.log('Sync request timed out')
         this.pendingSyncRequests.delete(this.tabId)
         resolve(null)
       }, this.syncTimeoutMs)
 
-      this.log('Creating new sync request')
       this.pendingSyncRequests.set(this.tabId, { resolve, reject, timeout })
 
-      this.postMessage('SYNC_REQUEST', { type: 'sync' } as T) // Добавлен тип
+      this.postMessage('SYNC_REQUEST', { type: 'sync' } as T)
     })
   }
 
@@ -195,7 +186,7 @@ const example = () => {
 
   // Подписываемся на сообщения
   const unsubscribe = channel.subscribe(async (message) => {
-    console.log('Received message:', message)
+    console.log('Получено сообщение:', message)
   })
 
   // Запрашиваем синхронизацию при инициализации
@@ -203,7 +194,7 @@ const example = () => {
     const syncedState = await channel.requestSync()
     if (syncedState) {
       // Обновляем локальное состояние
-      console.log('Received synced state:', syncedState)
+      console.log('Получено синхронизированное состояние:', syncedState)
     }
   }
 

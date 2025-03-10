@@ -1,4 +1,6 @@
 // Экспортируем публичные интерфейсы
+export * from './modules/plugin/plugin.interface'
+export * from './modules/plugin/plugin.service'
 export * from './storage.interface'
 
 // Экспортируем публичные middleware

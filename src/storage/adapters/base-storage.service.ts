@@ -77,7 +77,7 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
         })
       }
     } catch (error) {
-      this.logger?.error('Error initializing storage', { error })
+      this.logger?.error('Ошибка инициализации хранилища', { error })
       throw error
     }
   }
@@ -102,19 +102,16 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
 
   public async get<R>(key: StorageKeyType): Promise<R | undefined> {
     try {
-      const metadata = { operation: 'get', timestamp: Date.now() }
-
-      // Декодируем ключ для хранилища
-      const decodedKey = (await this.pluginExecutor?.executeKeyDecode(key)) ?? key
+      const metadata = { operation: 'get', timestamp: Date.now(), key }
 
       // Передаем в middleware chain
       const middlewareResult = await this.middlewareModule.dispatch({
         type: 'get',
-        key: decodedKey,
+        key,
         metadata,
       })
 
-      // Обрабатываем значение через плагины, передавая оригинальный ключ
+      // Обрабатываем значение через плагины
       const finalResult = (await this.pluginExecutor?.executeAfterGet(key, middlewareResult, metadata)) ?? middlewareResult
 
       await this.emitEvent({
@@ -131,37 +128,45 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
 
   public async set<R>(key: StorageKeyType, value: R): Promise<void> {
     try {
-      const metadata = { operation: 'set', timestamp: Date.now() }
+      const metadata = { operation: 'set', timestamp: Date.now(), key }
 
       // Обрабатываем значение через плагины
       const processedValue = (await this.pluginExecutor?.executeBeforeSet(value, metadata)) ?? value
 
-      // Кодируем ключ для хранилища
-      const encodedKey = (await this.pluginExecutor?.executeKeyEncode(key)) ?? key
-
       // Передаем в middleware chain
       const middlewareResult = await this.middlewareModule.dispatch({
         type: 'set',
-        key: encodedKey,
+        key,
         value: processedValue,
         metadata,
       })
 
+      // Проверяем метаданные, добавленные shallowCompare middleware
+      const valueNotChanged = middlewareResult?.__metadata?.valueNotChanged === true
       // Финальная обработка значения, передаем оригинальный ключ
-      const finalResult = (await this.pluginExecutor?.executeAfterSet(key, middlewareResult, metadata)) ?? middlewareResult
+      let finalResult
 
-      // Уведомляем подписчиков используя оригинальный ключ
-      this.notifySubscribers(key, finalResult)
-      this.notifySubscribers(BaseStorage.GLOBAL_SUBSCRIPTION_KEY, {
-        type: StorageEvents.STORAGE_UPDATE,
-        key,
-        value: finalResult,
-      })
+      if (valueNotChanged && middlewareResult?.__metadata?.originalValue !== undefined) {
+        // Если значение не изменилось, используем оригинальное значение без метаданных
+        finalResult = middlewareResult.__metadata.originalValue
+      } else {
+        finalResult = (await this.pluginExecutor?.executeAfterSet(key, middlewareResult, metadata)) ?? middlewareResult
+      }
 
-      await this.emitEvent({
-        type: StorageEvents.STORAGE_UPDATE,
-        payload: { key, value: finalResult },
-      })
+      // Уведомляем подписчиков только если значение изменилось
+      if (!valueNotChanged) {
+        this.notifySubscribers(key, finalResult)
+        this.notifySubscribers(BaseStorage.GLOBAL_SUBSCRIPTION_KEY, {
+          type: StorageEvents.STORAGE_UPDATE,
+          key,
+          value: finalResult,
+        })
+
+        await this.emitEvent({
+          type: StorageEvents.STORAGE_UPDATE,
+          payload: { key, value: finalResult },
+        })
+      }
     } catch (error) {
       this.logger?.error('Error setting value', { key, error })
       throw error
@@ -185,11 +190,12 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
       // Обрабатываем каждый измененный ключ
       const updates = await Promise.all(
         changedKeys.map(async (key: string) => {
-          // Кодируем ключ для хранилища
-          const encodedKey = (await this.pluginExecutor?.executeKeyEncode(key)) ?? key
-          // Обрабатываем значение через плагины
-          const processedValue = (await this.pluginExecutor?.executeBeforeSet(newState[key], metadata)) ?? newState[key]
-          return { key: encodedKey, value: processedValue }
+          // Добавляем ключ в метаданные для каждого обновления
+          const keyMetadata = { ...metadata, key }
+
+          // Обрабатываем значение через плагины с метаданными содержащими ключ
+          const processedValue = (await this.pluginExecutor?.executeBeforeSet(newState[key], keyMetadata)) ?? newState[key]
+          return { key, value: processedValue }
         }),
       )
 
@@ -206,12 +212,19 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
       // Уведомляем подписчиков
       this.notifySubscribers(BaseStorage.GLOBAL_SUBSCRIPTION_KEY, {
         type: StorageEvents.STORAGE_UPDATE,
+        key: changedKeys,
         value: result,
       })
 
+      Object.entries(result).forEach(([key, finalResult]) => {
+        this.notifySubscribers(key, finalResult)
+      })
       await this.emitEvent({
         type: StorageEvents.STORAGE_UPDATE,
-        payload: { state: result },
+        payload: {
+          state: result,
+          key: changedKeys,
+        },
       })
     } catch (error) {
       this.logger?.error('Error updating state', { error })
@@ -221,16 +234,13 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
 
   public async delete(key: StorageKeyType): Promise<void> {
     try {
-      const metadata = { operation: 'delete', timestamp: Date.now() }
-
-      // Кодируем ключ для хранилища
-      const encodedKey = (await this.pluginExecutor?.executeKeyEncode(key)) ?? key
+      const metadata = { operation: 'delete', timestamp: Date.now(), key }
 
       // Проверяем возможность удаления
-      if (await this.pluginExecutor?.executeBeforeDelete(encodedKey, metadata)) {
+      if (await this.pluginExecutor?.executeBeforeDelete(key, metadata)) {
         const middlewareResult = await this.middlewareModule.dispatch({
           type: 'delete',
-          key: encodedKey,
+          key,
           metadata,
         })
 
@@ -283,9 +293,7 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
 
   public async has(key: StorageKeyType): Promise<boolean> {
     try {
-      // Кодируем ключ для хранилища
-      const encodedKey = (await this.pluginExecutor?.executeKeyEncode(key)) ?? key
-      return await this.doHas(encodedKey)
+      return await this.doHas(key)
     } catch (error) {
       this.logger?.error('Error checking value existence', { key, error })
       throw error
@@ -294,9 +302,7 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
 
   public async getState(): Promise<Record<string, any>> {
     try {
-      // Кодируем пустой ключ для получения корневого состояния
-      const encodedKey = (await this.pluginExecutor?.executeKeyEncode('')) ?? ''
-      const value = await this.doGet(encodedKey)
+      const value = await this.doGet('')
       return value || {}
     } catch (error) {
       this.logger?.error('Error getting state', { error })
@@ -305,7 +311,7 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
   }
 
   // Вспомогательный метод для подписки на все изменения
-  public subscribeToAll(callback: (event: { type: 'set' | 'delete' | 'clear'; key?: string; value?: any }) => void): VoidFunction {
+  public subscribeToAll(callback: (event: { type: 'set' | 'delete' | 'clear'; key?: string[] | string; value?: any }) => void): VoidFunction {
     return this.subscribe(BaseStorage.GLOBAL_SUBSCRIPTION_KEY, callback)
   }
 
@@ -323,13 +329,34 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
     return this.subscribeBySelector(keyOrSelector, callback)
   }
 
-  private subscribeByKey(key: string, callback: (value: any) => void): () => void {
+  private subscribeByKey(key: string, callback: (value: any) => void): VoidFunction {
+    // Уникальный ID для отладки подписки
+    const subscriptionId = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+
+    // Создаем коллекцию подписчиков, если ее еще нет
     if (!this.subscribers.has(key)) {
       this.subscribers.set(key, new Set())
     }
 
+    // Флаг для отслеживания отправки начального значения
+    let initialValueSent = false
+
+    // Добавляем колбэк в набор подписчиков
     this.subscribers.get(key)!.add(callback)
 
+    // Получаем и отправляем начальное значение, но только один раз
+    this.get(key).then((value) => {
+      try {
+        if (!initialValueSent) {
+          initialValueSent = true
+          callback(value)
+        }
+      } catch (error) {
+        this.logger?.error('Error in initial callback', { key, error })
+      }
+    })
+
+    // Возвращаем функцию отписки
     return () => {
       const subscribers = this.subscribers.get(key)
       if (subscribers) {
@@ -341,13 +368,18 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
     }
   }
 
-  private subscribeBySelector<R>(pathSelector: PathSelector<T, R>, callback: (value: R) => void): () => void {
+  private subscribeBySelector<R>(pathSelector: PathSelector<T, R>, callback: (value: R) => void): VoidFunction {
     // Получаем путь из селектора
     const dummyState = this.createDummyState()
     const path = this.extractPath(pathSelector, dummyState)
 
+    // Создаем обертку для колбэка, которая правильно приводит тип
+    const wrappedCallback = (value: any) => {
+      callback(value as R)
+    }
+
     // Используем полученный путь для подписки
-    return this.subscribeByKey(path, callback)
+    return this.subscribeByKey(path, wrappedCallback)
   }
 
   // Вспомогательные методы
@@ -379,12 +411,14 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
     const subscribers = this.subscribers.get(key)
     if (!subscribers?.size) return
 
-    subscribers.forEach((callback) => {
+    // Создаем безопасную копию подписчиков для итерации
+    const subscribersCopy = new Set(subscribers)
+
+    subscribersCopy.forEach((callback) => {
       try {
         callback(value)
       } catch (error) {
-        console.error('Error in subscriber callback:', error)
-        this.logger?.error('Error in subscriber callback', { key, error })
+        this.logger?.error('Ошибка в подписчике на колбэк', { key, error })
       }
     })
   }

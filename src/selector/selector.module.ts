@@ -28,14 +28,14 @@ class SelectorSubscription<T> {
           try {
             await subscriber.notify(newValue)
           } catch (error) {
-            console.error('DEBUG: Error in subscriber notification:', error)
+            this.logger?.error('Ошибка в уведомлении подписчика')
           }
         })
 
         await Promise.all(promises)
       }
-    } catch (error) {
-      console.error('DEBUG: Error in notify():', error)
+    } catch (error: any) {
+      this.logger?.error('Ошибка в методе notify()', error)
       throw error
     }
   }
@@ -45,7 +45,7 @@ class SelectorSubscription<T> {
 
     // Сразу уведомляем о текущем значении
     this.notify().catch((error) => {
-      console.error('DEBUG: Error in initial notification:', error)
+      this.logger?.error('Ошибка в первоначальном уведомлении', error)
     })
 
     return () => {
@@ -63,50 +63,38 @@ class SelectorSubscription<T> {
   }
 }
 
-export class SelectorModule {
+export class SelectorModule<S extends Record<string, any>> {
   storageName: string
 
   private subscriptions = new Map<string, SelectorSubscription<any>>()
 
   constructor(
-    private readonly source: IStorage,
+    private readonly source: IStorage<S>,
     private readonly logger?: ILogger,
   ) {
     this.storageName = source.name
   }
 
-  createSelector<S, T>(selector: Selector<S, T>, options?: SelectorOptions<T>): SelectorAPI<T>
+  createSelector<T>(selector: Selector<S, T>, options?: SelectorOptions<T>): SelectorAPI<T>
 
-  createSelector<Deps extends any[], T>(
-    dependencies: Array<Selector<any, Deps[number]> | SelectorAPI<Deps[number]>>,
-    resultFn: ResultFunction<Deps, T>,
-    options?: SelectorOptions<T>,
-  ): SelectorAPI<T>
+  createSelector<Deps extends unknown[], T>(dependencies: { [K in keyof Deps]: SelectorAPI<Deps[K]> }, resultFn: (...args: Deps) => T, options?: SelectorOptions<T>): SelectorAPI<T>
 
-  createSelector<S, T>(
-    selectorOrDeps: Selector<S, T> | Array<SelectorAPI<any> | Selector<any, any>>,
-    resultFnOrOptions?: ResultFunction<any[], T> | SelectorOptions<T>,
+  createSelector<T>(
+    selectorOrDeps: Selector<S, T> | SelectorAPI<any>[],
+    resultFnOrOptions?: ((...args: any[]) => T) | SelectorOptions<T>,
     options?: SelectorOptions<T>,
   ): SelectorAPI<T> {
     if (Array.isArray(selectorOrDeps)) {
-      const deps: SelectorAPI<any>[] = selectorOrDeps.map((dep) => {
-        if (typeof dep === 'function') {
-          return this.createSimpleSelector(dep)
-        }
-        return dep
-      })
-
-      return this.createCombinedSelector(deps, resultFnOrOptions as ResultFunction<any[], T>, options || {})
+      return this.createCombinedSelector(selectorOrDeps, resultFnOrOptions as (...args: any[]) => T, options || {})
     }
 
     return this.createSimpleSelector(selectorOrDeps, resultFnOrOptions as SelectorOptions<T>)
   }
 
-  createSimpleSelector<S, T>(selector: Selector<S, T>, options: SelectorOptions<T> = {}): SelectorAPI<T> {
+  private createSimpleSelector<T>(selector: Selector<S, T>, options: SelectorOptions<T> = {}): SelectorAPI<T> {
     const getState = async (): Promise<T> => {
       const state = await this.source.getState()
-      const selectedValue = selector(state as S)
-      return selectedValue
+      return selector(state as S)
     }
 
     const subscription = new SelectorSubscription(getState, options.equals || ((a, b) => a === b), this.logger)
@@ -114,22 +102,19 @@ export class SelectorModule {
     const id = subscription.getId()
     this.subscriptions.set(id, subscription)
 
-    // Упрощённая обработка событий
     const unsubscribe = this.source.subscribeToAll(async (event: any) => {
-      if (event && event.type === 'storage:update') {
-        // Сразу запускаем обновление без дополнительных проверок
+      if (event?.type === 'storage:update') {
         await subscription.notify()
       }
     })
 
-    const api = {
+    return {
       select: () => getState(),
-      subscribe: (subscriber: Subscriber<T>) => {
+      subscribe: (subscriber) => {
         const unsub = subscription.subscribe(subscriber)
 
         return () => {
           unsub()
-          // Не удаляем подписку на хранилище при отписке одного подписчика
           if (this.subscriptions.get(id)?.subscribers.size === 0) {
             this.subscriptions.delete(id)
             unsubscribe()
@@ -137,20 +122,16 @@ export class SelectorModule {
         }
       },
     }
-
-    return api
   }
 
-  createCombinedSelector<T>(selectors: SelectorAPI<any>[], resultFn: (...args: any[]) => T, options: SelectorOptions<T> = {}): SelectorAPI<T> {
+  private createCombinedSelector<Deps extends unknown[], T>(
+    selectors: { [K in keyof Deps]: SelectorAPI<Deps[K]> },
+    resultFn: (...args: Deps) => T,
+    options: SelectorOptions<T> = {},
+  ): SelectorAPI<T> {
     const getState = async () => {
-      const values = await Promise.all(
-        selectors.map(async (s, index) => {
-          const value = await s.select()
-          return value
-        }),
-      )
-      const result = resultFn(...values)
-      return result
+      const values = await Promise.all(selectors.map((s) => s.select()))
+      return resultFn(...(values as Deps))
     }
 
     const subscription = new SelectorSubscription(getState, options.equals || ((a, b) => a === b), this.logger)
@@ -158,26 +139,20 @@ export class SelectorModule {
     const id = subscription.getId()
     this.subscriptions.set(id, subscription)
 
-    // Set для отслеживания ожидающих обновлений
     let pendingUpdate = false
     const debouncedNotify = () => {
       if (!pendingUpdate) {
         pendingUpdate = true
         Promise.resolve().then(() => {
           pendingUpdate = false
-          subscription.notify().catch((error) => {
-            console.error('DEBUG: Error in combined notification:', error)
-          })
+          subscription.notify().catch((error) => console.error('DEBUG: Error in combined notification:', error))
         })
       }
     }
 
-    // Подписываемся на все зависимости
-    const unsubscribers = selectors.map((selector, index) =>
+    const unsubscribers = selectors.map((selector) =>
       selector.subscribe({
-        notify: async (value) => {
-          debouncedNotify()
-        },
+        notify: async () => debouncedNotify(),
       }),
     )
 

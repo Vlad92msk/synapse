@@ -32,6 +32,7 @@ export const shallowCompareMiddleware = (options: ShallowCompareMiddlewareOption
     name: 'shallow-compare',
     setup: (api: MiddlewareAPI) => {},
     reducer: (api: MiddlewareAPI) => (next: NextFunction) => async (action: StorageAction) => {
+      // Пропускаем действия кроме set
       if (action.type !== 'set' || (segments.length && !segments.includes(action.metadata?.segment ?? 'default'))) {
         return next(action)
       }
@@ -42,7 +43,16 @@ export const shallowCompareMiddleware = (options: ShallowCompareMiddlewareOption
 
       // Если значения равны, пропускаем операцию
       if (prevValue !== undefined && comparator(prevValue, nextValue)) {
-        return prevValue
+        console.log('ShallowCompare: значения идентичны, пропускаем операцию', { key: cacheKey, value: nextValue })
+
+        // Добавляем специальный флаг в метаданные, чтобы BaseStorage знал, что значение не изменилось
+        return {
+          ...prevValue,
+          __metadata: {
+            valueNotChanged: true, // Этот флаг будет проверяться в BaseStorage перед notifySubscribers
+            originalValue: prevValue,
+          },
+        }
       }
 
       // Иначе обновляем кэш и продолжаем

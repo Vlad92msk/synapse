@@ -135,7 +135,7 @@ export class StoragePluginModule implements IPluginManager<IStoragePlugin>, IPlu
     if (this.parentExecutor) {
       result = await this.parentExecutor.executeAfterGet(key, result, context)
     }
-
+    console.log('executeAfterGet', key, value, metadata)
     for (const plugin of this.plugins.values()) {
       if (plugin.onAfterGet) {
         try {
@@ -189,51 +189,6 @@ export class StoragePluginModule implements IPluginManager<IStoragePlugin>, IPlu
         }
       }
     }
-  }
-
-  public async executeKeyEncode(key: StorageKeyType): Promise<StorageKeyType> {
-    let processedKey = key
-
-    if (this.parentExecutor) {
-      processedKey = await this.parentExecutor.executeKeyEncode(processedKey)
-    }
-
-    for (const plugin of this.plugins.values()) {
-      if (plugin.onKeyTransform?.encode) {
-        try {
-          processedKey = await plugin.onKeyTransform.encode(processedKey)
-        } catch (error) {
-          this.logger?.error(`Ошибка в плагине ${plugin.name} key encode`, { key, error })
-          throw error
-        }
-      }
-    }
-
-    return processedKey
-  }
-
-  public async executeKeyDecode(key: StorageKeyType): Promise<StorageKeyType> {
-    let processedKey = key
-
-    if (this.parentExecutor) {
-      processedKey = await this.parentExecutor.executeKeyDecode(processedKey)
-    }
-
-    // Декодируем в обратном порядке
-    const plugins = Array.from(this.plugins.values()).reverse()
-
-    for (const plugin of plugins) {
-      if (plugin.onKeyTransform?.decode) {
-        try {
-          processedKey = await plugin.onKeyTransform.decode(processedKey)
-        } catch (error) {
-          this.logger?.error(`Ошибка в плагине ${plugin.name} key decode`, { key, error })
-          throw error
-        }
-      }
-    }
-
-    return processedKey
   }
 
   public async executeOnClear(metadata?: Record<string, any>): Promise<void> {

@@ -89,6 +89,8 @@ export const broadcastMiddleware = (props: SharedStateMiddlewareProps): Middlewa
                 payload.value.forEach(({ key, value }) => {
                   api.storage.notifySubscribers(key, value)
                 })
+                //FIXME: Еще нужно настроить корректное уведомление глобальных подписчиков
+                // Чтобы передавался масив ключей которые были изменены
               }
               break
 

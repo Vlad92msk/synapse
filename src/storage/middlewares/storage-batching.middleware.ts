@@ -4,7 +4,6 @@ import { Middleware, MiddlewareAPI, NextFunction, StorageAction } from '../utils
 export interface BatchingMiddlewareOptions {
   batchSize?: number
   batchDelay?: number
-  segments?: string[]
 }
 
 export const batchingMiddleware = (options: BatchingMiddlewareOptions = {}): Middleware => {
@@ -13,14 +12,11 @@ export const batchingMiddleware = (options: BatchingMiddlewareOptions = {}): Mid
     batchDelay: options.batchDelay,
     shouldBatch: (action) => {
       if (action.type === 'get' || action.type === 'keys') return false
-      if (options.segments?.length) {
-        return options.segments.includes(action.metadata?.segment ?? 'default')
-      }
       return true
     },
     getSegmentKey: (action) => action.key || 'default',
-    mergeItems: (actions) =>
-      actions.reduce((acc, action) => {
+    mergeItems: (actions) => {
+      return actions.reduce((acc, action) => {
         if (action.type === 'set') {
           const existingIndex = acc.findIndex((existing) => existing.type === 'set' && existing.key === action.key)
           if (existingIndex !== -1) {
@@ -32,7 +28,8 @@ export const batchingMiddleware = (options: BatchingMiddlewareOptions = {}): Mid
           acc.push(action)
         }
         return acc
-      }, [] as StorageAction[]),
+      }, [] as StorageAction[])
+    },
   })
 
   return {

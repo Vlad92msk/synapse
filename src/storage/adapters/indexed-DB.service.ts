@@ -77,7 +77,7 @@ export class IndexedDBStorage<T extends Record<string, any>> extends BaseStorage
   private async transaction(mode: IDBTransactionMode = 'readonly'): Promise<IDBObjectStore> {
     await this.ensureInitialized()
     if (!this.db) {
-      throw new Error('Database not initialized')
+      throw new Error('База данных еще не инициализирована')
     }
     return this.db.transaction(this.STORE_NAME, mode).objectStore(this.STORE_NAME)
   }
@@ -148,17 +148,35 @@ export class IndexedDBStorage<T extends Record<string, any>> extends BaseStorage
   }
 
   protected async doSet(key: StorageKeyType, value: any): Promise<void> {
-    const store = await this.transaction('readwrite')
-
     // Для пустого ключа устанавливаем все состояние
     if (key === '') {
-      await this.doClear()
-      const entries = Object.entries(value)
-      for (const [entryKey, entryValue] of entries) {
-        await this.putValueInStore(store, entryKey as string, entryValue)
-      }
-      return
+      return new Promise((resolve, reject) => {
+        const tx = this.db!.transaction(this.STORE_NAME, 'readwrite')
+        const store = tx.objectStore(this.STORE_NAME)
+
+        tx.oncomplete = () => {
+          resolve()
+        }
+
+        tx.onerror = () => {
+          reject(tx.error)
+        }
+
+        const clearRequest = store.clear()
+
+        clearRequest.onsuccess = () => {
+          const entries = Object.entries(value)
+          for (const [entryKey, entryValue] of entries) {
+            store.put(entryValue, entryKey)
+          }
+        }
+
+        clearRequest.onerror = () => {
+          reject(clearRequest.error)
+        }
+      })
     }
+    const store = await this.transaction('readwrite')
 
     // Для "сырого" ключа
     if (key instanceof StorageKey && key.isUnparseable()) {
@@ -188,9 +206,6 @@ export class IndexedDBStorage<T extends Record<string, any>> extends BaseStorage
   }
 
   protected async doUpdate(updates: Array<{ key: string | StorageKey; value: any }>): Promise<void> {
-    const store = await this.transaction('readwrite')
-    const tx = store.transaction
-
     // Группируем обновления
     const updatesByRoot = new Map<string, Array<{ path: string[]; value: any }>>()
     const rawUpdates: Array<{ key: string; value: any }> = []
@@ -215,6 +230,8 @@ export class IndexedDBStorage<T extends Record<string, any>> extends BaseStorage
     try {
       // Обрабатываем "сырые" обновления
       for (const { key, value } of rawUpdates) {
+        // Создаем новую транзакцию для каждого обновления
+        const store = await this.transaction('readwrite')
         await this.putValueInStore(store, key, value)
       }
 
@@ -231,14 +248,10 @@ export class IndexedDBStorage<T extends Record<string, any>> extends BaseStorage
           }
         }
 
+        // Создаем новую транзакцию для каждого корневого ключа
+        const store = await this.transaction('readwrite')
         await this.putValueInStore(store, rootKey, updatedValue)
       }
-
-      // Ждем завершения транзакции
-      await new Promise<void>((resolve, reject) => {
-        tx.oncomplete = () => resolve()
-        tx.onerror = () => reject(tx.error)
-      })
     } catch (error) {
       console.error('Ошибка при обновлении:', error)
       throw error

@@ -8,7 +8,7 @@ import { ApiContext } from '../types/api.interface'
  * @returns - полный контекст для подготовки заголовков
  */
 export function createHeaderContext<RequestParams extends Record<string, any>>(
-  context: ApiContext = {} as ApiContext<RequestParams>,
+  context: Partial<ApiContext> = {} as ApiContext<RequestParams>,
   optionContext: Record<string, any> = {},
 ): ApiContext<RequestParams> {
   return {

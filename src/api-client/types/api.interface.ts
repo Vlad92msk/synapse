@@ -70,9 +70,9 @@ export interface ApiContext<RequestParams extends Record<string, any> = any> {
   /** Параметры запроса */
   requestParams?: RequestParams
   /** Получить значение из localStorage */
-  getFromStorage?: <T>(key: string) => T | undefined
+  getFromStorage: <T>(key: string) => T | undefined
   /** Получить значение cookie */
-  getCookie?: (name: string) => string | undefined
+  getCookie: (name: string) => string | undefined
   /** Поддержка для дополнительных свойств */
   [key: string]: any
 }

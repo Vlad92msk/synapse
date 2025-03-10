@@ -225,10 +225,8 @@ export class EndpointClass<RequestParams extends Record<string, any>, RequestRes
       waitWithCallbacks(handlers = {}) {
         const { idle, loading, success, error } = handlers
 
-        // this теперь указывает на текущий объект
         this.subscribe(
           (state: RequestState<RequestResponse, RequestParams>) => {
-            console.log('__state', state)
             switch (state.status) {
               case 'idle':
                 idle?.(state)
