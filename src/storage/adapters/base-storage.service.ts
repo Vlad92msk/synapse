@@ -300,7 +300,7 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
     }
   }
 
-  public async getState(): Promise<Record<string, any>> {
+  public async getState(): Promise<T> {
     try {
       const value = await this.doGet('')
       return value || {}

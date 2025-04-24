@@ -11,7 +11,7 @@ export class MemoryStorage<T extends Record<string, any>> extends BaseStorage<T>
     super(config, pluginExecutor, eventEmitter, logger)
   }
 
-  async initialize(): Promise<this> {
+  async initialize() {
     try {
       this.initializeMiddlewares()
       await this.initializeWithMiddlewares()

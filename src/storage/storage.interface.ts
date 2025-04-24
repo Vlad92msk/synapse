@@ -6,10 +6,10 @@ import { StorageKeyType } from './utils/storage-key'
 
 export interface IStorage<T extends Record<string, any> = any> {
   name: string
-  get<T>(key: StorageKeyType): Promise<T | undefined>
-  getState<T>(): Promise<Record<string, any>>
-  set<T>(key: StorageKeyType, value: T): Promise<void>
-  update(updater: (state: any) => void): Promise<void>
+  get<R>(key: StorageKeyType): Promise<R | undefined>
+  getState(): Promise<T>
+  set<R>(key: StorageKeyType, value: R): Promise<void>
+  update(updater: (state: T) => void): Promise<void>
   has(key: StorageKeyType): Promise<boolean>
   delete(key: StorageKeyType): Promise<void>
   clear(): Promise<void>
