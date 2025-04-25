@@ -18,9 +18,6 @@ interface ActionExecutionOptions {
   worker?: Worker
   // Функция мемоизации
   memoize?: (currentArgs: any[], previousArgs: any[], previousResult: any) => boolean
-  // Другие опции выполнения
-  timeout?: number
-  retry?: number | { count: number; delay: number }
 }
 
 /**
