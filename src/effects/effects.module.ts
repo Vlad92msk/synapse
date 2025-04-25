@@ -52,6 +52,7 @@ export function ofType<T extends DispatchFunction<any, any> | WatcherFunction<an
  * @param actionFns Массив функций действий
  */
 export function ofTypes<T extends DispatchFunction<any, any>[]>(actionFns: [...T]): OperatorFunction<Action, TypedAction<ExtractResultType<T[number]>>> {
+  console.log('actionFns', actionFns)
   // Получаем типы действий
   const actionTypes = actionFns.map((fn) => fn.actionType).filter(Boolean)
 

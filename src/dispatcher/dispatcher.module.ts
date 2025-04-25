@@ -77,6 +77,8 @@ export interface DispatchFunction<TParams, TResult> {
   actionType: string
   /** Метаданные действия */
   meta?: Record<string, any>
+  /** Внутренний тип для идентификации */
+  _type?: 'dispatch' | 'watchers'
 }
 
 /**
@@ -98,6 +100,20 @@ export type ExtractResultType<T> = T extends DispatchFunction<any, infer R> ? R 
  * Извлекает типы из функции настройки действий
  */
 export type ActionsResult<F> = F extends (create: ActionCreatorFactory, storage: any, ...args: any[]) => infer R ? R : Record<string, DispatchFunction<any, any>>
+
+/**
+ * Типизированный объект действий
+ */
+export type DispatchActions<T> = {
+  [K in keyof T]: T[K] extends DispatchFunction<any, any> ? T[K] : never
+}
+
+/**
+ * Типизированный объект watchers
+ */
+export type WatcherActions<T> = {
+  [K in keyof T]: T[K] extends WatcherFunction<any> ? T[K] : never
+}
 
 /**
  * Параметры для Dispatcher
@@ -143,15 +159,32 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
   }
 
   /**
+   * Получает типизированные действия диспетчера
+   */
+  public getTypedDispatch<A extends Record<string, any>>(): DispatchActions<A> {
+    return this.dispatch as DispatchActions<A>
+  }
+
+  /**
+   * Получает типизированные watcher'ы
+   */
+  public getTypedWatchers<A extends Record<string, any>>(): WatcherActions<A> {
+    return this.watchers as WatcherActions<A>
+  }
+
+  /**
    * Создает действие
    */
   public createAction<TParams, TResult>(actionConfig: ActionDefinition<TParams, TResult>, executionOptions?: ActionExecutionOptions): DispatchFunction<TParams, TResult> {
+    const actionType = `[${this.storage.name}]${actionConfig.type}`
     // Для мемоизации храним последние аргументы и результат
     let lastArgs: TParams[] | null = null
     let lastResult: TResult | null = null
 
     // Создаем функцию диспетчеризации
-    const dispatchFn = async (...args: TParams[]): Promise<TResult> => {
+    const dispatchFn = async (params: TParams): Promise<TResult> => {
+      const args = [params] as TParams[]
+
       // Проверяем мемоизацию
       if (executionOptions?.memoize && lastArgs && lastResult) {
         if (executionOptions.memoize(args, lastArgs, lastResult)) {
@@ -163,11 +196,10 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
 
       // Выполняем действие в worker или напрямую
       if (executionOptions?.worker) {
-        result = await this.executeInWorker(executionOptions.worker, actionConfig.type, args, actionConfig.action)
+        result = await this.executeInWorker(executionOptions.worker, actionType, args, actionConfig.action)
       } else {
         // Обычное выполнение
-        //@ts-ignore
-        result = await Promise.resolve(actionConfig.action(...args))
+        result = await Promise.resolve(actionConfig.action(params))
       }
 
       // Сохраняем аргументы и результат для мемоизации
@@ -176,7 +208,7 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
 
       // Отправляем информацию о действии в поток
       this.actions$.next({
-        type: actionConfig.type,
+        type: actionType,
         payload: result,
         meta: actionConfig.meta,
       })
@@ -187,7 +219,7 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
     dispatchFn._type = 'dispatch'
     // Добавляем тип действия как свойство функции
     Object.defineProperty(dispatchFn, 'actionType', {
-      value: actionConfig.type,
+      value: actionType,
       writable: false,
       enumerable: true,
     })
@@ -201,7 +233,6 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
       })
     }
 
-    // @ts-ignore
     return dispatchFn as DispatchFunction<TParams, TResult>
   }
 
@@ -209,6 +240,8 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
    * Создает watcher для отслеживания изменений в хранилище
    */
   public createWatcher<R>(config: WatcherDefinition<T, R>): WatcherFunction<R> {
+    const actionType = `[${this.storage.name}]${config.type}`
+
     // Создаем Subject для этого watcher'а
     const subject = new Subject<TypedAction<R>>()
 
@@ -221,7 +254,7 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
       if (!config.shouldTrigger || config.shouldTrigger(prevValue, value)) {
         // Создаем действие
         const action: TypedAction<R> = {
-          type: config.type,
+          type: actionType,
           payload: value,
           meta: config.meta,
         }
@@ -242,7 +275,7 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
     watcherFn._type = 'watchers'
     // Добавляем свойства
     Object.defineProperty(watcherFn, 'actionType', {
-      value: config.type,
+      value: actionType,
       writable: false,
       enumerable: true,
     })
@@ -262,9 +295,6 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
       enumerable: true,
     })
 
-    console.log('config', config)
-    // Регистрируем watcher
-    // this.watchers[config.type] = watcherFn as WatcherFunction<R>
     //@ts-ignore
     return watcherFn as WatcherFunction<R>
   }
@@ -276,7 +306,7 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
     worker: Worker,
     actionType: string,
     args: TParams[],
-    fallbackAction?: (...args: TParams[]) => Promise<TResult> | TResult,
+    fallbackAction?: (params: TParams) => Promise<TResult> | TResult,
   ): Promise<TResult> {
     return new Promise((resolve, reject) => {
       const requestId = `${actionType}_${Date.now()}_${Math.random()}`
@@ -316,48 +346,30 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
 export function createTypedDispatcher<TState extends Record<string, any>, TActions extends ActionsSetupWithUtils<TState>>(
   options: DispatcherOptions<TState>,
   actionsSetup: TActions,
-): Dispatcher<TState, TActions> {
+): Dispatcher<TState, TActions> & {
+  dispatch: DispatchActions<ReturnType<TActions>>
+  watchers: WatcherActions<ReturnType<TActions>>
+} {
   // Создаем экземпляр диспетчера
   const dispatcher = new Dispatcher<TState, TActions>(options)
 
-  // Создаем функцию для создания actions
-  const createAction: ActionCreatorFactory = <TParams, TResult>(
-    actionConfig: ActionDefinition<TParams, TResult>,
-    executionOptions?: ActionExecutionOptions,
-  ): DispatchFunction<TParams, TResult> => {
-    return dispatcher.createAction(actionConfig, executionOptions)
-  }
-
-  // Создаем функцию для создания watcher'ов
-  const createWatcher = <R>(config: WatcherDefinition<TState, R>): WatcherFunction<R> => {
-    return dispatcher.createWatcher(config)
-  }
-
   // Вызываем функцию настройки действий с обновленной структурой аргументов
   const actions = actionsSetup(options.storage, {
-    createAction,
-    createWatcher,
+    createAction: (actionConfig, executionOptions) => dispatcher.createAction(actionConfig, executionOptions),
+    createWatcher: (config) => dispatcher.createWatcher(config),
   })
 
   // Регистрируем все созданные объекты в соответствующих коллекциях
   for (const [key, fn] of Object.entries(actions)) {
     if (typeof fn === 'function') {
-      // @ts-ignore - проверяем наличие внутренней маркировки типа
-      if (fn._type === 'watchers') {
-        // Это watcher
-        dispatcher.watchers[key] = fn as WatcherFunction<any>
-        // Также добавляем по actionType для доступа по типу
-        dispatcher.watchers[fn.actionType] = fn as WatcherFunction<any>
-      } else {
-        // Это action
-        dispatcher.dispatch[key] = fn as DispatchFunction<any, any>
-        // Также добавляем по actionType для доступа по типу
-        dispatcher.dispatch[fn.actionType] = fn as DispatchFunction<any, any>
-      }
+      const type = (fn as any)._type
+      // @ts-ignore
+      dispatcher[type][key] = fn
     }
   }
 
-  console.log('actions', dispatcher.dispatch)
-  console.log('watchers', dispatcher.watchers)
-  return dispatcher
+  return dispatcher as Dispatcher<TState, TActions> & {
+    dispatch: DispatchActions<ReturnType<TActions>>
+    watchers: WatcherActions<ReturnType<TActions>>
+  }
 }
