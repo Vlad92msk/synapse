@@ -1,7 +1,7 @@
 import { combineLatest, merge, Observable, of, OperatorFunction, Subject } from 'rxjs'
 import { catchError, filter, map, take } from 'rxjs/operators'
 
-import { Action, ActionsResult, Dispatcher, DispatchFunction, ExtractResultType } from '../dispatcher/dispatcher.module'
+import { Action, ActionsResult, Dispatcher, DispatchFunction, ExtractResultType, WatcherFunction } from '../dispatcher/dispatcher.module'
 
 /**
  * Тип действия с типизированным payload
@@ -26,20 +26,24 @@ export type Effect<TDispatchers extends Record<string, Dispatcher<any, any>> = {
 export type DispatcherActions<T> = T extends Dispatcher<any, infer A> ? ActionsResult<A> : Record<string, DispatchFunction<any, any>>
 
 /**
- * Улучшенный оператор для фильтрации действий по типу с сохранением типа payload
- * @param actionFn Функция действия из dispatcher.dispatch
+ * Оператор для фильтрации действий по типу с сохранением типа payload
  */
-export function ofType<T extends DispatchFunction<any, any>>(actionFn: T): OperatorFunction<Action, TypedAction<ExtractResultType<T>>> {
+export function ofType<T extends DispatchFunction<any, any> | WatcherFunction<any>>(
+  actionFn: T,
+): OperatorFunction<Action, TypedAction<T extends WatcherFunction<infer R> ? R : ExtractResultType<T>>> {
   const { actionType } = actionFn
 
   if (!actionType) {
     console.warn('ofType: Action function does not have actionType property', actionFn)
-    return filter(() => false) as OperatorFunction<Action, TypedAction<ExtractResultType<T>>>
+    return filter(() => false) as any
   }
 
-  // Улучшенная реализация с явными типами для лучшего вывода типов
-  return (source$: Observable<Action>): Observable<TypedAction<ExtractResultType<T>>> => {
-    return source$.pipe(filter((action): action is TypedAction<ExtractResultType<T>> => action !== undefined && action.type === actionType))
+  // Определяем тип payload в зависимости от типа функции
+  type PayloadType = T extends WatcherFunction<infer R> ? R : ExtractResultType<T>
+
+  // Улучшенная реализация с явными типами
+  return (source$: Observable<Action>): Observable<TypedAction<PayloadType>> => {
+    return source$.pipe(filter((action): action is TypedAction<PayloadType> => action !== undefined && action.type === actionType))
   }
 }
 
