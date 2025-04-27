@@ -108,7 +108,10 @@ export class EndpointClass<RequestParams extends Record<string, any>, RequestRes
             headers: cachedResult.headers,
             requestParams: params,
           })
-          resolve(cachedResult)
+          resolve({
+            ...cachedResult,
+            fromCache: true,
+          })
         } else {
           // Нет данных в кэше - устанавливаем loading и делаем запрос
           notifyRequestSubscribers({
@@ -159,7 +162,10 @@ export class EndpointClass<RequestParams extends Record<string, any>, RequestRes
               }
               cb(endpointState)
             })
-            resolve(response)
+            resolve({
+              ...response,
+              fromCache: false,
+            })
           } else {
             // Оповещаем об ошибке
             notifyRequestSubscribers({

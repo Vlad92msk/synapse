@@ -87,4 +87,5 @@ export interface QueryResult<T = any, E = Error> {
   headers: Headers
   /** Результат скачивания файла (если responseFormat - Blob или ArrayBuffer) */
   fileDownloadResult?: FileDownloadResult
+  fromCache?: boolean
 }

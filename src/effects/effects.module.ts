@@ -3,6 +3,7 @@ import { catchError, filter, map, share, switchMap, take, withLatestFrom } from 
 
 import { Action, ActionsResult, Dispatcher, DispatchFunction, ExtractResultType, WatcherFunction } from '../dispatcher/dispatcher.module'
 import { IStorage } from '../storage'
+import { ChunkRequestConsistent, chunkRequestConsistent, ChunkRequestParallel, chunkRequestParallel } from './utils'
 
 /**
  * Тип действия с типизированным payload
@@ -48,15 +49,8 @@ export interface ValidateConfig {
  * Утилиты для запросов в validateMap
  */
 export interface ValidateMapRequestUtils {
-  chunkRequest: <T, R>(items: T[], chunkSize: number, fn: (chunk: T[]) => Observable<R>) => Observable<R[]>
-  chunkRequestConsistent: <T, R>(items: T[], fn: (item: T) => Observable<R>) => Observable<R[]>
-  recursiveFetchByPages: <T, R>(params: {
-    initialParams: any
-    fetchFn: (params: any) => Observable<T>
-    getNextParams: (result: T, currentParams: any) => any | null
-    mapResult: (result: T) => R
-  }) => Observable<R[]>
-  // Другие утилиты...
+  chunkRequest: ChunkRequestParallel
+  chunkRequestConsistent: ChunkRequestConsistent
 }
 
 /**
@@ -145,15 +139,6 @@ export function ofTypesWaitAll<T extends DispatchFunction<any, any>[]>(actionFns
 }
 
 /**
- * Версия ofType, которая принимает несколько функций действий и возвращает оператор,
- * который фильтрует по любому из указанных типов действий.
- * Результирующий тип payload будет объединением типов payload всех функций.
- */
-export function ofOneOf<T extends DispatchFunction<any, any>[]>(...actionFns: T): OperatorFunction<Action, TypedAction<ExtractResultType<T[number]>>> {
-  return ofTypes(actionFns)
-}
-
-/**
  * Оператор selectorMap для выбора частей состояния с помощью селекторов
  * @param state$ Поток состояния
  * @param selectors Селекторы для выбора частей состояния
@@ -178,7 +163,7 @@ export function selectorMap<TAction, TState, TResults extends any[]>(
 /**
  * Оператор validateMap для валидации данных и условного вызова API
  */
-export function validateMap<T, TMainData extends Record<string, any> = any, TResult = any>({
+export function validateMap<T, TResult = any>({
   validator,
   apiCall,
 }: {
@@ -192,19 +177,8 @@ export function validateMap<T, TMainData extends Record<string, any> = any, TRes
        */
       const callApi = () =>
         apiCall(pipeData, {
-          // Примеры утилит, которые могут быть реализованы
-          chunkRequest: <T, R>(items: T[], chunkSize: number, fn: (chunk: T[]) => Observable<R>) => {
-            // Реализация
-            return of([] as R[])
-          },
-          chunkRequestConsistent: <T, R>(items: T[], fn: (item: T) => Observable<R>) => {
-            // Реализация
-            return of([] as R[])
-          },
-          recursiveFetchByPages: <T, R>(params: any) => {
-            // Реализация
-            return of([] as R[])
-          },
+          chunkRequest: chunkRequestParallel,
+          chunkRequestConsistent: chunkRequestConsistent,
         })
 
       /**
@@ -232,26 +206,12 @@ export function validateMap<T, TMainData extends Record<string, any> = any, TRes
 }
 
 /**
- * Оператор getConfig для получения конфигурации в потоке
- */
-export function getConfig<T, TConfig>() {
-  return (source$: Observable<T>): Observable<{ pipeData: T; mainData: TConfig }> => {
-    return source$.pipe(
-      map((pipeData) => ({
-        pipeData,
-        mainData: {} as TConfig, // Здесь будет захватываться конфигурация из замыкания в реальной реализации
-      })),
-    )
-  }
-}
-
-/**
  * Базовый класс для управления эффектами без поддержки состояния
  * Оставлен для обратной совместимости
  */
 export class EffectsModuleBase<TDispatchers extends Record<string, Dispatcher<any, any>> = {}, TServices extends Record<string, any> = {}> {
   private effects: EffectBase<TDispatchers, TServices>[] = []
-  private subscriptions: Array<{ unsubscribe: () => void }> = []
+  private subscriptions: Array<{ unsubscribe: VoidFunction }> = []
   private running = false
   private action$ = new Subject<Action>()
 
@@ -381,7 +341,7 @@ export class EffectsModule<
   TConfig extends Record<string, any> = {},
 > {
   private effects: Effect<TState, TDispatchers, TServices, TConfig>[] = []
-  private subscriptions: Array<{ unsubscribe: () => void }> = []
+  private subscriptions: Array<{ unsubscribe: VoidFunction }> = []
   private running = false
   private action$ = new Subject<Action>()
 

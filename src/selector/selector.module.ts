@@ -1,5 +1,5 @@
 import { ILogger, IStorage } from '../storage/storage.interface'
-import { ResultFunction, Selector, SelectorAPI, SelectorOptions, Subscriber } from './selector.interface'
+import { Selector, SelectorAPI, SelectorOptions, Subscriber } from './selector.interface'
 
 class SelectorSubscription<T> {
   private readonly id: string
