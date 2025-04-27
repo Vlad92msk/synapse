@@ -1,7 +1,7 @@
 import { Observable, of } from 'rxjs'
 import { concatAll, delay, mergeMap, toArray } from 'rxjs/operators'
 
-import { chunk } from '../../utils'
+import { chunk } from '../../../utils'
 
 /**
  * Разбиение запроса на порции

@@ -1,4 +1,4 @@
-import { ApiClient } from './api-client.module'
+import { ApiClient } from './api.module'
 import { ResponseFormat } from './types/api.interface'
 
 // Типы данных для PokeAPI

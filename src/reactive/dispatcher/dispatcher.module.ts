@@ -1,7 +1,7 @@
 import { Observable, Subject } from 'rxjs'
 
+import { IStorage } from '../../core/storage'
 import { TypedAction } from '../effects'
-import { IStorage } from '../storage'
 
 /**
  * Базовая структура действия

@@ -1,5 +1,5 @@
-import { IndexedDBStorage, IStorage, LocalStorage, MemoryStorage, StorageKeyType, StorageType } from '../../storage'
-import { CacheEntry, CacheUtils } from '../../storage/utils/cache.util'
+import { IndexedDBStorage, IStorage, LocalStorage, MemoryStorage, StorageKeyType, StorageType } from '../../core/storage'
+import { CacheEntry, CacheUtils } from '../../core/storage/utils/cache.util'
 import { CacheConfig, CreateApiClientOptions } from '../types/api.interface'
 import { EndpointConfig } from '../types/endpoint.interface'
 import { QueryOptions } from '../types/query.interface'

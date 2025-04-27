@@ -1,8 +1,8 @@
 import { combineLatest, merge, Observable, of, OperatorFunction, pipe, Subject } from 'rxjs'
 import { catchError, filter, map, share, switchMap, take, withLatestFrom } from 'rxjs/operators'
 
+import { IStorage } from '../../core/storage'
 import { Action, ActionsResult, Dispatcher, DispatchFunction, ExtractResultType, WatcherFunction } from '../dispatcher/dispatcher.module'
-import { IStorage } from '../storage'
 import { ChunkRequestConsistent, chunkRequestConsistent, ChunkRequestParallel, chunkRequestParallel } from './utils'
 
 /**
