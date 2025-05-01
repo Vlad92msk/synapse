@@ -27,9 +27,9 @@ export type EffectBase<TDispatchers extends Record<string, Dispatcher<any, any>>
  */
 export type Effect<
   TState extends Record<string, any> = any,
-  TDispatchers extends Record<string, Dispatcher<any, any>> = {},
-  TServices extends Record<string, any> = {},
-  TConfig extends Record<string, any> = {},
+  TDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>,
+  TServices extends Record<string, any> = Record<string, never>,
+  TConfig extends Record<string, any> = Record<string, never>,
 > = (action$: Observable<Action>, state$: Observable<TState>, dispatchers: TDispatchers, services: TServices, config: TConfig) => Observable<unknown>
 
 /**
