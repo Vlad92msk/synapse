@@ -1,4 +1,4 @@
-import { StorageType } from '../../core/storage'
+import { StorageType } from '../../core'
 import { CreateEndpoint, EndpointConfig } from './endpoint.interface'
 
 /**

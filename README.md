@@ -1,15 +1,29 @@
 # Synapse
 
-Synapse — это библиотека управления состоянием и API-клиент для современных фронтенд-приложений.
-На данный момент - это бета-версия.
+Synapse — это набор инструментов для управления состоянием + API-клиент.
 
 ## Особенности
 
+- **Не привязан к конкретному фреймворку**: Вы можете использовать Synapse в контексте любого фреймворка или независимо от него  
 - **Разнообразные адаптеры хранилищ**: Выбирайте между Memory, LocalStorage или IndexedDB в зависимости от ваших потребностей
-- **Селекторы в стиле Redux**: Создавайте и комбинируйте селекторы для вычисляемых значений на основе состояния
-- **Надежный API-клиент**: Управляйте API-запросами с кешированием, логикой повторных попыток и отслеживанием запросов
+- **Различный способ получения данных**: Создавайте и комбинируйте селекторы для вычисляемых значений на основе состояния в стиле Redux или просто подписывайтесь на конкретное свойство в хранилище
+  - Возможность создания вычисляемых селекторов в стиле Redux
+  - Возможность прямой подписки на конкретное свойство в хранилище
+  - Возможность подписки на реактивное состояние
+- **Надежный API-клиент**: Создайте удобный API-клиент для вашего приложения (похож на RTK Query)
 - **Поддержка middleware**: Расширяйте функциональность с помощью пользовательских middleware
 - **Система плагинов**: Используйте готовые или создавайте собственные плагины для расширения функциональности
+- **Отдельные возможности для реактивного подхода**: Возможность гибкой работы с api-запросами в стиле Redux-Observable и RxJS
+
+## Автор
+
+**Владислав** — Frontend Developer (TypeScript, React)
+
+- [LinkedIn](https://www.linkedin.com/in/vlad-firsov/)
+- [GitHub](https://github.com/Vlad92msk/)
+- [Telegram](https://t.me/Vllad92)
+
+Нахожусь в поиске новых карьерных возможностей 🔎
 
 ## Установка
 
@@ -23,13 +37,66 @@ pnpm add @vlad92msk/synapse
 
 ## Быстрый старт
 
+Импорты:
+```typescript
+// Инструменты создания и управления хранилищем
+import {
+  // Хранилища
+  MemoryStorage,
+  IndexedDBStorage,
+  LocalStorage,
+
+  // Интерфейсы для хранилищ
+  IStorage,
+
+  // middleware для хранилища
+  broadcastMiddleware,
+
+  // Для создания кастомных плагинов хранилища
+  StoragePluginModule,
+  IStoragePlugin,
+  PluginContext,
+  StorageKeyType,
+
+  // Для создания кастомных middlewares хранилища
+  Middleware,
+  MiddlewareAPI,
+  NextFunction,
+
+  // Модуль создания вычисляемых селекторов в Redux стиле
+  SelectorModule,
+} from '@vlad92msk/synapse/core'
+
+// Инструменты для использования реактивного подхода (немного похоже на Redux-Observable)
+import { 
+  // Инструменты для создания Dispatcher
+  createDispatcher,
+  loggerDispatcherMiddleware,
+
+  // Инструменты для создания Effects (напоминает Redux-Observable)
+  EffectsModule, 
+  combineEffects, 
+  createEffect,
+  ofType,
+  ofTypes,
+  selectorMap,
+  validateMap
+} from '@vlad92msk/synapse/reactive';
+
+// Инструменты для работы с api
+import { ApiClient, ResponseFormat } from '@vlad92msk/synapse/api'
+
+// Несколько инструментов для удобного использования в React
+import { useStorageSubscribe, useSelector } from '@vlad92msk/synapse/react'
+```
+
 Вот простой пример использования Synapse с React:
 
 ```tsx
-import { MemoryStorage } from 'synapse';
-import { useEffect, useState } from 'react';
+import { IndexedDBStorage, LocalStorage, MemoryStorage } from '@vlad92msk/synapse/core'
+import { useEffect, useState } from 'react'
 
-// Создаем экземпляр хранилища
+// Создаем экземпляр хранилища (MemoryStorage / LocalStorage / IndexedDBStorage)
 const counterStorage = await new MemoryStorage({
   name: 'counter',
   initialState: { value: 0 }
@@ -57,12 +124,11 @@ function Counter() {
   );
 }
 ```
+Более подробные примеры можно найти в src/examples:
+- пример использования api-client(api-example.md)
+- пример комбинированного использования хранилищ всех типов, демонтсрация возможностей подписок и работы базовых middlewares(base-storage-example.md)
+- расширенный пример комплексного использования, включая реактивный подход (pokemons)
 
-## Документация
-
-- [Адаптеры хранилищ](./src/doc/storage.md) - Информация о различных типах хранилищ (Memory, LocalStorage, IndexedDB)
-- [Селекторы](./src/doc/selectors.md) - Создание и комбинирование селекторов для производных состояний
-- [API-клиент](./src/doc/api-client.md) - Выполнение HTTP-запросов с кешированием и расширенными функциями
 
 ## Адаптеры хранилищ
 
@@ -243,6 +309,174 @@ request.waitWithCallbacks({
 });
 ```
 
+## Реактивный подход
+Synapse предоставляет инструменты для использования реактивного подхода, напоминающий Redux-Observable.
+
+Пример создания Диспетчера:
+```typescript
+import { createDispatcher, loggerDispatcherMiddleware } from '@vlad92msk/synapse/reactive'
+import { PokemonStorage } from '../storages/pokemon.storage'
+import { createPokemonAlertMiddleware } from '../middlewares/pokenon.middlewares'
+import { Pokemon } from '../types'
+
+// const myWorker = new Worker('path-to-my-worker')
+
+export interface AlertPayload {
+  message: string
+  type: 'info' | 'warning' | 'error' | 'success'
+  duration?: number // Длительность показа в миллисекундах
+}
+
+// Функция для создания диспетчера
+export function createPokemonDispatcher(storage: PokemonStorage) {
+  // Создаем middleware: логгер
+  const loggerMiddleware = loggerDispatcherMiddleware({
+    collapsed: true, // Сворачиваем группы в консоли для компактности
+    colors: {
+      title: '#3498db', // Кастомный синий цвет для заголовка
+    },
+    duration: true,
+    diff: true,
+    showFullState: true,
+  })
+
+  // Создаем middleware: alertM (просто для примера)
+  const alertM = createPokemonAlertMiddleware()
+
+  return createDispatcher({
+    storage,
+    middlewares: [loggerMiddleware, alertM],
+  }, (storage, { createWatcher, createAction }) => ({
+    // watcher для отслеживания текущего ID
+    watchCurrentId: createWatcher({...}),
+    // Загрузка покемона по ID
+    loadPokemon: createAction<number, { id: number }>({...}),
+
+    loadPokemonRequest: createAction<number, { id: number }>({...}),
+    // Успешное получение данных
+    success: createAction<{ data?: Pokemon}, { data?: Pokemon }>({...}, {
+      // Функция мемоизации (пока не тестировал)
+      // memoize: (currentArgs: any[], previousArgs: any[], previousResult: any) => true,
+      // Веб-воркер для выполнения действия (пока не тестировал)
+      // worker: myWorker,
+    }),
+    failure: createAction<Error, { err: Error }>({...}),
+    next: createAction<void, { id: number }>({...}),
+    prev: createAction<void, { id: number }>({...}),
+    showAlert: createAction<AlertPayload, void>({...}),
+  }))
+  // Альтернативный вариант добавления:
+  // .use(logger)
+  // .use(alertM)
+}
+
+// Экспортируем тип диспетчера
+export type PokemonDispatcher = ReturnType<typeof createPokemonDispatcher>
+```
+
+Пример создания Эффекта:
+```typescript
+import { EMPTY, from, mapTo, of, tap } from 'rxjs'
+import { catchError, map, switchMap } from 'rxjs/operators'
+
+import {
+  ofType,           // Слушает 1 событие
+  ofTypes,          // Слушает несколько событий
+  createEffect,     // Функция создания эффекта
+  combineEffects,   // Объединяет несколько эффектов в один
+  selectorMap,      // Выбор частей состояния с помощью селекторов
+  validateMap       // Оператор для удобной работы с запросом
+} from '@vlad92msk/synapse/reactive'
+import { pokemonEndpoints } from '../api.md'
+import { AppConfig } from '../app.config'
+import { PokemonDispatcher } from '../pokemon.dispatcher'
+import { Pokemon, PokemonState } from '../types'
+
+// Определяем типы для наших эффектов
+type PokemonDispatcherType = { pokemonDispatcher: PokemonDispatcher }
+type PokemonApiType = { pokemonApi: typeof pokemonEndpoints }
+
+// Эффект для навигации
+export const navigationEffect = createEffect<PokemonState, PokemonDispatcherType, PokemonApiType, AppConfig>((action$, state$, { pokemonDispatcher }, _, config) =>
+  action$.pipe(
+    ofTypes([pokemonDispatcher.dispatch.next, pokemonDispatcher.dispatch.prev]),
+    switchMap((action) => {
+      const { id } = action.payload
+      return of(() => pokemonDispatcher.dispatch.loadPokemon(id))
+    }),
+  ),
+)
+
+// Эффект для отслеживания изменений ID
+export const watchIdEffect = createEffect<PokemonState, PokemonDispatcherType, PokemonApiType, AppConfig>((action$, state$, { pokemonDispatcher }) =>
+  action$.pipe(
+    ofType(pokemonDispatcher.watchers.watchCurrentId),
+    selectorMap(
+      state$,
+      //... selectors
+    ),
+    // tap(([action, [loading, currentId]]) => {...}),
+    mapTo(null),
+  ),
+)
+
+// Эффект для загрузки данных покемона
+export const loadPokemonEffect = createEffect<PokemonState, PokemonDispatcherType, PokemonApiType, AppConfig>((
+  action$,                // Поток событий 
+  state$,                 // Поток состояния
+  { pokemonDispatcher },  // Диспетчеры которые мы передали
+  { pokemonApi },         // различные API которые мы передали
+  config                   // Конфигурация, которую мы передали
+  ) =>
+  action$.pipe(
+    // Я использую отдельный action loadPokemon который уведомляет о намерении сделать запрос
+    // Для того, чтобы не устанавливать loading сразу
+    ofType(pokemonDispatcher.dispatch.loadPokemon),
+    selectorMap(state$, (state) => state.currentId),
+    validateMap({
+      apiCall: ([action, [currentId]]) => {
+        const { id } = action.payload
+
+        return from(
+          // Использую waitWithCallbacks чтобы иметь доступ к методу loading
+          pokemonApi.fetchPokemonById.request({ id }).waitWithCallbacks({
+            // Вызывается только тогда, когда запрос реально отправляется, а не берется из кэша
+            loading: (request) => {
+              // Именно в в этот момент установится loading и другая необходимая логика
+              pokemonDispatcher.dispatch.loadPokemonRequest(id)
+            },
+            // Можно использовать так:
+            // success: (data, request) => {
+            //   console.log('SUCCESS', request)
+            //   pokemonDispatcher.dispatch.success({ data })
+            // },
+            // error: (error, request) => {
+            //   console.log('ERROR', error, request)
+            //   pokemonDispatcher.dispatch.failure(error!)
+            // },
+          }),
+          // Можно более стандартным способом:
+        ).pipe(
+          switchMap(({ data }) => {
+            return of(pokemonDispatcher.dispatch.success({ data }))
+          }),
+          catchError((err) => of(pokemonDispatcher.dispatch.failure(err))),
+        )
+      },
+    }),
+  ),
+)
+
+// Объединяем все эффекты в один и экспортируем
+export const pokemonEffects = combineEffects(
+  navigationEffect,
+  watchIdEffect,
+  loadPokemonEffect
+)
+```
+Полноценный рабочий пример можно найти в папке src/examples/pokemons
+Там показано еще больше возможностей которые дает этот подход.
+
 ## Middleware и плагины
 
 Synapse предоставляет две системы расширения функциональности: middleware и плагины. Они выполняют разные роли и имеют разную область применения.
@@ -289,7 +523,7 @@ Result ← BroadcastMiddleware ← ShallowCompare ← Batching ← Base Operatio
 #### Создание пользовательского middleware
 
 ```typescript
-import { Middleware } from '@vlad92msk/synapse';
+import { Middleware } from '@vlad92msk/synapse/core';
 
 const loggingMiddleware = (): Middleware => ({
   // Уникальное имя middleware
@@ -332,7 +566,7 @@ const loggingMiddleware = (): Middleware => ({
 Плагины в Synapse представляют собой систему обработчиков событий хранилища с определенным жизненным циклом. В отличие от middleware, они не формируют цепочку, а работают как независимые "наблюдатели" за операциями хранилища.
 
 ```typescript
-import { IStoragePlugin, StoragePluginModule } from '@vlad92msk/synapse';
+import { IStoragePlugin, StoragePluginModule } from '@vlad92msk/synapse/core';
 
 // Создаем модуль плагинов
 const plugins = new StoragePluginModule(

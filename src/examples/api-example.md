@@ -1,12 +1,9 @@
-## Модуль управления запросами
-
-
-
+## Отдельно покажу более детальную настройку ApiClient
 ```tsx
 'use client'
 
-import { useCallback, useState } from 'react'
-import { ApiClient, ResponseFormat } from 'synapse'
+import { CSSProperties, useCallback, useState } from 'react'
+import { ApiClient, ResponseFormat } from '@vlad92msk/synapse/api'
 
 export interface PokemonListResponse {
   count: number
@@ -21,7 +18,40 @@ export interface PokemonListResponse {
 export interface PokemonDetails {
   id: number
   name: string
-  //...
+  height: number
+  weight: number
+  sprites: {
+    front_default: string
+    back_default: string
+    other?: {
+      'official-artwork'?: {
+        front_default: string
+      }
+    }
+  }
+  types: {
+    slot: number
+    type: {
+      name: string
+      url: string
+    }
+  }[]
+  abilities: {
+    ability: {
+      name: string
+      url: string
+    }
+    is_hidden: boolean
+    slot: number
+  }[]
+  stats: {
+    base_stat: number
+    effort: number
+    stat: {
+      name: string
+      url: string
+    }
+  }[]
 }
 
 export interface PokemonSearchParams {
@@ -123,10 +153,21 @@ export const pokemonApi = await api.init()
 // Получение эндпоинтов
 export const pokemonEndpoints = pokemonApi.getEndpoints()
 
-export function Example1() {
-  const [currentPokemon, setCurrentPokemon] = useState<PokemonDetails | undefined>(undefined)
+// Стили
+const btn: CSSProperties = { background: '#c7c6c6', color: 'black', padding: '5px', borderRadius: '5px' }
+const flexColumn: CSSProperties = { display: 'flex', flexDirection: 'column' }
+const img: CSSProperties = { position: 'absolute', objectFit: 'contain' }
+const contentContainer: CSSProperties = { ...flexColumn, position: 'relative', width: '400px', height: '400px', marginTop: '10px' }
+const actionContainer: CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }
+
+
+export function SimplePokemonViewer() {
+  const [currentId, setCurrentId] = useState(1)
+  const [state, setCurrentPokemon] = useState<PokemonDetails | undefined>(undefined)
+  const [status, setStatus] = useState<'idl'| 'loading' | 'success' | 'error'>('idl')
 
   const onPokemon = useCallback(async (id: number) => {
+    setCurrentId(id)
     // Создаем запрос
     const request = pokemonEndpoints.getPokemonById.request(
       { id },
@@ -152,15 +193,18 @@ export function Example1() {
           break
         }
         case 'loading': {
+          setStatus('loading')
           console.log('запрос loading')
           break
         }
         case 'success': {
           console.log('запрос success')
+          setStatus('success')
           setCurrentPokemon(state.data)
           break
         }
         case 'error': {
+          setStatus('error')
           console.log('запрос error')
           break
         }
@@ -181,29 +225,29 @@ export function Example1() {
   }, [])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
-      <h2>{currentPokemon?.name}</h2>
-      <img src={currentPokemon?.sprites.front_default} alt={currentPokemon?.name} />
-      <div>
-        Types:
-        {' '}
-        {currentPokemon?.types.map((t) => t.type.name).join(', ')}
-      </div>
-      <div>
-        <button
-          onClick={() => onPokemon((currentPokemon?.id || 0) + 1)}
-        >
-          Next
-        </button>
-        <span>
-          Pokemon #
-          {currentPokemon?.id}
-        </span>
-        <button
-          onClick={() => onPokemon((currentPokemon?.id || 0) - 1)}
-        >
-          Previous
-        </button>
+    <div style={flexColumn}>
+      {status === 'loading' ? (
+        <p>Loading Pokémon...</p>
+      ) : state ? (
+        <div style={contentContainer}>
+          <h2>{`Name: ${state.name}`}</h2>
+
+          <div style={{ ...flexColumn, marginTop: '10px' }}>
+            <p>{`Height: ${state.height / 10}`}</p>
+            <p>{`Weight: ${state.weight / 10}`}</p>
+          </div>
+          <img
+            style={img}
+            src={state.sprites.other?.['official-artwork']?.front_default || state.sprites.front_default}
+            alt={state.name}
+          />
+        </div>
+      ) : null}
+
+      <div style={actionContainer}>
+        <button style={btn} onClick={() => onPokemon(currentId - 1)}>{'<--'}</button>
+        <strong>{`#${state?.id}`}</strong>
+        <button style={btn} onClick={() => onPokemon(currentId + 1)}>{'-->'}</button>
       </div>
     </div>
   )

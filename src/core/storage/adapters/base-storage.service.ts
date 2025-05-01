@@ -184,7 +184,10 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
       // Применяем обновление
       updater(newState)
 
+      // Определяем, какие ключи изменились
       const changedKeys = Object.keys(newState).filter((key) => !this.isEqual(currentState[key], newState[key]))
+
+      // Если нет изменений, завершаем метод
       if (changedKeys.length === 0) return
 
       // Обрабатываем каждый измененный ключ
@@ -209,21 +212,51 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
         },
       })
 
-      // Уведомляем подписчиков
-      this.notifySubscribers(BaseStorage.GLOBAL_SUBSCRIPTION_KEY, {
-        type: StorageEvents.STORAGE_UPDATE,
-        key: changedKeys,
-        value: result,
+      // Преобразуем результат в объект для удобной работы
+      let updatedValues: Record<string, any> = {}
+
+      if (Array.isArray(result)) {
+        // Если результат - массив обновлений
+        result.forEach((update) => {
+          if (update && typeof update === 'object' && 'key' in update && 'value' in update) {
+            updatedValues[update.key as string] = update.value
+          }
+        })
+      } else if (result && typeof result === 'object') {
+        // Если результат - объект с ключами и значениями
+        updatedValues = { ...result }
+      }
+
+      // Определяем, какие ключи действительно изменились после обработки middleware
+      const actuallyChangedKeys = Object.keys(updatedValues).filter((key) => !this.isEqual(currentState[key], updatedValues[key]))
+
+      // Если нет реальных изменений после обработки middleware, завершаем работу
+      if (actuallyChangedKeys.length === 0) return
+
+      // Создаем объект только с действительно измененными значениями
+      const finalUpdates: Record<string, any> = {}
+      actuallyChangedKeys.forEach((key) => {
+        finalUpdates[key] = updatedValues[key]
       })
 
-      Object.entries(result).forEach(([key, finalResult]) => {
+      // Уведомляем подписчиков о глобальном обновлении, только если есть реальные изменения
+      this.notifySubscribers(BaseStorage.GLOBAL_SUBSCRIPTION_KEY, {
+        type: StorageEvents.STORAGE_UPDATE,
+        key: actuallyChangedKeys,
+        value: finalUpdates,
+      })
+
+      // Уведомляем подписчиков только для действительно измененных ключей
+      Object.entries(finalUpdates).forEach(([key, finalResult]) => {
         this.notifySubscribers(key, finalResult)
       })
+
+      // Отправляем событие только с реально измененными данными
       await this.emitEvent({
         type: StorageEvents.STORAGE_UPDATE,
         payload: {
-          state: result,
-          key: changedKeys,
+          state: finalUpdates,
+          key: actuallyChangedKeys,
         },
       })
     } catch (error) {
@@ -330,9 +363,6 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
   }
 
   private subscribeByKey(key: string, callback: (value: any) => void): VoidFunction {
-    // Уникальный ID для отладки подписки
-    const subscriptionId = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-
     // Создаем коллекцию подписчиков, если ее еще нет
     if (!this.subscribers.has(key)) {
       this.subscribers.set(key, new Set())
@@ -369,17 +399,39 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
   }
 
   private subscribeBySelector<R>(pathSelector: PathSelector<T, R>, callback: (value: R) => void): VoidFunction {
-    // Получаем путь из селектора
+    // Получаем базовый путь из селектора (это будет наиболее верхний уровень объекта)
     const dummyState = this.createDummyState()
-    const path = this.extractPath(pathSelector, dummyState)
+    const basePath = this.extractPath(pathSelector, dummyState)
 
-    // Создаем обертку для колбэка, которая правильно приводит тип
-    const wrappedCallback = (value: any) => {
-      callback(value as R)
+    // Сохраняем оригинальный селектор
+    const originalSelector = pathSelector
+
+    // Создаем обертку для колбэка, которая применяет оригинальный селектор к текущему состоянию
+    const wrappedCallback = async (value: any) => {
+      try {
+        // Получаем текущее полное состояние
+        const currentState = (await this.getState()) as T
+
+        // Если значение undefined или null, просто передаем его в callback
+        if (value === undefined || value === null) {
+          callback(value as R)
+          return
+        }
+
+        // Применяем оригинальный селектор к текущему состоянию
+        const selectedValue = originalSelector(currentState)
+
+        // Передаем результат в callback
+        callback(selectedValue as R)
+      } catch (error) {
+        this.logger?.error('Error in selector callback', { basePath, error })
+        // В случае ошибки передаем исходное значение
+        callback(value as R)
+      }
     }
 
-    // Используем полученный путь для подписки
-    return this.subscribeByKey(path, wrappedCallback)
+    // Используем полученный базовый путь для подписки
+    return this.subscribeByKey(basePath, wrappedCallback)
   }
 
   // Вспомогательные методы
@@ -394,17 +446,47 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
   }
 
   private extractPath(selector: (state: T) => any, dummyState: T): string {
-    const paths: string[] = []
-    const handler = {
+    let lastAccessedPath = ''
+
+    // Создаем прокси с рекурсивным обработчиком
+    const createProxyHandler = (path = ''): ProxyHandler<any> => ({
       get: (target: any, prop: string) => {
-        paths.push(prop)
-        return target[prop]
+        // Игнорируем служебные свойства Symbol
+        if (typeof prop === 'symbol') {
+          return Reflect.get(target, prop)
+        }
+
+        // Формируем текущий путь
+        const currentPath = path ? `${path}.${prop}` : prop
+
+        // Обновляем последний доступный путь
+        lastAccessedPath = currentPath
+
+        // Возвращаем новый прокси для вложенного свойства
+        return new Proxy({}, createProxyHandler(currentPath))
       },
+
+      // Обработка опциональной цепочки (?.)
+      has: (target: any, prop: string) => {
+        // Симулируем, что свойство существует для работы опциональной цепочки
+        return true
+      },
+    })
+
+    try {
+      // Применяем селектор к прокси для отслеживания пути
+      selector(new Proxy(dummyState, createProxyHandler()))
+    } catch (error) {
+      // Игнорируем ошибки - они могут возникать из-за доступа к несуществующим свойствам
     }
 
-    const proxiedState = new Proxy(dummyState, handler)
-    selector(proxiedState)
-    return paths.join('.')
+    // Получаем первую часть пути (до первой точки)
+    const basePathParts = lastAccessedPath.split('.')
+    if (basePathParts.length > 0) {
+      return basePathParts[0]
+    }
+
+    return lastAccessedPath
   }
 
   protected notifySubscribers(key: StorageKeyType, value: any): void {

@@ -1,8 +1,8 @@
 import { combineLatest, merge, Observable, of, OperatorFunction, pipe, Subject } from 'rxjs'
 import { catchError, filter, map, share, switchMap, take, withLatestFrom } from 'rxjs/operators'
 
-import { IStorage } from '../../core/storage'
-import { Action, ActionsResult, Dispatcher, DispatchFunction, ExtractResultType, WatcherFunction } from '../dispatcher/dispatcher.module'
+import { IStorage } from '../../core'
+import { Action, ActionsResult, Dispatcher, DispatchFunction, ExtractResultType, WatcherFunction } from '../dispatcher'
 import { ChunkRequestConsistent, chunkRequestConsistent, ChunkRequestParallel, chunkRequestParallel } from './utils'
 
 /**
@@ -16,7 +16,7 @@ export interface TypedAction<P> extends Action<P> {
 /**
  * Тип для базового эффекта без доступа к состоянию
  */
-export type EffectBase<TDispatchers extends Record<string, Dispatcher<any, any>> = {}, TServices extends Record<string, any> = {}> = (
+export type EffectBase<TDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>, TServices extends Record<string, any> = Record<string, never>> = (
   action$: Observable<Action>,
   dispatchers: TDispatchers,
   services: TServices,
@@ -195,6 +195,7 @@ export function validateMap<T, TResult = any>({
        */
       if (!conditionMet) {
         if (Array.isArray(skipAction)) {
+          // eslint-disable-next-line no-unsafe-optional-chaining
           return of(...skipAction?.filter(Boolean).map((action) => (typeof action === 'function' ? action() : action)))
         }
         return of(typeof skipAction === 'function' ? skipAction() : skipAction)
@@ -206,139 +207,14 @@ export function validateMap<T, TResult = any>({
 }
 
 /**
- * Базовый класс для управления эффектами без поддержки состояния
- * Оставлен для обратной совместимости
- */
-export class EffectsModuleBase<TDispatchers extends Record<string, Dispatcher<any, any>> = {}, TServices extends Record<string, any> = {}> {
-  private effects: EffectBase<TDispatchers, TServices>[] = []
-  private subscriptions: Array<{ unsubscribe: VoidFunction }> = []
-  private running = false
-  private action$ = new Subject<Action>()
-
-  /**
-   * Создает модуль эффектов
-   * @param dispatchers Объект с диспетчерами
-   * @param services Объект с сервисами
-   */
-  constructor(
-    private dispatchers: TDispatchers,
-    private services: TServices = {} as TServices,
-  ) {
-    // Подписываемся на действия от всех диспетчеров
-    this.subscribeToDispatchers()
-  }
-
-  /**
-   * Подписывается на действия от всех диспетчеров
-   */
-  private subscribeToDispatchers() {
-    for (const [_, dispatcher] of Object.entries(this.dispatchers)) {
-      const subscription = dispatcher.actions.subscribe((action) => {
-        this.action$.next(action)
-      })
-
-      this.subscriptions.push(subscription)
-    }
-  }
-
-  /**
-   * Добавляет эффект в модуль
-   * @param effect Эффект для добавления
-   * @returns Текущий модуль
-   */
-  add(effect: EffectBase<TDispatchers, TServices>): this {
-    this.effects.push(effect)
-
-    if (this.running) {
-      this.subscribeToEffect(effect)
-    }
-
-    return this
-  }
-
-  /**
-   * Добавляет несколько эффектов
-   * @param effects Эффекты для добавления
-   * @returns Текущий модуль
-   */
-  addEffects(effects: EffectBase<TDispatchers, TServices>[]): this {
-    effects.forEach((effect) => this.add(effect))
-    return this
-  }
-
-  /**
-   * Запускает все эффекты
-   * @returns Текущий модуль
-   */
-  start(): this {
-    if (this.running) {
-      return this
-    }
-
-    this.effects.forEach((effect) => this.subscribeToEffect(effect))
-    this.running = true
-
-    return this
-  }
-
-  /**
-   * Останавливает все эффекты
-   * @returns Текущий модуль
-   */
-  stop(): this {
-    this.subscriptions.forEach((sub) => sub.unsubscribe())
-    this.subscriptions = []
-    this.running = false
-
-    return this
-  }
-
-  /**
-   * Подписывается на конкретный эффект
-   * @param effect Эффект для подписки
-   */
-  private subscribeToEffect(effect: EffectBase<TDispatchers, TServices>): void {
-    try {
-      // Запускаем эффект с обработкой ошибок
-      const output$ = effect(this.action$.asObservable(), this.dispatchers, this.services).pipe(
-        catchError((err) => {
-          console.error('Error in effect:', err)
-          return of(null)
-        }),
-      )
-
-      // Подписываемся на результат
-      const subscription = output$.subscribe((result) => {
-        if (result === null || result === undefined) {
-          return // Игнорируем null и undefined
-        }
-
-        // Если результат - функция, вызываем ее
-        if (typeof result === 'function') {
-          try {
-            result()
-          } catch (callError) {
-            console.error('Error calling effect result function:', callError)
-          }
-        }
-      })
-
-      this.subscriptions.push(subscription)
-    } catch (setupError) {
-      console.error('Error setting up effect:', setupError)
-    }
-  }
-}
-
-/**
  * Класс для управления эффектами с поддержкой доступа к состоянию и конфигурации
  * Основной класс, который следует использовать
  */
 export class EffectsModule<
   TState extends Record<string, any> = any,
-  TDispatchers extends Record<string, Dispatcher<any, any>> = {},
-  TServices extends Record<string, any> = {},
-  TConfig extends Record<string, any> = {},
+  TDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>,
+  TServices extends Record<string, any> = Record<string, never>,
+  TConfig extends Record<string, any> = Record<string, never>,
 > {
   private effects: Effect<TState, TDispatchers, TServices, TConfig>[] = []
   private subscriptions: Array<{ unsubscribe: VoidFunction }> = []
@@ -352,7 +228,7 @@ export class EffectsModule<
 
   /**
    * Создает модуль эффектов с доступом к состоянию и конфигурации
-   * @param state Тип состояния (для дженериков)
+   * @param storage Тип состояния (для дженериков)
    * @param dispatchers Объект с диспетчерами
    * @param services Объект с сервисами
    * @param config Глобальная конфигурация для всех эффектов
@@ -502,7 +378,7 @@ export function createEffect<
   TState extends Record<string, any>,
   TDispatchers extends Record<string, Dispatcher<any, any>>,
   TServices extends Record<string, any>,
-  TConfig extends Record<string, any> = {},
+  TConfig extends Record<string, any> = Record<string, never>,
 >(effect: Effect<TState, TDispatchers, TServices, TConfig>): Effect<TState, TDispatchers, TServices, TConfig> {
   return effect
 }
@@ -516,7 +392,7 @@ export function combineEffects<
   TState extends Record<string, any>,
   TDispatchers extends Record<string, Dispatcher<any, any>>,
   TServices extends Record<string, any>,
-  TConfig extends Record<string, any> = {},
+  TConfig extends Record<string, any> = Record<string, never>,
 >(...effects: Effect<TState, TDispatchers, TServices, TConfig>[]): Effect<TState, TDispatchers, TServices, TConfig> {
   return (action$, state$, dispatchers, services, config) => {
     const outputs = effects.map((effect) => {

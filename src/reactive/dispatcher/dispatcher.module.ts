@@ -1,7 +1,39 @@
 import { Observable, Subject } from 'rxjs'
 
-import { IStorage } from '../../core/storage'
+import type { IStorage } from '../../core'
 import { TypedAction } from '../effects'
+
+/**
+ * Расширенное API для middleware
+ */
+export interface EnhancedMiddlewareAPI<T extends Record<string, any>> {
+  // Базовые возможности
+  getState: () => Promise<T>
+  dispatch: (action: Action) => Promise<any>
+
+  // Доступ к хранилищу напрямую
+  storage: IStorage<T>
+
+  // Доступ к потоку действий
+  actions$: Observable<Action>
+
+  // Доступ к зарегистрированным действиям
+  actions: Record<string, DispatchFunction<any, any>>
+
+  // Доступ к зарегистрированным наблюдателям
+  watchers: Record<string, WatcherFunction<any>>
+
+  // Вспомогательные методы
+  findActionByType: (actionType: string) => DispatchFunction<any, any> | undefined
+  findWatcherByType: (actionType: string) => WatcherFunction<any> | undefined
+}
+
+/**
+ * Расширенное определение middleware
+ */
+export interface EnhancedMiddleware<T extends Record<string, any> = any> {
+  (api: EnhancedMiddlewareAPI<T>): (next: (action: Action) => Promise<any>) => (action: Action) => Promise<any>
+}
 
 /**
  * Базовая структура действия
@@ -120,6 +152,23 @@ interface DispatcherOptions<T extends Record<string, any>> {
   storage: IStorage<T>
   // Опциональные параметры
   worker?: Worker
+  // DispatcherMiddleware для обработки действий
+  middlewares?: EnhancedMiddleware<T>[]
+}
+
+/**
+ * Интерфейс для API middleware
+ */
+export interface DispatcherMiddlewareAPI<T extends Record<string, any>> {
+  getState: () => Promise<T>
+  dispatch: (action: Action) => Promise<any>
+}
+
+/**
+ * Интерфейс для middleware
+ */
+export interface DispatcherMiddleware<T extends Record<string, any> = any> {
+  (api: DispatcherMiddlewareAPI<T>): (next: (action: Action) => Promise<any>) => (action: Action) => Promise<any>
 }
 
 /**
@@ -141,11 +190,54 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
   // Ссылка на хранилище
   private storage: IStorage<T>
 
+  // Только один массив для хранения инициализированных middleware
+  private middlewareFunctions: Array<(next: (action: Action) => Promise<any>) => (action: Action) => Promise<any>> = []
+
+  // API для инициализации middleware
+  private middlewareAPI: EnhancedMiddlewareAPI<T>
+
   /**
    * Создает новый экземпляр Dispatcher
    */
   constructor(private options: DispatcherOptions<T>) {
     this.storage = options.storage
+
+    // Создаем API для middleware сразу
+    this.middlewareAPI = {
+      getState: () => this.storage.getState(),
+      dispatch: async (action: Action) => {
+        this.actions$.next(action)
+        return action.payload
+      },
+      storage: this.storage,
+      actions$: this.actions,
+      actions: this.dispatch,
+      watchers: this.watchers,
+      findActionByType: (type) => this.findActionByType(type),
+      findWatcherByType: (type) => this.findWatcherByType(type),
+    }
+
+    // Если есть middleware в options, добавляем их
+    if (options.middlewares && options.middlewares.length > 0) {
+      this.use(...options.middlewares)
+    }
+  }
+
+  /**
+   * Добавляет middleware в цепочку обработки
+   */
+  public use(...middlewares: EnhancedMiddleware<T>[]): this {
+    // Инициализируем каждый middleware и добавляем только инициализированную версию
+    for (let i = 0; i < middlewares.length; i++) {
+      try {
+        // Инициализируем middleware с API
+        const initializedMiddleware = middlewares[i](this.middlewareAPI)
+        this.middlewareFunctions.push(initializedMiddleware)
+      } catch (error) {
+        console.error(`Error initializing middleware [${i}]:`, error)
+      }
+    }
+    return this
   }
 
   /**
@@ -170,10 +262,27 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
   }
 
   /**
+   * Находит действие по типу
+   */
+  public findActionByType(actionType: string): DispatchFunction<any, any> | undefined {
+    return Object.values(this.dispatch).find((action) => {
+      return action.actionType.split(`[${this.storage.name}]`)[1] === actionType
+    })
+  }
+
+  /**
+   * Находит наблюдатель по типу
+   */
+  public findWatcherByType(actionType: string): WatcherFunction<any> | undefined {
+    return Object.values(this.watchers).find((watcher) => watcher.actionType === actionType)
+  }
+
+  /**
    * Создает действие
    */
   public createAction<TParams, TResult>(actionConfig: ActionDefinition<TParams, TResult>, executionOptions?: ActionExecutionOptions): DispatchFunction<TParams, TResult> {
     const actionType = `[${this.storage.name}]${actionConfig.type}`
+
     // Для мемоизации храним последние аргументы и результат
     let lastArgs: TParams[] | null = null
     let lastResult: TResult | null = null
@@ -189,26 +298,63 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
         }
       }
 
+      // Создаем объект действия
+      const actionObject: Action<TResult> = {
+        type: actionType,
+        meta: actionConfig.meta,
+      }
+
+      // Применяем middleware цепочку
       let result: TResult
 
-      // Выполняем действие в worker или напрямую
-      if (executionOptions?.worker) {
-        result = await this.executeInWorker(executionOptions.worker, actionType, args, actionConfig.action)
+      if (this.middlewareFunctions.length > 0) {
+        // Базовая функция выполнения действия
+        // Строим цепочку middleware в обратном порядке
+        let chain = async (action: Action): Promise<TResult> => {
+          if (executionOptions?.worker) {
+            return this.executeInWorker(executionOptions.worker, actionType, args, actionConfig.action)
+          } else {
+            return Promise.resolve(actionConfig.action(params))
+          }
+        }
+
+        // Проходим по middleware в обратном порядке
+        // Важно: сначала создаем всю цепочку, затем выполняем
+        for (let i = this.middlewareFunctions.length - 1; i >= 0; i--) {
+          const currentMiddleware = this.middlewareFunctions[i]
+          const nextChain = chain // Сохраняем предыдущую цепочку
+
+          // Создаем новую цепочку, которая вызывает текущий middleware,
+          // передавая предыдущую цепочку как функцию next
+          chain = async (action: Action) => {
+            // Создаем функцию next для передачи в middleware
+            const next = async (nextAction: Action) => nextChain(nextAction)
+
+            // Получаем обработчик действия и сразу вызываем его
+            return currentMiddleware(next)(action)
+          }
+        }
+
+        // Выполняем действие через цепочку middleware
+        result = await chain(actionObject)
       } else {
-        // Обычное выполнение
-        result = await Promise.resolve(actionConfig.action(params))
+        // Выполняем действие напрямую без middleware
+        if (executionOptions?.worker) {
+          result = await this.executeInWorker(executionOptions.worker, actionType, args, actionConfig.action)
+        } else {
+          result = await actionConfig.action(params)
+        }
       }
+
+      // Обновляем объект действия результатом
+      actionObject.payload = result
 
       // Сохраняем аргументы и результат для мемоизации
       lastArgs = [...args]
       lastResult = result
 
       // Отправляем информацию о действии в поток
-      this.actions$.next({
-        type: actionType,
-        payload: result,
-        meta: actionConfig.meta,
-      })
+      this.actions$.next(actionObject)
 
       return result
     }
@@ -232,11 +378,11 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
 
     return dispatchFn as DispatchFunction<TParams, TResult>
   }
-
   /**
    * Создает watcher для отслеживания изменений в хранилище
    */
   public createWatcher<R>(config: WatcherDefinition<T, R>): WatcherFunction<R> {
+    // Логика остается без изменений
     const actionType = `[${this.storage.name}]${config.type}`
 
     // Создаем Subject для этого watcher'а
@@ -305,6 +451,7 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
     args: TParams[],
     fallbackAction?: (params: TParams) => Promise<TResult> | TResult,
   ): Promise<TResult> {
+    // Логика остается без изменений
     return new Promise((resolve, reject) => {
       const requestId = `${actionType}_${Date.now()}_${Math.random()}`
 
@@ -340,7 +487,7 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
 /**
  * Функция для создания типизированного диспетчера
  */
-export function createTypedDispatcher<TState extends Record<string, any>, TActions extends ActionsSetupWithUtils<TState>>(
+export function createDispatcher<TState extends Record<string, any>, TActions extends ActionsSetupWithUtils<TState>>(
   options: DispatcherOptions<TState>,
   actionsSetup: TActions,
 ): Dispatcher<TState, TActions> & {

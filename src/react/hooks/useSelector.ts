@@ -1,22 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 
-/**
- * Примеры использования:
- *
- * // Простой вариант (возвращает только значение)
- * const userData = useSelector(userSelector);
- *
- * // Расширенный вариант (возвращает значение и статус загрузки)
- * const { data: userData, isLoading } = useSelector(userSelector, { withLoading: true });
- *
- * // С начальным значением
- * const userData = useSelector(userSelector, { initialValue: { name: '' } });
- *
- * // С кастомной функцией сравнения
- * const userData = useSelector(userSelector, {
- *   equals: (a, b) => a?.id === b?.id && a?.name === b?.name
- * });
- */
 import type { SelectorAPI } from '../../core'
 
 interface UseSelectorOptions<T> {
@@ -29,69 +12,136 @@ interface UseSelectorOptions<T> {
 }
 
 /**
- * Хук для использования селекторов в компонентах React
- * @param selector Селектор, созданный через SelectorModule.createSelector
- * @param options Дополнительные опции
- * @returns Текущее значение из селектора или объект с данными и статусом загрузки
+ * Глобальный реестр селекторов с активными подписками.
+ * Предотвращает потерю подписок при размонтировании компонентов.
+ */
+const PERSISTENT_SUBSCRIPTIONS = new Map<
+  string,
+  {
+    selector: SelectorAPI<any>
+    unsubscribe: () => void
+    refCount: number
+  }
+>()
+
+/**
+ * Кеш идентификаторов для селекторов без toString
+ * Гарантирует стабильность ID между вызовами
+ */
+const SELECTOR_ID_CACHE = new WeakMap<SelectorAPI<any>, string>()
+
+/**
+ * Получает стабильный идентификатор селектора
+ */
+function getSelectorId<T>(selector: SelectorAPI<T>): string {
+  // Проверяем кеш идентификаторов
+  if (SELECTOR_ID_CACHE.has(selector)) {
+    return SELECTOR_ID_CACHE.get(selector)!
+  }
+
+  // Используем встроенный toString, если он доступен и возвращает строку
+  if (typeof selector.toString === 'function') {
+    const id = selector.toString()
+
+    // Проверяем, что результат toString - это не стандартный [object Object]
+    if (id !== '[object Object]' && typeof id === 'string') {
+      SELECTOR_ID_CACHE.set(selector, id)
+      return id
+    }
+  }
+
+  // Создаем уникальный идентификатор, если toString недоступен или не подходит
+  const generatedId = `selector_${Date.now()}_${Math.random().toString(36).slice(2)}`
+  SELECTOR_ID_CACHE.set(selector, generatedId)
+  return generatedId
+}
+
+/**
+ * Хук для использования селекторов в компонентах React.
+ * Поддерживает постоянные подписки для корректной работы реактивности.
  */
 export function useSelector<T>(selector: SelectorAPI<T>): T | undefined
-export function useSelector<T>(selector: SelectorAPI<T>, options: UseSelectorOptions<T> & { withLoading: true }): { data: T | undefined; isLoading: boolean }
+export function useSelector<T>(selector: SelectorAPI<T>, options: UseSelectorOptions<T> & { withLoading?: true }): { data: T | undefined; isLoading: boolean }
 export function useSelector<T>(selector: SelectorAPI<T>, options?: UseSelectorOptions<T>): { data: T | undefined; isLoading: boolean } | T | undefined {
+  // Базовые состояния
   const [state, setState] = useState<T | undefined>(options?.initialValue)
-  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [isLoading, setIsLoading] = useState<boolean>(!!options?.withLoading)
 
-  // Используем useRef для хранения последнего значения для сравнения
+  // Для предотвращения лишних ререндеров
   const prevValueRef = useRef<T | undefined>(options?.initialValue)
 
-  // Функция сравнения (по умолчанию === )
-  const equals = options?.equals || ((a: T, b: T) => a === b)
+  // Получаем стабильный ID селектора
+  const selectorId = getSelectorId(selector)
+
+  // Функция обновления состояния с проверкой на изменения
+  const updateState = (newValue: T) => {
+    const equals = options?.equals || ((a: T, b: T) => a === b)
+
+    // Обновляем только если значение изменилось или это первая загрузка
+    if (prevValueRef.current === undefined || !equals(newValue, prevValueRef.current)) {
+      prevValueRef.current = newValue
+      setState(newValue)
+    }
+  }
 
   useEffect(() => {
-    let isMounted = true
-
     // Запрашиваем начальное значение
-    setIsLoading(true)
+    if (options?.withLoading) setIsLoading(true)
+
     selector
       .select()
       .then((initialValue) => {
-        if (isMounted) {
-          // Обновляем только если значение изменилось или это первая загрузка
-          if (prevValueRef.current === undefined || !equals(initialValue, prevValueRef.current)) {
-            prevValueRef.current = initialValue
-            setState(initialValue)
-          }
-          setIsLoading(false)
-        }
+        updateState(initialValue)
+        if (options?.withLoading) setIsLoading(false)
       })
       .catch((error) => {
         console.error('useSelector: Ошибка при получении начального значения', error)
-        if (isMounted) {
-          setIsLoading(false)
-        }
+        if (options?.withLoading) setIsLoading(false)
       })
 
-    // Подписываемся на обновления
-    const unsubscribe = selector.subscribe({
-      notify: (newValue: T) => {
-        if (isMounted) {
-          // Обновляем только если значение изменилось
-          if (prevValueRef.current === undefined || !equals(newValue, prevValueRef.current)) {
-            prevValueRef.current = newValue
-            setState(newValue)
-          }
-        }
-      },
-    })
+    // Проверяем, есть ли уже подписка в глобальном реестре
+    if (!PERSISTENT_SUBSCRIPTIONS.has(selectorId)) {
+      // Создаем новую подписку
+      const unsubscribe = selector.subscribe({
+        notify: (newValue: T) => {
+          updateState(newValue)
+        },
+      })
 
-    // Отписываемся при размонтировании
-    return () => {
-      isMounted = false
-      unsubscribe()
+      // Добавляем в реестр постоянных подписок
+      PERSISTENT_SUBSCRIPTIONS.set(selectorId, {
+        selector,
+        unsubscribe,
+        refCount: 1,
+      })
+    } else {
+      // Увеличиваем счетчик ссылок
+      const entry = PERSISTENT_SUBSCRIPTIONS.get(selectorId)!
+      entry.refCount++
     }
-  }, [selector]) // зависимость только от селектора
 
-  // Если запрошен режим с загрузкой или опции не определены и withLoading=true по умолчанию
-  if (options?.withLoading === true) {
+    // При размонтировании компонента
+    return () => {
+      const entry = PERSISTENT_SUBSCRIPTIONS.get(selectorId)
+      if (entry) {
+        entry.refCount--
+
+        // Если это был последний компонент, использующий этот селектор,
+        // можно было бы удалить подписку, но мы специально этого не делаем,
+        // чтобы сохранить реактивность между различными монтированиями компонентов
+        //
+        // Для очистки ресурсов при необходимости можно раскомментировать:
+        //
+        // if (entry.refCount <= 0) {
+        //   entry.unsubscribe();
+        //   PERSISTENT_SUBSCRIPTIONS.delete(selectorId);
+        // }
+      }
+    }
+  }, [selector, selectorId])
+
+  // Если запрошен режим с загрузкой
+  if (options?.withLoading) {
     return { data: state, isLoading }
   }
 

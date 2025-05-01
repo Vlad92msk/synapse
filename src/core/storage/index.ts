@@ -8,7 +8,7 @@ export type { BatchingMiddlewareOptions, ShallowCompareMiddlewareOptions } from 
 export { broadcastMiddleware } from './middlewares'
 
 // Экспортируем публичные адаптеры
-export { BaseStorage } from './adapters/base-storage.service'
+// export { BaseStorage } from './adapters/base-storage.service'
 export { IndexedDBStorage } from './adapters/indexed-DB.service'
 export { LocalStorage } from './adapters/local-storage.service'
 export { MemoryStorage } from './adapters/memory-storage.service'

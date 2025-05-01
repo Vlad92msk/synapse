@@ -13,9 +13,16 @@
     "state-management",
     "typescript",
     "state",
-    "api-requests"
+    "api-requests",
+    "redux-alternative",
+    "framework-agnostic",
+    "rxjs",
+    "reactive",
+    "indexeddb",
+    "localstorage"
   ],
   "author": "Vlad Firsov",
+  "homepage": "https://github.com/Vlad92msk/synapse#readme",
   "repository": {
     "type": "git",
     "url": "https://github.com/Vlad92msk/synapse"
