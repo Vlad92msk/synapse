@@ -36,7 +36,7 @@
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "fix": "yarn format && yarn lint:fix",
-    "prepublishOnly": "yarn build",
+    "prepublishOnly": "yarn fix && yarn build",
     "release:patch": "npm version patch && npm publish --tag beta --access public",
     "release:minor": "npm version minor && npm publish --tag beta --access public",
     "release:major": "npm version major && npm publish --tag beta --access public",

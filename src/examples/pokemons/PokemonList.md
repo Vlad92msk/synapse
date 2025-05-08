@@ -44,7 +44,8 @@ export function SimplePokemonViewer() {
   useEffect(() => {
     const unsubscribe = pokemonStorage.subscribeToAll((event) => {
       console.log('event.type', event.type) // Тип события
-      console.log('event.key', event.key) // Массив ключей, которые меняются
+      console.log('event.key', event.key) // Массив ключей, которые меняются (Корневые ключи хранилища)
+      console.log('event.changedPaths', event.changedPaths) // Массив путей, которые менялись (Например: ['key1.key2.key3', enyKey1.enyKey2])
       console.log('event.value', event.value) // Текущее состояние
 
       if (event.key === 'currentId') {

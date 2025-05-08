@@ -15,7 +15,7 @@ export interface IStorage<T extends Record<string, any> = any> {
   clear(): Promise<void>
   keys(): Promise<string[]>
   destroy(): Promise<void>
-  subscribeToAll(callback: (event: { type: string; key?: StorageKeyType[] | StorageKeyType; value?: any }) => void): VoidFunction
+  subscribeToAll(callback: (event: { type: string; changedPaths?: string[]; key?: StorageKeyType[] | StorageKeyType; value?: any }) => void): VoidFunction
   initialize(): Promise<this>
   subscribe(key: StorageKeyType, callback: (value: any) => void): VoidFunction
   subscribe<R>(pathSelector: (state: T) => R, callback: (value: R) => void): VoidFunction
