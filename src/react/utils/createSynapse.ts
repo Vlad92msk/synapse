@@ -1,128 +1,128 @@
 import { Observable } from 'rxjs'
 
-import { IStorage, MemoryStorage, SelectorModule, StorageConfig, StorageType } from '../../core'
-import { ActionsSetupWithUtils, Dispatcher, Effect, EffectsModule } from '../../reactive'
+import { IStorage, SelectorModule, StorageCreatorFunction } from '../../core'
+import { Effect, EffectsModule } from '../../reactive'
 
 // Вспомогательные типы для извлечения типов из других типов
 export type ExtractPromiseType<T> = T extends Promise<infer U> ? U : T
 export type ExtractStorageType<T> = T extends IStorage<infer U> ? U : never
 export type ExtractDispatchType<T> = T extends { dispatch: infer D } ? D : never
 
-// Тип параметра хранилища
-export type StorageParam = (StorageConfig & { type: StorageType }) | (() => Promise<any>)
-
-// Интерфейс конфигурации с обобщенными типами
+/**
+ * Интерфейс конфигурации с обобщенными типами
+ * Используем более гибкие типы для параметров, чтобы избежать проблем с совместимостью
+ */
 export interface CreateSynapseConfig<
   TStore extends Record<string, any>,
-  TStorage = IStorage<TStore>,
   TSelectors = any,
-  TDispatcher = unknown,
+  TDispatcher = any,
   TApi extends Record<string, any> = Record<string, never>,
   TConfig extends Record<string, any> = Record<string, never>,
 > {
-  // Параметр хранилища
-  storage: StorageParam
+  // Функция создания хранилища
+  createStorageFn: StorageCreatorFunction<TStore>
 
-  // Внешние селекторы (опционально)
-  externalSelectors?: any
+  // Внешние селекторы
+  externalSelectors?: Record<string, any>
 
-  // Функция создания селекторов (опционально)
-  createSelectorsFn?: (selectorModule: any, externalSelectors?: any) => TSelectors
+  // Функция создания селекторов
+  // Используем any для selectorModule, чтобы избежать проблем с совместимостью
+  createSelectorsFn?: (selectorModule: SelectorModule<TStore>, externalSelectors?: Record<string, any>) => TSelectors
 
-  // Функция создания диспетчера (опционально)
-  createDispatcherFn?: (storage: TStorage) => TDispatcher
+  // Функция создания диспетчера
+  createDispatcherFn?: (storage: IStorage<TStore>) => TDispatcher
 
-  // Функция создания конфигурации для эффектов (опционально)
+  // Функция создания конфигурации для эффектов
   createEffectConfig?: (dispatcher: TDispatcher) => {
-    dispatchers: Record<string, Dispatcher<TStore, ActionsSetupWithUtils<TStore>>>
+    dispatchers: Record<string, any>
     api?: TApi
     config?: TConfig
   }
 
-  // Модули эффектов (опционально)
+  // Модули эффектов
   effectsModules?: Effect[]
 }
 
-// Интерфейс результата с обобщенными типами
-export interface SynapseStore<TStore extends Record<string, any>, TStorage = IStorage<TStore>, TSelectors = any, TActions = any> {
+/**
+ * Интерфейс результата с обобщенными типами
+ */
+export interface SynapseStore<TStore extends Record<string, any>, TStorage extends IStorage<TStore>, TSelectors = any, TActions = any> {
   storage: TStorage
   selectors: TSelectors
   actions: TActions
-  state$: Observable<ExtractStorageType<TStorage>>
+  state$: Observable<TStore>
   destroy: () => Promise<void>
 }
 
 /**
  * Создает хранилище Synapse с селекторами, действиями и эффектами
  *
+ * @example
+ * const {
+ *   storage,
+ *   selectors,
+ *   actions,
+ *   state$
+ * } = await createSynapse({
+ *   createStorageFn: createUserPageStorage,
+ *   createSelectorsFn: createUserInfoSelectors,
+ *   createDispatcherFn: createUserInfoDispatcher,
+ *   externalSelectors: {},
+ *   createEffectConfig: (dispatcher) => ({
+ *     dispatchers: {
+ *       userInfoDispatcher: dispatcher,
+ *     },
+ *     api: {
+ *       userInfoApi: userInfoEndpoints,
+ *     },
+ *   }),
+ * });
+ *
  * @param config Конфигурация для создания хранилища
  * @returns Promise, который разрешается в SynapseStore
  */
-export function createSynapse<
+export async function createSynapse<
   TStore extends Record<string, any>,
-  TStorage extends IStorage<TStore>,
   TSelectors = any,
   TDispatcher = any,
   TApi extends Record<string, any> = Record<string, never>,
   TConfig extends Record<string, any> = Record<string, never>,
+  TStorage extends IStorage<TStore> = IStorage<TStore>,
   TActions = ExtractDispatchType<TDispatcher>,
->(config: CreateSynapseConfig<TStore, TStorage, TSelectors, TDispatcher, TApi, TConfig>): Promise<SynapseStore<TStore, TStorage, TSelectors, TActions>> {
-  return (async function initializeStore() {
-    let storageInstance: any
+>(config: CreateSynapseConfig<TStore, TSelectors, TDispatcher, TApi, TConfig>): Promise<SynapseStore<TStore, TStorage, TSelectors, TActions>> {
+  // Создаем и инициализируем хранилище
+  const storageInstance = (await config.createStorageFn()) as TStorage
 
-    // Создаем хранилище на основе конфига
-    if (typeof config.storage === 'function') {
-      // Используем функцию для создания хранилища
-      storageInstance = await config.storage()
-      // Инициализируем, если не инициализировано
-      if (typeof storageInstance.initialize === 'function' && !storageInstance.initialized) {
-        await storageInstance.initialize()
+  // Создаем сборщики для последующей очистки
+  const cleanupCallbacks: Array<() => Promise<void> | void> = []
+
+  // Подготавливаем возвращаемый объект с базовыми настройками
+  const result: SynapseStore<TStore, TStorage, TSelectors, TActions> = {
+    storage: storageInstance,
+    selectors: {} as TSelectors,
+    actions: {} as TActions,
+    state$: new Observable<TStore>(),
+    destroy: async () => {
+      for (const callback of cleanupCallbacks) {
+        await callback()
       }
-    } else {
-      // Используем конфигурацию для создания хранилища
-      const storageConfig = config.storage
+    },
+  }
 
-      if (storageConfig.type === 'memory') {
-        storageInstance = new MemoryStorage(storageConfig)
-      } else if (storageConfig.type === 'localStorage') {
-        // Add localStorage implementation
-        throw new Error(`localStorage storage type not implemented yet`)
-      } else if (storageConfig.type === 'indexedDB') {
-        // Add indexedDB implementation
-        throw new Error(`indexedDB storage type not implemented yet`)
-      } else {
-        throw new Error(`Storage type ${(storageConfig as any).type} not supported`)
-      }
+  // Добавляем колбэк для уничтожения хранилища
+  cleanupCallbacks.push(() => storageInstance.destroy())
 
-      await storageInstance.initialize()
-    }
+  let dispatcher: TDispatcher | undefined
+  let selectorModule: any
+  let effectsModule: any
 
-    // Создаем сборщики для последующей очистки
-    const cleanupCallbacks: Array<() => Promise<void> | void> = []
+  // Создаем модуль селекторов, если нужно
+  if (config.createSelectorsFn) {
+    try {
+      // Импортируем SelectorModule динамически
 
-    // 2. Подготавливаем возвращаемый объект с базовыми настройками
-    const result: SynapseStore<TStore, TStorage, TSelectors, TActions> = {
-      storage: storageInstance as TStorage,
-      selectors: {} as TSelectors,
-      actions: {} as TActions,
-      state$: new Observable<ExtractStorageType<TStorage>>(),
-      destroy: async () => {
-        for (const callback of cleanupCallbacks) {
-          await callback()
-        }
-      },
-    }
-
-    // Добавляем колбэк для уничтожения хранилища
-    cleanupCallbacks.push(() => storageInstance.destroy())
-
-    let dispatcher: TDispatcher | undefined
-    let selectorModule: any
-    let effectsModule: any
-
-    // 3. Создаем модуль селекторов, если нужно
-    if (config.createSelectorsFn) {
       selectorModule = new SelectorModule(storageInstance)
+
       const externalSelectors = config.externalSelectors || {}
       result.selectors = config.createSelectorsFn(selectorModule, externalSelectors)
 
@@ -130,25 +130,34 @@ export function createSynapse<
       if (typeof (result.selectors as any).selectorsDestroy === 'function') {
         cleanupCallbacks.push(() => (result.selectors as any).selectorsDestroy())
       }
+    } catch (error) {
+      console.error('Error creating selectors:', error)
+      // В случае ошибки оставляем пустой объект селекторов
     }
+  }
 
-    // 4. Создаем диспетчер, если нужно
-    if (config.createDispatcherFn) {
-      dispatcher = config.createDispatcherFn(storageInstance)
-      // @ts-ignore
-      if (dispatcher && 'dispatch' in dispatcher) {
-        result.actions = dispatcher.dispatch as TActions
+  // Создаем диспетчер, если нужно
+  if (config.createDispatcherFn) {
+    dispatcher = config.createDispatcherFn(storageInstance)
+    // Проверяем наличие dispatch в диспетчере
+    // @ts-ignore
+    if (dispatcher && 'dispatch' in dispatcher) {
+      result.actions = (dispatcher as any).dispatch as TActions
 
-        // Добавляем очистку диспетчера, если есть метод destroy
-        if (typeof (dispatcher as any).destroy === 'function') {
-          cleanupCallbacks.push(() => (dispatcher as any).destroy())
-        }
+      // Добавляем очистку диспетчера, если есть метод destroy
+      if (typeof (dispatcher as any).destroy === 'function') {
+        cleanupCallbacks.push(() => (dispatcher as any).destroy())
       }
     }
+  }
 
-    // 5. Создаем и настраиваем модуль эффектов, если нужно
-    if (config.createEffectConfig && dispatcher) {
+  // Создаем и настраиваем модуль эффектов, если нужно
+  if (config.createEffectConfig && dispatcher) {
+    try {
       const { dispatchers, api, config: effectConfig } = config.createEffectConfig(dispatcher)
+
+      // Импортируем EffectsModule динамически
+
       effectsModule = new EffectsModule(storageInstance, dispatchers, api, effectConfig)
 
       // Добавляем эффекты, если они предоставлены
@@ -166,8 +175,11 @@ export function createSynapse<
       cleanupCallbacks.push(() => {
         if (effectsModule) effectsModule.stop()
       })
+    } catch (error) {
+      console.error('Error creating effects module:', error)
+      // В случае ошибки оставляем Observable по умолчанию
     }
+  }
 
-    return result
-  })()
+  return result
 }

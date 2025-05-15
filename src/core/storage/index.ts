@@ -1,4 +1,5 @@
 // Экспортируем публичные интерфейсы
+export * from './factory'
 export * from './modules/plugin/plugin.interface'
 export * from './modules/plugin/plugin.service'
 export * from './storage.interface'

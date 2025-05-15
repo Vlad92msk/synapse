@@ -517,3 +517,4 @@ export function createDispatcher<TState extends Record<string, any>, TActions ex
     watchers: WatcherActions<ReturnType<TActions>>
   }
 }
+export type CreateDispatcherType = ReturnType<typeof createDispatcher>
