@@ -1,5 +1,5 @@
 import { ILogger, IStorage } from '../storage'
-import { Selector, SelectorAPI, SelectorOptions, Subscriber } from './selector.interface'
+import { ISelectorModule, Selector, SelectorAPI, SelectorOptions, Subscriber } from './selector.interface'
 
 // Отладка: управление через параметр DEBUG
 const DEBUG = false
@@ -220,7 +220,7 @@ function memoizeSelector<S, T>(selector: (state: S) => T, equals: (a: T, b: T) =
   }
 }
 
-export class SelectorModule<S extends Record<string, any>> {
+export class SelectorModule<S extends Record<string, any>> implements ISelectorModule<S> {
   storageName: string
 
   private subscriptions = new Map<string, SelectorSubscription<any>>()

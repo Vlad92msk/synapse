@@ -3,11 +3,14 @@ import { Observable } from 'rxjs';
 import { IStorage } from '../../core';
 import { SynapseStore } from './createSynapse'
 
+const ERROR_HOOK_MESSAGE = 'useSynapseActions необходимо использовать внутри компонента contextSynapse'
+const ERROR_CONTEXT_INIT = 'Ошибка при инициализации контекста:'
+
 /**
  * Создает React-контекст и хуки для удобного использования хранилища Synapse в React-компонентах
- * Аналогично createZustandContext, но с поддержкой Synapse
  *
  * @param synapseStore - Хранилище, созданное функцией createSynapse
+ * @param loadingComponent - компонент который будет отображет пока идет загрузка
  * @returns Объект с функцией HOC и хуками для доступа к хранилищу
  */
 export function createSynapseCtx<
@@ -16,50 +19,46 @@ export function createSynapseCtx<
   TSelectors = any,
   TActions = any
 >(
-  synapseStore: SynapseStore<TStore, TStorage, TSelectors, TActions>
+  synapseStore: SynapseStore<TStore, TStorage, TSelectors, TActions>,
+  loadingComponent?: any
 ) {
   // Создаем контекст
-  const SynapseContext = createContext<SynapseStore<TStore, TStorage, TSelectors, TActions> | null>(null);
+  const SynapseContext = createContext<SynapseStore<TStore, TStorage, TSelectors, TActions> | null>(null)
 
   // Хук для доступа к хранилищу
   const useSynapseStorage = (): TStorage => {
-    const context = useContext(SynapseContext);
-    if (!context) {
-      throw new Error('useSynapseStorage must be used within a contextSynapse component');
-    }
-    return context.storage;
+    const context = useContext(SynapseContext)
+    if (!context) throw new Error(ERROR_HOOK_MESSAGE)
+
+    return context.storage
   };
 
   // Хук для доступа к селекторам (аналог useZustandSelector)
   const useSynapseSelectors = (): TSelectors => {
-    const context = useContext(SynapseContext);
-    if (!context) {
-      throw new Error('useSynapseSelectors must be used within a contextSynapse component');
-    }
-    return context.selectors;
+    const context = useContext(SynapseContext)
+    if (!context) throw new Error(ERROR_HOOK_MESSAGE)
+
+    return context.selectors
   };
 
   // Хук для доступа к действиям (аналог useZustandDispatch)
   const useSynapseActions = (): TActions => {
-    const context = useContext(SynapseContext);
-    if (!context) {
-      throw new Error('useSynapseActions must be used within a contextSynapse component');
-    }
-    return context.actions;
+    const context = useContext(SynapseContext)
+    if (!context) throw new Error(ERROR_HOOK_MESSAGE)
+
+    return context.actions
   };
 
   // Хук для доступа к потоку изменений состояния
   const useSynapseState$ = (): Observable<TStore> => {
     const context = useContext(SynapseContext);
-    if (!context) {
-      throw new Error('useSynapseState$ must be used within a contextSynapse component');
-    }
-    return context.state$;
+    if (!context) throw new Error(ERROR_HOOK_MESSAGE)
+
+    return context.state$
   };
 
   /**
-   * HOC для обертывания компонентов контекстом Synapse
-   * Аналогичен contextZustand из вашего примера
+   * Декоратор для обертывания компонентов в контекст Synapse
    */
   function contextSynapse<
     SelfComponentProps,
@@ -67,15 +66,15 @@ export function createSynapseCtx<
   >(
     Component: ComponentType<SelfComponentProps>
   ) {
-    type WrappedComponentProps = SelfComponentProps & { contextProps?: PublicContextProps };
+    type WrappedComponentProps = SelfComponentProps & { contextProps?: PublicContextProps }
 
     function WrappedComponent({ contextProps, ...props }: WrappedComponentProps) {
-      const [initialized, setInitialized] = useState(false);
-      const debugIdRef = useRef(`synapse-${Math.random().toString(36).substring(2, 9)}`);
+      const [initialized, setInitialized] = useState(false)
+      const debugIdRef = useRef(`synapse-${synapseStore.storage.name}`)
 
       // Инициализируем контекст при монтировании компонента
       useEffect(() => {
-        let mounted = true;
+        let mounted = true
 
         const initializeContext = async () => {
           try {
@@ -87,28 +86,26 @@ export function createSynapseCtx<
                   if (key in state) {
                     (state as any)[key] = value;
                   }
-                });
-              });
+                })
+              })
             }
 
             if (mounted) {
               setInitialized(true);
             }
           } catch (error) {
-            console.error(`[${debugIdRef.current}] Error initializing context:`, error);
+            console.error(`[${debugIdRef.current}] ${ERROR_CONTEXT_INIT}`, error)
           }
         };
 
-        initializeContext();
+        initializeContext()
 
         return () => {
-          mounted = false;
+          mounted = false
         };
-      }, [contextProps]);
+      }, [contextProps])
 
-      if (!initialized) {
-        return null; // или можно вернуть индикатор загрузки
-      }
+      if (!initialized) return loadingComponent
 
       return (
         <SynapseContext.Provider value={synapseStore}>
@@ -124,12 +121,16 @@ export function createSynapseCtx<
     return WrappedComponent;
   }
 
-  // Возвращаем объект с функциями и хуками, аналогично createZustandContext
+  const cleanupSynapse = async (): Promise<void> => {
+    return synapseStore.destroy();
+  };
+
   return {
     contextSynapse,
     useSynapseStorage,
     useSynapseSelectors,
     useSynapseActions,
     useSynapseState$,
+    cleanupSynapse,
   };
 }
