@@ -33,7 +33,7 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "lint": "eslint src --ext .ts",
-    "lint:fix": "eslint src --ext .ts --fix",
+    "lint:fix": "eslint --config eslint.config.mjs src --ext .ts,.tsx --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "fix": "yarn format && yarn lint:fix",
     "prepublishOnly": "yarn fix && yarn build",
@@ -86,21 +86,22 @@
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
-    "@eslint/js": "^9.22.0",
-    "@types/node": "^22.13.10",
+    "@eslint/js": "^9.27.0",
+    "@humanwhocodes/retry": "^0.4.3",
+    "@types/node": "^22.15.18",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@typescript-eslint/eslint-plugin": "^8.26.0",
     "@typescript-eslint/parser": "^8.26.0",
-    "eslint": "^9.22.0",
-    "eslint-config-prettier": "^10.1.1",
+    "eslint": "^9.27.0",
+    "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-import": "^2.31.0",
-    "eslint-plugin-prettier": "^5.2.3",
+    "eslint-plugin-prettier": "^5.4.0",
     "eslint-plugin-simple-import-sort": "^12.1.1",
+    "prettier": "^3.5.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "typescript": "^5.8.3",
-    "prettier": "^3.5.3",
-    "typescript-eslint": "^8.31.1"
+    "typescript-eslint": "^8.32.1"
   }
 }

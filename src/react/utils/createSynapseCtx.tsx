@@ -1,15 +1,15 @@
-import { ComponentType, createContext, useContext, useEffect, useRef, useState, PropsWithChildren } from 'react'
+import { ComponentType, createContext, PropsWithChildren, useContext, useEffect, useRef, useState } from 'react'
 import { Observable } from 'rxjs'
+
 import { IStorage } from '../../core'
-import { SynapseStore } from './createSynapse'
 import { deepMerge } from '../../utils'
+import { SynapseStore } from './createSynapse'
 
 const ERROR_HOOK_MESSAGE = 'useSynapseActions необходимо использовать внутри компонента contextSynapse'
 const ERROR_CONTEXT_INIT = 'Ошибка при инициализации контекста:'
 
-
 interface Options<TStore extends Record<string, any>> {
-  loadingComponent?: any,
+  loadingComponent?: any
   mergeFn?: (target: TStore, source: Record<string, any>) => void
 }
 
@@ -20,19 +20,11 @@ interface Options<TStore extends Record<string, any>> {
  * @param options
  * @returns Объект с функцией HOC и хуками для доступа к хранилищу
  */
-export function createSynapseCtx<
-  TStore extends Record<string, any>,
-  TStorage extends IStorage<TStore>,
-  TSelectors = any,
-  TActions = any
->(
+export function createSynapseCtx<TStore extends Record<string, any>, TStorage extends IStorage<TStore>, TSelectors = any, TActions = any>(
   synapseStore: SynapseStore<TStore, TStorage, TSelectors, TActions>,
-  options?: Options<TStore>
+  options?: Options<TStore>,
 ) {
-  const {
-    loadingComponent = null,
-    mergeFn = deepMerge
-  } = options || {}
+  const { loadingComponent = null, mergeFn = deepMerge } = options || {}
 
   const SynapseContext = createContext<SynapseStore<TStore, TStorage, TSelectors, TActions> | null>(null)
 
@@ -58,7 +50,7 @@ export function createSynapseCtx<
   }
 
   const useSynapseState$ = (): Observable<TStore> => {
-    const context = useContext(SynapseContext);
+    const context = useContext(SynapseContext)
     if (!context) throw new Error(ERROR_HOOK_MESSAGE)
 
     return context.state$
@@ -67,12 +59,7 @@ export function createSynapseCtx<
   /**
    * Декоратор для обертывания компонентов в контекст Synapse
    */
-  function contextSynapse<
-    SelfComponentProps,
-    PublicContextProps = Record<string, any>
-  >(
-    Component: ComponentType<SelfComponentProps>
-  ) {
+  function contextSynapse<SelfComponentProps, PublicContextProps = Record<string, any>>(Component: ComponentType<SelfComponentProps>) {
     type WrappedComponentProps = SelfComponentProps & { contextProps?: PublicContextProps }
 
     function WrappedComponent({ contextProps, ...props }: WrappedComponentProps) {
@@ -103,7 +90,7 @@ export function createSynapseCtx<
 
         return () => {
           mounted = false
-        };
+        }
       }, [contextProps])
 
       if (!initialized) return loadingComponent
@@ -112,19 +99,19 @@ export function createSynapseCtx<
         <SynapseContext.Provider value={synapseStore}>
           <Component {...(props as PropsWithChildren<SelfComponentProps>)} />
         </SynapseContext.Provider>
-      );
+      )
     }
 
     // Устанавливаем отображаемое имя для отладки
-    const componentName = Component.displayName || Component.name || 'Component';
-    WrappedComponent.displayName = `SynapseContext(${componentName})`;
+    const componentName = Component.displayName || Component.name || 'Component'
+    WrappedComponent.displayName = `SynapseContext(${componentName})`
 
-    return WrappedComponent;
+    return WrappedComponent
   }
 
   const cleanupSynapse = async (): Promise<void> => {
-    return synapseStore.destroy();
-  };
+    return synapseStore.destroy()
+  }
 
   return {
     contextSynapse,
@@ -133,5 +120,5 @@ export function createSynapseCtx<
     useSynapseActions,
     useSynapseState$,
     cleanupSynapse,
-  };
+  }
 }
