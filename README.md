@@ -21,7 +21,6 @@ Synapse — это набор инструментов для управлени
 
 - [LinkedIn](https://www.linkedin.com/in/vlad-firsov/)
 - [GitHub](https://github.com/Vlad92msk/)
-- [Telegram](https://t.me/Vllad92)
 
 Нахожусь в поиске новых карьерных возможностей 🔎
 
