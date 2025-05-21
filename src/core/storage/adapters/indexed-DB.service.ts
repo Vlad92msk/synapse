@@ -1,89 +1,461 @@
 import { IPluginExecutor } from '../modules/plugin/plugin.interface'
-import { IEventEmitter, ILogger, StorageConfig } from '../storage.interface'
+import { ConfigureMiddlewares, IEventEmitter, ILogger, StorageConfig } from '../storage.interface'
 import { StorageKey, StorageKeyType } from '../utils/storage-key'
 import { BaseStorage } from './base-storage.service'
 import { getValueByPath, parsePath, setValueByPath } from './path.utils'
 
 export interface IndexedDBConfig {
   dbName?: string
-  dbVersion?: number
-  storeName?: string
+  dbVersion: number
 }
 
-export class IndexedDBStorage<T extends Record<string, any>> extends BaseStorage<T> {
-  private initPromise: Promise<void> | null = null
-
+// Управляет соединением с базой данных
+export class IndexedDBManager {
+  private static instances = new Map<string, IndexedDBManager>()
   private db: IDBDatabase | null = null
+  private initPromise: Promise<IDBDatabase> | null = null
+  private storeNames: Set<string> = new Set()
+  private dbVersion: number
 
-  private readonly DB_NAME: string
-
-  private readonly STORE_NAME: string
-
-  private readonly DB_VERSION: number
-
-  constructor(config: StorageConfig & { options?: IndexedDBConfig }, pluginExecutor?: IPluginExecutor, eventEmitter?: IEventEmitter, logger?: ILogger) {
-    super(config, pluginExecutor, eventEmitter, logger)
-
-    const options = config.options as IndexedDBConfig
-    this.DB_NAME = options?.dbName || 'app_storage'
-    this.STORE_NAME = options?.storeName || 'keyValueStore'
-    this.DB_VERSION = options?.dbVersion || 1
+  private constructor(
+    private readonly dbName: string,
+    dbVersion: number,
+    private readonly logger?: ILogger,
+  ) {
+    this.dbVersion = dbVersion
   }
 
-  async initialize(): Promise<this> {
-    try {
-      // Сначала инициализируем БД
-      await this.ensureInitialized()
-      this.initializeMiddlewares()
-      // Затем инициализируем данные через middleware
-      await this.initializeWithMiddlewares()
-      return this
-    } catch (error) {
-      this.logger?.error('Error initializing IndexedDB storage', { error })
-      throw error
+  static getInstance(dbName: string, dbVersion: number = 1, logger?: ILogger): IndexedDBManager {
+    if (!IndexedDBManager.instances.has(dbName)) {
+      IndexedDBManager.instances.set(dbName, new IndexedDBManager(dbName, dbVersion, logger))
     }
+
+    const instance = IndexedDBManager.instances.get(dbName)!
+
+    // Update version if higher version is requested
+    if (dbVersion > instance.dbVersion) {
+      instance.dbVersion = dbVersion
+    }
+
+    return instance
   }
 
-  private initDB(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.DB_NAME, this.DB_VERSION)
+  async initialize(): Promise<IDBDatabase> {
+    if (this.db) {
+      return this.db
+    }
+
+    if (!this.initPromise) {
+      this.initPromise = this.openDatabase()
+    }
+
+    return this.initPromise
+  }
+
+  async ensureStoreExists(storeName: string): Promise<IDBDatabase> {
+    await this.initialize()
+
+    if (this.db!.objectStoreNames.contains(storeName)) {
+      this.storeNames.add(storeName)
+      return this.db!
+    }
+
+    this.logger?.debug(`Store "${storeName}" not found, upgrading database`, {
+      dbName: this.dbName,
+      currentStores: Array.from(this.db!.objectStoreNames),
+    })
+
+    this.db!.close()
+    this.db = null
+
+    this.dbVersion++
+    this.initPromise = this.openDatabase([storeName])
+
+    const newDb = await this.initPromise
+    this.storeNames.add(storeName)
+    return newDb
+  }
+
+  private async openDatabase(newStores: string[] = []): Promise<IDBDatabase> {
+    return new Promise<IDBDatabase>((resolve, reject) => {
+      this.logger?.debug(`Opening database "${this.dbName}" with version ${this.dbVersion}`)
+
+      const request = indexedDB.open(this.dbName, this.dbVersion)
 
       request.onerror = () => {
-        this.logger?.error('Failed to open IndexedDB', { error: request.error })
+        this.logger?.error(`Failed to open database "${this.dbName}"`, { error: request.error })
         reject(request.error)
       }
 
       request.onsuccess = () => {
         this.db = request.result
-        resolve()
+
+        // Add existing stores to our set
+        for (let i = 0; i < this.db.objectStoreNames.length; i++) {
+          this.storeNames.add(this.db.objectStoreNames[i])
+        }
+
+        this.logger?.debug(`Database "${this.dbName}" opened successfully`, {
+          version: this.db.version,
+          stores: Array.from(this.db.objectStoreNames),
+        })
+
+        resolve(this.db)
       }
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result
-        if (!db.objectStoreNames.contains(this.STORE_NAME)) {
-          db.createObjectStore(this.STORE_NAME)
+        this.logger?.debug(`Upgrading database "${this.dbName}" to version ${this.dbVersion}`)
+
+        // Create new stores that don't exist yet
+        for (const storeName of newStores) {
+          if (!db.objectStoreNames.contains(storeName)) {
+            this.logger?.debug(`Creating store "${storeName}"`)
+            db.createObjectStore(storeName)
+          }
         }
       }
     })
   }
 
-  private async ensureInitialized() {
-    if (!this.initPromise) {
-      this.initPromise = this.initDB()
+  closeDatabase(): void {
+    if (this.db) {
+      this.db.close()
+      this.db = null
+      this.initPromise = null
     }
+  }
+
+  async deleteDatabase(): Promise<void> {
+    this.closeDatabase()
+
+    return new Promise<void>((resolve, reject) => {
+      const request = indexedDB.deleteDatabase(this.dbName)
+      request.onsuccess = () => {
+        this.logger?.debug(`Database "${this.dbName}" deleted successfully`)
+        IndexedDBManager.instances.delete(this.dbName)
+        this.storeNames.clear()
+        resolve()
+      }
+      request.onerror = () => {
+        this.logger?.error(`Failed to delete database "${this.dbName}"`, { error: request.error })
+        reject(request.error)
+      }
+    })
+  }
+  async ensureStoresExist(storeNames: string[]): Promise<IDBDatabase> {
+    // Сначала инициализируем базу
+    await this.initialize()
+
+    // Проверяем, какие хранилища уже существуют
+    const missingStores = storeNames.filter((name) => !this.db!.objectStoreNames.contains(name))
+
+    // Если все хранилища уже существуют, просто возвращаем базу
+    if (missingStores.length === 0) {
+      return this.db!
+    }
+
+    // Иначе нам нужно обновить базу для создания новых хранилищ
+    this.logger?.debug(`Создание недостающих хранилищ: ${missingStores.join(', ')}`, {
+      dbName: this.dbName,
+      currentStores: Array.from(this.db!.objectStoreNames),
+    })
+
+    // Закрываем текущее соединение
+    this.db!.close()
+    this.db = null
+
+    // Увеличиваем версию один раз для всех новых хранилищ
+    this.dbVersion++
+    this.initPromise = this.openDatabase(missingStores)
+
     return this.initPromise
   }
 
-  private async transaction(mode: IDBTransactionMode = 'readonly'): Promise<IDBObjectStore> {
-    await this.ensureInitialized()
+  // Метод для получения текущей версии
+  getCurrentVersion(): number {
+    return this.dbVersion
+  }
+}
+
+/**
+ * Менеджер для управления версией базы данных IndexedDB
+ * и создания хранилищ
+ */
+class DBVersionManager {
+  private db: IDBDatabase | null = null
+  private version: number
+
+  constructor(
+    private readonly dbName: string,
+    initialVersion: number = 1,
+    private readonly logger?: ILogger,
+  ) {
+    this.version = initialVersion
+  }
+
+  /**
+   * Получает текущую версию базы данных
+   */
+  getCurrentVersion(): number {
+    return this.version
+  }
+
+  /**
+   * Открывает базу данных с заданной версией
+   */
+  private openDatabase(version: number, newStores: string[] = []): Promise<IDBDatabase> {
+    return new Promise<IDBDatabase>((resolve, reject) => {
+      this.logger?.debug(`Открытие базы данных "${this.dbName}" с версией ${version}`)
+
+      const request = indexedDB.open(this.dbName, version)
+
+      request.onerror = () => {
+        this.logger?.error(`Ошибка при открытии базы данных "${this.dbName}"`, { error: request.error })
+        reject(request.error)
+      }
+
+      request.onsuccess = () => {
+        this.db = request.result
+        this.version = this.db.version
+
+        this.logger?.debug(`База данных "${this.dbName}" успешно открыта`, {
+          version: this.db.version,
+          stores: Array.from(this.db.objectStoreNames),
+        })
+
+        resolve(this.db)
+      }
+
+      request.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result
+        this.logger?.debug(`Обновление базы данных "${this.dbName}" до версии ${version}`)
+
+        // Создаем все новые хранилища
+        for (const storeName of newStores) {
+          if (!db.objectStoreNames.contains(storeName)) {
+            this.logger?.debug(`Создание хранилища "${storeName}"`)
+            db.createObjectStore(storeName)
+          }
+        }
+      }
+    })
+  }
+
+  /**
+   * Убеждается, что все указанные хранилища существуют в базе данных
+   */
+  async ensureStoresExist(storeNames: string[]): Promise<IDBDatabase> {
+    // Если база еще не открыта, открываем ее
     if (!this.db) {
-      throw new Error('База данных еще не инициализирована')
+      this.db = await this.openDatabase(this.version)
     }
-    return this.db.transaction(this.STORE_NAME, mode).objectStore(this.STORE_NAME)
+
+    // Проверяем, какие хранилища отсутствуют
+    const missingStores = storeNames.filter((name) => !this.db!.objectStoreNames.contains(name))
+
+    // Если все хранилища уже существуют, просто возвращаем базу
+    if (missingStores.length === 0) {
+      return this.db
+    }
+
+    // Иначе нам нужно обновить базу данных
+    this.logger?.debug(`Необходимо создать отсутствующие хранилища: ${missingStores.join(', ')}`, {
+      dbName: this.dbName,
+      currentVersion: this.version,
+    })
+
+    // Закрываем текущее соединение
+    this.db.close()
+    this.db = null
+
+    // Увеличиваем версию и открываем базу с новыми хранилищами
+    this.version++
+    this.db = await this.openDatabase(this.version, missingStores)
+
+    return this.db
+  }
+
+  /**
+   * Закрывает соединение с базой данных
+   */
+  close(): void {
+    if (this.db) {
+      this.db.close()
+      this.db = null
+    }
+  }
+}
+
+export class IndexedDBStorage<T extends Record<string, any>> extends BaseStorage<T> {
+  private readonly DB_NAME: string
+  private readonly STORE_NAME: string
+  private readonly DB_VERSION: number
+  private dbManager: IndexedDBManager
+
+  constructor(
+    config: StorageConfig & {
+      options: IndexedDBConfig
+    },
+    pluginExecutor?: IPluginExecutor,
+    eventEmitter?: IEventEmitter,
+    logger?: ILogger,
+  ) {
+    super(config, pluginExecutor, eventEmitter, logger)
+
+    const options = config.options
+    this.DB_NAME = options.dbName || 'app_storage'
+    this.STORE_NAME = config.name
+    this.DB_VERSION = options.dbVersion || 1
+
+    // Get database manager instance
+    this.dbManager = IndexedDBManager.getInstance(this.DB_NAME, this.DB_VERSION, logger)
+  }
+
+  async initialize(): Promise<this> {
+    try {
+      this.logger?.debug(`Initializing IndexedDB storage "${this.STORE_NAME}"`)
+
+      await this.dbManager.ensureStoreExists(this.STORE_NAME)
+
+      // Проверим еще раз, что хранилище доступно перед инициализацией middleware
+      try {
+        const db = await this.dbManager.initialize()
+        if (!db.objectStoreNames.contains(this.STORE_NAME)) {
+          throw new Error(`Store "${this.STORE_NAME}" not found after initialization`)
+        }
+      } catch (error) {
+        this.logger?.error(`Error verifying store "${this.STORE_NAME}" exists:`, { error })
+        throw error
+      }
+
+      // Initialize middlewares from BaseStorage
+      this.initializeMiddlewares()
+
+      try {
+        await this.initializeWithMiddlewares()
+        this.logger?.debug(`IndexedDB storage "${this.STORE_NAME}" initialized successfully`)
+      } catch (error) {
+        this.logger?.error(`Failed to initialize middleware for store "${this.STORE_NAME}"`, { error })
+        // Продолжаем работу даже при ошибке middleware
+      }
+
+      return this
+    } catch (error) {
+      this.logger?.error(`Ошибка инициализации IndexedDB "${this.name}"`, { error })
+      throw error
+    }
+  }
+
+  static async getCurrentDBVersion(dbName: string): Promise<number> {
+    return new Promise((resolve) => {
+      try {
+        const request = indexedDB.open(dbName)
+
+        request.onsuccess = () => {
+          const version = request.result.version
+          request.result.close() // Важно закрыть соединение
+          resolve(version)
+        }
+
+        request.onerror = () => {
+          console.warn(`Ошибка при определении версии БД ${dbName}`, request.error)
+          resolve(0) // В случае ошибки возвращаем 0
+        }
+      } catch (error) {
+        console.warn(`Исключение при определении версии БД ${dbName}`, error)
+        resolve(0)
+      }
+    })
+  }
+
+  static async createStorages<S extends Record<string, any>>(
+    dbName: string,
+    configs: {
+      [K in keyof S]: {
+        name: string
+        initialState?: S[K]
+        middlewares?: ConfigureMiddlewares
+        pluginExecutor?: IPluginExecutor
+        eventEmitter?: IEventEmitter
+      }
+    },
+    logger?: ILogger,
+  ): Promise<{ [K in keyof S]: IndexedDBStorage<S[K]> }> {
+    // Получаем текущую версию базы данных
+    const currentVersion = await this.getCurrentDBVersion(dbName)
+    const initialVersion = currentVersion || 1
+
+    // Создаем менеджер для управления базой данных
+    const dbManager = new DBVersionManager(dbName, initialVersion, logger)
+
+    // Получаем имена всех хранилищ, которые нужно создать
+    const storeNames = Object.values(configs).map((config) => config.name)
+
+    // Предварительно создаем все хранилища в рамках одной операции
+    await dbManager.ensureStoresExist(storeNames)
+
+    // Создаем и инициализируем все хранилища
+    const result: Record<string, IndexedDBStorage<any>> = {}
+
+    for (const [key, config] of Object.entries(configs)) {
+      const storage = new IndexedDBStorage(
+        {
+          ...config,
+          options: {
+            dbName,
+            dbVersion: dbManager.getCurrentVersion(),
+          },
+        },
+        config.pluginExecutor,
+        config.eventEmitter,
+        logger,
+      )
+
+      // Инициализируем хранилище
+      result[key] = await storage.initialize()
+    }
+
+    return result as { [K in keyof S]: IndexedDBStorage<S[K]> }
+  }
+
+  private async getTransaction(mode: IDBTransactionMode = 'readonly'): Promise<IDBTransaction> {
+    try {
+      // Ensure database is open and our store exists
+      const db = await this.dbManager.ensureStoreExists(this.STORE_NAME)
+
+      // Проверяем существование хранилища перед созданием транзакции
+      if (!db.objectStoreNames.contains(this.STORE_NAME)) {
+        // Попытка исправить проблему - закрываем и снова открываем
+        this.logger?.warn(`Object store "${this.STORE_NAME}" not found, attempting to repair`)
+
+        db.close()
+        this.dbManager.closeDatabase()
+
+        // Пробуем заново создать хранилище с инкрементом версии
+        const newDb = await this.dbManager.ensureStoreExists(this.STORE_NAME)
+
+        if (!newDb.objectStoreNames.contains(this.STORE_NAME)) {
+          throw new Error(`Object store "${this.STORE_NAME}" still doesn't exist after repair attempt`)
+        }
+
+        return newDb.transaction(this.STORE_NAME, mode)
+      }
+
+      return db.transaction(this.STORE_NAME, mode)
+    } catch (error) {
+      this.logger?.error(`Failed to create transaction for store "${this.STORE_NAME}"`, { error })
+      throw error
+    }
+  }
+
+  private async getObjectStore(mode: IDBTransactionMode = 'readonly'): Promise<IDBObjectStore> {
+    const transaction = await this.getTransaction(mode)
+    return transaction.objectStore(this.STORE_NAME)
   }
 
   protected async doGet(key: StorageKeyType): Promise<any> {
-    const store = await this.transaction()
+    const store = await this.getObjectStore()
 
     // Для пустого ключа возвращаем все состояние
     if (key === '') {
@@ -150,9 +522,9 @@ export class IndexedDBStorage<T extends Record<string, any>> extends BaseStorage
   protected async doSet(key: StorageKeyType, value: any): Promise<void> {
     // Для пустого ключа устанавливаем все состояние
     if (key === '') {
+      const store = await this.getObjectStore('readwrite')
       return new Promise((resolve, reject) => {
-        const tx = this.db!.transaction(this.STORE_NAME, 'readwrite')
-        const store = tx.objectStore(this.STORE_NAME)
+        const tx = store.transaction
 
         tx.oncomplete = () => {
           resolve()
@@ -176,7 +548,8 @@ export class IndexedDBStorage<T extends Record<string, any>> extends BaseStorage
         }
       })
     }
-    const store = await this.transaction('readwrite')
+
+    const store = await this.getObjectStore('readwrite')
 
     // Для "сырого" ключа
     if (key instanceof StorageKey && key.isUnparseable()) {
@@ -205,6 +578,14 @@ export class IndexedDBStorage<T extends Record<string, any>> extends BaseStorage
     await this.putValueInStore(store, parts[0], value)
   }
 
+  private async putValueInStore(store: IDBObjectStore, key: StorageKeyType, value: any): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = store.put(value, key.valueOf())
+      request.onerror = () => reject(request.error)
+      request.onsuccess = () => resolve()
+    })
+  }
+
   protected async doUpdate(updates: Array<{ key: string | StorageKey; value: any }>): Promise<void> {
     // Группируем обновления
     const updatesByRoot = new Map<string, Array<{ path: string[]; value: any }>>()
@@ -230,8 +611,7 @@ export class IndexedDBStorage<T extends Record<string, any>> extends BaseStorage
     try {
       // Обрабатываем "сырые" обновления
       for (const { key, value } of rawUpdates) {
-        // Создаем новую транзакцию для каждого обновления
-        const store = await this.transaction('readwrite')
+        const store = await this.getObjectStore('readwrite')
         await this.putValueInStore(store, key, value)
       }
 
@@ -248,18 +628,17 @@ export class IndexedDBStorage<T extends Record<string, any>> extends BaseStorage
           }
         }
 
-        // Создаем новую транзакцию для каждого корневого ключа
-        const store = await this.transaction('readwrite')
+        const store = await this.getObjectStore('readwrite')
         await this.putValueInStore(store, rootKey, updatedValue)
       }
     } catch (error) {
-      console.error('Ошибка при обновлении:', error)
+      this.logger?.error('Error during update:', { error })
       throw error
     }
   }
 
   protected async doDelete(key: StorageKeyType): Promise<boolean> {
-    const store = await this.transaction('readwrite')
+    const store = await this.getObjectStore('readwrite')
 
     // Для "сырого" ключа
     if (key instanceof StorageKey && key.isUnparseable()) {
@@ -320,16 +699,8 @@ export class IndexedDBStorage<T extends Record<string, any>> extends BaseStorage
     })
   }
 
-  private async putValueInStore(store: IDBObjectStore, key: StorageKeyType, value: any): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const request = store.put(value, key.valueOf())
-      request.onerror = () => reject(request.error)
-      request.onsuccess = () => resolve()
-    })
-  }
-
   protected async doClear(): Promise<void> {
-    const store = await this.transaction('readwrite')
+    const store = await this.getObjectStore('readwrite')
     return new Promise((resolve, reject) => {
       const request = store.clear()
       request.onsuccess = () => resolve()
@@ -338,7 +709,7 @@ export class IndexedDBStorage<T extends Record<string, any>> extends BaseStorage
   }
 
   protected async doKeys(): Promise<string[]> {
-    const store = await this.transaction()
+    const store = await this.getObjectStore()
     const request = store.getAllKeys()
     return new Promise((resolve, reject) => {
       request.onsuccess = () => {
@@ -348,29 +719,21 @@ export class IndexedDBStorage<T extends Record<string, any>> extends BaseStorage
     })
   }
 
-  protected async doDestroy(): Promise<void> {
-    await this.close()
-    await this.deleteDatabase()
-  }
-
-  private async deleteDatabase(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.deleteDatabase(this.DB_NAME)
-      request.onsuccess = () => resolve()
-      request.onerror = () => reject(request.error)
-    })
-  }
-
   protected async doHas(key: StorageKeyType): Promise<boolean> {
     const value = await this.doGet(key)
     return value !== undefined
   }
 
-  private async close(): Promise<void> {
-    if (this.db) {
-      this.db.close()
-      this.db = null
-      this.initPromise = null
+  protected async doDestroy(): Promise<void> {
+    try {
+      await this.doClear()
+
+      // Note: We don't actually delete the object store from the database
+      // as that would require reopening the DB with a higher version.
+      // An empty object store takes minimal space.
+    } catch (error) {
+      this.logger?.error(`Error destroying store "${this.STORE_NAME}"`, { error })
+      throw error
     }
   }
 }

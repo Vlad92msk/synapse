@@ -1,9 +1,9 @@
 import { ComponentType, createContext, PropsWithChildren, useContext, useEffect, useRef, useState } from 'react'
 import { Observable } from 'rxjs'
 
+import { deepMerge } from '../../_utils'
 import { IStorage } from '../../core'
-import { deepMerge } from '../../utils'
-import { SynapseStore } from './createSynapse'
+import { SynapseStore } from '../../utils'
 
 const ERROR_HOOK_MESSAGE = 'useSynapseActions необходимо использовать внутри компонента contextSynapse'
 const ERROR_CONTEXT_INIT = 'Ошибка при инициализации контекста:'
@@ -20,11 +20,28 @@ interface Options<TStore extends Record<string, any>> {
  * @param options
  * @returns Объект с функцией HOC и хуками для доступа к хранилищу
  */
+// Модифицированный createSynapseCtx.tsx
 export function createSynapseCtx<TStore extends Record<string, any>, TStorage extends IStorage<TStore>, TSelectors = any, TActions = any>(
-  synapseStore: SynapseStore<TStore, TStorage, TSelectors, TActions>,
+  synapseStorePromise: Promise<SynapseStore<TStore, TStorage, TSelectors, TActions>> | SynapseStore<TStore, TStorage, TSelectors, TActions>,
   options?: Options<TStore>,
 ) {
   const { loadingComponent = null, mergeFn = deepMerge } = options || {}
+
+  // Храним ссылку на store
+  let synapseStore: SynapseStore<TStore, TStorage, TSelectors, TActions> | null = null
+
+  // Флаг готовности хранилища
+  let storeReady = false
+
+  // Если передан Promise, начинаем его обработку
+  const initPromise = (async () => {
+    try {
+      synapseStore = await (synapseStorePromise instanceof Promise ? synapseStorePromise : Promise.resolve(synapseStorePromise))
+      storeReady = true
+    } catch (error) {
+      console.error('Ошибка инициализации хранилища Synapse:', error)
+    }
+  })()
 
   const SynapseContext = createContext<SynapseStore<TStore, TStorage, TSelectors, TActions> | null>(null)
 
@@ -64,15 +81,28 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
 
     function WrappedComponent({ contextProps, ...props }: WrappedComponentProps) {
       const [initialized, setInitialized] = useState(false)
-      const debugIdRef = useRef(`synapse-${synapseStore.storage.name}`)
+      const [storeInitialized, setStoreInitialized] = useState(storeReady)
+      const debugIdRef = useRef(`synapse-${synapseStore?.storage.name || 'initializing'}`)
+
+      // Отслеживаем инициализацию хранилища, если оно еще не готово
+      useEffect(() => {
+        if (!storeReady) {
+          initPromise.then(() => {
+            setStoreInitialized(true)
+          })
+        }
+      }, [])
 
       // Инициализируем контекст при монтировании компонента
       useEffect(() => {
+        // Не начинаем инициализацию контекста, пока хранилище не готово
+        if (!storeInitialized) return
+
         let mounted = true
 
         const initializeContext = async () => {
           try {
-            if (contextProps && Object.keys(contextProps).length > 0) {
+            if (synapseStore && contextProps && Object.keys(contextProps).length > 0) {
               await synapseStore.storage.update((state) => {
                 mergeFn(state, contextProps)
               })
@@ -91,9 +121,16 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
         return () => {
           mounted = false
         }
-      }, [contextProps])
+      }, [contextProps, storeInitialized])
 
-      if (!initialized) return loadingComponent
+      // Проверяем инициализацию хранилища и контекста
+      if (!storeInitialized) {
+        return loadingComponent || <div>Загрузка хранилища...</div>
+      }
+
+      if (!initialized) {
+        return loadingComponent || <div>Инициализация контекста...</div>
+      }
 
       return (
         <SynapseContext.Provider value={synapseStore}>
@@ -110,7 +147,8 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
   }
 
   const cleanupSynapse = async (): Promise<void> => {
-    return synapseStore.destroy()
+    await initPromise // Ждем завершения инициализации
+    return synapseStore?.destroy() || Promise.resolve()
   }
 
   return {

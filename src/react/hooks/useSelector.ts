@@ -13,52 +13,20 @@ interface UseSelectorOptions<T> {
 
 /**
  * Глобальный реестр селекторов с активными подписками.
- * Предотвращает потерю подписок при размонтировании компонентов.
+ * Хранит последние значения селекторов и список callbacks для обновления всех компонентов.
  */
-const PERSISTENT_SUBSCRIPTIONS = new Map<
+const SELECTOR_REGISTRY = new Map<
   string,
   {
-    selector: SelectorAPI<any>
-    unsubscribe: () => void
-    refCount: number
+    lastValue: any
+    listeners: Set<(value: any) => void>
+    unsubscribe: (() => void) | null
   }
 >()
 
 /**
- * Кеш идентификаторов для селекторов без toString
- * Гарантирует стабильность ID между вызовами
- */
-const SELECTOR_ID_CACHE = new WeakMap<SelectorAPI<any>, string>()
-
-/**
- * Получает стабильный идентификатор селектора
- */
-function getSelectorId<T>(selector: SelectorAPI<T>): string {
-  // Проверяем кеш идентификаторов
-  if (SELECTOR_ID_CACHE.has(selector)) {
-    return SELECTOR_ID_CACHE.get(selector)!
-  }
-
-  // Используем встроенный toString, если он доступен и возвращает строку
-  if (typeof selector.toString === 'function') {
-    const id = selector.toString()
-
-    // Проверяем, что результат toString - это не стандартный [object Object]
-    if (id !== '[object Object]' && typeof id === 'string') {
-      SELECTOR_ID_CACHE.set(selector, id)
-      return id
-    }
-  }
-
-  // Создаем уникальный идентификатор, если toString недоступен или не подходит
-  const generatedId = `selector_${Date.now()}_${Math.random().toString(36).slice(2)}`
-  SELECTOR_ID_CACHE.set(selector, generatedId)
-  return generatedId
-}
-
-/**
  * Хук для использования селекторов в компонентах React.
- * Поддерживает постоянные подписки для корректной работы реактивности.
+ * Обеспечивает согласованность значений между всеми экземплярами хука.
  */
 export function useSelector<T>(selector: SelectorAPI<T>): T | undefined
 export function useSelector<T>(selector: SelectorAPI<T>, options: UseSelectorOptions<T> & { withLoading?: true }): { data: T | undefined; isLoading: boolean }
@@ -69,82 +37,105 @@ export function useSelector<T>(selector: SelectorAPI<T>, options?: UseSelectorOp
 
   // Для предотвращения лишних ререндеров
   const prevValueRef = useRef<T | undefined>(options?.initialValue)
+  const equalsRef = useRef(options?.equals || ((a: T, b: T) => a === b))
 
-  // Получаем стабильный ID селектора
-  const selectorId = getSelectorId(selector)
+  // Получаем ID селектора с помощью метода getId()
+  const selectorId = selector.getId()
 
-  // Функция обновления состояния с проверкой на изменения
-  const updateState = (newValue: T) => {
-    const equals = options?.equals || ((a: T, b: T) => a === b)
-
-    // Обновляем только если значение изменилось или это первая загрузка
-    if (prevValueRef.current === undefined || !equals(newValue, prevValueRef.current)) {
+  // Обновляем состояние компонента при изменении значения
+  const updateComponentState = (newValue: T) => {
+    // Сравниваем с предыдущим значением компонента
+    if (prevValueRef.current === undefined || !equalsRef.current(newValue, prevValueRef.current)) {
       prevValueRef.current = newValue
       setState(newValue)
     }
   }
 
   useEffect(() => {
-    // Запрашиваем начальное значение
-    if (options?.withLoading) setIsLoading(true)
-
-    selector
-      .select()
-      .then((initialValue) => {
-        updateState(initialValue)
-        if (options?.withLoading) setIsLoading(false)
+    // Создаем запись в реестре, если её ещё нет
+    if (!SELECTOR_REGISTRY.has(selectorId)) {
+      SELECTOR_REGISTRY.set(selectorId, {
+        lastValue: undefined,
+        listeners: new Set(),
+        unsubscribe: null,
       })
-      .catch((error) => {
-        console.error('useSelector: Ошибка при получении начального значения', error)
-        if (options?.withLoading) setIsLoading(false)
-      })
+    }
 
-    // Проверяем, есть ли уже подписка в глобальном реестре
-    if (!PERSISTENT_SUBSCRIPTIONS.has(selectorId)) {
-      // Создаем новую подписку
-      const unsubscribe = selector.subscribe({
+    const registry = SELECTOR_REGISTRY.get(selectorId)!
+
+    // Добавляем текущий компонент в список слушателей
+    registry.listeners.add(updateComponentState)
+
+    // Если у нас уже есть значение, сразу устанавливаем его
+    if (registry.lastValue !== undefined) {
+      updateComponentState(registry.lastValue)
+
+      // Если был запрошен режим загрузки, сразу сбрасываем его
+      if (options?.withLoading) {
+        setIsLoading(false)
+      }
+    } else {
+      // Запрашиваем начальное значение
+      if (options?.withLoading) setIsLoading(true)
+
+      selector
+        .select()
+        .then((initialValue) => {
+          // Обновляем значение в реестре
+          registry.lastValue = initialValue
+
+          // Уведомляем все компоненты
+          registry.listeners.forEach((listener) => listener(initialValue))
+
+          if (options?.withLoading) setIsLoading(false)
+        })
+        .catch((error) => {
+          console.error(`useSelector: Ошибка при получении начального значения для ${selectorId}`, error)
+          if (options?.withLoading) setIsLoading(false)
+        })
+    }
+
+    // Создаем подписку только один раз для селектора
+    if (!registry.unsubscribe) {
+      registry.unsubscribe = selector.subscribe({
         notify: (newValue: T) => {
-          updateState(newValue)
+          // Обновляем значение в реестре
+          registry.lastValue = newValue
+
+          // Уведомляем все компоненты
+          registry.listeners.forEach((listener) => {
+            try {
+              listener(newValue)
+            } catch (error) {
+              console.error(`useSelector: Ошибка при уведомлении слушателя для ${selectorId}`, error)
+            }
+          })
         },
       })
-
-      // Добавляем в реестр постоянных подписок
-      PERSISTENT_SUBSCRIPTIONS.set(selectorId, {
-        selector,
-        unsubscribe,
-        refCount: 1,
-      })
-    } else {
-      // Увеличиваем счетчик ссылок
-      const entry = PERSISTENT_SUBSCRIPTIONS.get(selectorId)!
-      entry.refCount++
     }
 
     // При размонтировании компонента
     return () => {
-      const entry = PERSISTENT_SUBSCRIPTIONS.get(selectorId)
-      if (entry) {
-        entry.refCount--
+      const registry = SELECTOR_REGISTRY.get(selectorId)
+      if (registry) {
+        // Удаляем текущий компонент из списка слушателей
+        registry.listeners.delete(updateComponentState)
 
-        // Если это был последний компонент, использующий этот селектор,
-        // можно было бы удалить подписку, но мы специально этого не делаем,
-        // чтобы сохранить реактивность между различными монтированиями компонентов
-        //
-        // Для очистки ресурсов при необходимости можно раскомментировать:
-        //
-        // if (entry.refCount <= 0) {
-        //   entry.unsubscribe();
-        //   PERSISTENT_SUBSCRIPTIONS.delete(selectorId);
-        // }
+        // Если больше нет слушателей, можно очистить подписку
+        if (registry.listeners.size === 0) {
+          if (registry.unsubscribe) {
+            registry.unsubscribe()
+          }
+          SELECTOR_REGISTRY.delete(selectorId)
+        }
       }
     }
   }, [selector, selectorId])
 
-  // Если запрошен режим с загрузкой
+  // Возвращаем данные в нужном формате
   if (options?.withLoading) {
     return { data: state, isLoading }
   }
 
-  // В простом режиме возвращаем только данные
   return state
 }

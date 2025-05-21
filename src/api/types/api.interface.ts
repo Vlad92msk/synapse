@@ -1,4 +1,4 @@
-import { StorageType } from '../../core'
+import { IStorage, StorageType } from '../../core'
 import { CreateEndpoint, EndpointConfig } from './endpoint.interface'
 
 /**
@@ -93,19 +93,7 @@ export interface FetchBaseQueryArgs {
 }
 
 export interface CreateApiClientOptions<T extends Record<string, EndpointConfig<any, any>> = Record<string, EndpointConfig<any, any>>> {
-  /** Тип хранилища */
-  storageType: StorageType
-  /** Опции хранилища */
-  storageOptions?: {
-    /** Имя хранилища */
-    name?: string
-    /** Имя базы данных (для IndexedDB) */
-    dbName?: string
-    /** Имя хранилища (для IndexedDB) */
-    storeName?: string
-    /** Версия базы данных (для IndexedDB) */
-    dbVersion?: number
-  }
+  storage: IStorage
   /** Настройки кэша
    * если явно указан false - значит ни один запрос НЕ будет кэшироваться, даже если в эндпоинтах указаны параметры
    * */

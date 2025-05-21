@@ -19,9 +19,7 @@ export class ApiClient<EndpointsFn extends (create: CreateEndpoint) => Promise<R
 
   private readonly baseQueryConfig: CreateApiClientOptions['baseQuery']
 
-  private readonly storageType: CreateApiClientOptions['storageType']
-
-  private readonly storageOptions: CreateApiClientOptions['storageOptions']
+  private readonly storageExternal: CreateApiClientOptions['storage']
 
   private readonly createEndpoints: EndpointsFn
 
@@ -35,14 +33,13 @@ export class ApiClient<EndpointsFn extends (create: CreateEndpoint) => Promise<R
     this.cacheableHeaderKeys = options.cacheableHeaderKeys
     this.globalCacheConfig = options.cache
     this.baseQueryConfig = options.baseQuery
-    this.storageType = options.storageType
-    this.storageOptions = options.storageOptions
+    this.storageExternal = options.storage
     this.createEndpoints = options.endpoints
   }
 
   public async init(): Promise<this> {
     // 1. Создаем кэшированное хранилище запросов
-    this.queryStorage = await new QueryStorage(this.storageType, this.storageOptions, this.globalCacheConfig).initialize()
+    this.queryStorage = await new QueryStorage(this.storageExternal, this.globalCacheConfig).initialize()
 
     // 2. Создаем эндпоинты
     await this.initializeEndpoints()

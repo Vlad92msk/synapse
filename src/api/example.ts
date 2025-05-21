@@ -1,3 +1,4 @@
+import { IndexedDBStorage, LocalStorage, MemoryStorage } from '../core'
 import { ApiClient } from './api.module'
 import { ResponseFormat } from './types/api.interface'
 
@@ -56,16 +57,42 @@ export interface PokemonSearchParams {
   offset?: number
 }
 
+// Создаем базу данных в indexedDB
+const { pokemonStorageIdb } = await IndexedDBStorage.createStorages<{
+  pokemonStorageIdb: Record<string, any>
+  myStorage1: Record<string, any>
+}>('pokemon-api-cache', {
+  // Создаем хранилище в базе данных
+  pokemonStorageIdb: {
+    name: 'pokemon-api',
+  },
+  // И так далее
+  myStorage1: {
+    name: 'some-api-1',
+    // Тоже самое что при
+    // initialState: ,
+    // middlewares: ,
+    // pluginExecutor: ,
+    // eventEmitter: ,
+  },
+})
+
+// Для MemoryStorage и LocalStorage как обычно
+const pokemonStorageMemory = await new MemoryStorage(
+  {
+    name: 'pokemon-api',
+    // middlewares: ,
+    // initialState: {},
+  },
+  // pluginExecutor: ,  // IPluginExecutor
+  // eventEmitter: , // IEventEmitter
+  // logger: , // ILogger
+).initialize()
+
 export const api = new ApiClient({
   cacheableHeaderKeys: ['X-Global-Header'],
-  storageType: 'localStorage',
-  storageOptions: {
-    name: 'pokemon-api-storage',
-    dbName: 'pokemon-api-cache',
-    storeName: 'requests',
-    dbVersion: 1,
-  },
-  // Кэширование может быть включено/отключено при создании
+  // Передаем готовое хранилище
+  storage: pokemonStorageIdb, // или pokemonStorageMemory
   cache: true,
   // Базовый запрос
   baseQuery: {

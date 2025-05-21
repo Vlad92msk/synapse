@@ -25,8 +25,7 @@ export class QueryStorage {
   }
 
   constructor(
-    private readonly storageType: StorageType,
-    private readonly storageOptions: CreateApiClientOptions['storageOptions'],
+    private readonly storageExternal: CreateApiClientOptions['storage'],
     private readonly globalCacheConfig: CreateApiClientOptions['cache'],
   ) {}
 
@@ -41,28 +40,7 @@ export class QueryStorage {
 
   private async createStorage() {
     try {
-      const name = this.storageOptions?.name || 'api-storage'
-      let s: IStorage
-      switch (this.storageType) {
-        case 'indexedDB':
-          s = new IndexedDBStorage({
-            name,
-            options: {
-              dbName: this.storageOptions?.dbName || 'api-cache',
-              storeName: this.storageOptions?.storeName || 'requests',
-              dbVersion: this.storageOptions?.dbVersion || 1,
-            },
-          })
-          break
-
-        case 'localStorage':
-          s = new LocalStorage({ name })
-          break
-
-        case 'memory':
-        default:
-          s = new MemoryStorage({ name })
-      }
+      const s: IStorage = this.storageExternal
 
       await s.initialize()
       this.storage = s
