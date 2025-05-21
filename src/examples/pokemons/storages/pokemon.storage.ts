@@ -1,4 +1,3 @@
-```typescript
 import { MemoryStorage } from '@vlad92msk/synapse/core'
 
 import { PokemonState } from '../types'
@@ -15,5 +14,4 @@ export async function createPokemonStorage() {
   }).initialize()
 }
 
-export type PokemonStorage = Awaited<ReturnType<typeof createPokemonStorage>>;
-```
+export type PokemonStorage = Awaited<ReturnType<typeof createPokemonStorage>>

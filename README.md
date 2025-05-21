@@ -17,12 +17,22 @@ Synapse — это набор инструментов для управлени
 
 ## Автор
 
-**Владислав** — Frontend Developer (TypeScript, React)
+**Владислав** — Senior Frontend Developer (React, TypeScript)
 
-- [LinkedIn](https://www.linkedin.com/in/vlad-firsov/)
-- [GitHub](https://github.com/Vlad92msk/)
 
-Нахожусь в поиске новых карьерных возможностей 🔎
+<div style="
+    border: 1px solid #0077B5;
+    border-radius: 8px; 
+    padding: 15px; 
+    background-color: #2b2b29;
+    "
+>
+
+### 🔎 Нахожусь в поиске новых карьерных возможностей!
+
+[GitHub](https://github.com/Vlad92msk/) | [LinkedIn](https://www.linkedin.com/in/vlad-firsov/)
+
+</div>
 
 ## Установка
 
@@ -34,6 +44,57 @@ yarn add @vlad92msk/synapse
 pnpm add @vlad92msk/synapse
 ```
 
+
+## В своих примерах я буду использовать top-level-await, поэтому:
+
+### Версии Node.js
+- ✅ Node.js ≥ 14.8.0 (минимальная версия с поддержкой top-level-await)
+- ✅ Node.js ≥ 16.0.0 (рекомендуется для полной поддержки)
+
+### Версии TypeScript
+- ✅ TypeScript ≥ 3.8 (базовая поддержка)
+- ✅ TypeScript ≥ 4.5 (улучшенная поддержка)
+- ✅ TypeScript ≥ 5.0 (рекомендуется, полная поддержка)
+
+### Параметр `target` в tsconfig.json
+- ✅ ES2022 (рекомендуется)
+- ✅ ESNext
+- ❌ ES2021 или ниже (не поддерживает top-level-await)
+
+### Параметр `module` в tsconfig.json
+- ✅ ESNext (рекомендуется)
+- ✅ NodeNext
+- ✅ ES2022
+- ❌ CommonJS (не поддерживает top-level-await)
+- ❌ AMD, UMD, System (не поддерживают top-level-await)
+
+### Параметр `moduleResolution` в tsconfig.json
+- ✅ bundler (для проектов использующих Vite, Webpack 5, esbuild)
+- ✅ node16 или nodenext (для Node.js проектов)
+- ✅ node (для совместимости со старыми проектами, не рекомендуется)
+- ❓ classic (может работать с ограничениями)
+
+### Бандлеры и сборщики
+- ✅ Vite (полная поддержка)
+- ✅ Webpack 5+ (с правильной конфигурацией)
+- ✅ esbuild (полная поддержка)
+- ✅ Rollup (с плагином @rollup/plugin-dynamic-import-vars)
+- ✅ Next.js ≥ 12 (нужен правильный build target)
+- ❌ Webpack 4 и ниже
+
+### Пример минимальной конфигурации tsconfig.json
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true
+  }
+}
+```
+  
 ## Быстрый старт
 
 Импорты:
@@ -64,6 +125,7 @@ import {
 
   // Модуль создания вычисляемых селекторов в Redux стиле
   SelectorModule,
+  ISelectorModule
 } from '@vlad92msk/synapse/core'
 
 // Инструменты для использования реактивного подхода (немного похоже на Redux-Observable)
@@ -86,7 +148,9 @@ import {
 import { ApiClient, ResponseFormat } from '@vlad92msk/synapse/api'
 
 // Несколько инструментов для удобного использования в React
-import { useStorageSubscribe, useSelector } from '@vlad92msk/synapse/react'
+import { useStorageSubscribe, useSelector, createSynapseCtx } from '@vlad92msk/synapse/react'
+
+import { createSynapse } from '@vlad92msk/synapse/utils'
 ```
 
 Вот простой пример использования Synapse с React:
@@ -156,16 +220,38 @@ const localStorage = await new LocalStorage({
 ### IndexedDBStorage
 
 Хранилище на основе IndexedDB для больших объемов данных и сложных структур.
-
+Создается немного иначе, но довольно похожим образом
 ```typescript
-const dbStorage = await new IndexedDBStorage({
-  name: 'dbStorage',
-  options: {
-    dbName: 'myApp',
-    storeName: 'main-store',
-    dbVersion: 1
+import { IndexedDBStorage } from '@vlad92msk/synapse/core'
+import { IDBApi, IDBCore } from './types'
+
+export const { CORE, API } = await IndexedDBStorage.createStorages<{
+  CORE: IDBCore
+  API: IDBApi
+}>(
+  'social-network', // Название базы данных в indexDB
+  // Таблицы:
+  {
+    // === Хранение запросов для кэширования ===
+    API: {
+      name: 'api',
+      // eventEmitter: ,
+      // initialState: ,
+      // middlewares: ,
+      // pluginExecutor: ,
+    },
+    // === Основные данные проекта ===
+    CORE: {
+      name: 'core',
+      initialState: {
+        currentUserProfile: undefined,
+      },
+      //...
+    },
+    // Другие объекты (хранилища)
   },
-}).initialize();
+  console, // logger (может быть любой, который имплементируют интерфейс ILogger)
+)
 ```
 
 ## Селекторы
@@ -203,7 +289,12 @@ const countValueSelector = counterSelector.createSelector(s => s.value);
 // Комбинирование селекторов
 const doubledCountSelector = counterSelector.createSelector(
   [countValueSelector],
-  count => count * 2
+  count => count * 2,
+  // Опционально:
+  // {
+  //   equals: , // Функция сравнения
+  //   name: 'doubledCountSelector' // Имя селектора
+  // }
 );
 
 // Подписка на изменения вычисляемого значения
@@ -225,13 +316,7 @@ Synapse включает в себя API-клиент с поддержкой к
 const api = new ApiClient({
   // Настройка кеширования запросов
   cacheableHeaderKeys: ['X-Auth-Token'],
-  storageType: 'localStorage',
-  storageOptions: {
-    name: 'api-cache',
-    dbName: 'api-cache-db',
-    storeName: 'requests',
-    dbVersion: 1,
-  },
+  storage: API, // Передаем готовое экземпляр готового хранилища
   // Настройки кеша
   cache: {
     ttl: 5 * 60 * 1000, // Время жизни кеша: 5 минут
@@ -473,6 +558,280 @@ export const pokemonEffects = combineEffects(
   loadPokemonEffect
 )
 ```
+---
+## Пример организации кода и использования утилиты createSynapse
+
+Предлагаемая структура файлов
+
+```md
+📦some-directory
+└── 📂synapses
+│    └── 📂core
+│    │    ├── 📄core.dispatcher.ts
+│    │    ├── 📄core.synapse.ts
+│    │    └── ...
+│    └── 📂user-info
+│    │    ├── 📄user-info.context.tsx
+│    │    ├── 📄user-info.dispatcher.ts
+│    │    ├── 📄user-info.effects.ts
+│    │    ├── 📄user-info.selectors.ts
+│    │    ├── 📄user-info.store.ts
+│    │    └── 📄user-info.synapse.ts
+│    └──...
+│
+└── 📄indexdb.config.ts
+```
+
+```typescript
+// user-info.store.ts
+// === СОЗДАНИЕ ХРАНИЛИЩА НУЖНОГОТИПА ===
+export async function createUserInfoStorage() {
+  return new MemoryStorage<AboutUserUserInfo>({
+    name: 'user-info',
+    initialState: {
+      userInfoInit: undefined,
+      isChangeActive: false,
+      fieldsInit: {},
+      fields: {},
+    },
+  }).initialize()
+}
+```
+
+```typescript
+// user-info.dispatcher.ts
+// === СОЗДАНИЕ ДИСПЕТЧЕРА ===
+
+import { IStorage } from '@vlad92msk/synapse/core'
+import { createDispatcher, loggerDispatcherMiddleware } from '@vlad92msk/synapse/reactive'
+
+export function createUserInfoDispatcher(store: IStorage<AboutUserUserInfo>) {
+  const loggerMiddleware = loggerDispatcherMiddleware({...})
+
+  return createDispatcher({ storage: store }, (storage, { createAction, createWatcher }) => ({
+    setCurrentUserProfile: createAction<UserProfileInfo, UserProfileInfo>({
+      type: 'setCurrentUserProfile',
+      // meta: ,
+      // action: async () => {...}),
+    }),
+
+    setActiveChange: createAction<void, void>({
+      type: 'setActiveChange',
+      // meta: ,
+      // action: async () => {...}),
+    })
+  // Другие диспетчеры ...
+  })).use(loggerMiddleware)
+}
+
+export type UserInfoDispatcher = ReturnType<typeof createUserInfoDispatcher>
+```
+
+```typescript
+// user-info.dispatcher.ts
+// === СОЗДАНИЕ СЕЛЕКТОРОВ ===
+import { ISelectorModule } from '@vlad92msk/synapse/core'
+
+export const createUserInfoSelectors = (selectorModule: ISelectorModule<AboutUserUserInfo>) => {
+  const currentUserProfile = selectorModule.createSelector((s) => s.userInfoInit)
+  const fieldsInit = selectorModule.createSelector((s) => s.fieldsInit)
+
+  const isChangeActive = selectorModule.createSelector((s) => s.isChangeActive)
+
+  const fields = selectorModule.createSelector((s) => s.fields)
+  // Для React
+  // Комопнент будет ререндериться всегда, когда меняется возвращаемое селектором значение
+  // Для уменьшения ререндеров советую создавать точечные селекторы
+  // Если для отображения information у вас отдельный компонент - лучше создать отдельный для него селектор
+  const fieldInformation = selectorModule.createSelector((s) => s.fields.information)
+  const fieldPosition = selectorModule.createSelector((s) => s.fields.position)
+  //...
+
+  return ({
+    currentUserProfile,
+    isChangeActive,
+    //...
+  })
+}
+```
+
+```typescript
+// user-info.effects.ts
+// === СОЗДАНИЕ ЭФФЕКТОВ ===
+import { EMPTY, from, of } from 'rxjs'
+import { catchError, map } from 'rxjs/operators'
+import { combineEffects, createEffect, ofType, validateMap } from '@vlad92msk/synapse/reactive'
+
+type CurrentDispatchers = {
+  userInfoDispatcher: UserInfoDispatcher
+  coreIdbDispatcher: CoreDispatcher
+};
+type CurrentApis = {
+  userInfoAPi: typeof userInfoEndpoints
+};
+
+/**
+ * Добавляем полученный профиль пользователя в текущий СТор
+ */
+const loadUserInfoById = createEffect<
+  AboutUserUserInfo,
+  CurrentDispatchers,
+  CurrentApis,
+  any
+>((action$, state$, { userInfoDispatcher, coreIdbDispatcher }) => action$.pipe(
+  // Подписываемся на изменения в стороннем Synapse
+  ofType(coreIdbDispatcher.watchers.watchCurrentUserProfile),
+  map((s) => {
+    if (!s.payload) return EMPTY
+    // Берем данные из стороннего Synapse и кладем в текущий
+    return userInfoDispatcher.dispatch.setCurrentUserProfile(s.payload)
+  }),
+))
+
+const updateUserProfile = createEffect<
+  AboutUserUserInfo,
+  CurrentDispatchers,
+  CurrentApis,
+  any
+>((action$, state$, { userInfoDispatcher }, { userInfoAPi }) => action$.pipe(
+  ofType(userInfoDispatcher.dispatch.submit),
+  validateMap({
+    // Валидация перед запросом
+    validator: (action) => ({
+      skipAction: userInfoDispatcher.dispatch.reset(),
+      conditions: [Boolean(action.payload)]
+    }),
+    apiCall: (action) => {
+      return from(
+        userInfoAPi.getUserById.request({ user_id: 1 }).waitWithCallbacks({
+          // Вызывается только тогда, когда запрос реально отправляется, а не берется из кэша
+          loading: (request) => {
+            // Именно в в этот момент установится loading и другая необходимая логика
+            // userInfoDispatcher.dispatch.request(id)
+          },
+          // Можно использовать так:
+          success: (data, request) => {
+            // userInfoDispatcher.dispatch.success({ data })
+          },
+          error: (error, request) => {
+            // userInfoDispatcher.dispatch.failure(error!)
+          },
+        }),
+      )
+    },
+  }),
+))
+
+export const userInfoEffects = combineEffects(
+  loadUserInfoById,
+  updateUserProfile,
+)
+
+```
+
+```typescript
+// user-info.synapse.ts
+// === СОЗДАНИЕ Synapse ===
+import { createSynapse } from '@vlad92msk/synapse/utils'
+import { createUserInfoDispatcher } from './user-info.dispatcher'
+import { userInfoEffects } from './user-info.effects'
+import { createUserInfoSelectors } from './user-info.selectors'
+import { createUserInfoStorage } from './user-info.store'
+import { userInfoEndpoints } from '../../api/user-info.api'
+import { coreSynapseIDB } from '../core/core.synapse'
+
+export const userInfoSynapse = await createSynapse({
+  // Передаем хранилище
+  // Это может быть 
+  // 1 - Функция, которая фозвращает готовое ранилище
+  createStorageFn: createUserInfoStorage,
+  // 2 - Класс для создания хранилища (initialize() убдет вызван внутри)
+  // storage: new MemoryStorage<AboutUserUserInfo>({
+  //   name: 'user-info',
+  //   initialState: {
+  //     userInfoInit: undefined,
+  //     isChangeActive: false,
+  //     fieldsInit: {},
+  //     fields: {},
+  //   },
+  // }),
+  // Функция создания диспетчеров (Опционально)
+  createDispatcherFn: createUserInfoDispatcher,
+  // Функция создания селекторов (Опционально)
+  createSelectorsFn: createUserInfoSelectors,
+  // Конфигурация для эффектов (Опционально)
+  createEffectConfig: (userInfoDispatcher) => ({
+    // Диспетчеры для эффектов
+    dispatchers: {
+      userInfoDispatcher,                           // Текущий, для управления соственных хранилищем
+      coreIdbDispatcher: coreSynapseIDB.dispatcher, // Внешний, для взаиможействия с внешними хранилищами
+      //...
+    },
+    // Дополнительное АПИ по вашему усмотрения (у меня это API Clients)
+    api: {
+      userInfoAPi: userInfoEndpoints,
+    },
+  }),
+  // Эффекты которые будут запущены для этого synapse
+  effects: [userInfoEffects],
+})
+```
+
+```tsx
+// user-info.context.tsx
+// === СОЗДАНИЕ React Context ===
+import { createSynapseCtx } from '@vlad92msk/synapse/react'
+import { userInfoSynapse } from './user-info.synapse'
+
+// Получаем все необходимые инструменты для работы в компонете
+export const {
+  contextSynapse: useUserInfoContextSynapse,
+  useSynapseActions: useUserInfoSynapseActions,
+  useSynapseSelectors: useUserInfoSynapseSelectors,
+  useSynapseState$: useUserInfoSynapseState$,
+  useSynapseStorage: useUserInfoSynapseStorage,
+  cleanupSynapse: useUserInfoCleanupSynapse,
+} = createSynapseCtx(userInfoSynapse, {
+  loadingComponent: <div>loading</div>, // Компонент, который будет отображаться пока выполняется асинхронная загрузка Synapse
+})
+```
+
+Вы можете связывать Synapse между собой
+
+```typescript
+// core.synapse.ts
+export const coreSynapseIDB = await createSynapse({
+  storage: CORE,
+  createSelectorsFn: (selectorModule) => {
+    const currentUserProfile = selectorModule.createSelector((s) => s.currentUserProfile, { name: 'currentUserProfile' })
+
+    return ({
+      currentUserProfile,
+    })
+  },
+  createDispatcherFn: createCoreDispatcher,
+})
+
+// user-info.synapse.ts
+import { createSynapse } from '@vlad92msk/synapse/utils'
+import { coreSynapseIDB } from '../core/core.synapse'
+
+export const userInfoSynapse = await createSynapse({
+  // Передаем внешие селекторы
+  externalSelectors: {
+    coreSelectors: coreSynapseIDB.selectors
+  },
+  // TypeScript подскажет интерфейс
+  // createSelectorsFn: (currentSelectorModule, { coreSelectors }) => {...},
+})
+```
+
+Таким образом вы можете резделить функционал на слои
+
+
+---
+
+
 Полноценный рабочий пример можно найти в папке src/examples/pokemons
 Там показано еще больше возможностей которые дает этот подход.
 

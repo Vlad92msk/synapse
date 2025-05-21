@@ -1,7 +1,7 @@
-```tsx
+import { useSelector, useStorageSubscribe } from '@vlad92msk/synapse/react'
 import { CSSProperties, useEffect, useState } from 'react'
 import { distinctUntilChanged, filter, map } from 'rxjs/operators'
-import { useSelector, useStorageSubscribe } from '@vlad92msk/synapse/react'
+
 import { pokemonActions, pokemonSelectors, pokemonState$, pokemonStorage } from './store'
 import { PokemonState } from './types'
 
@@ -77,10 +77,13 @@ export function SimplePokemonViewer() {
   // Этот подход можно использовать если нужна дополнительная логика обновления состояниея в компоненте
   // Или вне React
   useEffect(() => {
-    const unsubscribe = pokemonStorage.subscribe((s) => s.currentId, (value) => {
-      // Сработает только если изменится currentId
-      console.log('currentId', value)
-    })
+    const unsubscribe = pokemonStorage.subscribe(
+      (s) => s.currentId,
+      (value) => {
+        // Сработает только если изменится currentId
+        console.log('currentId', value)
+      },
+    )
 
     return () => {
       unsubscribe()
@@ -89,13 +92,13 @@ export function SimplePokemonViewer() {
 
   // ВАРИАНТ #2 (Использование селекторов в стиле Redux)
   // С помощью хука useSelector
-  const selectorValue1 = useSelector(pokemonSelectors.val1)
+  const selectorValue1 = useSelector(pokemonSelectors.sprites)
   console.log('selectorValue1', selectorValue1)
 
   // ВАРИАНТ #2.1
   // Нативным способом (единоразовое получение)
   useEffect(() => {
-    pokemonSelectors.val1.select().then((val) => {
+    pokemonSelectors.sprites.select().then((val) => {
       console.log('pokemonSelectors select', val)
     })
   }, [])
@@ -103,7 +106,7 @@ export function SimplePokemonViewer() {
   // ВАРИАНТ #2.2
   // Нативным способом (подписка на вычисляемое значение)
   useEffect(() => {
-    pokemonSelectors.val1.subscribe({
+    pokemonSelectors.sprites.subscribe({
       notify: (s) => {
         console.log('pokemonSelectors subscribe', s)
       },
@@ -113,13 +116,15 @@ export function SimplePokemonViewer() {
   // ВАРИАНТ #3 (Реактивный подход)
   // работает только совместно с использованием Dispatcher-а
   useEffect(() => {
-    const subscription = pokemonState$.pipe(
-      map((state) => state.currentId),
-      distinctUntilChanged(),
-      filter((pokemonId) => pokemonId > 3),
-    ).subscribe((state) => {
-      console.log('Текущее состояние REACTIVE:', state)
-    })
+    const subscription = pokemonState$
+      .pipe(
+        map((state) => state.currentId),
+        distinctUntilChanged(),
+        filter((pokemonId) => pokemonId > 3),
+      )
+      .subscribe((state) => {
+        console.log('Текущее состояние REACTIVE:', state)
+      })
 
     return () => {
       subscription.unsubscribe()
@@ -151,12 +156,14 @@ export function SimplePokemonViewer() {
       ) : null}
 
       <div style={actionContainer}>
-        <button style={btn} onClick={handlePrev}>{'<--'}</button>
+        <button style={btn} onClick={handlePrev}>
+          {'<--'}
+        </button>
         <strong>{`#${state.currentId}`}</strong>
-        <button style={btn} onClick={handleNext}>{'-->'}</button>
+        <button style={btn} onClick={handleNext}>
+          {'-->'}
+        </button>
       </div>
     </div>
   )
 }
-
-```

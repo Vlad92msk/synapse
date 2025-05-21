@@ -34,24 +34,32 @@ const counter2 = await new LocalStorage<Counter>({
   },
 }).initialize()
 
-const counter3 = await new IndexedDBStorage<Counter>({
-  name: 'counter3',
-  options: {
-    dbName: 'IndexedDBStorage-test-counter3',
-    dbVersion: 1,
-    storeName: 'counter3',
+
+export const { counter3 } = await IndexedDBStorage.createStorages<{
+  counter3: Counter
+}>(
+  'IndexedDBStorage-test-counter3', // Название базы данных в indexDB
+  // Таблицы:
+  {
+    counter3: {
+      name: 'counter3',
+      initialState: { value: 3 },
+      middlewares: (getDefaultMiddleware) => {
+        const { batching } = getDefaultMiddleware()
+        return [
+          batching({
+            batchSize: 20,
+            batchDelay: 200,
+          }),
+        ]
+      },
+      // eventEmitter: ,
+      // pluginExecutor: ,
+    },
+    // Другие объекты (хранилища)
   },
-  initialState: { value: 3 },
-  middlewares: (getDefaultMiddleware) => {
-    const { batching } = getDefaultMiddleware()
-    return [
-      batching({
-        batchSize: 20,
-        batchDelay: 200,
-      }),
-    ]
-  },
-}).initialize()
+  console, // logger (может быть любой, который имплементируют интерфейс ILogger)
+)
 
 // Создаем экземпляры модуля селекторов
 const counter1Selector = new SelectorModule(counter1)
