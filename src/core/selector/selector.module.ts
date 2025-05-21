@@ -2,15 +2,15 @@ import { ILogger, IStorage } from '../storage'
 import { ISelectorModule, Selector, SelectorAPI, SelectorOptions, Subscriber } from './selector.interface'
 
 // Отладка: управление через параметр DEBUG
-const DEBUG = false
+const DEBUG = true
 
-// Глобальный кеш селекторов
+// Глобальный кеш селекторов (используем имя селектора как ключ)
 const GLOBAL_SELECTOR_CACHE = new Map<
   string,
   {
     api: SelectorAPI<any>
     refCount: number
-    permanentSubscriptions?: Array<() => void>
+    unsubscribeFunctions: Array<() => void>
   }
 >()
 
@@ -18,82 +18,21 @@ class SelectorSubscription<T> {
   private readonly id: string
   readonly subscribers = new Set<Subscriber<T>>()
   private lastValue?: T
-  private lastState?: any // Кеш последнего состояния для предотвращения повторных вычислений
-  private pendingNotification = false // Флаг для предотвращения каскадных уведомлений
-  private readonly selector?: (state: any) => T // Функция селектора
 
   constructor(
+    private readonly name: string,
     public readonly getState: () => Promise<T>,
     private readonly equals: (a: T, b: T) => boolean,
     private readonly logger?: ILogger,
-    selectorFn?: (state: any) => T, // Опционально сохраняем селектор для оптимизации
   ) {
-    this.id = `selector_${Date.now()}_${Math.random().toString(36).slice(2)}`
-    this.selector = selectorFn
+    this.id = name // Используем name в качестве id напрямую
 
     if (DEBUG) {
       console.log(`[${this.id}] Created new SelectorSubscription`)
     }
   }
 
-  // Метод для прямого обновления на основе состояния без повторных вычислений
-  async updateWithState(state: any): Promise<void> {
-    if (!this.selector) return this.notify()
-
-    try {
-      // Если состояние не изменилось, пропускаем обновление
-      if (this.lastState === state) {
-        if (DEBUG) console.log(`[${this.id}] Skip update - same state reference`)
-        return
-      }
-
-      // Обновляем последнее состояние
-      this.lastState = state
-
-      // Вычисляем новое значение с помощью селектора
-      const newValue = this.selector(state)
-
-      // Проверяем, изменилось ли значение
-      if (this.lastValue === undefined || !this.equals(newValue, this.lastValue)) {
-        this.lastValue = newValue
-
-        if (DEBUG) {
-          console.log(`[${this.id}] Value changed, notifying subscribers`, {
-            subscribers: this.subscribers.size,
-            value: newValue,
-          })
-        }
-
-        // Уведомляем подписчиков
-        const promises = Array.from(this.subscribers).map(async (subscriber) => {
-          try {
-            await subscriber.notify(newValue)
-          } catch (error) {
-            // @ts-ignore
-            this.logger?.error(`[${this.id}] Error notifying subscriber`, error)
-          }
-        })
-
-        await Promise.all(promises)
-      } else if (DEBUG) {
-        console.log(`[${this.id}] Value unchanged, skipping notifications`)
-      }
-    } catch (error) {
-      // @ts-ignore
-      this.logger?.error(`[${this.id}] Error in updateWithState`, error)
-      throw error
-    }
-  }
-
   async notify(): Promise<void> {
-    // Предотвращаем вложенные вызовы notify()
-    if (this.pendingNotification) {
-      if (DEBUG) console.log(`[${this.id}] Notification already in progress, skipping`)
-      return
-    }
-
-    this.pendingNotification = true
-
     try {
       const newValue = await this.getState()
 
@@ -112,8 +51,7 @@ class SelectorSubscription<T> {
           try {
             await subscriber.notify(newValue)
           } catch (error) {
-            // @ts-ignore
-            this.logger?.error(`[${this.id}] Error in subscriber notification`, error)
+            this.logger?.error(`[${this.id}] Error in subscriber notification`, { error })
           }
         })
 
@@ -122,10 +60,8 @@ class SelectorSubscription<T> {
         console.log(`[${this.id}] Value unchanged in notify(), skipping notifications`)
       }
     } catch (error: any) {
-      this.logger?.error(`[${this.id}] Error in notify()`, error)
+      this.logger?.error(`[${this.id}] Error in notify()`, { error })
       throw error
-    } finally {
-      this.pendingNotification = false
     }
   }
 
@@ -143,14 +79,13 @@ class SelectorSubscription<T> {
         try {
           subscriber.notify(this.lastValue as T)
         } catch (error) {
-          // @ts-ignore
-          this.logger?.error(`[${this.id}] Error in initial notification`, error)
+          this.logger?.error(`[${this.id}] Error in initial notification`, { error })
         }
       })
     } else {
       // Если значения нет - запрашиваем его
       this.notify().catch((error) => {
-        this.logger?.error(`[${this.id}] Error in initial notification`, error)
+        this.logger?.error(`[${this.id}] Error in initial notification`, { error })
       })
     }
 
@@ -168,55 +103,10 @@ class SelectorSubscription<T> {
     }
     this.subscribers.clear()
     this.lastValue = undefined
-    this.lastState = undefined
   }
 
   getId(): string {
     return this.id
-  }
-}
-
-// Создаем мемоизированную версию селектора
-function memoizeSelector<S, T>(selector: (state: S) => T, equals: (a: T, b: T) => boolean = (a, b) => a === b): (state: S) => T {
-  let lastState: S | undefined
-  let lastResult: T | undefined
-  let hasResult = false
-
-  // Счетчик для отладки
-  let callCount = 0
-
-  return (state: S): T => {
-    callCount++
-
-    // Проверяем изменение состояния по ссылке
-    if (hasResult && lastState === state) {
-      if (DEBUG) {
-        console.log(`Memoized selector reused cached value (call #${callCount})`)
-      }
-      return lastResult as T
-    }
-
-    // Вычисляем новое значение
-    const result = selector(state)
-
-    // Если у нас есть предыдущий результат, проверяем равенство
-    if (hasResult && equals(result, lastResult as T)) {
-      if (DEBUG) {
-        console.log(`Memoized selector values equal after calculation (call #${callCount})`)
-      }
-      // Обновляем ссылку на состояние, но сохраняем прежний результат
-      lastState = state
-      return lastResult as T
-    }
-
-    // Полностью обновляем кеш
-    if (DEBUG) {
-      console.log(`Memoized selector calculated new value (call #${callCount})`)
-    }
-    lastState = state
-    lastResult = result
-    hasResult = true
-    return result
   }
 }
 
@@ -231,8 +121,7 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
     {
       api: SelectorAPI<any>
       dependencies?: SelectorAPI<any>[]
-      permanentSubscriptions?: Array<() => void>
-      memoizedSelector?: (state: S) => any // Мемоизированная версия селектора
+      unsubscribeFunctions: Array<() => void>
     }
   >()
 
@@ -255,44 +144,42 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
     })
   }
 
-  private generateSelectorKey(selectorOrDeps: Selector<S, any> | SelectorAPI<any>[], resultFnOrOptions?: ((...args: any[]) => any) | SelectorOptions<any>): string {
-    const typePrefix = Array.isArray(selectorOrDeps) ? 'combined' : 'simple'
+  createSelector<T>(selector: Selector<S, T>, options: SelectorOptions<T>): SelectorAPI<T>
 
-    if (Array.isArray(selectorOrDeps)) {
-      const depsIds = selectorOrDeps.map((s) => s.toString()).join('|')
-      const fnHash = resultFnOrOptions ? resultFnOrOptions.toString().substring(0, 50) : ''
-      return `${typePrefix}:${this.storageName}:${depsIds}:${fnHash}`
-    } else {
-      const fnHash = selectorOrDeps.toString().substring(0, 100)
-      return `${typePrefix}:${this.storageName}:${fnHash}`
-    }
-  }
-
-  createSelector<T>(selector: Selector<S, T>, options?: SelectorOptions<T>): SelectorAPI<T>
-
-  createSelector<Deps extends unknown[], T>(dependencies: { [K in keyof Deps]: SelectorAPI<Deps[K]> }, resultFn: (...args: Deps) => T, options?: SelectorOptions<T>): SelectorAPI<T>
+  createSelector<Deps extends unknown[], T>(dependencies: { [K in keyof Deps]: SelectorAPI<Deps[K]> }, resultFn: (...args: Deps) => T, options: SelectorOptions<T>): SelectorAPI<T>
 
   createSelector<T>(
     selectorOrDeps: Selector<S, T> | SelectorAPI<any>[],
-    resultFnOrOptions?: ((...args: any[]) => T) | SelectorOptions<T>,
-    options?: SelectorOptions<T>,
+    resultFnOrOptions: ((...args: any[]) => T) | SelectorOptions<T>,
+    optionsArg?: SelectorOptions<T>,
   ): SelectorAPI<T> {
-    const cacheKey = this.generateSelectorKey(selectorOrDeps, resultFnOrOptions)
+    // Определяем, какую перегрузку используем
+    const isSimpleSelector = !Array.isArray(selectorOrDeps)
+
+    // Извлекаем options
+    const options = isSimpleSelector ? (resultFnOrOptions as SelectorOptions<T>) : (optionsArg as SelectorOptions<T>)
+
+    // Проверяем наличие обязательного name
+    if (!options || !options.name) {
+      throw new Error('Selector name is required')
+    }
+
+    const selectorId = options.name
 
     // Проверяем локальный кеш
-    if (this.localSelectorCache.has(cacheKey)) {
+    if (this.localSelectorCache.has(selectorId)) {
       if (DEBUG) {
-        console.log(`[${this.storageName}] Reusing cached selector: ${cacheKey}`)
+        console.log(`[${this.storageName}] Reusing cached selector: ${selectorId}`)
       }
-      return this.localSelectorCache.get(cacheKey)!.api
+      return this.localSelectorCache.get(selectorId)!.api
     }
 
     // Проверяем глобальный кеш
-    if (GLOBAL_SELECTOR_CACHE.has(cacheKey)) {
-      const cached = GLOBAL_SELECTOR_CACHE.get(cacheKey)!
+    if (GLOBAL_SELECTOR_CACHE.has(selectorId)) {
+      const cached = GLOBAL_SELECTOR_CACHE.get(selectorId)!
       cached.refCount++
       if (DEBUG) {
-        console.log(`[${this.storageName}] Reusing global cached selector: ${cacheKey}, refCount: ${cached.refCount}`)
+        console.log(`[${this.storageName}] Reusing global cached selector: ${selectorId}, refCount: ${cached.refCount}`)
       }
       return cached.api
     }
@@ -300,44 +187,36 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
     // Создаем новый селектор
     let result: SelectorAPI<T>
     let dependencies: SelectorAPI<any>[] | undefined
-    let permanentSubscriptions: Array<() => void> | undefined
-    let memoizedSelector: ((state: S) => any) | undefined
+    let unsubscribeFunctions: Array<() => void> = []
 
-    if (Array.isArray(selectorOrDeps)) {
-      dependencies = selectorOrDeps
-      const created = this.createCombinedSelector(selectorOrDeps, resultFnOrOptions as (...args: any[]) => T, options || {})
+    if (isSimpleSelector) {
+      // Простой селектор
+      const created = this.createSimpleSelector(selectorOrDeps as Selector<S, T>, options)
       result = created.api
-      permanentSubscriptions = created.permanentSubscriptions
+      unsubscribeFunctions = created.unsubscribeFunctions
     } else {
-      // Создаем мемоизированную версию селектора
-      memoizedSelector = memoizeSelector(selectorOrDeps, (options as SelectorOptions<T>)?.equals)
-
-      const created = this.createSimpleSelector(
-        memoizedSelector, // Используем мемоизированную версию
-        resultFnOrOptions as SelectorOptions<T>,
-        selectorOrDeps, // Сохраняем оригинальный селектор для отладки
-      )
-
+      // Комбинированный селектор
+      dependencies = selectorOrDeps as SelectorAPI<any>[]
+      const created = this.createCombinedSelector(dependencies, resultFnOrOptions as (...args: any[]) => T, options)
       result = created.api
-      permanentSubscriptions = created.permanentSubscriptions
+      unsubscribeFunctions = created.unsubscribeFunctions
     }
 
     // Сохраняем в кеши
-    this.localSelectorCache.set(cacheKey, {
+    this.localSelectorCache.set(selectorId, {
       api: result,
       dependencies,
-      permanentSubscriptions,
-      memoizedSelector,
+      unsubscribeFunctions,
     })
 
-    GLOBAL_SELECTOR_CACHE.set(cacheKey, {
+    GLOBAL_SELECTOR_CACHE.set(selectorId, {
       api: result,
       refCount: 1,
-      permanentSubscriptions,
+      unsubscribeFunctions,
     })
 
     if (DEBUG) {
-      console.log(`[${this.storageName}] Created new selector: ${cacheKey}`)
+      console.log(`[${this.storageName}] Created new selector: ${selectorId}`)
     }
 
     return result
@@ -345,17 +224,16 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
 
   private createSimpleSelector<T>(
     selector: Selector<S, T>,
-    options: SelectorOptions<T> = {},
-    originalSelector?: Selector<S, T>, // Оригинальный селектор для отладки
+    options: SelectorOptions<T>,
   ): {
     api: SelectorAPI<T>
-    permanentSubscriptions: Array<() => void>
+    unsubscribeFunctions: Array<() => void>
   } {
-    if (DEBUG && originalSelector) {
-      console.log(`[${this.storageName}] Creating simple selector with:`, originalSelector.toString().slice(0, 50))
+    if (DEBUG) {
+      console.log(`[${this.storageName}] Creating simple selector with name: ${options.name}`)
     }
 
-    // Оптимизированный getState с использованием кеша состояния
+    // Функция для получения данных
     const getState = async (): Promise<T> => {
       // Используем кешированное состояние, если оно доступно
       if (this.cachedState) {
@@ -368,12 +246,7 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
       return selector(state as S)
     }
 
-    const subscription = new SelectorSubscription(
-      getState,
-      options.equals || ((a, b) => a === b),
-      this.logger,
-      selector, // Передаем селектор в подписку
-    )
+    const subscription = new SelectorSubscription(options.name, getState, options.equals || ((a, b) => a === b), this.logger)
 
     const id = subscription.getId()
     this.subscriptions.set(id, subscription)
@@ -389,12 +262,12 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
         const newState = await this.source.getState()
         this.cachedState = newState
 
-        // Используем оптимизированный метод с передачей состояния
-        await (subscription as any).updateWithState(newState)
+        // Уведомляем подписчиков
+        await subscription.notify()
       }
     })
 
-    const permanentSubscriptions = [unsubscribeFromStorage]
+    const unsubscribeFunctions = [unsubscribeFromStorage]
 
     return {
       api: {
@@ -402,98 +275,36 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
         subscribe: (subscriber) => {
           return subscription.subscribe(subscriber)
         },
-        // @ts-ignore
-        toString: () => id,
+        getId: () => id,
       },
-      permanentSubscriptions,
+      unsubscribeFunctions,
     }
   }
 
   private createCombinedSelector<Deps extends unknown[], T>(
     selectors: { [K in keyof Deps]: SelectorAPI<Deps[K]> },
     resultFn: (...args: Deps) => T,
-    options: SelectorOptions<T> = {},
+    options: SelectorOptions<T>,
   ): {
     api: SelectorAPI<T>
-    permanentSubscriptions: Array<() => void>
+    unsubscribeFunctions: Array<() => void>
   } {
-    // Мемоизируем функцию результата
-    const memoizedResultFn = memoizeSelector((values: Deps) => resultFn(...values), options.equals)
-
-    // Последние значения зависимостей для оптимизации
-    const lastDependencyValues: any[] = []
-    let hasInitialValues = false
-
     const getState = async () => {
       const values = await Promise.all(selectors.map((s) => s.select()))
-
-      // Сохраняем значения для оптимизации
-      if (!hasInitialValues) {
-        for (let i = 0; i < values.length; i++) {
-          lastDependencyValues[i] = values[i]
-        }
-        hasInitialValues = true
-      }
-
-      // Используем мемоизированную функцию для вычисления результата
-      return memoizedResultFn(values as Deps)
+      return resultFn(...(values as Deps))
     }
 
-    const subscription = new SelectorSubscription(getState, options.equals || ((a, b) => a === b), this.logger)
+    const subscription = new SelectorSubscription(options.name, getState, options.equals || ((a, b) => a === b), this.logger)
 
     const id = subscription.getId()
     this.subscriptions.set(id, subscription)
 
-    // Оптимизация: отслеживаем, когда последний раз обновлялся селектор
-    let lastUpdateTime = 0
-    const UPDATE_THROTTLE = 16 // ~60fps
-
-    // Функция для дебаунсинга обновлений
-    let updateTimeoutId: any = null
-    const scheduleUpdate = () => {
-      const now = Date.now()
-
-      // Если прошло достаточно времени, обновляем сразу
-      if (now - lastUpdateTime > UPDATE_THROTTLE) {
-        if (updateTimeoutId) {
-          clearTimeout(updateTimeoutId)
-          updateTimeoutId = null
-        }
-
-        lastUpdateTime = now
-        subscription.notify().catch((error) => this.logger?.error(`[${id}] Error in combined notification:`, error))
-      }
-      // Иначе планируем отложенное обновление
-      else if (!updateTimeoutId) {
-        updateTimeoutId = setTimeout(() => {
-          updateTimeoutId = null
-          lastUpdateTime = Date.now()
-          subscription.notify().catch((error) => this.logger?.error(`[${id}] Error in combined notification:`, error))
-        }, UPDATE_THROTTLE)
-      }
-    }
-
-    // Создаем постоянные подписки на зависимости
-    const permanentSubscriptions = selectors.map((selector, index) =>
+    // Создаем подписки на зависимости
+    const unsubscribeFunctions = selectors.map((selector) =>
       selector.subscribe({
-        notify: async (newValue) => {
-          // Проверяем, изменилось ли значение
-          if (hasInitialValues && lastDependencyValues[index] === newValue) {
-            if (DEBUG) {
-              console.log(`[${id}] Dependency ${index} value unchanged, skipping update`)
-            }
-            return
-          }
-
-          // Обновляем значение в кеше
-          lastDependencyValues[index] = newValue
-
-          if (DEBUG) {
-            console.log(`[${id}] Dependency ${index} changed, scheduling update`)
-          }
-
-          // Планируем обновление
-          scheduleUpdate()
+        notify: () => {
+          // При изменении любой зависимости, обновляем значение
+          subscription.notify().catch((error) => this.logger?.error(`[${id}] Error in combined notification:`, { error }))
         },
       }),
     )
@@ -504,10 +315,9 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
         subscribe: (subscriber) => {
           return subscription.subscribe(subscriber)
         },
-        // @ts-ignore
-        toString: () => id,
+        getId: () => id,
       },
-      permanentSubscriptions,
+      unsubscribeFunctions,
     }
   }
 
@@ -523,9 +333,9 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
     // Очищаем кеш состояния
     this.cachedState = undefined
 
-    // Очищаем постоянные подписки из локального кеша
+    // Очищаем подписки из локального кеша
     this.localSelectorCache.forEach((cached) => {
-      cached.permanentSubscriptions?.forEach((unsub) => unsub())
+      cached.unsubscribeFunctions.forEach((unsub) => unsub())
     })
 
     // Собираем ключи для глобального кеша
@@ -541,7 +351,7 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
       if (globalCached) {
         globalCached.refCount--
         if (globalCached.refCount <= 0) {
-          globalCached.permanentSubscriptions?.forEach((unsub) => unsub())
+          globalCached.unsubscribeFunctions.forEach((unsub) => unsub())
           GLOBAL_SELECTOR_CACHE.delete(key)
 
           if (DEBUG) {

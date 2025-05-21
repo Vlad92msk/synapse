@@ -1,7 +1,7 @@
 import { forkJoin, Observable, timer } from 'rxjs'
 import { mergeMap } from 'rxjs/operators'
 
-import { chunk } from '../../../utils'
+import { chunk } from '../../../_utils'
 
 /**
  * Разбиение запроса на порции

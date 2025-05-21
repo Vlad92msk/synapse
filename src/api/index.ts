@@ -1,5 +1,5 @@
 export * from './api.module'
 export { ResponseFormat } from './types/api.interface'
 export * from './utils/api-helpers'
-// export * from './utils/file-utils'
-// export * from './utils/get-cacheable-headers'
+// export * from './_utils/file-_utils'
+// export * from './_utils/get-cacheable-headers'

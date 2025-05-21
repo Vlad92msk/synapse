@@ -1,5 +1,4 @@
 // Экспортируем публичные интерфейсы
-export * from './factory'
 export * from './modules/plugin/plugin.interface'
 export * from './modules/plugin/plugin.service'
 export * from './storage.interface'
@@ -10,6 +9,7 @@ export { broadcastMiddleware } from './middlewares'
 
 // Экспортируем публичные адаптеры
 // export { BaseStorage } from './adapters/base-storage.service'
+// export { IndexedDBStorage } from './adapters/indexed-DB.service1'
 export { IndexedDBStorage } from './adapters/indexed-DB.service'
 export { LocalStorage } from './adapters/local-storage.service'
 export { MemoryStorage } from './adapters/memory-storage.service'

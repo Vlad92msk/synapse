@@ -7,6 +7,7 @@
 export * from './api'
 export * from './core'
 export * from './reactive'
+export * from './utils'
 
 // React-интеграция экспортируется только если установлен React
 // Оставляем этот экспорт, он будет работать для пользователей,

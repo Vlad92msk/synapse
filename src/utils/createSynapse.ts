@@ -1,43 +1,38 @@
 import { Observable } from 'rxjs'
 
-import { ISelectorModule, IStorage, SelectorAPI, SelectorModule, StorageCreatorFunction } from '../../core'
-import { Effect, EffectsModule } from '../../reactive'
+import { ISelectorModule, IStorage, SelectorModule } from '../core'
+import { createDispatcher, CreateDispatcherType, Effect, EffectsModule } from '../reactive'
 
 // Вспомогательные типы для извлечения типов из других типов
 export type ExtractPromiseType<T> = T extends Promise<infer U> ? U : T
 export type ExtractStorageType<T> = T extends IStorage<infer U> ? U : never
 export type ExtractDispatchType<T> = T extends { dispatch: infer D } ? D : never
 
+export type StorageCreatorFunction<T extends Record<string, any>> = () => Promise<IStorage<T>>
+
 /**
  * Конфигурация хранилища
  */
-export interface CreateSynapseConfig<
+export type CreateSynapseConfig<
   TStore extends Record<string, any>,
   TSelectors = any,
   TDispatcher = any,
   TApi extends Record<string, any> = Record<string, never>,
   TConfig extends Record<string, any> = Record<string, never>,
   TExternalSelectors extends Record<string, any> = Record<string, any>,
-> {
-  // Функция создания хранилища
-  createStorageFn: StorageCreatorFunction<TStore>
-
+> = ({ storage: IStorage<TStore>; createStorageFn?: undefined } | { storage?: undefined; createStorageFn: StorageCreatorFunction<TStore> }) & {
   // Внешние селекторы
   externalSelectors?: TExternalSelectors
-
   // Функция создания селекторов
   createSelectorsFn?: (selectorModule: ISelectorModule<TStore>, externalSelectors: TExternalSelectors) => TSelectors
-
   // Функция создания диспетчера
   createDispatcherFn?: (storage: IStorage<TStore>) => TDispatcher
-
   // Функция создания конфигурации для эффектов
   createEffectConfig?: (dispatcher: TDispatcher) => {
     dispatchers: Record<string, any>
     api?: TApi
     config?: TConfig
   }
-
   // Эффекты
   effects?: Effect<TStore, any, TApi, TConfig>[]
 }
@@ -45,12 +40,13 @@ export interface CreateSynapseConfig<
 /**
  * Возвращаемый результат
  */
-export interface SynapseStore<TStore extends Record<string, any>, TStorage extends IStorage<TStore>, TSelectors = any, TActions = any> {
+export interface SynapseStore<TStore extends Record<string, any>, TStorage extends IStorage<TStore>, TSelectors = any, TActions = any, TDispatcher = any> {
   storage: TStorage
   selectors: TSelectors
   actions: TActions
   state$: Observable<TStore>
   destroy: () => Promise<void>
+  dispatcher: TDispatcher
 }
 
 /**
@@ -68,18 +64,19 @@ export async function createSynapse<
   TExternalSelectors extends Record<string, any> = Record<string, any>,
   TStorage extends IStorage<TStore> = IStorage<TStore>,
   TActions = ExtractDispatchType<TDispatcher>,
->(config: CreateSynapseConfig<TStore, TSelectors, TDispatcher, TApi, TConfig, TExternalSelectors>): Promise<SynapseStore<TStore, TStorage, TSelectors, TActions>> {
+>(config: CreateSynapseConfig<TStore, TSelectors, TDispatcher, TApi, TConfig, TExternalSelectors>): Promise<SynapseStore<TStore, TStorage, TSelectors, TActions, TDispatcher>> {
   // Создаем и инициализируем хранилище
-  const storageInstance = (await config.createStorageFn()) as TStorage
+  const storageInstance = (config.createStorageFn ? await config.createStorageFn() : config.storage!) as TStorage
 
   // Создаем сборщики для последующей очистки
   const cleanupCallbacks: Array<() => Promise<void> | void> = []
 
-  const result: SynapseStore<TStore, TStorage, TSelectors, TActions> = {
+  const result: SynapseStore<TStore, TStorage, TSelectors, TActions, TDispatcher> = {
     storage: storageInstance,
     selectors: {} as TSelectors,
     actions: {} as TActions,
     state$: new Observable<TStore>(),
+    dispatcher: undefined as TDispatcher,
     destroy: async () => {
       for (const callback of cleanupCallbacks) {
         await callback()
@@ -96,7 +93,7 @@ export async function createSynapse<
   // Создаем модуль селекторов
   if (config.createSelectorsFn) {
     try {
-      selectorModule = new SelectorModule(storageInstance)
+      selectorModule = new SelectorModule(storageInstance, console)
 
       const externalSelectors = config.externalSelectors || ({} as TExternalSelectors)
 
@@ -113,7 +110,7 @@ export async function createSynapse<
   // Создаем диспетчер
   if (config.createDispatcherFn) {
     dispatcher = config.createDispatcherFn(storageInstance)
-
+    result.dispatcher = dispatcher
     // @ts-ignore
     if (dispatcher && 'dispatch' in dispatcher) {
       result.actions = (dispatcher as any).dispatch as TActions

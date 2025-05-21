@@ -1,5 +1,5 @@
 // storage.interface.ts
-import { IndexedDBConfig } from './adapters/indexed-DB.service'
+import { IndexedDBConfig } from './adapters/indexed-DB.service.old'
 import { BatchingMiddlewareOptions, ShallowCompareMiddlewareOptions } from './middlewares'
 import { Middleware } from './utils/middleware-module'
 import { StorageKeyType } from './utils/storage-key'
