@@ -59,16 +59,14 @@ export interface PokemonSearchParams {
   offset?: number
 }
 
+const storage = await new MemoryStorage({
+  name: 'pokemon-api-cache'
+}).initialize()
+
 export const api = new ApiClient({
   // Перечисляем заголовки которые будут добавлены в локину формирования ключа
   cacheableHeaderKeys: ['X-Global-Header'],
-  storageType: 'localStorage',
-  storageOptions: {
-    name: 'pokemon-api-storage',
-    dbName: 'pokemon-api-cache',
-    storeName: 'requests',
-    dbVersion: 1,
-  },
+  storage,
   // Или boolean или объект с настройками
   cache: {
     // Время жизни кэша в миллисекундах

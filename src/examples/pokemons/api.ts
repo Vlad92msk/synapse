@@ -1,5 +1,6 @@
-```typescript
 import { ApiClient, ResponseFormat } from '@vlad92msk/synapse/api'
+import { MemoryStorage } from '@vlad92msk/synapse/core'
+
 import { Pokemon } from './types'
 
 export interface PokemonSearchParams {
@@ -7,14 +8,12 @@ export interface PokemonSearchParams {
   offset?: number
 }
 
+const storage = await new MemoryStorage({
+  name: 'pokemon-api-cache',
+}).initialize()
+
 export const api = new ApiClient({
-  storageType: 'indexedDB',
-  storageOptions: {
-    name: 'pokemon-api-storage',
-    dbName: 'pokemon-api-cache',
-    storeName: 'requests',
-    dbVersion: 1,
-  },
+  storage,
   // Или boolean или объект с настройками
   cache: {
     // Время жизни кэша в миллисекундах
@@ -51,4 +50,3 @@ export const pokemonApi = await api.init()
 
 // Получение эндпоинтов
 export const pokemonEndpoints = pokemonApi.getEndpoints()
-```

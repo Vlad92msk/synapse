@@ -1,7 +1,6 @@
-```typescript
 import { EnhancedMiddleware } from '@vlad92msk/synapse/reactive'
-import { PokemonState } from '../types'
 
+import { PokemonState } from '../types'
 
 // Создадим пользовательскую middleware для теста
 // Бдем слушать события определенных типов и вызывать другое
@@ -32,4 +31,3 @@ export const createPokemonAlertMiddleware = (): EnhancedMiddleware<PokemonState>
 
   return result
 }
-```
