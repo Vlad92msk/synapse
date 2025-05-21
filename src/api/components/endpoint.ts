@@ -126,7 +126,7 @@ export class EndpointClass<RequestParams extends Record<string, any>, RequestRes
           const response = await this.queryFunction<RequestResponse, RequestParams>(requestDefinition, mergedOptions, headers)
 
           // 6. Обрабатываем результат запроса
-          if (response.ok && response.data) {
+          if (response.ok) {
             const { headers, ...restResponse } = response
             // Сохраняем в кэш, если нужно
             if (shouldCache) {

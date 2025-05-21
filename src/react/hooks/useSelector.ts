@@ -20,7 +20,7 @@ const SELECTOR_REGISTRY = new Map<
   {
     lastValue: any
     listeners: Set<(value: any) => void>
-    unsubscribe: (() => void) | null
+    unsubscribe: VoidFunction | null
   }
 >()
 
