@@ -4,7 +4,7 @@ export interface Selector<T, R> {
 
 export interface SelectorOptions<T> {
   equals?: (a: T, b: T) => boolean
-  name: string // Сделали name обязательным параметром
+  name?: string
 }
 
 export interface Subscriber<T> {
@@ -14,7 +14,7 @@ export interface Subscriber<T> {
 export interface SelectorAPI<T> {
   select: () => Promise<T>
   subscribe: (subscriber: Subscriber<T>) => VoidFunction
-  getId: () => string // Добавили явный метод получения ID
+  getId: () => string
 }
 
 /**
@@ -31,7 +31,7 @@ export interface ISelectorModule<TStore extends Record<string, any>> {
    * Создает простой селектор на основе функции выбора
    *
    * @param selector Функция, извлекающая данные из состояния
-   * @param options Опции селектора с обязательным именем
+   * @param options Опции селектора
    * @returns API селектора
    *
    * @example
@@ -40,14 +40,14 @@ export interface ISelectorModule<TStore extends Record<string, any>> {
    *   { name: 'userIsActive' }
    * );
    */
-  createSelector<T>(selector: Selector<TStore, T>, options: SelectorOptions<T>): SelectorAPI<T>
+  createSelector<T>(selector: Selector<TStore, T>, options?: SelectorOptions<T>): SelectorAPI<T>
 
   /**
    * Создает комбинированный селектор на основе других селекторов
    *
    * @param dependencies Массив селекторов, от которых зависит новый селектор
    * @param resultFn Функция, комбинирующая результаты зависимостей
-   * @param options Опции селектора с обязательным именем
+   * @param options Опции селектора
    * @returns API селектора
    *
    * @example
@@ -57,7 +57,7 @@ export interface ISelectorModule<TStore extends Record<string, any>> {
    *   { name: 'userWithStatus' }
    * );
    */
-  createSelector<Deps extends unknown[], T>(dependencies: { [K in keyof Deps]: SelectorAPI<Deps[K]> }, resultFn: (...args: Deps) => T, options: SelectorOptions<T>): SelectorAPI<T>
+  createSelector<Deps extends unknown[], T>(dependencies: { [K in keyof Deps]: SelectorAPI<Deps[K]> }, resultFn: (...args: Deps) => T, options?: SelectorOptions<T>): SelectorAPI<T>
 
   /**
    * Освобождает ресурсы, связанные с модулем селекторов
@@ -81,8 +81,7 @@ export interface ISelectorCreator<TStore extends Record<string, any>, TSelectors
    * const createUserSelectors: ISelectorCreator<UserStore, UserSelectors> =
    *   (selectorModule, externalSelectors) => {
    *     const isActive = selectorModule.createSelector(
-   *       (state) => state.user.isActive,
-   *       { name: 'userIsActive' }
+   *       (state) => state.user.isActive
    *     );
    *
    *     return { isActive };
