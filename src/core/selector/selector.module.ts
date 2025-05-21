@@ -112,7 +112,7 @@ class SelectorSubscription<T> {
   private readonly id: string
   readonly subscribers = new Set<Subscriber<T>>()
   private lastValue?: T
-  private memoizedGetState: () => Promise<T>
+  private readonly memoizedGetState: () => Promise<T>
 
   constructor(
     private readonly name: string,
@@ -305,16 +305,17 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
         this.pendingUpdates.clear()
 
         // Обновляем состояние один раз
-        const newState = await this.source.getState()
-        this.cachedState = newState
+        this.cachedState = await this.source.getState()
 
         // Обновляем все ожидающие селекторы
-        const updatePromises = subscriptionsToUpdate.map((id) => {
+        const updatePromises = subscriptionsToUpdate.map(async (id) => {
           const subscription = this.subscriptions.get(id)
           if (subscription) {
-            return subscription.notify().catch((error) => {
+            try {
+              return await subscription.notify()
+            } catch (error) {
               this.logger?.error(`Ошибка уведомления подписчика ${id}`, { error })
-            })
+            }
           }
           return Promise.resolve()
         })
