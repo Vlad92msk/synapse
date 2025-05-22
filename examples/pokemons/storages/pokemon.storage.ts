@@ -1,4 +1,4 @@
-import { MemoryStorage } from '@vlad92msk/synapse/core'
+import { MemoryStorage } from 'synapse-storage/core'
 
 import { PokemonState } from '../types'
 

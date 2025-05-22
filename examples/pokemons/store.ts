@@ -1,4 +1,4 @@
-import { createSynapse } from '@vlad92msk/synapse/utils'
+import { createSynapse } from 'synapse-storage/utils'
 
 import { pokemonEndpoints } from './api'
 import { createPokemonDispatcher } from './dispatchers/pokemon.dispatcher'

@@ -1,4 +1,4 @@
-import { combineEffects, createEffect, ofType, ofTypes, selectorMap, validateMap } from '@vlad92msk/synapse/reactive'
+import { combineEffects, createEffect, ofType, ofTypes, selectorMap, validateMap } from 'synapse-storage/reactive'
 import { from, mapTo, of, tap } from 'rxjs'
 import { catchError, switchMap } from 'rxjs/operators'
 

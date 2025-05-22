@@ -20,28 +20,19 @@ Synapse — это набор инструментов для управлени
 **Владислав** — Senior Frontend Developer (React, TypeScript)
 
 
-<div style="
-    border: 1px solid #0077B5;
-    border-radius: 8px; 
-    padding: 15px; 
-    background-color: #2b2b29;
-    "
+> ### 🔎 Нахожусь в поиске новых карьерных возможностей!
 >
+> [GitHub](https://github.com/Vlad92msk/) | [LinkedIn](https://www.linkedin.com/in/vlad-firsov/)
 
-### 🔎 Нахожусь в поиске новых карьерных возможностей!
-
-[GitHub](https://github.com/Vlad92msk/) | [LinkedIn](https://www.linkedin.com/in/vlad-firsov/)
-
-</div>
 
 ## Установка
 
 ```bash
-npm install @vlad92msk/synapse
+npm install synapse-storage
 # или
-yarn add @vlad92msk/synapse
+yarn add synapse-storage
 # или
-pnpm add @vlad92msk/synapse
+pnpm add synapse-storage
 ```
 
 
@@ -126,7 +117,7 @@ import {
   // Модуль создания вычисляемых селекторов в Redux стиле
   SelectorModule,
   ISelectorModule
-} from '@vlad92msk/synapse/core'
+} from 'synapse-storage/core'
 
 // Инструменты для использования реактивного подхода (немного похоже на Redux-Observable)
 import { 
@@ -142,21 +133,21 @@ import {
   ofTypes,
   selectorMap,
   validateMap
-} from '@vlad92msk/synapse/reactive';
+} from 'synapse-storage/reactive';
 
 // Инструменты для работы с api
-import { ApiClient, ResponseFormat } from '@vlad92msk/synapse/api'
+import { ApiClient, ResponseFormat } from 'synapse-storage/api'
 
 // Несколько инструментов для удобного использования в React
-import { useStorageSubscribe, useSelector, createSynapseCtx } from '@vlad92msk/synapse/react'
+import { useStorageSubscribe, useSelector, createSynapseCtx } from 'synapse-storage/react'
 
-import { createSynapse } from '@vlad92msk/synapse/utils'
+import { createSynapse } from 'synapse-storage/utils'
 ```
 
 Вот простой пример использования Synapse с React:
 
 ```tsx
-import { IndexedDBStorage, LocalStorage, MemoryStorage } from '@vlad92msk/synapse/core'
+import { IndexedDBStorage, LocalStorage, MemoryStorage } from 'synapse-storage/core'
 import { useEffect, useState } from 'react'
 
 // Создаем экземпляр хранилища (MemoryStorage / LocalStorage / IndexedDBStorage)
@@ -222,7 +213,7 @@ const localStorage = await new LocalStorage({
 Хранилище на основе IndexedDB для больших объемов данных и сложных структур.
 Создается немного иначе, но довольно похожим образом
 ```typescript
-import { IndexedDBStorage } from '@vlad92msk/synapse/core'
+import { IndexedDBStorage } from 'synapse-storage/core'
 import { IDBApi, IDBCore } from './types'
 
 export const { CORE, API } = await IndexedDBStorage.createStorages<{
@@ -398,7 +389,7 @@ Synapse предоставляет инструменты для использ�
 
 Пример создания Диспетчера:
 ```typescript
-import { createDispatcher, loggerDispatcherMiddleware } from '@vlad92msk/synapse/reactive'
+import { createDispatcher, loggerDispatcherMiddleware } from 'synapse-storage/reactive'
 import { PokemonStorage } from '../storages/pokemon.storage'
 import { createPokemonAlertMiddleware } from '../middlewares/pokenon.middlewares'
 import { Pokemon } from '../types'
@@ -470,7 +461,7 @@ import {
   combineEffects,   // Объединяет несколько эффектов в один
   selectorMap,      // Выбор частей состояния с помощью селекторов
   validateMap       // Оператор для удобной работы с запросом
-} from '@vlad92msk/synapse/reactive'
+} from 'synapse-storage/reactive'
 import { pokemonEndpoints } from '../api.md'
 import { AppConfig } from '../app.config'
 import { PokemonDispatcher } from '../pokemon.dispatcher'
@@ -622,8 +613,8 @@ export async function createUserInfoStorage() {
 // user-info.dispatcher.ts
 // === СОЗДАНИЕ ДИСПЕТЧЕРА ===
 
-import { IStorage } from '@vlad92msk/synapse/core'
-import { createDispatcher, loggerDispatcherMiddleware } from '@vlad92msk/synapse/reactive'
+import { IStorage } from 'synapse-storage/core'
+import { createDispatcher, loggerDispatcherMiddleware } from 'synapse-storage/reactive'
 
 export function createUserInfoDispatcher(store: IStorage<AboutUserUserInfo>) {
   const loggerMiddleware = loggerDispatcherMiddleware({...})
@@ -650,7 +641,7 @@ export type UserInfoDispatcher = ReturnType<typeof createUserInfoDispatcher>
 ```typescript
 // user-info.dispatcher.ts
 // === СОЗДАНИЕ СЕЛЕКТОРОВ ===
-import { ISelectorModule } from '@vlad92msk/synapse/core'
+import { ISelectorModule } from 'synapse-storage/core'
 
 export const createUserInfoSelectors = (selectorModule: ISelectorModule<AboutUserUserInfo>) => {
   const currentUserProfile = selectorModule.createSelector((s) => s.userInfoInit)
@@ -680,7 +671,7 @@ export const createUserInfoSelectors = (selectorModule: ISelectorModule<AboutUse
 // === СОЗДАНИЕ ЭФФЕКТОВ ===
 import { EMPTY, from, of } from 'rxjs'
 import { catchError, map } from 'rxjs/operators'
-import { combineEffects, createEffect, ofType, validateMap } from '@vlad92msk/synapse/reactive'
+import { combineEffects, createEffect, ofType, validateMap } from 'synapse-storage/reactive'
 
 type CurrentDispatchers = {
   userInfoDispatcher: UserInfoDispatcher
@@ -752,7 +743,7 @@ export const userInfoEffects = combineEffects(
 ```typescript
 // user-info.synapse.ts
 // === СОЗДАНИЕ Synapse ===
-import { createSynapse } from '@vlad92msk/synapse/utils'
+import { createSynapse } from 'synapse-storage/utils'
 import { createUserInfoDispatcher } from './user-info.dispatcher'
 import { userInfoEffects } from './user-info.effects'
 import { createUserInfoSelectors } from './user-info.selectors'
@@ -800,7 +791,7 @@ export const userInfoSynapse = await createSynapse({
 ```tsx
 // user-info.context.tsx
 // === СОЗДАНИЕ React Context ===
-import { createSynapseCtx } from '@vlad92msk/synapse/react'
+import { createSynapseCtx } from 'synapse-storage/react'
 import { userInfoSynapse } from './user-info.synapse'
 
 // Получаем все необходимые инструменты для работы в компонете
@@ -833,7 +824,7 @@ export const coreSynapseIDB = await createSynapse({
 })
 
 // user-info.synapse.ts
-import { createSynapse } from '@vlad92msk/synapse/utils'
+import { createSynapse } from 'synapse-storage/utils'
 import { coreSynapseIDB } from '../core/core.synapse'
 
 export const userInfoSynapse = await createSynapse({
@@ -901,7 +892,7 @@ Result ← BroadcastMiddleware ← ShallowCompare ← Batching ← Base Operatio
 #### Создание пользовательского middleware
 
 ```typescript
-import { Middleware } from '@vlad92msk/synapse/core';
+import { Middleware } from 'synapse-storage/core';
 
 const loggingMiddleware = (): Middleware => ({
   // Уникальное имя middleware
@@ -944,7 +935,7 @@ const loggingMiddleware = (): Middleware => ({
 Плагины в Synapse представляют собой систему обработчиков событий хранилища с определенным жизненным циклом. В отличие от middleware, они не формируют цепочку, а работают как независимые "наблюдатели" за операциями хранилища.
 
 ```typescript
-import { IStoragePlugin, StoragePluginModule } from '@vlad92msk/synapse/core';
+import { IStoragePlugin, StoragePluginModule } from 'synapse-storage/core';
 
 // Создаем модуль плагинов
 const plugins = new StoragePluginModule(

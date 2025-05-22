@@ -1,5 +1,5 @@
-import { ApiClient, ResponseFormat } from '@vlad92msk/synapse/api'
-import { MemoryStorage } from '@vlad92msk/synapse/core'
+import { ApiClient, ResponseFormat } from 'synapse-storage/api'
+import { MemoryStorage } from 'synapse-storage/core'
 
 import { Pokemon } from './types'
 

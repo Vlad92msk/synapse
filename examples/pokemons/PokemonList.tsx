@@ -1,4 +1,4 @@
-import { useSelector, useStorageSubscribe } from '@vlad92msk/synapse/react'
+import { useSelector, useStorageSubscribe } from 'synapse-storage/react'
 import { CSSProperties, useEffect, useState } from 'react'
 import { distinctUntilChanged, filter, map } from 'rxjs/operators'
 

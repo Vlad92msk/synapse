@@ -2,8 +2,8 @@
 
 ```tsx
 import { CSSProperties } from 'react'
-import { broadcastMiddleware, IndexedDBStorage, LocalStorage, MemoryStorage, SelectorModule } from '@vlad92msk/synapse/core'
-import { useSelector } from '@vlad92msk/synapse/react'
+import { broadcastMiddleware, IndexedDBStorage, LocalStorage, MemoryStorage, SelectorModule } from 'synapse-storage/core'
+import { useSelector } from 'synapse-storage/react'
 
 interface Counter {
   value: number
