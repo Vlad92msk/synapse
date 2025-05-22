@@ -1,0 +1,42 @@
+# Source code
+src/
+examples/
+*.example.*
+*.test.*
+*.spec.*
+
+# Development files
+.eslintrc*
+.prettierrc*
+eslint.config.*
+tsconfig.json
+yarn.lock
+package-lock.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Node modules
+node_modules/
+
+# Build artifacts (keep only dist/)
+*.tsbuildinfo
