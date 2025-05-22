@@ -1,4 +1,4 @@
-import { ISelectorModule } from '@vlad92msk/synapse/core'
+import { ISelectorModule } from 'synapse-storage/core'
 
 import { PokemonState } from '../types'
 

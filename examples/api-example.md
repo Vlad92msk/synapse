@@ -3,7 +3,7 @@
 'use client'
 
 import { CSSProperties, useCallback, useState } from 'react'
-import { ApiClient, ResponseFormat } from '@vlad92msk/synapse/api'
+import { ApiClient, ResponseFormat } from 'synapse-storage/api'
 
 export interface PokemonListResponse {
   count: number

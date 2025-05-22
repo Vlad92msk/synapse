@@ -1,4 +1,4 @@
-import { EnhancedMiddleware } from '@vlad92msk/synapse/reactive'
+import { EnhancedMiddleware } from 'synapse-storage/reactive'
 
 import { PokemonState } from '../types'
 

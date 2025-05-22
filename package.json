@@ -1,5 +1,5 @@
 {
-  "name": "@vlad92msk/synapse",
+  "name": "synapse-storage",
   "version": "2.0.14",
   "description": "Библиотека для управления состоянием и апи-запросами",
   "type": "module",

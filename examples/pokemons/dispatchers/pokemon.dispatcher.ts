@@ -1,4 +1,4 @@
-import { createDispatcher, loggerDispatcherMiddleware } from '@vlad92msk/synapse/reactive'
+import { createDispatcher, loggerDispatcherMiddleware } from 'synapse-storage/reactive'
 
 import { createPokemonAlertMiddleware } from '../middlewares/pokenon.middlewares'
 import { PokemonStorage } from '../storages/pokemon.storage'
