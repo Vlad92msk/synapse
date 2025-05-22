@@ -19,6 +19,10 @@ export const {
     dispatchers: {
       pokemonDispatcher: dispatcher,
     },
+    // Внешние потоки хранилищ
+    externalStates: {
+      // ...
+    },
     api: {
       pokemonApi: pokemonEndpoints,
     },
