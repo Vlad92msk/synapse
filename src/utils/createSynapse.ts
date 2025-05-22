@@ -1,7 +1,7 @@
 import { Observable } from 'rxjs'
 
-import { ISelectorModule, IStorage, SelectorModule } from '../core'
-import { createDispatcher, CreateDispatcherType, Effect, EffectsModule } from '../reactive'
+import { ILogger, ISelectorModule, IStorage, SelectorModule } from '../core'
+import { Effect, EffectsModule, ExternalStates } from '../reactive'
 
 // Вспомогательные типы для извлечения типов из других типов
 export type ExtractPromiseType<T> = T extends Promise<infer U> ? U : T
@@ -20,6 +20,7 @@ export type CreateSynapseConfig<
   TApi extends Record<string, any> = Record<string, never>,
   TConfig extends Record<string, any> = Record<string, never>,
   TExternalSelectors extends Record<string, any> = Record<string, any>,
+  TExternalStates extends ExternalStates = Record<string, never>,
 > = ({ storage: IStorage<TStore>; createStorageFn?: undefined } | { storage?: undefined; createStorageFn: StorageCreatorFunction<TStore> }) & {
   // Внешние селекторы
   externalSelectors?: TExternalSelectors
@@ -30,11 +31,15 @@ export type CreateSynapseConfig<
   // Функция создания конфигурации для эффектов
   createEffectConfig?: (dispatcher: TDispatcher) => {
     dispatchers: Record<string, any>
+    externalStates?: TExternalStates
     api?: TApi
     config?: TConfig
   }
   // Эффекты
   effects?: Effect<TStore, any, TApi, TConfig>[]
+  config?: {
+    selectorModuleLogger?: ILogger
+  }
 }
 
 /**
@@ -62,9 +67,12 @@ export async function createSynapse<
   TApi extends Record<string, any> = Record<string, never>,
   TConfig extends Record<string, any> = Record<string, never>,
   TExternalSelectors extends Record<string, any> = Record<string, any>,
+  TExternalStates extends ExternalStates = Record<string, never>,
   TStorage extends IStorage<TStore> = IStorage<TStore>,
   TActions = ExtractDispatchType<TDispatcher>,
->(config: CreateSynapseConfig<TStore, TSelectors, TDispatcher, TApi, TConfig, TExternalSelectors>): Promise<SynapseStore<TStore, TStorage, TSelectors, TActions, TDispatcher>> {
+>(
+  config: CreateSynapseConfig<TStore, TSelectors, TDispatcher, TApi, TConfig, TExternalSelectors, TExternalStates>,
+): Promise<SynapseStore<TStore, TStorage, TSelectors, TActions, TDispatcher>> {
   // Создаем и инициализируем хранилище
   const storageInstance = (config.createStorageFn ? await config.createStorageFn() : config.storage!) as TStorage
 
@@ -93,7 +101,7 @@ export async function createSynapse<
   // Создаем модуль селекторов
   if (config.createSelectorsFn) {
     try {
-      selectorModule = new SelectorModule(storageInstance, console)
+      selectorModule = new SelectorModule(storageInstance, config.config?.selectorModuleLogger)
 
       const externalSelectors = config.externalSelectors || ({} as TExternalSelectors)
 
@@ -124,10 +132,13 @@ export async function createSynapse<
   // Создаем и настраиваем модуль эффектов
   if (config.createEffectConfig && dispatcher) {
     try {
-      const { dispatchers, api, config: effectConfig } = config.createEffectConfig(dispatcher)
+      const { dispatchers, api, config: effectConfig, externalStates } = config.createEffectConfig(dispatcher)
+
+      // Получаем внешние состояния из конфигурации эффектов
+      const effectExternalStates = externalStates || ({} as TExternalStates)
 
       // Создаем модуль эффектов
-      effectsModule = new EffectsModule(storageInstance, dispatchers, api, effectConfig)
+      effectsModule = new EffectsModule(storageInstance, effectExternalStates, dispatchers, api, effectConfig)
 
       // Добавляем эффекты
       if (Array.isArray(config.effects)) {

@@ -12,7 +12,13 @@ type PokemonDispatcherType = { pokemonDispatcher: PokemonDispatcher }
 type PokemonApiType = { pokemonApi: typeof pokemonEndpoints }
 
 // Эффект для навигации
-export const navigationEffect = createEffect<PokemonState, PokemonDispatcherType, PokemonApiType, AppConfig>((action$, state$, { pokemonDispatcher }, _, config) =>
+export const navigationEffect = createEffect<
+  PokemonState,
+  PokemonDispatcherType,
+  PokemonApiType,
+  AppConfig,
+  any //ExternalStorages
+>((action$, state$, externalStorages, { pokemonDispatcher }, _, config) =>
   action$.pipe(
     ofTypes([pokemonDispatcher.dispatch.next, pokemonDispatcher.dispatch.prev]),
     switchMap((action) => {
@@ -23,7 +29,13 @@ export const navigationEffect = createEffect<PokemonState, PokemonDispatcherType
 )
 
 // Эффект для отслеживания изменений ID
-export const watchIdEffect = createEffect<PokemonState, PokemonDispatcherType, PokemonApiType, AppConfig>((action$, state$, { pokemonDispatcher }) =>
+export const watchIdEffect = createEffect<
+  PokemonState,
+  PokemonDispatcherType,
+  PokemonApiType,
+  AppConfig,
+  any //ExternalStorages
+>((action$, state$, externalStorages, { pokemonDispatcher }) =>
   action$.pipe(
     ofType(pokemonDispatcher.watchers.watchCurrentId),
     selectorMap(
@@ -41,10 +53,17 @@ export const watchIdEffect = createEffect<PokemonState, PokemonDispatcherType, P
 )
 
 // Эффект для загрузки данных покемона
-export const loadPokemonEffect = createEffect<PokemonState, PokemonDispatcherType, PokemonApiType, AppConfig>(
+export const loadPokemonEffect = createEffect<
+  PokemonState,
+  PokemonDispatcherType,
+  PokemonApiType,
+  AppConfig,
+  any //ExternalStorages
+>(
   (
     action$, // Поток событий
     state$, // Поток состояния
+    externalStorages, // Потоки внешних хранилищ
     { pokemonDispatcher }, // Диспетчеры которые мы передали
     { pokemonApi }, // различные API которые мы передали
     config, // Конфигурация, которую мы передали

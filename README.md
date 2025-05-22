@@ -481,7 +481,13 @@ type PokemonDispatcherType = { pokemonDispatcher: PokemonDispatcher }
 type PokemonApiType = { pokemonApi: typeof pokemonEndpoints }
 
 // Эффект для навигации
-export const navigationEffect = createEffect<PokemonState, PokemonDispatcherType, PokemonApiType, AppConfig>((action$, state$, { pokemonDispatcher }, _, config) =>
+export const navigationEffect = createEffect<
+  PokemonState,
+  PokemonDispatcherType,
+  PokemonApiType,
+  AppConfig,
+  any //ExternalStorages
+>((action$, state$, externalStorages, { pokemonDispatcher }, _, config) =>
   action$.pipe(
     ofTypes([pokemonDispatcher.dispatch.next, pokemonDispatcher.dispatch.prev]),
     switchMap((action) => {
@@ -492,7 +498,13 @@ export const navigationEffect = createEffect<PokemonState, PokemonDispatcherType
 )
 
 // Эффект для отслеживания изменений ID
-export const watchIdEffect = createEffect<PokemonState, PokemonDispatcherType, PokemonApiType, AppConfig>((action$, state$, { pokemonDispatcher }) =>
+export const watchIdEffect = createEffect<
+  PokemonState, 
+  PokemonDispatcherType, 
+  PokemonApiType, 
+  AppConfig,
+  any //ExternalStorages
+>((action$, state$, externalStorages, { pokemonDispatcher }) =>
   action$.pipe(
     ofType(pokemonDispatcher.watchers.watchCurrentId),
     selectorMap(
@@ -505,9 +517,16 @@ export const watchIdEffect = createEffect<PokemonState, PokemonDispatcherType, P
 )
 
 // Эффект для загрузки данных покемона
-export const loadPokemonEffect = createEffect<PokemonState, PokemonDispatcherType, PokemonApiType, AppConfig>((
+export const loadPokemonEffect = createEffect<
+  PokemonState, 
+  PokemonDispatcherType,
+  PokemonApiType,
+  AppConfig,
+  any //ExternalStorages
+>((
   action$,                // Поток событий 
   state$,                 // Поток состояния
+  externalStorages,       // Потоки внешних хранилищ
   { pokemonDispatcher },  // Диспетчеры которые мы передали
   { pokemonApi },         // различные API которые мы передали
   config                   // Конфигурация, которую мы передали
@@ -516,9 +535,10 @@ export const loadPokemonEffect = createEffect<PokemonState, PokemonDispatcherTyp
     // Я использую отдельный action loadPokemon который уведомляет о намерении сделать запрос
     // Для того, чтобы не устанавливать loading сразу
     ofType(pokemonDispatcher.dispatch.loadPokemon),
-    selectorMap(state$, (state) => state.currentId),
+    selectorMap(state$, (state) => state.currentId),                                // Получаем данные из текущего хранилища
+    selectorMap(externalStorages.someExternalStorage, (state) => state.someValue1), // Получаем данные из внешнего хранилища
     validateMap({
-      apiCall: ([action, [currentId]]) => {
+      apiCall: ([action, [currentId], [someValue1]]) => {
         const { id } = action.payload
 
         return from(
