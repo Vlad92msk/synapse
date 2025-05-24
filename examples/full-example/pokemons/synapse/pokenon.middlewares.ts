@@ -1,6 +1,6 @@
 import { EnhancedMiddleware } from 'synapse-storage/reactive'
-
 import { PokemonState } from '../types'
+
 
 // Создадим пользовательскую middleware для теста
 // Бдем слушать события определенных типов и вызывать другое

@@ -1,6 +1,6 @@
 import { ApiClient, ResponseFormat } from 'synapse-storage/api'
 import { MemoryStorage } from 'synapse-storage/core'
-
+import { appConfig } from './app.config'
 import { Pokemon } from './types'
 
 export interface PokemonSearchParams {
@@ -9,7 +9,7 @@ export interface PokemonSearchParams {
 }
 
 const storage = await new MemoryStorage({
-  name: 'pokemon-api-cache',
+  name: 'pokemon-api-cache'
 }).initialize()
 
 export const api = new ApiClient({
@@ -28,7 +28,7 @@ export const api = new ApiClient({
     },
   },
   baseQuery: {
-    baseUrl: 'https://pokeapi.co/api/v2',
+    baseUrl: appConfig.apiBaseUrl,
     timeout: 10000,
     credentials: 'same-origin',
   },
