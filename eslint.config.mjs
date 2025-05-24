@@ -11,6 +11,7 @@ export default [
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    ignores: ["examples/*", "*.example.*"],
     files: ['src/**/*.{ts,tsx}'],
     languageOptions: {
       parser: tseslint.parser,
@@ -67,7 +68,7 @@ export default [
       'no-useless-catch': 'off',
       'no-async-promise-executor': 'off',
       'no-useless-escape': 'off'
-    }
+    },
   },
   prettierConfig
 ]

@@ -4,7 +4,7 @@ import { PokemonState } from '../types'
 
 export async function createPokemonStorage() {
   return new MemoryStorage<PokemonState>({
-    name: 'pokemon-store',
+    name: 'pokemon-store-1',
     initialState: {
       currentPokemon: null,
       loading: true,
@@ -14,4 +14,4 @@ export async function createPokemonStorage() {
   }).initialize()
 }
 
-export type PokemonStorage = Awaited<ReturnType<typeof createPokemonStorage>>
+export type PokemonStorage = Awaited<ReturnType<typeof createPokemonStorage>>;

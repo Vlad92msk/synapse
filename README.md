@@ -17,7 +17,7 @@ Synapse — это набор инструментов для управлени
 
 ## Автор
 
-**Владислав** — Senior Frontend Developer (React, TypeScript)
+**Владислав** — Senior Frontend Developer (React, TypeScript)÷
 
 
 > ### 🔎 Нахожусь в поиске новых карьерных возможностей!
@@ -178,10 +178,10 @@ function Counter() {
   );
 }
 ```
-Более подробные примеры можно найти в src/examples:
+Более подробные примеры можно найти в examples:
+- расширенный пример комплексного использования, включая реактивный подход (full-example)
 - пример использования api-client(api-example.md)
 - пример комбинированного использования хранилищ всех типов, демонтсрация возможностей подписок и работы базовых middlewares(base-storage-example.md)
-- расширенный пример комплексного использования, включая реактивный подход (pokemons)
 
 
 ## Адаптеры хранилищ
@@ -459,7 +459,8 @@ import {
   ofTypes,          // Слушает несколько событий
   createEffect,     // Функция создания эффекта
   combineEffects,   // Объединяет несколько эффектов в один
-  selectorMap,      // Выбор частей состояния с помощью селекторов
+  selectorMap,      // Выбор частей состояния с помощью селекторов (возвращает массив)
+  selectorObject,   // Выбор частей состояния с помощью селекторов (возвращает объект)
   validateMap       // Оператор для удобной работы с запросом
 } from 'synapse-storage/reactive'
 import { pokemonEndpoints } from '../api.md'
@@ -498,9 +499,10 @@ export const watchIdEffect = createEffect<
 >((action$, state$, externalStorages, { pokemonDispatcher }) =>
   action$.pipe(
     ofType(pokemonDispatcher.watchers.watchCurrentId),
-    selectorMap(
-      state$,
-      //... selectors
+    withLatestFrom(
+          selectorMap(state$,
+          //... selectors
+        ),
     ),
     // tap(([action, [loading, currentId]]) => {...}),
     mapTo(null),
@@ -526,10 +528,17 @@ export const loadPokemonEffect = createEffect<
     // Я использую отдельный action loadPokemon который уведомляет о намерении сделать запрос
     // Для того, чтобы не устанавливать loading сразу
     ofType(pokemonDispatcher.dispatch.loadPokemon),
-    selectorMap(state$, (state) => state.currentId),                                // Получаем данные из текущего хранилища
-    selectorMap(externalStorages.someExternalStorage, (state) => state.someValue1), // Получаем данные из внешнего хранилища
+    withLatestFrom(
+      selectorMap(state$, (s) => s.currentId, (s) => s.currentId),           // |
+      selectorMap(pokemon1State$, (s) => s.currentId, (s) => s.currentId),   // | получает поток и селекторы, возвращает массив с результатами
+      selectorMap(pokemon1State$, (s) => s.currentId),                       // |
+      selectorObject(state$, {                                     // |
+        currentId: (s) => s.currentId,                             // | получает поток и возвращает объект с результатами (для каждого свойства вызывается функция с состояниеме этого потого потока)
+        name: (s) => s.currentPokemon?.sprites,                    // |
+      }),
+    ),
     validateMap({
-      apiCall: ([action, [currentId], [someValue1]]) => {
+      apiCall: ([action, [currentId], [externalId, externalId2], [external2Id], externalData]) => {
         const { id } = action.payload
 
         return from(
@@ -782,6 +791,11 @@ export const userInfoSynapse = await createSynapse({
     api: {
       userInfoAPi: userInfoEndpoints,
     },
+    // Внешние состояния ввиде потоков, которые хотим использовать в эффектах
+    externalStates: {
+      pokemonState$: pokemon1State$,
+      core$: coreSynapseIDB.state$,
+    },
   }),
   // Эффекты которые будут запущены для этого synapse
   effects: [userInfoEffects],
@@ -802,9 +816,14 @@ export const {
   useSynapseState$: useUserInfoSynapseState$,
   useSynapseStorage: useUserInfoSynapseStorage,
   cleanupSynapse: useUserInfoCleanupSynapse,
-} = createSynapseCtx(userInfoSynapse, {
-  loadingComponent: <div>loading</div>, // Компонент, который будет отображаться пока выполняется асинхронная загрузка Synapse
-})
+} = createSynapseCtx(
+    // Передаем сам Synapse
+    userInfoSynapse,
+    {
+      loadingComponent: <div>loading</div>, // Передаем компонент, который будет отображаться пока идет загрузка инициализация
+      // mergeFn: // Функция слияния переданных параметров в initialState (по умолчанию выполняется глубокая копия)
+    },
+)
 ```
 
 Вы можете связывать Synapse между собой

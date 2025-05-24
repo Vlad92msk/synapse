@@ -3,7 +3,7 @@ import { Observable } from 'rxjs'
 
 import { deepMerge } from '../../_utils'
 import { IStorage } from '../../core'
-import { SynapseStore } from '../../utils'
+import { AnySynapseStore, SynapseStoreBasic, SynapseStoreWithDispatcher, SynapseStoreWithEffects } from '../../utils'
 
 const ERROR_HOOK_MESSAGE = 'useSynapseActions необходимо использовать внутри компонента contextSynapse'
 const ERROR_CONTEXT_INIT = 'Ошибка при инициализации контекста:'
@@ -14,21 +14,67 @@ interface Options<TStore extends Record<string, any>> {
 }
 
 /**
- * Создает React-контекст и хуки для удобного использования хранилища Synapse в React-компонентах
- *
- * @param synapseStore - Хранилище, созданное функцией createSynapse
- * @param options
- * @returns Объект с функцией HOC и хуками для доступа к хранилищу
+ * Типы для условного возврата хуков в зависимости от типа store
  */
-// Модифицированный createSynapseCtx.tsx
+type ConditionalActions<T> = T extends SynapseStoreWithEffects<any, any, any, infer A> ? A : T extends SynapseStoreWithDispatcher<any, any, any, infer A> ? A : never
+
+type ConditionalState$<T> = T extends SynapseStoreWithEffects<infer S, any, any, any> ? Observable<S> : never
+
+/**
+ * Перегрузки для createSynapseCtx в зависимости от типа хранилища
+ */
+
+// Для хранилища с effects
+export function createSynapseCtx<TStore extends Record<string, any>, TStorage extends IStorage<TStore>, TSelectors, TActions>(
+  synapseStorePromise: Promise<SynapseStoreWithEffects<TStore, TStorage, TSelectors, TActions>> | SynapseStoreWithEffects<TStore, TStorage, TSelectors, TActions>,
+  options?: Options<TStore>,
+): {
+  contextSynapse: <SelfComponentProps, PublicContextProps = Record<string, any>>(
+    Component: ComponentType<SelfComponentProps>,
+  ) => ComponentType<SelfComponentProps & { contextProps?: PublicContextProps }>
+  useSynapseStorage: () => TStorage
+  useSynapseSelectors: () => TSelectors
+  useSynapseActions: () => TActions
+  useSynapseState$: () => Observable<TStore>
+  cleanupSynapse: () => Promise<void>
+}
+
+// Для хранилища с dispatcher (без effects)
+export function createSynapseCtx<TStore extends Record<string, any>, TStorage extends IStorage<TStore>, TSelectors, TActions>(
+  synapseStorePromise: Promise<SynapseStoreWithDispatcher<TStore, TStorage, TSelectors, TActions>> | SynapseStoreWithDispatcher<TStore, TStorage, TSelectors, TActions>,
+  options?: Options<TStore>,
+): {
+  contextSynapse: <SelfComponentProps, PublicContextProps = Record<string, any>>(
+    Component: ComponentType<SelfComponentProps>,
+  ) => ComponentType<SelfComponentProps & { contextProps?: PublicContextProps }>
+  useSynapseStorage: () => TStorage
+  useSynapseSelectors: () => TSelectors
+  useSynapseActions: () => TActions
+  cleanupSynapse: () => Promise<void>
+}
+
+// Для базового хранилища
+export function createSynapseCtx<TStore extends Record<string, any>, TStorage extends IStorage<TStore>, TSelectors>(
+  synapseStorePromise: Promise<SynapseStoreBasic<TStore, TStorage, TSelectors>> | SynapseStoreBasic<TStore, TStorage, TSelectors>,
+  options?: Options<TStore>,
+): {
+  contextSynapse: <SelfComponentProps, PublicContextProps = Record<string, any>>(
+    Component: ComponentType<SelfComponentProps>,
+  ) => ComponentType<SelfComponentProps & { contextProps?: PublicContextProps }>
+  useSynapseStorage: () => TStorage
+  useSynapseSelectors: () => TSelectors
+  cleanupSynapse: () => Promise<void>
+}
+
+// Основная реализация
 export function createSynapseCtx<TStore extends Record<string, any>, TStorage extends IStorage<TStore>, TSelectors = any, TActions = any>(
-  synapseStorePromise: Promise<SynapseStore<TStore, TStorage, TSelectors, TActions>> | SynapseStore<TStore, TStorage, TSelectors, TActions>,
+  synapseStorePromise: Promise<AnySynapseStore<TStore, TStorage, TSelectors, TActions>> | AnySynapseStore<TStore, TStorage, TSelectors, TActions>,
   options?: Options<TStore>,
 ) {
   const { loadingComponent = null, mergeFn = deepMerge } = options || {}
 
   // Храним ссылку на store
-  let synapseStore: SynapseStore<TStore, TStorage, TSelectors, TActions> | null = null
+  let synapseStore: AnySynapseStore<TStore, TStorage, TSelectors, TActions> | null = null
 
   // Флаг готовности хранилища
   let storeReady = false
@@ -43,7 +89,7 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
     }
   })()
 
-  const SynapseContext = createContext<SynapseStore<TStore, TStorage, TSelectors, TActions> | null>(null)
+  const SynapseContext = createContext<AnySynapseStore<TStore, TStorage, TSelectors, TActions> | null>(null)
 
   const useSynapseStorage = (): TStorage => {
     const context = useContext(SynapseContext)
@@ -59,18 +105,28 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
     return context.selectors
   }
 
+  // Условный хук для actions (только если есть dispatcher)
   const useSynapseActions = (): TActions => {
     const context = useContext(SynapseContext)
     if (!context) throw new Error(ERROR_HOOK_MESSAGE)
 
-    return context.actions
+    if ('actions' in context) {
+      return (context as SynapseStoreWithDispatcher<TStore, TStorage, TSelectors, TActions> | SynapseStoreWithEffects<TStore, TStorage, TSelectors, TActions>).actions
+    }
+
+    throw new Error('useSynapseActions: actions недоступны для этого типа хранилища. Убедитесь, что передана функция createDispatcherFn при создании хранилища.')
   }
 
+  // Условный хук для state$ (только если есть effects)
   const useSynapseState$ = (): Observable<TStore> => {
     const context = useContext(SynapseContext)
     if (!context) throw new Error(ERROR_HOOK_MESSAGE)
 
-    return context.state$
+    if ('state$' in context) {
+      return (context as SynapseStoreWithEffects<TStore, TStorage, TSelectors, TActions>).state$
+    }
+
+    throw new Error('useSynapseState$: state$ недоступен для этого типа хранилища. Убедитесь, что переданы функции createDispatcherFn и createEffectConfig при создании хранилища.')
   }
 
   /**
