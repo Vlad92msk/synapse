@@ -10,40 +10,30 @@ const distDir = path.join(__dirname, 'dist');
 function fixImports(filePath) {
   const content = fs.readFileSync(filePath, 'utf8');
 
-  // Заменяем импорты без расширений на импорты с .js
-  const fixedContent = content.replace(
-    /from\s+['"](\.\/.+?)(?<!\.js)['"];?/g,
-    (match, importPath) => {
-      // Если путь заканчивается на /index, добавляем .js
-      if (importPath.endsWith('/index')) {
-        return match.replace(importPath, importPath + '.js');
+  // Простая логика: заменяем все импорты без .js
+  let fixedContent = content;
+
+  // Исправляем все виды экспортов и импортов
+  fixedContent = fixedContent.replace(
+    /((?:import|export).*?from\s+['"])(\.\/.+?)(?<!\.js)(['"])/g,
+    (match, prefix, importPath, suffix) => {
+      // Если уже есть .js - не трогаем
+      if (importPath.endsWith('.js')) {
+        return match;
       }
-      // Если это файл (содержит точку в названии), добавляем .js
-      if (importPath.includes('.') && !importPath.endsWith('/')) {
-        return match.replace(importPath, importPath + '.js');
+
+      // Если путь содержит точку (файл типа base-storage.service) - добавляем .js
+      if (importPath.match(/\.[a-zA-Z-]+[^/]*$/)) {
+        return prefix + importPath + '.js' + suffix;
       }
-      // Если это папка без /index, добавляем /index.js
-      return match.replace(importPath, importPath + '/index.js');
+
+      // Если это простое имя (папка) - добавляем /index.js
+      return prefix + importPath + '/index.js' + suffix;
     }
   );
 
-  // Также исправляем export * from и export { } from
-  const finalContent = fixedContent.replace(
-    /export\s+.*?from\s+['"](\.\/.+?)(?<!\.js)['"];?/g,
-    (match, importPath) => {
-      if (importPath.endsWith('/index')) {
-        return match.replace(importPath, importPath + '.js');
-      }
-      // Если это файл (содержит точку в названии), добавляем .js
-      if (importPath.includes('.') && !importPath.endsWith('/')) {
-        return match.replace(importPath, importPath + '.js');
-      }
-      return match.replace(importPath, importPath + '/index.js');
-    }
-  );
-
-  if (content !== finalContent) {
-    fs.writeFileSync(filePath, finalContent);
+  if (content !== fixedContent) {
+    fs.writeFileSync(filePath, fixedContent);
     console.log(`Fixed imports in: ${filePath}`);
   }
 }
