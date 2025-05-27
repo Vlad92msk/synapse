@@ -18,16 +18,24 @@ function fixImports(filePath) {
       if (importPath.endsWith('/index')) {
         return match.replace(importPath, importPath + '.js');
       }
-      // Если это относительный путь без расширения, добавляем /index.js
+      // Если это файл (содержит точку в названии), добавляем .js
+      if (importPath.includes('.') && !importPath.endsWith('/')) {
+        return match.replace(importPath, importPath + '.js');
+      }
+      // Если это папка без /index, добавляем /index.js
       return match.replace(importPath, importPath + '/index.js');
     }
   );
 
-  // Также исправляем export * from
+  // Также исправляем export * from и export { } from
   const finalContent = fixedContent.replace(
-    /export\s+\*\s+from\s+['"](\.\/.+?)(?<!\.js)['"];?/g,
+    /export\s+.*?from\s+['"](\.\/.+?)(?<!\.js)['"];?/g,
     (match, importPath) => {
       if (importPath.endsWith('/index')) {
+        return match.replace(importPath, importPath + '.js');
+      }
+      // Если это файл (содержит точку в названии), добавляем .js
+      if (importPath.includes('.') && !importPath.endsWith('/')) {
         return match.replace(importPath, importPath + '.js');
       }
       return match.replace(importPath, importPath + '/index.js');
