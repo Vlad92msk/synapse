@@ -11,8 +11,24 @@ export default defineConfig({
   },
   format: ['cjs', 'esm'],
   dts: true,
-  splitting: false,
-  sourcemap: true,
+  splitting: true,        // ✅ Выносит общий код в chunks
+  sourcemap: false,       // ✅ Убираем source maps для npm пакета
   clean: true,
-  external: ['react', 'react-dom', 'rxjs']
+  minify: true,          // ✅ Минификация
+  treeshake: true,       // ✅ Убираем неиспользуемый код
+  external: ['rxjs', 'react', 'react-dom'],    // ✅ Внешние зависимости
+  bundle: true,          // ✅ Бандлим все импорты
+  target: 'es2022',      // ✅ Более современный таргет
+
+  // Настройки для уменьшения размера
+  esbuildOptions: (options) => {
+    options.mangleProps = /^_/  // Сжимаем приватные свойства
+    options.drop = ['console', 'debugger']  // Убираем console.log
+  },
+
+  // Исключаем из бандла
+  noExternal: [],
+
+  // Оптимизация для библиотек
+  platform: 'neutral'
 })
