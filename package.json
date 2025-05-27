@@ -122,9 +122,6 @@
       "optional": true
     }
   },
-  "dependencies": {
-    "rxjs": "^7.8.2"
-  },
   "devDependencies": {
     "@eslint/js": "^9.27.0",
     "@humanwhocodes/retry": "^0.4.3",
