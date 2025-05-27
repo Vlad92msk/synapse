@@ -30,7 +30,7 @@
   "license": "MIT",
   "private": false,
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node fix-imports.js",
     "watch": "tsc --watch",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint --config eslint.config.mjs src --ext .ts,.tsx --fix",

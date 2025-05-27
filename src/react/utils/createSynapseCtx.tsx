@@ -14,13 +14,6 @@ interface Options<TStore extends Record<string, any>> {
 }
 
 /**
- * Типы для условного возврата хуков в зависимости от типа store
- */
-type ConditionalActions<T> = T extends SynapseStoreWithEffects<any, any, any, infer A> ? A : T extends SynapseStoreWithDispatcher<any, any, any, infer A> ? A : never
-
-type ConditionalState$<T> = T extends SynapseStoreWithEffects<infer S, any, any, any> ? Observable<S> : never
-
-/**
  * Перегрузки для createSynapseCtx в зависимости от типа хранилища
  */
 
