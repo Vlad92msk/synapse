@@ -1,9 +1,9 @@
 {
   "name": "synapse-storage",
   "version": "3.0.2",
-  "description": "Библиотека для управления состоянием и апи-запросами",
+  "description": "Набор инструментов для управления состоянием и апи-запросами",
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
@@ -30,8 +30,8 @@
   "license": "MIT",
   "private": false,
   "scripts": {
-    "build": "tsc && node fix-imports.js",
-    "watch": "tsc --watch",
+    "build": "tsup",
+    "watch": "tsup --watch",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint --config eslint.config.mjs src --ext .ts,.tsx --fix",
     "format": "prettier --write \"src/**/*.ts\"",
@@ -46,28 +46,64 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./core": {
-      "import": "./dist/core/index.js",
-      "types": "./dist/core/index.d.ts"
+      "import": {
+        "types": "./dist/core.d.ts",
+        "default": "./dist/core.js"
+      },
+      "require": {
+        "types": "./dist/core.d.cts",
+        "default": "./dist/core.cjs"
+      }
     },
     "./reactive": {
-      "import": "./dist/reactive/index.js",
-      "types": "./dist/reactive/index.d.ts"
+      "import": {
+        "types": "./dist/reactive.d.ts",
+        "default": "./dist/reactive.js"
+      },
+      "require": {
+        "types": "./dist/reactive.d.cts",
+        "default": "./dist/reactive.cjs"
+      }
     },
     "./api": {
-      "import": "./dist/api/index.js",
-      "types": "./dist/api/index.d.ts"
+      "import": {
+        "types": "./dist/api.d.ts",
+        "default": "./dist/api.js"
+      },
+      "require": {
+        "types": "./dist/api.d.cts",
+        "default": "./dist/api.cjs"
+      }
     },
     "./react": {
-      "import": "./dist/react/index.js",
-      "types": "./dist/react/index.d.ts"
+      "import": {
+        "types": "./dist/react.d.ts",
+        "default": "./dist/react.js"
+      },
+      "require": {
+        "types": "./dist/react.d.cts",
+        "default": "./dist/react.cjs"
+      }
     },
     "./utils": {
-      "import": "./dist/utils/index.js",
-      "types": "./dist/utils/index.d.ts"
+      "import": {
+        "types": "./dist/utils.d.ts",
+        "default": "./dist/utils.js"
+      },
+      "require": {
+        "types": "./dist/utils.d.cts",
+        "default": "./dist/utils.cjs"
+      }
     }
   },
   "peerDependencies": {
@@ -105,6 +141,7 @@
     "prettier": "^3.5.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "tsup": "8.5.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.32.1"
   }
