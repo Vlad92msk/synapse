@@ -1,26 +1,45 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "lib": ["ES2022", "dom"],
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "outDir": "dist",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
+    // =================== КОМПИЛЯЦИЯ ===================
+    "target": "ES2022",                    // Соответствует tsup target
+    "module": "ES2022",                    // ES модули
+    "moduleResolution": "bundler",         // ✅ Современная резолюция для сложных exports
+    "lib": ["ES2022", "dom"],              // API браузера и современный JS
+
+    // =================== ТИПЫ ===================
+    "declaration": true,                   // Генерируем .d.ts (tsup тоже включен)
+    "declarationMap": true,                // Source maps для типов
+    "sourceMap": false,                    // Соответствует tsup sourcemap: false
+
+    // =================== ВЫВОД ===================
+    "outDir": "dist",                      // Папка вывода (как в tsup)
+
+    // =================== СТРОГОСТЬ ===================
+    "strict": true,                        // Максимальная строгость
+    "skipLibCheck": true,                  // Пропускаем проверку node_modules
     "forceConsistentCasingInFileNames": true,
-    "jsx": "react-jsx",
-    "resolveJsonModule": true,
-    "isolatedModules": true
+
+    // =================== СОВМЕСТИМОСТЬ ===================
+    "esModuleInterop": true,               // Совместимость с CommonJS
+    "allowSyntheticDefaultImports": true,  // Синтетические default импорты
+    "verbatimModuleSyntax": false,          // Современная замена preserveValueImports
+
+    // =================== JSX ===================
+    "jsx": "react-jsx",                    // Соответствует esbuild jsx: 'automatic'
+
+    // =================== МОДУЛИ ===================
+    "resolveJsonModule": true,             // Импорт JSON файлов
+    "isolatedModules": true                // Каждый файл - отдельный модуль
   },
-  "include": ["src"],
+
+  // =================== ВКЛЮЧЕНИЯ ===================
+  "include": ["src"],                      // Только исходники
+
+  // =================== ИСКЛЮЧЕНИЯ ===================
   "exclude": [
-    "node_modules",
-    "dist",
-    "**/*.test.*",
-    "**/*.spec.*"
+    "node_modules",                        // Зависимости
+    "dist",                                // Собранные файлы
+    "**/*.test.*",                         // Тесты
+    "**/*.spec.*"                          // Спеки
   ]
 }

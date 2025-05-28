@@ -39,7 +39,6 @@ export function useSelector<T>(selector: SelectorAPI<T>, options?: UseSelectorOp
   const prevValueRef = useRef<T | undefined>(options?.initialValue)
   const equalsRef = useRef(options?.equals || ((a: T, b: T) => a === b))
 
-  // Получаем ID селектора с помощью метода getId()
   const selectorId = selector.getId()
 
   // Обновляем состояние компонента при изменении значения
