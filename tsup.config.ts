@@ -20,7 +20,7 @@ export default defineConfig([
     splitting: false,                // CJS не поддерживает splitting
     sourcemap: false,                // Убираем source maps
     clean: false,                    // Не очищаем (ESM очистит)
-    minify: false,                   // Можно включить для продакшена
+    minify: true,                    // ✅ Включаем минификацию
     bundle: true,                    // ✅ CJS бандлит зависимости
     target: 'es2022',                // Современный JS
     platform: 'node',               // CJS обычно для Node.js
@@ -56,7 +56,7 @@ export default defineConfig([
     splitting: false,                // Отключено для stable external
     sourcemap: false,                // Убираем source maps
     clean: true,                     // ✅ Очищаем dist перед сборкой
-    minify: false,                   // Можно включить для продакшена
+    minify: true,                    // ✅ Включаем минификацию
     bundle: true,                    // ✅ Возвращаем bundle для ESM
     target: 'es2022',                // Современный JS
     platform: 'neutral',            // Универсальная платформа
