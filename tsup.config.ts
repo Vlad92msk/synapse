@@ -57,22 +57,29 @@ export default defineConfig([
     sourcemap: false,                // Убираем source maps
     clean: true,                     // ✅ Очищаем dist перед сборкой
     minify: false,                   // Можно включить для продакшена
-    bundle: false,                   // ✅ НЕ бандлим - сохраняем импорты
+    bundle: true,                    // ✅ Возвращаем bundle для ESM
     target: 'es2022',                // Современный JS
     platform: 'neutral',            // Универсальная платформа
 
-    // =================== ЗАВИСИМОСТИ ===================
-    // При bundle: false external работает надежно
+    // ✅ Максимально строгие настройки external для bundle: true
     external: [
-      'react',                       // Основные peer dependencies
+      'react',
       'react-dom',
-      'rxjs'
+      'rxjs',
     ],
 
-    // =================== ESBUILD НАСТРОЙКИ ===================
+    // ✅ Агрессивные настройки для принуждения external
     esbuildOptions: (options) => {
-      options.jsx = 'automatic'      // Современный JSX transform
-      options.jsxDev = false         // Продакшен JSX
+      options.jsx = 'automatic'
+      options.jsxDev = false
+      options.packages = 'external'  // ✅ Принуждаем external
+
+      // ✅ Дублируем external в esbuild для надежности
+      options.external = [
+        'react',
+        'react-dom',
+        'rxjs'
+      ]
     },
 
     // =================== ПРОВЕРКА РЕЗУЛЬТАТА ===================
