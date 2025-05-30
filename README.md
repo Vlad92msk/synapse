@@ -1,10 +1,11 @@
 # Synapse Storage
 
+Набор инструментов для управления состоянием + API-клиент
+
 [![npm version](https://badge.fury.io/js/synapse-storage.svg)](https://badge.fury.io/js/synapse-storage)
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/synapse-storage)](https://bundlephobia.com/package/synapse-storage)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue)](https://www.typescriptlang.org/)
-
-Synapse — это набор инструментов для управления состоянием + API-клиент.
+[![RxJS Version](https://img.shields.io/badge/RxJS-%5E7.8.2-red?logo=reactivex)](https://rxjs.dev/)
 
 ## Особенности
 
@@ -21,26 +22,29 @@ Synapse — это набор инструментов для управлени
 
 ## Автор
 
-**Владислав** — Senior Frontend Developer (React, TypeScript)÷
+**Владислав** — Senior Frontend Developer (React, TypeScript)
 
 
 > ### 🔎 Нахожусь в поиске новых карьерных возможностей!
 >
 > [GitHub](https://github.com/Vlad92msk/) | [LinkedIn](https://www.linkedin.com/in/vlad-firsov/)
 
+> ### Подробные примеры:
+>[GitHub](https://github.com/Vlad92msk/synapse-examples)
+> |
+>[YouTube](https://www.youtube.com/channel/UCGENI_i4qmBkPp98P2HvvGw)
 
-
-## 🎯 Модули и зависимости
-
-Устанавливайте только те зависимости, которые вам нужны:
+---
+*PS: Пока не рекоммендую использовать в production т.к разработкой занимаюсь в свободное время.
+Библиотека в целом работает, но дать гарантии смогу после полной интеграции ее в свой пет-проект Социальная сеть.
+Но произойдет это не раньше смены моего текущего места работы и страны проживания*
+---
 
 ## 📦 Установка
 
 ```bash
 npm install synapse-storage
 ```
-
-### Дополнительные зависимости (по необходимости)
 
 ```bash
 # Для реактивных возможностей
@@ -54,7 +58,6 @@ npm install synapse-storage rxjs react react-dom
 ```
 
 ## 🚀 Быстрый старт
-
 
 | Модуль | Описание              | Зависимости |
 |--------|-----------------------|-------------|
@@ -133,159 +136,272 @@ import { useStorageSubscribe, useSelector, createSynapseCtx } from 'synapse-stor
 import { createSynapse } from 'synapse-storage/utils'
 ```
 
-Вот простой пример использования Synapse с React:
 
-```tsx
-import { IndexedDBStorage, LocalStorage, MemoryStorage } from 'synapse-storage/core'
-import { useEffect, useState } from 'react'
+## Базовое использование
 
-// Создаем экземпляр хранилища (MemoryStorage / LocalStorage / IndexedDBStorage)
-const counterStorage = await new MemoryStorage({
-  name: 'counter',
-  initialState: { value: 0 }
-}).initialize();
-
-function Counter() {
-  const [count, setCount] = useState(0);
-  
-  useEffect(() => {
-    // Подписываемся на изменения
-    return counterStorage.subscribe('value', setCount);
-  }, []);
-  
-  const increment = () => {
-    counterStorage.update(state => {
-      state.value++;
-    });
-  };
-  
-  return (
-    <div>
-      <p>Счетчик: {count}</p>
-      <button onClick={increment}>Увеличить</button>
-    </div>
-  );
-}
-```
-Более подробные примеры можно найти в examples:
-- расширенный пример комплексного использования, включая реактивный подход (full-example)
-- пример использования api-client(api-example.md)
-- пример комбинированного использования хранилищ всех типов, демонтсрация возможностей подписок и работы базовых middlewares(base-storage-example.md)
-
-
-## Адаптеры хранилищ
-
-Synapse предоставляет три типа адаптеров хранилищ:
-
-### MemoryStorage
-
-In-memory хранилище для временных данных, которые очищаются при перезагрузке страницы.
+### Создание зранилищ
 
 ```typescript
-const memoryStorage = await new MemoryStorage({
-  name: 'tempStorage',
-}).initialize();
+const counter1 = await new MemoryStorage<Counter>({
+  name: 'counter1',
+  initialState: {
+    value: 100,
+  },
+}).initialize()
 ```
 
-### LocalStorage
-
-Хранилище на основе Web Storage API для небольших объемов данных, которые сохраняются между сессиями.
 
 ```typescript
-const localStorage = await new LocalStorage({
-  name: 'appStorage',
-}).initialize();
+const counter2 = await new LocalStorage<Counter>({
+  name: 'counter2',
+  initialState: { value: 100 },
+}).initialize()
 ```
 
-### IndexedDBStorage
 
-Хранилище на основе IndexedDB для больших объемов данных и сложных структур.
-Создается немного иначе, но довольно похожим образом
 ```typescript
-import { IndexedDBStorage } from 'synapse-storage/core'
-import { IDBApi, IDBCore } from './types'
-
-export const { CORE, API } = await IndexedDBStorage.createStorages<{
-  CORE: IDBCore
-  API: IDBApi
-}>(
-  'social-network', // Название базы данных в indexDB
+const { counter3 } = await IndexedDBStorage.createStorages<{ counter3: Counter }>(
+  'example1', // Название базы данных в indexDB
   // Таблицы:
   {
-    // === Хранение запросов для кэширования ===
-    API: {
-      name: 'api',
+    counter3: {
+      name: 'counter3',
+      initialState: { value: 99 },
       // eventEmitter: ,
       // initialState: ,
       // middlewares: ,
       // pluginExecutor: ,
     },
-    // === Основные данные проекта ===
-    CORE: {
-      name: 'core',
-      initialState: {
-        currentUserProfile: undefined,
-      },
-      //...
-    },
-    // Другие объекты (хранилища)
-  },
-  console, // logger (может быть любой, который имплементируют интерфейс ILogger)
+    // Другие объекты (хранилища в текущей базе данных)
+  }
 )
 ```
 
-## Селекторы
-
-Селекторы предоставляют удобный способ доступа к данным в хранилище:
-
-### Базовые подписки на свойства хранилища
+### Способы изменения значений (основные)
 
 ```typescript
-// Подписка на конкретное свойство (по пути)
-const unsubscribe1 = storage.subscribe('value', (event) => {
-  console.log('Новое значение:', event);
-});
+    const updateCounter1 = async () => {
+        await counter1.update((state) => {
+            state.value = state.value + 1
+        })
+    }
 
-// Подписка на свойство (через функцию селектора)
-const unsubscribe2 = storage.subscribe((state) => state.value, (event) => {
-  console.log('Новое значение:', event);
-});
+    const updateCounter2 = async () => {
+        await counter2.set('value', counter2ValueSelectorValue! + 1)
+    }
 
-// Подписка на вложенные свойства
-const unsubscribe3 = storage.subscribe('user.settings.theme', (event) => {
-  console.log('Новая тема:', event);
-});
+    const updateCounter3 = async () => {
+        counter3.set('value', counter3ValueSelectorValue! + 1)
+    }
 ```
 
-### Селекторы для вычисляемых значений (в стиле Redux)
 
+### Создание подписок
+
+> **💡 Совет:**
+При создании подписок с помощью subscribe или subscribeToAll лучше не забывать вызывать функцию отписки 
+> 
+```jsx
+const [counter1Value, setCounter1Value] = useState(0)
+const [counter2Value, setCounter2Value] = useState(0)
+
+
+useEffect(() => {
+  // Подписка через колбэк
+  counter1.subscribe((state) => state.value, (value) => {
+    setCounter1Value(value)
+  })
+  // Подписка через путь (может быть типа 'user.settings.theme')
+  counter2.subscribe('value', (value) => {
+    setCounter2Value(value)
+  })
+
+  // Подписка на все события
+  counter1.subscribeToAll((event) => {
+    console.log('event', event)
+    // Здесь мы получим объект:
+    // changedPaths:['value'] // все пути по которым были вызваны изменения (['prop1.prop2', 'prop44.prop.555.prop.666'])
+    // key:['value'] // Корневые ключи в хранилище которые вкоторых были изменения
+    // type:"storage:update" // Тип операции
+    // value: {value: 101} // Новый state
+  })
+}, [])
+// Для React через специальный селектор
+const counter3Value = useStorageSubscribe(counter3, (state) => state.value)
+```
+
+### Создание вычисляемых подписок в стиле Redux
 ```typescript
-// Создание модуля селекторов
-const counterSelector = new SelectorModule(counterStorage);
+const counter1Selector = new SelectorModule(counter1)
+const counter2Selector = new SelectorModule(counter2)
+const counter3Selector = new SelectorModule(counter3)
 
-// Создание простого селектора
-const countValueSelector = counterSelector.createSelector(s => s.value);
+const counter1ValueSelector = counter1Selector.createSelector((s) => s.value)
+const counter2ValueSelector = counter2Selector.createSelector((s) => s.value)
+const counter3ValueSelector = counter3Selector.createSelector((s) => s.value)
 
-// Комбинирование селекторов
-const doubledCountSelector = counterSelector.createSelector(
-  [countValueSelector],
-  count => count * 2,
+const sum = counter3Selector.createSelector(
+  [counter1ValueSelector, counter2ValueSelector, counter3ValueSelector],
+  (a,b,c) => a + b + c,
   // Опционально:
   // {
   //   equals: , // Функция сравнения
   //   name: 'doubledCountSelector' // Имя селектора
   // }
-);
+)
+```
 
-// Подписка на изменения вычисляемого значения
-doubledCountSelector.subscribe({
-  notify: value => console.log('Удвоенное значение:', value)
-});
+### Получение значений из вычисляемых селекторов
+```jsx
+// Нативный способ
 
-// Одноразовое получение значения
-doubledCountSelector.select().then(value => {
-  console.log('Текущее удвоенное значение:', value);
-});
+// Единоразовое получение
+const sumValueSelector = sum.select().then(value => value)
+
+// Подписка на изменение
+counter2ValueSelector.subscribe({
+  notify: (value) => {
+    console.log('counter2ValueSelector', value)
+  }
+})
+
+counter3ValueSelector.subscribe({
+  notify: (value) => {
+    console.log('counter3ValueSelector', value)
+  }
+})
+
+// Для React через специальный селектор
+const counter1ValueSelectorValue = useSelector(counter1ValueSelector)
+const counter2ValueSelectorValue = useSelector(counter2ValueSelector)
+const counter3ValueSelectorValue = useSelector(counter3ValueSelector, 
+  // Можно указать доп опции
+  {
+    initialValue: 99,
+    withLoading: true,
+    equals: (a, b) =>  a !== b
+  })
+// Тогда получать значение так
+counter3ValueSelectorValue.data
+counter3ValueSelectorValue.isLoading
+```
+
+
+### Middlewares
+
+> **💡 Важно:**
+Порядок имеет значение!<br/>
+Action → BroadcastMiddleware → ShallowCompare → Batching → Base Operation
+> 
+```typescript
+const counter1 = await new MemoryStorage<Counter>({
+  name: 'counter1',
+  initialState: {
+    value: 100,
+  },
+  middlewares: () => {
+    const broadcast = broadcastMiddleware({
+      storageType: 'memory',  // <-- Важно правильно указывать тип хранилища
+      storageName: 'counter1' // <-- Желательно правильно указывать имя хранилища
+    })
+    return [broadcast]
+  }
+}).initialize()
+
+const counter2 = await new LocalStorage<Counter>({
+  name: 'counter2',
+  initialState: { value: 100 },
+  middlewares: (getDefaultMiddleware) => {
+    const { shallowCompare } = getDefaultMiddleware()
+
+    const broadcast = broadcastMiddleware({
+      storageType: 'localStorage',
+      storageName: 'counter2'
+    })
+
+    return [broadcast, shallowCompare()]
+  }
+}).initialize()
+
+const { counter3 } = await IndexedDBStorage.createStorages<{ counter3: Counter }>(
+  'example1', {
+    counter3: {
+      name: 'counter3',
+      initialState: { value: 99 },
+      middlewares: (getDefaultMiddleware) => {
+        const { batching } = getDefaultMiddleware()
+
+        const broadcast = broadcastMiddleware({
+          storageType: 'indexedDB',
+          storageName: 'counter3'
+        })
+        return [
+          broadcast,
+          batching({
+            batchSize: 20,
+            batchDelay: 200
+          })
+        ]
+      }
+    }
+  }
+)
+```
+
+```typescript
+    // Поверхностное сравнение
+    const updateCounter2 = async () => {
+        await counter2.set('value', counter2ValueSelectorValue! + 1) // Это будет применено
+        await counter2.set('value', counter2ValueSelectorValue! + 1) // |
+        await counter2.set('value', counter2ValueSelectorValue! + 1) // | Не будут вызваны так как payload не изменился
+        await counter2.set('value', counter2ValueSelectorValue! + 1) // |
+        await counter2.set('value', counter2ValueSelectorValue! + 1) // |
+    }
+
+    // Батчинг
+    // !! работает только для методов без await
+    const updateCounter3 = async () => {
+        counter3.set('value', counter3ValueSelectorValue! + 1) // | игнорируется 
+        counter3.set('value', counter3ValueSelectorValue! + 1) // | игнорируется
+        counter3.set('value', counter3ValueSelectorValue! + 1) // | игнорируется 
+        counter3.set('value', counter3ValueSelectorValue! + 1) // | игнорируется 
+        counter3.set('value', counter3ValueSelectorValue! + 10)// | < --- будет применено только это
+    }
+```
+
+### Иное
+
+```typescript
+const counter1 = await new MemoryStorage<Counter>({
+    name: 'counter1',
+    initialState: {
+      value: 100,
+    },
+    middlewares: () => {
+      const broadcast = broadcastMiddleware({
+        storageType: 'memory',
+        storageName: 'counter1'
+      })
+      return [broadcast]
+    }
+  },
+  undefined, // Менеджер плагинов имплементирующий IPluginExecutor
+  {
+    emit: async (event: StorageEvent) => { // любой EventEmitter имплементирующий IEventEmitter
+      console.log('event', event)
+      // event будет содержать следующую инф:
+      // type: "storage:update"
+      // metadata:
+      //   storageName:"counter1"
+      // timestamp: 1748581282102
+      // payload:
+      //   changedPaths:['value']
+      // key: ['value']
+      // state: {value: 101}
+    },                                        
+  },
+  console // любой логгер имплементирующий ILogger
+).initialize()
 ```
 
 ## API-клиент
@@ -411,11 +527,10 @@ export function createPokemonDispatcher(storage: PokemonStorage) {
     storage,
     middlewares: [loggerMiddleware, alertM],
   }, (storage, { createWatcher, createAction }) => ({
-    // watcher для отслеживания текущего ID
+    // watcher`s
     watchCurrentId: createWatcher({...}),
-    // Загрузка покемона по ID
+    // сСобытия
     loadPokemon: createAction<number, { id: number }>({...}),
-
     loadPokemonRequest: createAction<number, { id: number }>({...}),
     // Успешное получение данных
     success: createAction<{ data?: Pokemon}, { data?: Pokemon }>({...}, {
@@ -458,17 +573,26 @@ import { PokemonDispatcher } from '../pokemon.dispatcher'
 import { Pokemon, PokemonState } from '../types'
 
 // Определяем типы для наших эффектов
-type PokemonDispatcherType = { pokemonDispatcher: PokemonDispatcher }
-type PokemonApiType = { pokemonApi: typeof pokemonEndpoints }
+type DispatcherType = {
+  pokemonDispatcher: PokemonDispatcher 
+}
+type ApiType = { 
+  pokemonApi: typeof pokemonEndpoints 
+}
+type ExternalStorages = {
+  core$: typeof coreSynapseIDB.state$
+}
+
+type Effect = ReturnType<typeof createEffect<
+  AboutUserUserInfo,    // Тип текущего хранилища
+  DispatcherType,       // Типы диспетчеров
+  ApiType,              // Типы api
+  Record<string, void>, // Тип конфигурации
+  ExternalStorages     // Типы внешних хранилищ потоков
+>>
 
 // Эффект для навигации
-export const navigationEffect = createEffect<
-  PokemonState,
-  PokemonDispatcherType,
-  PokemonApiType,
-  AppConfig,
-  any //ExternalStorages
->((action$, state$, externalStorages, { pokemonDispatcher }, _, config) =>
+export const navigationEffect: Effect = createEffect((action$, state$, externalStorages, { pokemonDispatcher }, _, config) =>
   action$.pipe(
     ofTypes([pokemonDispatcher.dispatch.next, pokemonDispatcher.dispatch.prev]),
     switchMap((action) => {
@@ -479,33 +603,21 @@ export const navigationEffect = createEffect<
 )
 
 // Эффект для отслеживания изменений ID
-export const watchIdEffect = createEffect<
-  PokemonState, 
-  PokemonDispatcherType, 
-  PokemonApiType, 
-  AppConfig,
-  any //ExternalStorages
->((action$, state$, externalStorages, { pokemonDispatcher }) =>
+export const watchIdEffect: Effect = createEffect((action$, state$, externalStorages, { pokemonDispatcher }) =>
   action$.pipe(
     ofType(pokemonDispatcher.watchers.watchCurrentId),
     withLatestFrom(
           selectorMap(state$,
+            (state) => state.value
           //... selectors
         ),
     ),
-    // tap(([action, [loading, currentId]]) => {...}),
     mapTo(null),
   ),
 )
 
 // Эффект для загрузки данных покемона
-export const loadPokemonEffect = createEffect<
-  PokemonState, 
-  PokemonDispatcherType,
-  PokemonApiType,
-  AppConfig,
-  any //ExternalStorages
->((
+export const loadPokemonEffect: Effect = createEffect((
   action$,                // Поток событий 
   state$,                 // Поток состояния
   externalStorages,       // Потоки внешних хранилищ
@@ -678,16 +790,21 @@ type CurrentDispatchers = {
 type CurrentApis = {
   userInfoAPi: typeof userInfoEndpoints
 };
+type ExternalStorages = {
+}
+
+type Effect = ReturnType<typeof createEffect<
+  AboutUserUserInfo,     // Тип текущего хранилища
+  CurrentDispatchers,       // Типы диспетчеров
+  CurrentApis,              // Типы api
+  Record<string, void>, // Тип конфигурации
+  ExternalStorages     // Типы внешних хранилищ потоков
+>>
 
 /**
  * Добавляем полученный профиль пользователя в текущий СТор
  */
-const loadUserInfoById = createEffect<
-  AboutUserUserInfo,
-  CurrentDispatchers,
-  CurrentApis,
-  any
->((action$, state$, { userInfoDispatcher, coreIdbDispatcher }) => action$.pipe(
+const loadUserInfoById: Effect = createEffect((action$, state$, { userInfoDispatcher, coreIdbDispatcher }) => action$.pipe(
   // Подписываемся на изменения в стороннем Synapse
   ofType(coreIdbDispatcher.watchers.watchCurrentUserProfile),
   map((s) => {
@@ -697,12 +814,7 @@ const loadUserInfoById = createEffect<
   }),
 ))
 
-const updateUserProfile = createEffect<
-  AboutUserUserInfo,
-  CurrentDispatchers,
-  CurrentApis,
-  any
->((action$, state$, { userInfoDispatcher }, { userInfoAPi }) => action$.pipe(
+const updateUserProfile: Effect = createEffect((action$, state$, { userInfoDispatcher }, { userInfoAPi }) => action$.pipe(
   ofType(userInfoDispatcher.dispatch.submit),
   validateMap({
     // Валидация перед запросом
@@ -768,6 +880,10 @@ export const userInfoSynapse = await createSynapse({
   createDispatcherFn: createUserInfoDispatcher,
   // Функция создания селекторов (Опционально)
   createSelectorsFn: createUserInfoSelectors,
+  // Внешние селекторы (Опционально)
+  externalSelectors: {
+    // externalSelectors1: ...
+  },
   // Конфигурация для эффектов (Опционально)
   createEffectConfig: (userInfoDispatcher) => ({
     // Диспетчеры для эффектов
@@ -815,77 +931,21 @@ export const {
 )
 ```
 
-Вы можете связывать Synapse между собой
-
-```typescript
-// core.synapse.ts
-export const coreSynapseIDB = await createSynapse({
-  storage: CORE,
-  createSelectorsFn: (selectorModule) => {
-    const currentUserProfile = selectorModule.createSelector((s) => s.currentUserProfile, { name: 'currentUserProfile' })
-
-    return ({
-      currentUserProfile,
-    })
-  },
-  createDispatcherFn: createCoreDispatcher,
-})
-
-// user-info.synapse.ts
-import { createSynapse } from 'synapse-storage/utils'
-import { coreSynapseIDB } from '../core/core.synapse'
-
-export const userInfoSynapse = await createSynapse({
-  // Передаем внешие селекторы
-  externalSelectors: {
-    coreSelectors: coreSynapseIDB.selectors
-  },
-  // TypeScript подскажет интерфейс
-  // createSelectorsFn: (currentSelectorModule, { coreSelectors }) => {...},
-})
-```
-
 Таким образом вы можете резделить функционал на слои
 
 
 ---
 
 
-Полноценный рабочий пример можно найти в папке src/examples/pokemons
-Там показано еще больше возможностей которые дает этот подход.
 
-## Middleware и плагины
+## Создание пользовательского middleware
 
 Synapse предоставляет две системы расширения функциональности: middleware и плагины. Они выполняют разные роли и имеют разную область применения.
 
-### Middleware
-
 Middleware в Synapse работают по принципу "цепочки обработчиков" и позволяют перехватывать любые операции хранилища. Каждое middleware может модифицировать действия до и после их обработки базовым хранилищем.
 
-```typescript
-const storage = await new MemoryStorage({
-  name: 'appState',
-  middlewares: (getDefaultMiddleware) => {
-    const { shallowCompare, batching } = getDefaultMiddleware();
-    return [
-      // Синхронизация между вкладками браузера
-      broadcastMiddleware({
-        storageName: 'appState',
-        storageType: 'memory',
-      }),
-      // Предотвращает ненужные обновления при одинаковых значениях
-      shallowCompare(),
-      // Группирует операции для оптимизации
-      batching({ 
-        batchSize: 10,       // Максимальное количество операций в батче
-        batchDelay: 300,     // Задержка перед обработкой батча (мс)
-      }),
-    ];
-  },
-}).initialize();
-```
 
-#### Порядок выполнения middleware
+### Порядок выполнения middleware
 
 Middleware выполняются в порядке их объявления в массиве:
 1. Действие проходит через все middleware сверху вниз
