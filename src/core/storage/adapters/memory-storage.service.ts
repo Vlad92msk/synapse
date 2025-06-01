@@ -11,10 +11,17 @@ export class MemoryStorage<T extends Record<string, any>> extends BaseStorage<T>
     super(config, pluginExecutor, eventEmitter, logger)
   }
 
-  async initialize() {
+  protected async doInitialize(): Promise<this> {
     try {
+      this.logger?.debug(`Initializing MemoryStorage "${this.name}"`)
+
+      // Инициализируем middleware
       this.initializeMiddlewares()
+
+      // Инициализируем с middleware
       await this.initializeWithMiddlewares()
+
+      this.logger?.debug(`MemoryStorage "${this.name}" initialized successfully`)
       return this
     } catch (error) {
       this.logger?.error('Error initializing MemoryStorage', { error })

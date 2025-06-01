@@ -1,5 +1,5 @@
 import { combineLatest, merge, Observable, of, OperatorFunction, pipe, Subject } from 'rxjs'
-import { catchError, filter, map, share, switchMap, take, withLatestFrom } from 'rxjs/operators'
+import { catchError, filter, map, share, switchMap, take } from 'rxjs/operators'
 
 import { IStorage } from '../../core'
 import { Action, ActionsResult, Dispatcher, DispatchFunction, ExtractResultType, WatcherFunction } from '../dispatcher'
@@ -325,10 +325,12 @@ export class EffectsModule<
    * Запускает все эффекты
    * @returns Текущий модуль
    */
-  start(): this {
+  async start(): Promise<this> {
     if (this.running) {
       return this
     }
+    // Ждем готовности основного хранилища
+    await this.storage.waitForReady()
 
     this.effects.forEach((effect) => this.subscribeToEffect(effect))
     this.running = true
