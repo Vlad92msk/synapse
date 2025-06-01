@@ -9,9 +9,17 @@ export class LocalStorage<T extends Record<string, any>> extends BaseStorage<T> 
     super(config, pluginExecutor, eventEmitter, logger)
   }
 
-  async initialize(): Promise<this> {
+  protected async doInitialize(): Promise<this> {
     try {
+      this.logger?.debug(`Initializing LocalStorage "${this.name}"`)
+
+      // Инициализируем middleware
+      this.initializeMiddlewares()
+
+      // Инициализируем с middleware
       await this.initializeWithMiddlewares()
+
+      this.logger?.debug(`LocalStorage "${this.name}" initialized successfully`)
       return this
     } catch (error) {
       this.logger?.error('Error initializing LocalStorage', { error })

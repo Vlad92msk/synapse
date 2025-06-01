@@ -1,7 +1,7 @@
 import { batchingMiddleware } from '../middlewares/storage-batching.middleware'
 import { shallowCompareMiddleware } from '../middlewares/storage-shallow-compare.middleware'
 import { IPluginExecutor } from '../modules/plugin/plugin.interface'
-import { DefaultMiddlewares, IEventEmitter, ILogger, IStorage, StorageConfig, StorageEvent, StorageEvents } from '../storage.interface'
+import { DefaultMiddlewares, IEventEmitter, ILogger, IStorage, StorageConfig, StorageEvent, StorageEvents, StorageInitStatus, StorageStatus } from '../storage.interface'
 import { Middleware, MiddlewareModule } from '../utils/middleware-module'
 import { StorageKeyType } from '../utils/storage-key'
 import { getValueByPath } from './path.utils'
@@ -13,6 +13,14 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
   protected static readonly GLOBAL_SUBSCRIPTION_KEY = '*'
 
   name: string
+
+  // Статус инициализации
+  private _initStatus: StorageInitStatus = {
+    status: StorageStatus.IDLE,
+  }
+
+  // Подписчики на изменения статуса
+  private statusSubscribers = new Set<(status: StorageInitStatus) => void>()
 
   private selectorPathCache = new WeakMap<PathSelector<any, any>, string>()
 
@@ -47,6 +55,117 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
     })
 
     this.initializeMiddlewares()
+  }
+
+  get initStatus(): StorageInitStatus {
+    return { ...this._initStatus }
+  }
+
+  // Ожидание готовности хранилища
+  async waitForReady(): Promise<this> {
+    if (this._initStatus.status === StorageStatus.READY) {
+      return this
+    }
+
+    if (this._initStatus.status === StorageStatus.ERROR) {
+      throw this._initStatus.error || new Error('Storage initialization failed')
+    }
+
+    return new Promise((resolve, reject) => {
+      const unsubscribe = this.onStatusChange((status) => {
+        if (status.status === StorageStatus.READY) {
+          unsubscribe()
+          resolve(this)
+        } else if (status.status === StorageStatus.ERROR) {
+          unsubscribe()
+          reject(status.error || new Error('Storage initialization failed'))
+        }
+      })
+    })
+  }
+
+  // Подписка на изменения статуса
+  onStatusChange(callback: (status: StorageInitStatus) => void): VoidFunction {
+    this.statusSubscribers.add(callback)
+
+    // Немедленно вызываем callback с текущим статусом
+    callback(this.initStatus)
+
+    return () => {
+      this.statusSubscribers.delete(callback)
+    }
+  }
+
+  // Обновление статуса инициализации
+  private updateInitStatus(update: Partial<StorageInitStatus>): void {
+    const previousStatus = this._initStatus.status
+
+    this._initStatus = {
+      ...this._initStatus,
+      ...update,
+    }
+
+    // Логирование изменений статуса
+    if (previousStatus !== this._initStatus.status) {
+      this.logger?.debug(`Storage "${this.name}" status changed: ${previousStatus} -> ${this._initStatus.status}`)
+    }
+
+    // Уведомляем подписчиков
+    const statusCopy = this.initStatus
+    this.statusSubscribers.forEach((callback) => {
+      try {
+        callback(statusCopy)
+      } catch (error) {
+        this.logger?.error('Error in status change callback', { error })
+      }
+    })
+  }
+
+  // Обертка для инициализации с отслеживанием статуса
+  public async initialize(): Promise<this> {
+    // Если уже инициализировано
+    if (this._initStatus.status === StorageStatus.READY) {
+      return this
+    }
+
+    // Если уже в процессе инициализации, ждем завершения
+    if (this._initStatus.status === StorageStatus.LOADING) {
+      return this.waitForReady()
+    }
+
+    // Начинаем инициализацию
+    this.updateInitStatus({
+      status: StorageStatus.LOADING,
+      error: undefined,
+    })
+
+    try {
+      const result = await this.doInitialize()
+
+      this.updateInitStatus({
+        status: StorageStatus.READY,
+        error: undefined,
+      })
+
+      return result
+    } catch (error) {
+      this.updateInitStatus({
+        status: StorageStatus.ERROR,
+        error: error instanceof Error ? error : new Error(String(error)),
+      })
+
+      throw error
+    }
+  }
+
+  // Абстрактный метод для реальной инициализации
+  protected abstract doInitialize(): Promise<this>
+
+  // Проверка готовности перед операциями
+  private ensureReady(): void {
+    if (this._initStatus.status !== StorageStatus.READY) {
+      throw new Error(`Storage "${this.name}" is not ready. Current status: ${this._initStatus.status}`)
+    }
   }
 
   protected initializeMiddlewares(): void {
@@ -85,8 +204,6 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
     }
   }
 
-  public abstract initialize(): Promise<this>
-
   protected abstract doGet(key: StorageKeyType): Promise<any>
 
   protected abstract doSet(key: StorageKeyType, value: any): Promise<void>
@@ -104,6 +221,8 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
   protected abstract doDestroy(): Promise<void>
 
   public async get<R>(key: StorageKeyType): Promise<R | undefined> {
+    this.ensureReady()
+
     try {
       const metadata = { operation: 'get', timestamp: Date.now(), key }
 
@@ -130,6 +249,8 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
   }
 
   public async set<R>(key: StorageKeyType, value: R): Promise<void> {
+    this.ensureReady()
+
     try {
       const metadata = { operation: 'set', timestamp: Date.now(), key }
 
@@ -189,6 +310,8 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
   }
 
   public async update(updater: (state: T) => void): Promise<void> {
+    this.ensureReady()
+
     try {
       const metadata = { operation: 'update', timestamp: Date.now() }
 
@@ -333,6 +456,8 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
   }
 
   public async delete(key: StorageKeyType): Promise<void> {
+    this.ensureReady()
+
     try {
       const metadata = { operation: 'delete', timestamp: Date.now(), key }
 
@@ -378,6 +503,8 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
   }
 
   public async clear(): Promise<void> {
+    this.ensureReady()
+
     try {
       this.pluginExecutor?.executeOnClear()
 
@@ -391,6 +518,8 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
   }
 
   public async keys(): Promise<string[]> {
+    this.ensureReady()
+
     try {
       return await this.middlewareModule.dispatch({
         type: 'keys',
@@ -402,6 +531,7 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
   }
 
   public async has(key: StorageKeyType): Promise<boolean> {
+    this.ensureReady()
     try {
       return await this.doHas(key)
     } catch (error) {
@@ -472,6 +602,14 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
         )
         this.initializedMiddlewares = null
       }
+
+      // Очищаем подписчиков статуса
+      this.statusSubscribers.clear()
+
+      // Сбрасываем статус
+      this.updateInitStatus({
+        status: StorageStatus.IDLE,
+      })
 
       await this.emitEvent({
         type: StorageEvents.STORAGE_DESTROY,

@@ -312,34 +312,26 @@ export class IndexedDBStorage<T extends Record<string, any>> extends BaseStorage
     this.dbManager = IndexedDBManager.getInstance(this.DB_NAME, this.DB_VERSION, logger)
   }
 
-  async initialize(): Promise<this> {
+  protected async doInitialize(): Promise<this> {
     try {
       this.logger?.debug(`Initializing IndexedDB storage "${this.STORE_NAME}"`)
 
+      // Создаем store в базе данных
       await this.dbManager.ensureStoreExists(this.STORE_NAME)
 
-      // Проверим еще раз, что хранилище доступно перед инициализацией middleware
-      try {
-        const db = await this.dbManager.initialize()
-        if (!db.objectStoreNames.contains(this.STORE_NAME)) {
-          throw new Error(`Store "${this.STORE_NAME}" not found after initialization`)
-        }
-      } catch (error) {
-        this.logger?.error(`Error verifying store "${this.STORE_NAME}" exists:`, { error })
-        throw error
+      // Проверяем, что хранилище доступно
+      const db = await this.dbManager.initialize()
+      if (!db.objectStoreNames.contains(this.STORE_NAME)) {
+        throw new Error(`Store "${this.STORE_NAME}" not found after initialization`)
       }
 
-      // Initialize middlewares from BaseStorage
+      // Инициализируем middleware
       this.initializeMiddlewares()
 
-      try {
-        await this.initializeWithMiddlewares()
-        this.logger?.debug(`IndexedDB storage "${this.STORE_NAME}" initialized successfully`)
-      } catch (error) {
-        this.logger?.error(`Failed to initialize middleware for store "${this.STORE_NAME}"`, { error })
-        // Продолжаем работу даже при ошибке middleware
-      }
+      // Инициализируем с middleware
+      await this.initializeWithMiddlewares()
 
+      this.logger?.debug(`IndexedDB storage "${this.STORE_NAME}" initialized successfully`)
       return this
     } catch (error) {
       this.logger?.error(`Ошибка инициализации IndexedDB "${this.name}"`, { error })

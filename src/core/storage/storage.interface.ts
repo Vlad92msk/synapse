@@ -1,8 +1,22 @@
 // storage.interface.ts
-import { IndexedDBConfig } from './adapters/indexed-DB.service.old'
+import { IndexedDBConfig } from './adapters/indexed-DB.service'
 import { BatchingMiddlewareOptions, ShallowCompareMiddlewareOptions } from './middlewares'
 import { Middleware } from './utils/middleware-module'
 import { StorageKeyType } from './utils/storage-key'
+
+// Статусы инициализации хранилища
+export enum StorageStatus {
+  IDLE = 'idle', // Не инициализировано
+  LOADING = 'loading', // В процессе инициализации
+  READY = 'ready', // Успешно инициализировано
+  ERROR = 'error', // Ошибка инициализации
+}
+
+// Информация о статусе инициализации
+export interface StorageInitStatus {
+  status: StorageStatus
+  error?: Error
+}
 
 export interface IStorage<T extends Record<string, any> = any> {
   name: string
@@ -19,6 +33,8 @@ export interface IStorage<T extends Record<string, any> = any> {
   initialize(): Promise<this>
   subscribe(key: StorageKeyType, callback: (value: any) => void): VoidFunction
   subscribe<R>(pathSelector: (state: T) => R, callback: (value: R) => void): VoidFunction
+  onStatusChange(callback: (status: StorageInitStatus) => void): VoidFunction
+  waitForReady(): Promise<this>
 }
 
 export enum StorageEvents {

@@ -10,6 +10,11 @@ export type ExtractDispatchType<T> = T extends { dispatch: infer D } ? D : never
 
 export type StorageCreatorFunction<T extends Record<string, any>> = () => Promise<IStorage<T>>
 
+export type SynapseDependency = {
+  storage: IStorage<any>
+  [key: string]: any // Для других свойств synapse (dispatcher, selectors, etc.)
+}
+
 /**
  * Базовая конфигурация хранилища
  */
@@ -17,6 +22,8 @@ type BaseSynapseConfig<TStore extends Record<string, any>, TSelectors = any, TEx
   | { storage: IStorage<TStore>; createStorageFn?: undefined }
   | { storage?: undefined; createStorageFn: StorageCreatorFunction<TStore> }
 ) & {
+  // Зависимости от других synapse
+  dependencies?: SynapseDependency[]
   // Внешние селекторы
   externalSelectors?: TExternalSelectors
   // Функция создания селекторов
@@ -45,6 +52,102 @@ export type CreateSynapseConfigWithEffects<
   }
   // Эффекты
   effects?: Effect<TStore, any, TApi, TConfig, any>[]
+}
+
+// Валидация конфигурации Synapse
+function validateSynapseConfig(config: any): void {
+  // Проверяем базовые требования к хранилищу
+  if (!config.storage && !config.createStorageFn) {
+    throw new Error('Synapse config must have either "storage" or "createStorageFn"')
+  }
+
+  if (config.storage && config.createStorageFn) {
+    throw new Error('Synapse config cannot have both "storage" and "createStorageFn". Choose one.')
+  }
+
+  // Проверяем зависимости эффектов от диспетчера
+  if (config.effects && !config.createDispatcherFn) {
+    throw new Error('Effects require dispatcher. Add "createDispatcherFn" to config.')
+  }
+
+  if (config.createEffectConfig && !config.createDispatcherFn) {
+    throw new Error('Effect config requires dispatcher. Add "createDispatcherFn" to config.')
+  }
+
+  // Проверяем зависимости
+  if (config.dependencies) {
+    if (!Array.isArray(config.dependencies)) {
+      throw new Error('Dependencies must be an array')
+    }
+
+    config.dependencies.forEach((dependency: any, index: number) => {
+      if (!dependency || typeof dependency !== 'object') {
+        throw new Error(`Dependency at index ${index} must be an object`)
+      }
+
+      if (!dependency.storage || typeof dependency.storage.waitForReady !== 'function') {
+        throw new Error(`Dependency at index ${index} must have a storage with waitForReady method`)
+      }
+    })
+  }
+
+  // Проверяем функции создания
+  if (config.createStorageFn && typeof config.createStorageFn !== 'function') {
+    throw new Error('"createStorageFn" must be a function')
+  }
+
+  if (config.createDispatcherFn && typeof config.createDispatcherFn !== 'function') {
+    throw new Error('"createDispatcherFn" must be a function')
+  }
+
+  if (config.createSelectorsFn && typeof config.createSelectorsFn !== 'function') {
+    throw new Error('"createSelectorsFn" must be a function')
+  }
+
+  if (config.createEffectConfig && typeof config.createEffectConfig !== 'function') {
+    throw new Error('"createEffectConfig" must be a function')
+  }
+
+  // Проверяем эффекты
+  if (config.effects) {
+    if (!Array.isArray(config.effects)) {
+      throw new Error('Effects must be an array')
+    }
+
+    config.effects.forEach((effect: any, index: number) => {
+      if (typeof effect !== 'function') {
+        throw new Error(`Effect at index ${index} must be a function`)
+      }
+    })
+  }
+
+  // Проверяем внешние селекторы
+  if (config.externalSelectors && typeof config.externalSelectors !== 'object') {
+    throw new Error('External selectors must be an object')
+  }
+}
+
+// Функция для ожидания готовности зависимостей
+async function waitForDependencies(dependencies: SynapseDependency[] = []): Promise<void> {
+  if (dependencies.length === 0) {
+    return
+  }
+
+  console.log(`Waiting for ${dependencies.length} dependencies to be ready...`)
+
+  await Promise.all(
+    dependencies.map(async (dependency, index) => {
+      try {
+        await dependency.storage.waitForReady()
+        console.log(`Dependency ${index} (${dependency.storage.name || 'unnamed'}) is ready`)
+      } catch (error) {
+        console.error(`Dependency ${index} failed to initialize:`, error)
+        throw new Error(`Dependency ${index} initialization failed: ${error}`)
+      }
+    }),
+  )
+
+  console.log('All dependencies are ready!')
 }
 
 /**
@@ -163,8 +266,23 @@ export async function createSynapse<
   TExternalSelectors extends Record<string, any> = Record<string, any>,
   TStorage extends IStorage<TStore> = IStorage<TStore>,
 >(config: any): Promise<any> {
-  // Создаем и инициализируем хранилище
+  // 0. Валидируем конфигурацию
+  try {
+    validateSynapseConfig(config)
+  } catch (error) {
+    console.error('Synapse configuration validation failed:', error)
+    throw error
+  }
+
+  // 1. Сначала ждем готовности всех зависимостей
+  await waitForDependencies(config.dependencies)
+
+  // 2. Создаем и инициализируем хранилище
   const storageInstance = (config.createStorageFn ? await config.createStorageFn() : config.storage!) as TStorage
+
+  // 3. Ждем готовности нашего хранилища
+  await storageInstance.waitForReady()
+  console.log(`Storage "${storageInstance.name}" is ready`)
 
   // Создаем сборщики для последующей очистки
   const cleanupCallbacks: Array<() => Promise<void> | void> = []
@@ -237,7 +355,7 @@ export async function createSynapse<
       }
 
       // Запускаем модуль эффектов
-      effectsModule.start()
+      await effectsModule.start()
       result.state$ = effectsModule.state$
 
       // Добавляем очистку эффектов
