@@ -1,4 +1,5 @@
 > [🏠 Home](../../README.md)
+> [🏠 Журнал изменений](../../CHANGELOG.md)
 
 # Code Organization Example and createSynapse Utility Usage
 ___
@@ -186,6 +187,7 @@ import { userInfoEndpoints } from '../../api/user-info.api'
 import { coreSynapseIDB } from '../core/core.synapse'
 
 export const userInfoSynapse = await createSynapse({
+  dependencies: [coreSynapseIDB], // Wait for coreSynapseIDB to initialize
   // Pass storage
   // This can be 
   // 1 - Function that returns ready storage

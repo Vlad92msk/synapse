@@ -1,6 +1,6 @@
 # Synapse Storage
 
-> **🇺🇸 English** | [🇷🇺 Русский](./docs/ru/README.md)
+> **🇺🇸 English** | [🇷🇺 Русский](./docs/ru/README.md) | [📝  ChangeLog](./CHANGELOG.md)
 
 State management toolkit + API client
 
@@ -97,6 +97,97 @@ npm install synapse-storage rxjs react react-dom
 - [GitHub](https://github.com/Vlad92msk/synapse-examples)
 - [YouTube](https://www.youtube.com/channel/UCGENI_i4qmBkPp98P2HvvGw)
 
+---
+
+## 📊 Why Synapse Storage?
+
+**One library instead of many** - Synapse combines functionality that usually requires multiple dependencies:
+
+| What you get | Traditional approach | Synapse Storage |
+|--------------|---------------------|---------|
+| **State Management** | Redux + RTK (~45KB) | ✅ |
+| **HTTP Client + Caching** | React Query (~39KB) | ✅|
+| **Reactive Effects** | Redux-Observable (~25KB) | ✅|
+| **Storage Adapters** | Custom solutions | ✅|
+| **React Integration** | Custom hooks | ✅|
+| **Computed Selectors** | Reselect (~5KB) | ✅|
+| **Middleware System** | Custom implementation | ✅|
+| **Plugin Architecture** | Custom implementation | ✅|
+
+### Bundle Size Comparison
+
+```typescript
+// Traditional stack
+import { configureStore } from '@reduxjs/toolkit'     // ~45KB
+import { createApi } from '@reduxjs/toolkit/query'    // included in RTK
+import { QueryClient } from '@tanstack/react-query'  // ~39KB  
+import { createEpicMiddleware } from 'redux-observable' // ~25KB
+// Total: ~109KB + custom implementations
+
+// Synapse Storage
+import { createSynapse } from 'synapse-storage'       // ~171KB
+// Total: 171KB with ALL features included
+```
+
+### Modular Usage
+
+Don't need everything? Import only what you use:
+
+| Use Case          | Import                 | Size | Comparison                |
+|-------------------|------------------------|------|---------------------------|
+| **Basic state**   | `synapse-storage/core` | ~42KB | vs Redux: 45KB            |
+| **+ HTTP client** | `+ /api`               | +13KB | vs React Query: 39KB      |
+| **+ Reactive**    | `+ /reactive`          | +8KB | vs Redux-Observable: 25KB |
+| **+ React hooks** | `+ /react`             | +5KB | vs Custom hooks           |
+| **Full package**  | all modules            | ~171KB |vs 109KB stack + custom   |
+
+> **🎯 Result:** Similar or better performance with unified API and TypeScript support out of the box
+
+## 🧩 Modular Architecture "Like a Constructor"
+
+**Use only what you need** - each module works independently:
+
+### 🎯 Flexible Usage Scenarios
+
+```typescript
+// 📦 Minimal project - storage only
+import { MemoryStorage } from 'synapse-storage/core'        // 42KB
+
+// 📦 + Add HTTP client when needed  
+import { ApiClient } from 'synapse-storage/api'             // +13KB
+
+// 📦 + Add reactive effects when required
+import { createDispatcher } from 'synapse-storage/reactive' // +8KB
+
+// 📦 + Add React hooks for UI
+import { useSelector } from 'synapse-storage/react'         // +5KB
+```
+
+### 🔧 Or Create Your Own Implementation
+
+```typescript
+// Use core + your solutions
+import { IStorage } from 'synapse-storage/core'
+
+// Implement your HTTP client
+class MyApiClient { /* your logic */ }
+
+// Implement your React hooks  
+const useMyCustomHook = () => { /* your logic */ }
+
+// Combine as convenient!
+```
+
+### 🎨 Constructor Approach Benefits
+
+- **🚀 Quick Start** - begin with core, add modules as project grows
+- **📦 Optimal Bundle** - don't pay for unused functionality
+- **🔄 Flexibility** - replace any module with your implementation
+- **🛠️ Compatibility** - modules work independently but integrate perfectly
+- **📈 Scalability** - from simple state to full-featured architecture
+
+> **💡 Evolution Example:** Started with MemoryStorage → added ApiClient → connected reactive effects → integrated React hooks. **Each step is optional!**
+> 
 ---
 
 ## 📁 Documentation Structure

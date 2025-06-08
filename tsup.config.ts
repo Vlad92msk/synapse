@@ -1,137 +1,113 @@
 import { defineConfig } from 'tsup'
 
-export default defineConfig([
-  // =================== COMMONJS КОНФИГУРАЦИЯ ===================
-  // CJS хорошо работает с bundle: true и включает зависимости в бандл
-  // Используется в Node.js проектах и legacy окружениях
-  {
-    entry: {
-      index: 'src/index.ts',
-      core: 'src/core/index.ts',
-      reactive: 'src/reactive/index.ts',
-      api: 'src/api/index.ts',
-      react: 'src/react/index.ts',
-      utils: 'src/utils/index.ts'
-    },
-
-    // =================== БАЗОВЫЕ НАСТРОЙКИ ===================
-    format: ['cjs'],                 // Только CommonJS
-    dts: false,                      // Типы генерируем только для ESM
-    splitting: false,                // CJS не поддерживает splitting
-    sourcemap: false,                // Убираем source maps
-    clean: false,                    // Не очищаем (ESM очистит)
-    minify: true,                    // ✅ Включаем минификацию
-    bundle: true,                    // ✅ CJS бандлит зависимости
-    target: 'es2022',                // Современный JS
-    platform: 'node',               // CJS обычно для Node.js
-
-    // =================== ЗАВИСИМОСТИ ===================
-    external: [
-      'react',                       // Основные peer dependencies
-      'react-dom',
-      'rxjs'
-    ],
-
-    // =================== РАСШИРЕНИЯ ФАЙЛОВ ===================
-    // @ts-ignore - временно игнорируем типы tsup
-    outExtension: () => ({ '.js': '.cjs' }) // .js → .cjs
+export default defineConfig({
+  // =================== ENTRY POINTS ===================
+  entry: {
+    index: 'src/index.ts',
+    core: 'src/core/index.ts',
+    reactive: 'src/reactive/index.ts',
+    api: 'src/api/index.ts',
+    react: 'src/react/index.ts',
+    utils: 'src/utils/index.ts'
   },
 
-  // =================== ESM КОНФИГУРАЦИЯ ===================
-  // ESM с bundle: false - современный подход для библиотек
-  // Сохраняет импорты как есть, минимальный размер файлов
-  {
-    entry: {
-      index: 'src/index.ts',
-      core: 'src/core/index.ts',
-      reactive: 'src/reactive/index.ts',
-      api: 'src/api/index.ts',
-      react: 'src/react/index.ts',
-      utils: 'src/utils/index.ts'
-    },
+  // =================== ESM ONLY КОНФИГУРАЦИЯ ===================
+  format: ['esm'],                   // Только ES modules
+  dts: true,                         // Генерируем TypeScript типы
+  splitting: false,                  // Отключено для стабильной работы с external
+  sourcemap: false,                  // Убираем source maps для продакшена
+  clean: true,                       // Очищаем dist перед сборкой
+  minify: true,                      // Минификация для меньшего размера
+  bundle: true,                      // Бандлим код библиотеки
+  target: 'es2022',                  // Современный JavaScript
+  platform: 'neutral',              // Универсальная платформа (браузер + Node.js)
 
-    // =================== БАЗОВЫЕ НАСТРОЙКИ ===================
-    format: ['esm'],                 // Только ES modules
-    dts: true,                       // ✅ Генерируем типы для ESM
-    splitting: false,                // Отключено для stable external
-    sourcemap: false,                // Убираем source maps
-    clean: true,                     // ✅ Очищаем dist перед сборкой
-    minify: true,                    // ✅ Включаем минификацию
-    bundle: true,                    // ✅ Возвращаем bundle для ESM
-    target: 'es2022',                // Современный JS
-    platform: 'neutral',            // Универсальная платформа
+  // =================== EXTERNAL ЗАВИСИМОСТИ ===================
+  external: [
+    'react',                         // React остается внешней зависимостью
+    'react-dom',                     // React DOM остается внешней
+    'rxjs'                           // RxJS остается внешней
+  ],
 
-    // ✅ Максимально строгие настройки external для bundle: true
-    external: [
+  // =================== ESBUILD НАСТРОЙКИ ===================
+  esbuildOptions: (options) => {
+    options.jsx = 'automatic'        // Современный JSX transform
+    options.jsxDev = false           // Отключаем dev режим JSX
+    options.packages = 'external'    // Принуждаем external зависимости
+    options.treeShaking = true
+    options.drop = ['console', 'debugger'] // Убираем в продакшене
+    options.mangleProps = /^_/ // Сжимаем приватные свойства
+
+    // Дублируем external настройки для надежности
+    options.external = [
       'react',
       'react-dom',
-      'rxjs',
-    ],
+      'rxjs'
+    ]
+  },
 
-    // ✅ Агрессивные настройки для принуждения external
-    esbuildOptions: (options) => {
-      options.jsx = 'automatic'
-      options.jsxDev = false
-      options.packages = 'external'  // ✅ Принуждаем external
+  // =================== ПРОВЕРКА КАЧЕСТВА СБОРКИ ===================
+  onSuccess: async () => {
+    console.log('🚀 ESM-only build completed!')
 
-      // ✅ Дублируем external в esbuild для надежности
-      options.external = [
-        'react',
-        'react-dom',
-        'rxjs'
-      ]
-    },
+    // Проверяем что external зависимости не попали в бандл
+    const fs = await import('fs')
+    const path = await import('path')
 
-    // =================== ПРОВЕРКА РЕЗУЛЬТАТА ===================
-    onSuccess: async () => {
-      console.log('✅ ESM build completed!')
-
-      // Проверяем что external зависимости не попали в бандл
-      const fs = await import('fs')
+    try {
       const files = fs.readdirSync('./dist')
-      const esmFiles = files.filter(f => f.endsWith('.js') && !f.endsWith('.cjs'))
+      const jsFiles = files.filter(f => f.endsWith('.js'))
+
+      console.log(`📦 Generated files: ${jsFiles.join(', ')}`)
 
       let allGood = true
+      let totalSize = 0
 
-      for (const file of esmFiles) {
-        const content = fs.readFileSync(`./dist/${file}`, 'utf8')
+      for (const file of jsFiles) {
+        const filePath = path.join('./dist', file)
+        const content = fs.readFileSync(filePath, 'utf8')
+        const sizeKB = (content.length / 1024).toFixed(2)
+        totalSize += parseFloat(sizeKB)
 
-        // Проверяем что React остался как импорт, а не как код
-        if (content.includes('function useState') || content.includes('useState:')) {
-          console.error(`❌ React CODE found in ${file}`)
+        // Проверяем что React остался как импорт, а не включен в код
+        if (content.includes('function useState') || content.includes('createElement(')) {
+          console.error(`❌ React CODE found in ${file} (${sizeKB}KB)`)
           allGood = false
-        } else if (content.includes('import {useState') || content.includes('import{useState')) {
-          console.log(`✅ ${file}: React import found (good - external)`)
+        } else if (content.includes('from"react"') || content.includes('from "react"')) {
+          console.log(`✅ ${file} (${sizeKB}KB): External React import ✓`)
         } else {
-          console.log(`✅ ${file}: No React`)
+          console.log(`✅ ${file} (${sizeKB}KB): No React dependency`)
+        }
+
+        // Проверяем RxJS
+        if (content.includes('from"rxjs"') || content.includes('from "rxjs"')) {
+          console.log(`✅ ${file}: External RxJS import ✓`)
         }
       }
 
+      console.log(`📊 Total library size: ${totalSize.toFixed(2)}KB`)
+
       if (allGood) {
-        console.log('🎉 SUCCESS: All ESM files use external React imports!')
+        console.log('🎉 SUCCESS: Clean ESM-only build with external dependencies!')
+      } else {
+        console.error('💥 FAILED: Some dependencies were bundled instead of staying external')
+        process.exit(1)
       }
+    } catch (error) {
+      // @ts-ignore
+      console.warn('⚠️  Could not verify build quality:', error.message)
     }
-  }
+  },
 
-  // =================== ДОПОЛНИТЕЛЬНЫЕ НАСТРОЙКИ ===================
-  // Раскомментируйте для продакшена:
+  // =================== ДОПОЛНИТЕЛЬНЫЕ ОПЦИИ ДЛЯ РАЗРАБОТКИ ===================
+  // Раскомментируйте при необходимости:
 
-  // minify: true,                    // Минификация
-  // treeshake: true,                 // Удаление неиспользуемого кода
+  // watch: true,                     // Режим наблюдения за изменениями
   // sourcemap: true,                 // Source maps для отладки
+  // metafile: true,                  // Метаданные сборки для анализа
 
-  // =================== ПРОДВИНУТЫЕ НАСТРОЙКИ ===================
-
-  // splitting: true,                 // Только для bundle: true
-  // metafile: true,                  // Анализ бандла
-  //
   // esbuildOptions: (options) => {
-  //   options.drop = ['console', 'debugger'] // Убираем логи
-  //   options.mangleProps = /^_/     // Сжимаем приватные свойства
+  //   options.drop = ['console']     // Убираем console.log в продакшене
+  //   options.treeShaking = true     // Дополнительный tree shaking
   // }
-
-  // =================== МОНИТОРИНГ ===================
-
-  // watch: true,                     // Режим разработки
-  // onSuccess: 'echo "Build done!"' // Команда после сборки
-])
+})

@@ -186,6 +186,7 @@ import { userInfoEndpoints } from '../../api/user-info.api'
 import { coreSynapseIDB } from '../core/core.synapse'
 
 export const userInfoSynapse = await createSynapse({
+  dependencies: [coreSynapseIDB], // Дождется инициализации coreSynapseIDB
   // Передаем хранилище
   // Это может быть 
   // 1 - Функция, которая фозвращает готовое ранилище

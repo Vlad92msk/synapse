@@ -1,4 +1,5 @@
 > [🏠 Home](../../README.md)
+> [🏠 Журнал изменений](../../CHANGELOG.md)
 
 # Creating Dispatcher
 ___
@@ -38,7 +39,22 @@ export function createPokemonDispatcher(storage: PokemonStorage) {
     middlewares: [loggerMiddleware, alertM],
   }, (storage, { createWatcher, createAction }) => ({
     // watchers
-    watchCurrentId: createWatcher({...}),
+    watchCurrentId: createWatcher({
+      type: 'watchCurrentId',
+      selector: (state) => state.currentId,
+      shouldTrigger: (prev, curr) => prev !== curr,
+      notifyAfterSubscribe: false, // Only changes (default)
+      meta: { description: 'Track current Pokemon changes' },
+    }),
+
+    // Watches user profile for synchronization
+    watchUserProfile: createWatcher({
+      type: 'watchUserProfile',
+      selector: (state) => state.userProfile,
+      shouldTrigger: (prev, curr) => JSON.stringify(prev) !== JSON.stringify(curr),
+      notifyAfterSubscribe: true, // Emit on subscription for sync
+      meta: { description: 'Synchronize profile between modules' },
+    }),
     // Events
     loadPokemon: createAction<number, { id: number }>({...}),
     loadPokemonRequest: createAction<number, { id: number }>({...}),
