@@ -73,6 +73,8 @@ interface WatcherDefinition<T, R> {
   meta?: Record<string, any>
   // Опционально - функция для определения, изменилось ли значение
   shouldTrigger?: (prev: R | undefined, current: R) => boolean
+  // Эмитить текущее значение при подписке
+  notifyAfterSubscribe?: boolean
 }
 
 /**
@@ -114,11 +116,6 @@ export interface DispatchFunction<TParams, TResult> {
  * Тип для фабрики создателей действий
  */
 type ActionCreatorFactory = <TParams, TResult>(config: ActionDefinition<TParams, TResult>, executionOptions?: ActionExecutionOptions) => DispatchFunction<TParams, TResult>
-
-/**
- * Тип для функции настройки действий
- */
-export type ActionsSetup<T extends Record<string, unknown>> = (create: ActionCreatorFactory, storage: IStorage<T>) => Record<string, DispatchFunction<any, any>>
 
 /**
  * Извлекает тип результата из функции диспетчера
@@ -382,7 +379,6 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
    * Создает watcher для отслеживания изменений в хранилище
    */
   public createWatcher<R>(config: WatcherDefinition<T, R>): WatcherFunction<R> {
-    // Логика остается без изменений
     const actionType = `[${this.storage.name}]${config.type}`
 
     // Создаем Subject для этого watcher'а
@@ -390,6 +386,12 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
 
     // Предыдущее значение для сравнения
     let prevValue: R | undefined
+
+    // Функция получения текущего значения
+    const getCurrentValue = async (): Promise<R> => {
+      const currentState = await this.storage.getState()
+      return config.selector(currentState)
+    }
 
     // Подписываемся на изменения состояния
     const unsubscribe = this.storage.subscribe(config.selector, (value: R) => {
@@ -414,8 +416,64 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
     })
 
     // Создаем функцию watcher'а
-    const watcherFn = () => subject.asObservable()
+    const watcherFn = () => {
+      const baseObservable = subject.asObservable()
+
+      // Если НЕ нужно стартовать с текущим значением - возвращаем как есть
+      if (!config.notifyAfterSubscribe) {
+        return baseObservable
+      }
+
+      // Если нужно стартовать с текущим значением - создаем Observable с начальным значением
+      return new Observable<TypedAction<R>>((subscriber) => {
+        let hasEmittedInitial = false
+
+        // Получаем и эмитим текущее значение
+        getCurrentValue()
+          .then((currentValue) => {
+            // Проверяем shouldTrigger для начального значения
+            if (!config.shouldTrigger || config.shouldTrigger(undefined, currentValue)) {
+              const initialAction: TypedAction<R> = {
+                type: actionType,
+                payload: currentValue,
+                meta: {
+                  ...config.meta,
+                  isInitial: true, // Помечаем как начальное значение
+                },
+              }
+
+              subscriber.next(initialAction)
+              prevValue = currentValue
+              hasEmittedInitial = true
+            }
+          })
+          .catch((error) => {
+            console.warn(`Error getting initial value for watcher ${actionType}:`, error)
+            subscriber.error(error)
+          })
+
+        // Подписываемся на последующие изменения
+        const subscription = baseObservable.subscribe({
+          next: (action) => {
+            // Если это первое событие и мы еще не эмитили начальное - пропускаем дубликат
+            if (hasEmittedInitial && action.payload === prevValue) {
+              return
+            }
+            subscriber.next(action)
+          },
+          error: (error) => subscriber.error(error),
+          complete: () => subscriber.complete(),
+        })
+
+        // Cleanup функция
+        return () => {
+          subscription.unsubscribe()
+        }
+      })
+    }
+
     watcherFn._type = 'watchers'
+
     // Добавляем свойства
     Object.defineProperty(watcherFn, 'actionType', {
       value: actionType,
@@ -431,7 +489,7 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
       })
     }
 
-    // Добавляем метод для отписки
+    // Добавляем метод для отписки от хранилища
     Object.defineProperty(watcherFn, 'unsubscribe', {
       value: unsubscribe,
       writable: false,

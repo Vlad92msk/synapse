@@ -1,4 +1,5 @@
 > [🏠 Home](../../README.md)
+> [🏠 Журнал изменений](../../CHANGELOG.md)
 
 # Creating Effects
 ___

@@ -19,7 +19,8 @@
     "rxjs",
     "reactive",
     "indexeddb",
-    "localstorage"
+    "localstorage",
+    "esm-only"
   ],
   "author": "Vlad Firsov",
   "homepage": "https://github.com/Vlad92msk/synapse#readme",
@@ -50,64 +51,28 @@
   },
   "exports": {
     ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.cjs"
-      }
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
     "./core": {
-      "import": {
-        "types": "./dist/core.d.ts",
-        "default": "./dist/core.js"
-      },
-      "require": {
-        "types": "./dist/core.d.ts",
-        "default": "./dist/core.cjs"
-      }
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js"
     },
     "./reactive": {
-      "import": {
-        "types": "./dist/reactive.d.ts",
-        "default": "./dist/reactive.js"
-      },
-      "require": {
-        "types": "./dist/reactive.d.ts",
-        "default": "./dist/reactive.cjs"
-      }
+      "types": "./dist/reactive.d.ts",
+      "import": "./dist/reactive.js"
     },
     "./api": {
-      "import": {
-        "types": "./dist/api.d.ts",
-        "default": "./dist/api.js"
-      },
-      "require": {
-        "types": "./dist/api.d.ts",
-        "default": "./dist/api.cjs"
-      }
+      "types": "./dist/api.d.ts",
+      "import": "./dist/api.js"
     },
     "./react": {
-      "import": {
-        "types": "./dist/react.d.ts",
-        "default": "./dist/react.js"
-      },
-      "require": {
-        "types": "./dist/react.d.ts",
-        "default": "./dist/react.cjs"
-      }
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
     },
     "./utils": {
-      "import": {
-        "types": "./dist/utils.d.ts",
-        "default": "./dist/utils.js"
-      },
-      "require": {
-        "types": "./dist/utils.d.ts",
-        "default": "./dist/utils.cjs"
-      }
+      "types": "./dist/utils.d.ts",
+      "import": "./dist/utils.js"
     }
   },
   "peerDependencies": {
