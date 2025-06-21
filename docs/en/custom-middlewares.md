@@ -1,8 +1,7 @@
 > [🏠 Home](../../README.md)
-> [🏠 Журнал изменений](../../CHANGELOG.md)
+> [🏠 Changelog](../../CHANGELOG.md)
 
 # Creating Custom Middlewares
-___
 
 Synapse provides two systems for extending functionality: middlewares and plugins. They serve different roles and have different scopes of application.
 
@@ -21,10 +20,10 @@ Action → BroadcastMiddleware → ShallowCompare → Batching → Base Operatio
 Result ← BroadcastMiddleware ← ShallowCompare ← Batching ← Base Operation
 ```
 
-> **⚠️ Important:** Middleware order matters!
-> - `BroadcastMiddleware` should be first for tab synchronization
-> - `ShallowCompare` optimizes repeated calls
-> - `Batching` groups operations for performance
+> ⚠️ Important: Middleware order matters!
+> - BroadcastMiddleware should be first for tab synchronization
+> - ShallowCompare optimizes repeated calls
+> - Batching groups operations for performance
 
 #### Creating Custom Middleware
 

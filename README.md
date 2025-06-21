@@ -78,19 +78,19 @@ npm install synapse-storage rxjs react react-dom
 
 ## 📚 Documentation
 
-- [📖 Main](./docs/ru/README.md)
-- [🚀 Basic Usage](./docs/ru/basic-usage.md)
-- [🧮 Redux-style Computed Selectors](./docs/ru/redux-selectors.md)
-- [⚙️ Middlewares](./docs/ru/middlewares.md)
-- [🌐 API Client](./docs/ru/api-client.md)
+- [📖 Main](./README.md)
+- [🚀 Basic Usage](./docs/en/basic-usage.md)
+- [🧮 Redux-style Computed Selectors](./docs/en/redux-selectors.md)
+- [⚙️ Middlewares](./docs/en/middlewares.md)
+- [🌐 API Client](./docs/en/api-client.md)
 - ⚡ Reactive Approach
-    - [⚡ Creating Dispatcher](./docs/ru/create-dispatcher.md)
-    - [⚡ Creating Effects](./docs/ru/create-effects.md)
-    - [⚡ Creating Effects Module](./docs/ru/create-effects-module.md)
-- [🛠️ createSynapse Utility](./docs/ru/create-synapse.md)
-- [🔌 Creating Custom Plugins](./docs/ru/custom-plugins.md)
-- [⚙️ Creating Custom Middlewares](./docs/ru/custom-middlewares.md)
-- [📋 Additional](./docs/ru/additional.md)
+    - [⚡ Creating Dispatcher](./docs/en/create-dispatcher.md)
+    - [⚡ Creating Effects](./docs/en/create-effects.md)
+    - [⚡ Creating Effects Module](./docs/en/create-effects-module.md)
+- [🛠️ createSynapse Utility](./docs/en/create-synapse.md)
+- [🔌 Creating Custom Plugins](./docs/en/custom-plugins.md)
+- [⚙️ Creating Custom Middlewares](./docs/en/custom-middlewares.md)
+- [📋 Additional](./docs/en/additional.md)
 
 ## 🎯 Examples
 

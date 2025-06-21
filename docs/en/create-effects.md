@@ -1,8 +1,7 @@
 > [🏠 Home](../../README.md)
-> [🏠 Журнал изменений](../../CHANGELOG.md)
+> [🏠 Changelog](../../CHANGELOG.md)
 
 # Creating Effects
-___
 
 ```typescript
 import { EMPTY, from, mapTo, of, tap } from 'rxjs'

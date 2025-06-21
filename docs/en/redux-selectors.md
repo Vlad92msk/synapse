@@ -1,8 +1,7 @@
 > [🏠 Home](../../README.md)
-> [🏠 Журнал изменений](../../CHANGELOG.md)
+> [🏠 Changelog](../../CHANGELOG.md)
 
 # Creating Redux-style Computed Subscriptions
-___
 
 ```typescript
 import { SelectorModule } from 'synapse-storage/core'

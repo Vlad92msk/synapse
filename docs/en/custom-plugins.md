@@ -1,8 +1,7 @@
 > [🏠 Home](../../README.md)
-> [🏠 Журнал изменений](../../CHANGELOG.md)
+> [🏠 Changelog](../../CHANGELOG.md)
 
 # Creating Custom Plugins
-___
 
 Plugins in Synapse represent a system of storage event handlers with a defined lifecycle. Unlike middlewares, they don't form a chain but work as independent "observers" of storage operations.
 
@@ -82,23 +81,23 @@ const storage = await new MemoryStorage(
 
 Plugins have the following lifecycle methods:
 
-1. **Initialization**: `initialize()` - called when adding plugin to storage
-2. **Storage operations**:
-    - `onBeforeSet` / `onAfterSet` - before/after saving value
-    - `onBeforeGet` / `onAfterGet` - before/after getting value
-    - `onBeforeDelete` / `onAfterDelete` - before/after deleting value
-    - `onClear` - when clearing storage
-3. **Destruction**: `destroy()` - called when removing plugin or destroying storage
+1. Initialization: initialize() - called when adding plugin to storage
+2. Storage operations:
+    - onBeforeSet / onAfterSet - before/after saving value
+    - onBeforeGet / onAfterGet - before/after getting value
+    - onBeforeDelete / onAfterDelete - before/after deleting value
+    - onClear - when clearing storage
+3. Destruction: destroy() - called when removing plugin or destroying storage
 
 #### When to use middlewares vs plugins?
 
-- **Middlewares** are better for:
+- Middlewares are better for:
     - Intercepting all storage operations in one place
     - Changing behavior of base storage operations
     - Optimization (batching, deduplication)
     - Synchronization between storages/tabs
 
-- **Plugins** are better for:
+- Plugins are better for:
     - Handling specific storage events
     - Data validation
     - Operation logging

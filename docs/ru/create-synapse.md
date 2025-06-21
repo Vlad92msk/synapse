@@ -1,7 +1,6 @@
 > [🏠 Главная](./README.md)
  
 # Пример организации кода и использования утилиты createSynapse
-___
 
 Утилита createSynapse - это всего лишь обертка над всеми модулями, которая связывает их в единое целое.
 Вы можете сделать свою, если так будет удобнее.
@@ -189,7 +188,7 @@ export const userInfoSynapse = await createSynapse({
   dependencies: [coreSynapseIDB], // Дождется инициализации coreSynapseIDB
   // Передаем хранилище
   // Это может быть 
-  // 1 - Функция, которая фозвращает готовое ранилище
+  // 1 - Функция, которая возвращает готовое хранилище
   createStorageFn: createUserInfoStorage,
   // 2 - Класс для создания хранилища (initialize() убдет вызван внутри)
   // storage: new MemoryStorage<AboutUserUserInfo>({
@@ -258,7 +257,200 @@ export const {
 
 Таким образом вы можете резделить функционал на слои
 
-___
+---
+## Связывание Synapse между собой
+
+### 📊 Обычная связь через dependencies
+
+Как показано на примере выше - вы можете связывать синопсы просто передавая их в массив зависимостей
+```typescript
+// user-info.synapse.ts
+// === СОЗДАНИЕ Synapse ===
+import { createSynapse } from 'synapse-storage/utils'
+import { createUserInfoDispatcher } from './user-info.dispatcher'
+import { userInfoEffects } from './user-info.effects'
+import { createUserInfoSelectors } from './user-info.selectors'
+import { createUserInfoStorage } from './user-info.store'
+import { userInfoEndpoints } from '../../api/user-info.api'
+import { coreSynapseIDB } from '../core/core.synapse'
+
+export const currentSynapse = await createSynapse({
+  dependencies: [someSynapse1, someSynapse2, someSynapse3], // Дождется инициализации всего, отчего зависит
+  //...
+})
+```
+
+В этом случае общая схема будет выглядеть так:
+```mermaid
+graph TD
+    Core((Core<br/>Synapse))
+    UserInfo((UserInfo<br/>Synapse))
+    Posts((Posts<br/>Synapse))
+    Settings((Settings<br/>Synapse))
+    
+    Core --> UserInfo
+    Core --> Posts
+    Core --> Settings
+    
+```
+
+### 📡 EventBus паттерн (продвинутый)
+
+EventBus паттерн - альтернативный способ связи синопсов между собой
+Его главные преимущества - уменьшение связи между модулями и отсутствие проблемы циклических зависимостей, если нужно связать два модуля между собой в обоих направлениях
+
+В этом случае общая схема будет выглядеть так:
+```mermaid
+graph TD
+    EventBus((EventBus<br/>Synapse))
+    Auth((Auth<br/>Synapse))
+    User((User<br/>Synapse))
+    Notifications((Notifications<br/>Synapse))
+    
+    Auth -.-> EventBus
+    User -.-> EventBus
+    Notifications -.-> EventBus
+    EventBus -.-> Auth
+    EventBus -.-> User
+    EventBus -.-> Notifications
+    
+```
+
+### ⚙️ Конфигурация EventBus
+
+```typescript
+const appEventBus = await createEventBus({
+  name: 'app-events',        // Имя для отладки и логирования
+  autoCleanup: true,         // Автоматическая очистка старых событий
+  maxEvents: 500            // Максимальное количество событий в памяти
+})
+```
+
+#### 🔧 Основные методы
+
+- publish() - публикация события с данными и метаданными
+- subscribe() - подписка на события с поддержкой паттернов ('USER_*', '*')
+- getEventHistory() - получение истории событий определенного типа
+- clearEvents() - очистка событий (всех или старше определенного времени)
+- getActiveSubscriptions() - список активных подписок
+
+#### 💡 Практические советы
+
+- Именование событий: используйте формат 'MODULE_ACTION' (например, 'USER_LOGGED_IN', 'ORDER_CREATED')
+- Паттерны: 'USER_*' для всех пользовательских событий, '*' для глобального мониторинга
+- Приоритеты: 'high' для критичных событий, 'normal' для обычных, 'low' для логирования
+
+```typescript
+// Создание EventBus с помощью утилиты
+import { createEventBus } from 'synapse-storage/utils'
+
+export const appEventBus = await createEventBus({
+  name: 'app-events',
+  autoCleanup: true,
+  maxEvents: 500
+})
+
+// auth.synapse.ts
+export const authSynapse = await createSynapse({
+  dependencies: [appEventBus], // Подключаем EventBus
+  createEffectConfig: (authDispatcher) => ({
+    dispatchers: {
+      authDispatcher,
+      eventBus: appEventBus.dispatcher
+    }
+  }),
+  effects: [
+    // Effect для публикации событий при успешной авторизации
+    createEffect((action$, state$, _, { authDispatcher, eventBus }) => 
+      action$.pipe(
+        ofType(authDispatcher.dispatch.loginSuccess),
+        map(action => 
+          eventBus.dispatch.publish({
+            event: 'USER_LOGGED_IN',
+            data: action.payload,
+            metadata: { priority: 'high' }
+          })
+        )
+      )
+    )
+  ]
+})
+
+// user.synapse.ts
+export const userSynapse = await createSynapse({
+  dependencies: [appEventBus], // Подключаем EventBus
+  createEffectConfig: (userDispatcher) => ({
+    dispatchers: {
+      userDispatcher,
+      eventBus: appEventBus.dispatcher
+    }
+  }),
+  effects: [
+    // Effect для подписки на события авторизации
+    createEffect((action$, state$, _, { userDispatcher, eventBus }) => {
+      // Подписываемся на события входa пользователя
+      eventBus.dispatch.subscribe({
+        eventPattern: 'USER_*', // Поддержка паттернов
+        handler: (userData, event) => {
+          if (event.event === 'USER_LOGGED_IN') {
+            userDispatcher.dispatch.loadUserProfile(userData.id)
+          }
+        },
+        options: { priority: 'high' } // Фильтрация по приоритету
+      })
+      
+      return EMPTY // Этот effect только устанавливает подписку
+    })
+  ]
+})
+
+// notifications.synapse.ts
+export const notificationsSynapse = await createSynapse({
+  dependencies: [appEventBus],
+  createEffectConfig: (notificationsDispatcher) => ({
+    dispatchers: {
+      notificationsDispatcher,
+      eventBus: appEventBus.dispatcher
+    }
+  }),
+  effects: [
+    // Подписка на все события для показа уведомлений
+    createEffect((action$, state$, _, { notificationsDispatcher, eventBus }) => {
+      eventBus.dispatch.subscribe({
+        eventPattern: '*', // Слушаем все события
+        handler: (data, event) => {
+          notificationsDispatcher.dispatch.showNotification({
+            message: `Событие: ${event.event}`,
+            data
+          })
+        }
+      })
+      
+      return EMPTY
+    })
+  ]
+})
+```
+
+### 🎯 Преимущества каждого подхода
+
+#### Dependencies (Обычный)
+- ✅ Простота понимания
+- ✅ Прямые связи между модулями
+- ✅ TypeScript типизация из коробки
+- ❌ Жесткая связанность модулей
+- ❌ Сложность при большом количестве связей
+
+#### EventBus (Продвинутый)
+- ✅ Слабая связанность модулей
+- ✅ Легкость добавления новых модулей
+- ✅ Централизованное управление событиями
+- ✅ Возможность отладки всех событий в одном месте
+- ✅ Поддержка паттернов событий ('USER_*', '*')
+- ✅ Фильтрация по приоритету и метаданным
+- ✅ Автоматическая очистка старых событий
+- ❌ Сложность отслеживания потока данных
+- ❌ Необходимость ручной типизации событий
 
 ## 📚 Навигация
 

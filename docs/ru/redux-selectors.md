@@ -2,7 +2,6 @@
 > [🏠 Журнал изменений](../../CHANGELOG.md)
 
 # Создание вычисляемых подписок в стиле Redux
-___
 
 ```typescript
 import { SelectorModule } from 'synapse-storage/core'

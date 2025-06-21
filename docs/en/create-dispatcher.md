@@ -1,8 +1,9 @@
 > [🏠 Home](../../README.md)
-> [🏠 Журнал изменений](../../CHANGELOG.md)
+> [🏠 Changelog](../../CHANGELOG.md)
 
-# Creating Dispatcher
-___
+# Creating dispatcher
+
+The dispatcher is needed to create a reactive state
 
 ```typescript
 import { createDispatcher, loggerDispatcherMiddleware } from 'synapse-storage/reactive'
@@ -21,15 +22,24 @@ export interface AlertPayload {
 // Function to create dispatcher
 export function createPokemonDispatcher(storage: PokemonStorage) {
   // Create middleware: logger
-  const loggerMiddleware = loggerDispatcherMiddleware({
-    collapsed: true, // Collapse groups in console for compactness
-    colors: {
-      title: '#3498db', // Custom blue color for title
-    },
-    duration: true,
-    diff: true,
-    showFullState: true,
-  })
+    const loggerMiddleware = loggerDispatcherMiddleware({
+        collapsed: true, // Collapse groups in consoles for compactness
+        colors: {
+            title: '#3498db', // Custom blue color for header
+        },
+        duration: true,      // Execution time
+        diff: true,          // Show full status
+        showFullState: true, // Show full state
+        // Custom interface translations
+        translations: {
+            action: '',
+            changesCount: '',
+            diff: '',
+            duration: '',
+            error: '',
+            //...
+        }
+    })
 
   // Create middleware: alertM (just for example)
   const alertM = createPokemonAlertMiddleware()

@@ -1,8 +1,7 @@
 > [🏠 Home](../../README.md)
-> [🏠 Журнал изменений](../../CHANGELOG.md)
+> [🏠 Changelog](../../CHANGELOG.md)
 
 # Creating Effects Module
-___
 
 The effects module (`EffectsModule`) allows you to create reactive effects for handling actions and states without using the `createSynapse` utility. This is useful when you need more detailed control over effects configuration.
 
