@@ -1,8 +1,7 @@
 > [🏠 Home](../../README.md)
-> [🏠 Журнал изменений](../../CHANGELOG.md)
+> [🏠 Changelog](../../CHANGELOG.md)
 
 # Basic Usage
-___
 
 Imports:
 ```typescript
@@ -60,7 +59,7 @@ import { useStorageSubscribe, useSelector, createSynapseCtx } from 'synapse-stor
 import { createSynapse } from 'synapse-storage/utils'
 ```
 
-### Creating Storage
+## Creating Storage
 
 ```typescript
 const counter1 = await new MemoryStorage<Counter>({
@@ -99,7 +98,7 @@ const { counter3 } = await IndexedDBStorage.createStorages<{ counter3: Counter }
 ```
 
 
-### Ways to Change Values (Main)
+## Ways to Change Values (Main)
 
 ```typescript
     const updateCounter1 = async () => {
@@ -117,11 +116,8 @@ const { counter3 } = await IndexedDBStorage.createStorages<{ counter3: Counter }
     }
 ```
 
-### Creating Subscriptions
+## Creating Subscriptions
 
-> **💡 Tip:**
-When creating subscriptions using subscribe or subscribeToAll, it's better not to forget to call the unsubscribe function
->
 ```jsx
 const [counter1Value, setCounter1Value] = useState(0)
 const [counter2Value, setCounter2Value] = useState(0)
@@ -150,6 +146,8 @@ useEffect(() => {
 // For React via special selector
 const counter3Value = useStorageSubscribe(counter3, (state) => state.value)
 ```
+> **💡 Tip:**
+When creating subscriptions using subscribe or subscribeToAll, it's better not to forget to call the unsubscribe function
 
 ---
 

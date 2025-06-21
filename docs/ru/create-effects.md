@@ -2,7 +2,6 @@
 > [🏠 Журнал изменений](../../CHANGELOG.md)
 
 # Создание Эффекта
-___
 
 ```typescript
 import { EMPTY, from, mapTo, of, tap } from 'rxjs'

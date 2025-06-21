@@ -1,8 +1,7 @@
 > [🏠 Home](../../README.md)
-> [🏠 Журнал изменений](../../CHANGELOG.md)
+> [🏠 Changelog](../../CHANGELOG.md)
 
 # Code Organization Example and createSynapse Utility Usage
-___
 
 The createSynapse utility is just a wrapper over all modules that connects them into a single whole.
 You can make your own if it's more convenient.
@@ -74,7 +73,7 @@ export type UserInfoDispatcher = ReturnType<typeof createUserInfoDispatcher>
 ```
 
 ```typescript
-// user-info.dispatcher.ts
+// user-info.selectors.ts
 // === CREATING SELECTORS ===
 import { ISelectorModule } from 'synapse-storage/core'
 
@@ -259,7 +258,201 @@ export const {
 
 This way you can separate functionality into layers
 
-___
+---
+## Connecting Synapse to Each Other
+
+### 📊 Regular Connection via Dependencies
+
+As shown in the example above - you can connect synapses simply by passing them in the dependencies array
+```typescript
+// user-info.synapse.ts
+// === CREATING Synapse ===
+import { createSynapse } from 'synapse-storage/utils'
+import { createUserInfoDispatcher } from './user-info.dispatcher'
+import { userInfoEffects } from './user-info.effects'
+import { createUserInfoSelectors } from './user-info.selectors'
+import { createUserInfoStorage } from './user-info.store'
+import { userInfoEndpoints } from '../../api/user-info.api'
+import { coreSynapseIDB } from '../core/core.synapse'
+
+export const currentSynapse = await createSynapse({
+  dependencies: [someSynapse1, someSynapse2, someSynapse3], // Will wait for initialization of everything it depends on
+  //...
+})
+```
+
+In this case, the overall schema will look like this:
+```mermaid
+graph TD
+    Core((Core<br/>Synapse))
+    UserInfo((UserInfo<br/>Synapse))
+    Posts((Posts<br/>Synapse))
+    Settings((Settings<br/>Synapse))
+
+    Core --> UserInfo
+    Core --> Posts
+    Core --> Settings
+
+```
+
+### 📡 EventBus Pattern (Advanced)
+
+EventBus pattern is an alternative way to connect synapses to each other
+Its main advantages are reducing coupling between modules and avoiding circular dependency problems when you need to connect two modules in both directions
+
+In this case, the overall schema will look like this:
+```mermaid
+graph TD
+    EventBus((EventBus<br/>Synapse))
+    Auth((Auth<br/>Synapse))
+    User((User<br/>Synapse))
+    Notifications((Notifications<br/>Synapse))
+
+    Auth -.-> EventBus
+    User -.-> EventBus
+    Notifications -.-> EventBus
+    EventBus -.-> Auth
+    EventBus -.-> User
+    EventBus -.-> Notifications
+
+```
+
+
+### ⚙️ EventBus Configuration
+
+```typescript
+const appEventBus = await createEventBus({
+  name: 'app-events',        // Name for debugging and logging
+  autoCleanup: true,         // Automatic cleanup of old events
+  maxEvents: 500            // Maximum number of events in memory
+})
+```
+
+#### 🔧 Main Methods
+
+- publish() - publish event with data and metadata
+- subscribe() - subscribe to events with pattern support ('USER_*', '*')
+- getEventHistory() - get event history for specific event type
+- clearEvents() - clear events (all or older than specific time)
+- getActiveSubscriptions() - list of active subscriptions
+
+#### 💡 Practical Tips
+
+- Event naming: use 'MODULE_ACTION' format (e.g., 'USER_LOGGED_IN', 'ORDER_CREATED')
+- Patterns: 'USER_*' for all user events, '*' for global monitoring
+- Priorities: 'high' for critical events, 'normal' for regular, 'low' for logging
+
+```typescript
+// Creating EventBus using utility
+import { createEventBus } from 'synapse-storage/utils'
+
+export const appEventBus = await createEventBus({
+  name: 'app-events',
+  autoCleanup: true,
+  maxEvents: 500
+})
+
+// auth.synapse.ts
+export const authSynapse = await createSynapse({
+  dependencies: [appEventBus], // Connect EventBus
+  createEffectConfig: (authDispatcher) => ({
+    dispatchers: {
+      authDispatcher,
+      eventBus: appEventBus.dispatcher
+    }
+  }),
+  effects: [
+    // Effect to publish events on successful authentication
+    createEffect((action$, state$, _, { authDispatcher, eventBus }) => 
+      action$.pipe(
+        ofType(authDispatcher.dispatch.loginSuccess),
+        map(action => 
+          eventBus.dispatch.publish({
+            event: 'USER_LOGGED_IN',
+            data: action.payload,
+            metadata: { priority: 'high' }
+          })
+        )
+      )
+    )
+  ]
+})
+
+// user.synapse.ts
+export const userSynapse = await createSynapse({
+  dependencies: [appEventBus], // Connect EventBus
+  createEffectConfig: (userDispatcher) => ({
+    dispatchers: {
+      userDispatcher,
+      eventBus: appEventBus.dispatcher
+    }
+  }),
+  effects: [
+    // Effect to subscribe to auth events
+    createEffect((action$, state$, _, { userDispatcher, eventBus }) => {
+      // Subscribe to user login events
+      eventBus.dispatch.subscribe({
+        eventPattern: 'USER_*', // Pattern support
+        handler: (userData, event) => {
+          if (event.event === 'USER_LOGGED_IN') {
+            userDispatcher.dispatch.loadUserProfile(userData.id)
+          }
+        },
+        options: { priority: 'high' } // Priority filtering
+      })
+      
+      return EMPTY // This effect only sets up subscription
+    })
+  ]
+})
+
+// notifications.synapse.ts
+export const notificationsSynapse = await createSynapse({
+  dependencies: [appEventBus],
+  createEffectConfig: (notificationsDispatcher) => ({
+    dispatchers: {
+      notificationsDispatcher,
+      eventBus: appEventBus.dispatcher
+    }
+  }),
+  effects: [
+    // Subscribe to all events to show notifications
+    createEffect((action$, state$, _, { notificationsDispatcher, eventBus }) => {
+      eventBus.dispatch.subscribe({
+        eventPattern: '*', // Listen to all events
+        handler: (data, event) => {
+          notificationsDispatcher.dispatch.showNotification({
+            message: `Event: ${event.event}`,
+            data
+          })
+        }
+      })
+      
+      return EMPTY
+    })
+  ]
+})
+```
+
+### 🎯 Advantages of Each Approach
+
+#### Dependencies (Regular)
+- ✅ Easy to understand
+- ✅ Direct connections between modules
+- ✅ TypeScript typing out of the box
+- ❌ Tight coupling between modules
+- ❌ Complexity with large number of connections
+
+#### EventBus (Advanced)
+- ✅ Loose coupling between modules
+- ✅ Easy to add new modules
+- ✅ Centralized event management
+- ✅ Ability to debug all events in one place
+- ✅ Event pattern support ('USER_*', '*')
+- ✅ Filtering by priority and metadata
+- ✅ Automatic cleanup of old events
+- ❌ Complexity in tracking data flow
+- ❌ Need for manual event typing
 
 ## 📚 Navigation
 
@@ -267,8 +460,11 @@ ___
 - [📖 All documentation sections](../../README.md#-documentation)
 
 ### Related sections:
-- [🚀 Basic usage](./basic-usage.md)
+- [🚀 Basic Usage](./basic-usage.md)
 - [⚡ Creating Dispatcher](./create-dispatcher.md)
 - [⚡ Creating Effects](./create-effects.md)
-- [🧮 Redux-style computed selectors](./redux-selectors.md)
-- [🌐 API client](./api-client.md)
+- [🧮 Redux-style Computed Selectors](./redux-selectors.md)
+- [🌐 API Client](./api-client.md)
+
+
+

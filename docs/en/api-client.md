@@ -1,7 +1,6 @@
 > [🏠 Home](../../README.md)
-> [🏠 Журнал изменений](../../CHANGELOG.md)
+> [🏠 Changelog](../../CHANGELOG.md)
 # API Client
-___
 
 Synapse includes an API client with caching support:
 

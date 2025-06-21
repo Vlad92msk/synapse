@@ -1,8 +1,9 @@
 > [🏠 Home](../../README.md)
-> [🏠 Журнал изменений](../../CHANGELOG.md)
+> [🏠 Changelog](../../CHANGELOG.md)
 
 # Creating Storage
-___
+
+MemoryStorage
 
 ```typescript
 import { IndexedDBStorage, LocalStorage, MemoryStorage } from "synapse-storage/core";
@@ -15,7 +16,7 @@ const counter1 = await new MemoryStorage<Counter>({
 }).initialize()
 ```
 
-
+LocalStorage
 ```typescript
 const counter2 = await new LocalStorage<Counter>({
   name: 'counter2',
@@ -23,7 +24,7 @@ const counter2 = await new LocalStorage<Counter>({
 }).initialize()
 ```
 
-
+IndexedDBStorage
 ```typescript
 const { counter3 } = await IndexedDBStorage.createStorages<{ counter3: Counter }>(
   'example1', // Database name in indexDB

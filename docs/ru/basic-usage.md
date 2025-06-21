@@ -2,7 +2,6 @@
 > [🏠 Журнал изменений](../../CHANGELOG.md)
 
 # Базовое использование
-___
 
 Импорты:
 ```typescript
@@ -60,7 +59,7 @@ import { useStorageSubscribe, useSelector, createSynapseCtx } from 'synapse-stor
 import { createSynapse } from 'synapse-storage/utils'
 ```
 
-### Создание хранилищ
+## Создание хранилищ
 
 ```typescript
 const counter1 = await new MemoryStorage<Counter>({
@@ -99,7 +98,7 @@ const { counter3 } = await IndexedDBStorage.createStorages<{ counter3: Counter }
 ```
 
 
-### Способы изменения значений (основные)
+## Способы изменения значений (основные)
 
 ```typescript
     const updateCounter1 = async () => {
@@ -117,11 +116,8 @@ const { counter3 } = await IndexedDBStorage.createStorages<{ counter3: Counter }
     }
 ```
 
-### Создание подписок
+## Создание подписок
 
-> **💡 Совет:**
-При создании подписок с помощью subscribe или subscribeToAll лучше не забывать вызывать функцию отписки
->
 ```jsx
 const [counter1Value, setCounter1Value] = useState(0)
 const [counter2Value, setCounter2Value] = useState(0)
@@ -141,8 +137,8 @@ useEffect(() => {
   counter1.subscribeToAll((event) => {
     console.log('event', event)
     // Здесь мы получим объект:
-    // changedPaths:['value'] // все пути по которым были вызваны изменения (['prop1.prop2', 'prop44.prop.555.prop.666'])
-    // key:['value'] // Корневые ключи в хранилище которые вкоторых были изменения
+    // changedPaths:['value'] // все пути, по которым были вызваны изменения (['prop1.prop2', 'prop44.prop.555.prop.666'])
+    // key:['value'] // Корневые ключи в хранилище, в которых были изменения
     // type:"storage:update" // Тип операции
     // value: {value: 101} // Новый state
   })
@@ -150,6 +146,8 @@ useEffect(() => {
 // Для React через специальный селектор
 const counter3Value = useStorageSubscribe(counter3, (state) => state.value)
 ```
+> **💡 Совет:**
+При создании подписок с помощью subscribe или subscribeToAll лучше не забывать вызывать функцию отписки
 
 ---
 

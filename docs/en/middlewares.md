@@ -1,8 +1,7 @@
 > [🏠 Home](../../README.md)
-> [🏠 Журнал изменений](../../CHANGELOG.md)
+> [🏠 Changelog](../../CHANGELOG.md)
 
 # Middlewares
-___
 
 Middlewares in Synapse work on the principle of "handler chain" and allow intercepting any storage operations. Each middleware can modify actions before and after their processing by the base storage.
 
@@ -95,10 +94,10 @@ Action → BroadcastMiddleware → ShallowCompare → Batching → Base Operatio
 Result ← BroadcastMiddleware ← ShallowCompare ← Batching ← Base Operation
 ```
 
-> **⚠️ Important:** Middleware order matters!
-> - `BroadcastMiddleware` should be first for tab synchronization
-> - `ShallowCompare` optimizes repeated calls
-> - `Batching` groups operations for performance
+> ⚠️ Important: Middleware order matters!
+> - BroadcastMiddleware should be first for tab synchronization
+> - ShallowCompare optimizes repeated calls
+> - Batching groups operations for performance
 
 ___
 
