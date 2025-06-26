@@ -1,4 +1,5 @@
 // Определяем типы для переводов и опций
+import { loggerConsole } from '../../../_utils'
 import type { EnhancedMiddleware } from '../dispatcher.module'
 
 interface LoggerTranslations {
@@ -137,40 +138,40 @@ export const loggerDispatcherMiddleware = <State extends Record<string, any>>(op
 
       // Теперь выводим всю информацию в группе
       const title = `${action.type}`
-      const groupMethod = collapsed ? console.groupCollapsed : console.group
+      const groupMethod = collapsed ? loggerConsole.groupCollapsed : loggerConsole.group
 
       groupMethod(`%c ${title}`, `color: ${colors.title}; font-weight: bold`)
 
       // Выводим информацию о действии
-      console.log(`%c ${translations.action}:`, `color: ${colors.action}; font-weight: bold`, action)
+      loggerConsole.log(`%c ${translations.action}:`, `color: ${colors.action}; font-weight: bold`, action)
 
       // Если включена опция diff, вычисляем и показываем изменения
       if (mergedOptions.diff) {
         const stateDiff = getStateDiff(prevState, nextState)
         const changesCount = Object.keys(stateDiff).length
 
-        console.log(`%c ${translations.diff} (${translations.changesCount}: ${changesCount}):`, `color: ${colors.diff}; font-weight: bold`, stateDiff)
+        loggerConsole.log(`%c ${translations.diff} (${translations.changesCount}: ${changesCount}):`, `color: ${colors.diff}; font-weight: bold`, stateDiff)
       }
 
       // Если showFullState включен, показываем полные состояния
       if (mergedOptions.showFullState) {
         // Создаем подгруппу для полного состояния
-        console.groupCollapsed(`%c ${translations.showFullState}`, `color: ${colors.fullState}; font-weight: bold`)
-        console.log(`%c ${translations.prevState}:`, `color: ${colors.prevState}; font-weight: bold`, prevState)
-        console.log(`%c ${translations.nextState}:`, `color: ${colors.nextState}; font-weight: bold`, nextState)
-        console.groupEnd()
+        loggerConsole.groupCollapsed(`%c ${translations.showFullState}`, `color: ${colors.fullState}; font-weight: bold`)
+        loggerConsole.log(`%c ${translations.prevState}:`, `color: ${colors.prevState}; font-weight: bold`, prevState)
+        loggerConsole.log(`%c ${translations.nextState}:`, `color: ${colors.nextState}; font-weight: bold`, nextState)
+        loggerConsole.groupEnd()
       }
 
       if (duration) {
-        console.log(`%c ${translations.duration}: %c ${time}ms`, 'font-weight: bold', 'color: #4CAF50')
+        loggerConsole.log(`%c ${translations.duration}: %c ${time}ms`, 'font-weight: bold', 'color: #4CAF50')
       }
 
-      console.groupEnd()
+      loggerConsole.groupEnd()
 
       return result
     } catch (error) {
       // В случае ошибки логируем её отдельно, не в группе
-      console.error(`%c ${translations.error}:`, `color: ${colors.error}; font-weight: bold`, action.type, error)
+      loggerConsole.error(`%c ${translations.error}:`, `color: ${colors.error}; font-weight: bold`, action.type, error)
 
       // Пробрасываем ошибку дальше
       throw error

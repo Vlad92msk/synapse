@@ -1,15 +1,14 @@
 # Changelog
 
-## [3.0.14] -  2025-06-21
+## [3.0.14] - 2025-06-21
 
-### 📖 Improved
+### 🐛 Fixed
 
-- **Documentation Updates**: Enhanced project documentation for better developer experience
-- **Homepage Link**: Added homepage link to package configuration for easier project discovery
+- **Logger Middleware**: Fixed issue with dispatcher logger not displaying properly formatted output
 
 ---
 
-## [3.0.13] -  2025-06-08
+## [3.0.13] - 2025-06-08
 
 ### ✨ Added
 
