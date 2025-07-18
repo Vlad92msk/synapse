@@ -128,7 +128,13 @@ export class EndpointClass<RequestParams extends Record<string, any>, RequestRes
           // 6. Обрабатываем результат запроса
           if (response.ok) {
             const { headers, ...restResponse } = response
-            // Сохраняем в кэш, если нужно
+
+            // 1. Сначала инвалидируем кэш по тегам (независимо от кэширования текущего запроса)
+            if (this.configCurrentEndpoint.invalidatesTags?.length) {
+              await this.queryStorage.invalidateCacheByTags(this.configCurrentEndpoint.invalidatesTags)
+            }
+
+            // 2. Потом сохраняем в кэш, если нужно
             if (shouldCache) {
               const currentCacheConfig = this.queryStorage.createCacheConfig(this.configCurrentEndpoint)
               await this.queryStorage.setCachedResult(
@@ -137,7 +143,6 @@ export class EndpointClass<RequestParams extends Record<string, any>, RequestRes
                 currentCacheConfig,
                 cacheParams ?? {},
                 this.configCurrentEndpoint.tags ?? [],
-                this.configCurrentEndpoint.invalidatesTags ?? [],
               )
             }
 

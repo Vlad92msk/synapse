@@ -45,11 +45,11 @@ export interface Action<T = unknown> {
 }
 
 // Параметры исполнения функции действия
-interface ActionExecutionOptions {
+interface ActionExecutionOptions<TParams, TResult> {
   // Веб-воркер для выполнения действия
   worker?: Worker
   // Функция мемоизации
-  memoize?: (currentArgs: any[], previousArgs: any[], previousResult: any) => boolean
+  memoize?: (currentArgs: TParams, previousArgs: TParams, previousResult: TResult) => boolean
 }
 
 /**
@@ -115,7 +115,10 @@ export interface DispatchFunction<TParams, TResult> {
 /**
  * Тип для фабрики создателей действий
  */
-type ActionCreatorFactory = <TParams, TResult>(config: ActionDefinition<TParams, TResult>, executionOptions?: ActionExecutionOptions) => DispatchFunction<TParams, TResult>
+type ActionCreatorFactory = <TParams, TResult>(
+  config: ActionDefinition<TParams, TResult>,
+  executionOptions?: ActionExecutionOptions<TParams[], TResult>,
+) => DispatchFunction<TParams, TResult>
 
 /**
  * Извлекает тип результата из функции диспетчера
@@ -277,7 +280,10 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
   /**
    * Создает действие
    */
-  public createAction<TParams, TResult>(actionConfig: ActionDefinition<TParams, TResult>, executionOptions?: ActionExecutionOptions): DispatchFunction<TParams, TResult> {
+  public createAction<TParams, TResult>(
+    actionConfig: ActionDefinition<TParams, TResult>,
+    executionOptions?: ActionExecutionOptions<TParams[], TResult>,
+  ): DispatchFunction<TParams, TResult> {
     const actionType = `[${this.storage.name}]${actionConfig.type}`
 
     // Для мемоизации храним последние аргументы и результат

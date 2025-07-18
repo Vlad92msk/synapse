@@ -1,4 +1,4 @@
-import { IndexedDBStorage, IStorage, LocalStorage, MemoryStorage, StorageKeyType, StorageType } from '../../core/storage'
+import { IStorage, StorageKeyType } from '../../core'
 import { CacheEntry, CacheUtils } from '../../core/storage/utils/cache.util'
 import { CacheConfig, CreateApiClientOptions } from '../types/api.interface'
 import { EndpointConfig } from '../types/endpoint.interface'
@@ -113,9 +113,8 @@ export class QueryStorage {
    * @param cacheKey Ключ кэша
    * @param data Данные для кэширования
    * @param cacheOptions Метаданные
-   * @param cacheParams Параметры которые влияли на созадние ключа
+   * @param cacheParams Параметры которые влияли на создание ключа
    * @param tags Тэги эндпоинта
-   * @param invalidatesTags Тэги которые нужно инвалидировать
    */
   public async setCachedResult<T, CacheParams extends Record<string, any>>(
     cacheKey: StorageKeyType,
@@ -123,14 +122,8 @@ export class QueryStorage {
     cacheOptions: Exclude<CacheConfig, boolean>,
     cacheParams: CacheParams,
     tags: string[],
-    invalidatesTags: string[],
   ): Promise<void> {
     if (!this.storage) throw new Error('Хранилище не инициализировано')
-
-    // Проверяем, нужно ли инвалидировать другие кэши по тегам
-    if (invalidatesTags?.length) {
-      await this.invalidateCacheByTags(invalidatesTags)
-    }
 
     // Создаем метаданные кэша
     const cacheMetadata = CacheUtils.createMetadata(cacheOptions.ttl, tags)

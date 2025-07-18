@@ -461,41 +461,49 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
     try {
       const metadata = { operation: 'delete', timestamp: Date.now(), key }
 
-      // Проверяем возможность удаления
-      if (await this.pluginExecutor?.executeBeforeDelete(key, metadata)) {
-        const middlewareResult = await this.middlewareModule.dispatch({
-          type: 'delete',
-          key,
-          metadata,
-        })
+      // Проверяем, разрешено ли удаление плагинами
+      const preventDeletion = await this.pluginExecutor?.executeBeforeDelete(key, metadata)
 
-        // Выполняем afterDelete с оригинальным ключом
-        await this.pluginExecutor?.executeAfterDelete(key, metadata)
+      // Плагин запретил удаление
+      if (preventDeletion === false) return
 
-        // Определяем путь изменения (по аналогии с set)
-        const keyStr = key.toString()
-        const changedPaths = [keyStr]
+      // Выполняем удаление через middleware
+      const middlewareResult = await this.middlewareModule.dispatch({
+        type: 'delete',
+        key,
+        metadata,
+      })
 
-        // Уведомляем подписчиков используя оригинальный ключ
-        this.notifySubscribers(key, undefined)
-        this.notifySubscribers(BaseStorage.GLOBAL_SUBSCRIPTION_KEY, {
-          type: StorageEvents.STORAGE_UPDATE,
+      // Если ключ не существовал, завершаем без уведомлений
+      if (middlewareResult === false) {
+        return
+      }
+
+      // Выполняем afterDelete плагины
+      await this.pluginExecutor?.executeAfterDelete(key, metadata)
+
+      // Уведомляем подписчиков об удалении
+      const keyStr = key.toString()
+      const changedPaths = [keyStr]
+
+      this.notifySubscribers(key, undefined)
+      this.notifySubscribers(BaseStorage.GLOBAL_SUBSCRIPTION_KEY, {
+        type: StorageEvents.STORAGE_UPDATE,
+        key,
+        value: undefined,
+        result: middlewareResult,
+        changedPaths,
+      })
+
+      await this.emitEvent({
+        type: StorageEvents.STORAGE_UPDATE,
+        payload: {
           key,
           value: undefined,
           result: middlewareResult,
           changedPaths,
-        })
-
-        await this.emitEvent({
-          type: StorageEvents.STORAGE_UPDATE,
-          payload: {
-            key,
-            value: undefined,
-            result: middlewareResult,
-            changedPaths,
-          },
-        })
-      }
+        },
+      })
     } catch (error) {
       this.logger?.error('Error deleting value', { key, error })
       throw error
