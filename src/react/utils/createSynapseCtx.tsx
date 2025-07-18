@@ -1,16 +1,14 @@
-import { ComponentType, createContext, PropsWithChildren, useContext, useEffect, useRef, useState } from 'react'
+import { ComponentType, createContext, PropsWithChildren, useContext, useEffect, useState } from 'react'
 import { Observable } from 'rxjs'
 
-import { deepMerge } from '../../_utils'
 import { IStorage } from '../../core'
 import { AnySynapseStore, SynapseStoreBasic, SynapseStoreWithDispatcher, SynapseStoreWithEffects } from '../../utils'
 
-const ERROR_HOOK_MESSAGE = 'useSynapseActions необходимо использовать внутри компонента contextSynapse'
+const ERROR_HOOK_MESSAGE = 'Хук необходимо использовать внутри компонента contextSynapse'
 const ERROR_CONTEXT_INIT = 'Ошибка при инициализации контекста:'
 
-interface Options<TStore extends Record<string, any>> {
-  loadingComponent?: any
-  mergeFn?: (target: TStore, source: Record<string, any>) => void
+interface SimplifiedOptions {
+  loadingComponent?: React.ReactNode
 }
 
 /**
@@ -20,11 +18,9 @@ interface Options<TStore extends Record<string, any>> {
 // Для хранилища с effects
 export function createSynapseCtx<TStore extends Record<string, any>, TStorage extends IStorage<TStore>, TSelectors, TActions>(
   synapseStorePromise: Promise<SynapseStoreWithEffects<TStore, TStorage, TSelectors, TActions>> | SynapseStoreWithEffects<TStore, TStorage, TSelectors, TActions>,
-  options?: Options<TStore>,
+  options?: SimplifiedOptions,
 ): {
-  contextSynapse: <SelfComponentProps, PublicContextProps = Record<string, any>>(
-    Component: ComponentType<SelfComponentProps>,
-  ) => ComponentType<SelfComponentProps & { contextProps?: PublicContextProps }>
+  contextSynapse: <SelfComponentProps>(Component: ComponentType<SelfComponentProps>) => ComponentType<SelfComponentProps>
   useSynapseStorage: () => TStorage
   useSynapseSelectors: () => TSelectors
   useSynapseActions: () => TActions
@@ -35,11 +31,9 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
 // Для хранилища с dispatcher (без effects)
 export function createSynapseCtx<TStore extends Record<string, any>, TStorage extends IStorage<TStore>, TSelectors, TActions>(
   synapseStorePromise: Promise<SynapseStoreWithDispatcher<TStore, TStorage, TSelectors, TActions>> | SynapseStoreWithDispatcher<TStore, TStorage, TSelectors, TActions>,
-  options?: Options<TStore>,
+  options?: SimplifiedOptions,
 ): {
-  contextSynapse: <SelfComponentProps, PublicContextProps = Record<string, any>>(
-    Component: ComponentType<SelfComponentProps>,
-  ) => ComponentType<SelfComponentProps & { contextProps?: PublicContextProps }>
+  contextSynapse: <SelfComponentProps>(Component: ComponentType<SelfComponentProps>) => ComponentType<SelfComponentProps>
   useSynapseStorage: () => TStorage
   useSynapseSelectors: () => TSelectors
   useSynapseActions: () => TActions
@@ -49,11 +43,9 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
 // Для базового хранилища
 export function createSynapseCtx<TStore extends Record<string, any>, TStorage extends IStorage<TStore>, TSelectors>(
   synapseStorePromise: Promise<SynapseStoreBasic<TStore, TStorage, TSelectors>> | SynapseStoreBasic<TStore, TStorage, TSelectors>,
-  options?: Options<TStore>,
+  options?: SimplifiedOptions,
 ): {
-  contextSynapse: <SelfComponentProps, PublicContextProps = Record<string, any>>(
-    Component: ComponentType<SelfComponentProps>,
-  ) => ComponentType<SelfComponentProps & { contextProps?: PublicContextProps }>
+  contextSynapse: <SelfComponentProps>(Component: ComponentType<SelfComponentProps>) => ComponentType<SelfComponentProps>
   useSynapseStorage: () => TStorage
   useSynapseSelectors: () => TSelectors
   cleanupSynapse: () => Promise<void>
@@ -62,23 +54,19 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
 // Основная реализация
 export function createSynapseCtx<TStore extends Record<string, any>, TStorage extends IStorage<TStore>, TSelectors = any, TActions = any>(
   synapseStorePromise: Promise<AnySynapseStore<TStore, TStorage, TSelectors, TActions>> | AnySynapseStore<TStore, TStorage, TSelectors, TActions>,
-  options?: Options<TStore>,
+  options?: SimplifiedOptions,
 ) {
-  const { loadingComponent = null, mergeFn = deepMerge } = options || {}
+  const { loadingComponent = <div>Инициализация контекста...</div> } = options || {}
 
-  // Храним ссылку на store
-  let synapseStore: AnySynapseStore<TStore, TStorage, TSelectors, TActions> | null = null
-
-  // Флаг готовности хранилища
-  let storeReady = false
-
-  // Если передан Promise, начинаем его обработку
-  const initPromise = (async () => {
+  // Создаем Promise для инициализации хранилища
+  const storeInitPromise = (async () => {
     try {
-      synapseStore = await (synapseStorePromise instanceof Promise ? synapseStorePromise : Promise.resolve(synapseStorePromise))
-      storeReady = true
+      const store = await (synapseStorePromise instanceof Promise ? synapseStorePromise : Promise.resolve(synapseStorePromise))
+      await store.storage.waitForReady()
+      return store
     } catch (error) {
       console.error('Ошибка инициализации хранилища Synapse:', error)
+      throw error
     }
   })()
 
@@ -86,22 +74,20 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
 
   const useSynapseStorage = (): TStorage => {
     const context = useContext(SynapseContext)
-    if (!context) throw new Error(ERROR_HOOK_MESSAGE)
-
+    if (!context) throw new Error(`useSynapseStorage: ${ERROR_HOOK_MESSAGE}`)
     return context.storage
   }
 
   const useSynapseSelectors = (): TSelectors => {
     const context = useContext(SynapseContext)
-    if (!context) throw new Error(ERROR_HOOK_MESSAGE)
-
+    if (!context) throw new Error(`useSynapseSelectors: ${ERROR_HOOK_MESSAGE}`)
     return context.selectors
   }
 
   // Условный хук для actions (только если есть dispatcher)
   const useSynapseActions = (): TActions => {
     const context = useContext(SynapseContext)
-    if (!context) throw new Error(ERROR_HOOK_MESSAGE)
+    if (!context) throw new Error(`useSynapseActions: ${ERROR_HOOK_MESSAGE}`)
 
     if ('actions' in context) {
       return (context as SynapseStoreWithDispatcher<TStore, TStorage, TSelectors, TActions> | SynapseStoreWithEffects<TStore, TStorage, TSelectors, TActions>).actions
@@ -113,7 +99,7 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
   // Условный хук для state$ (только если есть effects)
   const useSynapseState$ = (): Observable<TStore> => {
     const context = useContext(SynapseContext)
-    if (!context) throw new Error(ERROR_HOOK_MESSAGE)
+    if (!context) throw new Error(`useSynapseState$: ${ERROR_HOOK_MESSAGE}`)
 
     if ('state$' in context) {
       return (context as SynapseStoreWithEffects<TStore, TStorage, TSelectors, TActions>).state$
@@ -125,43 +111,27 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
   /**
    * Декоратор для обертывания компонентов в контекст Synapse
    */
-  function contextSynapse<SelfComponentProps, PublicContextProps = Record<string, any>>(Component: ComponentType<SelfComponentProps>) {
-    type WrappedComponentProps = SelfComponentProps & { contextProps?: PublicContextProps }
+  function contextSynapse<SelfComponentProps>(Component: ComponentType<SelfComponentProps>) {
+    function WrappedComponent(props: SelfComponentProps) {
+      const [synapseStore, setSynapseStore] = useState<AnySynapseStore<TStore, TStorage, TSelectors, TActions> | null>(null)
+      const [isReady, setIsReady] = useState(false)
+      const [error, setError] = useState<Error | null>(null)
 
-    function WrappedComponent({ contextProps, ...props }: WrappedComponentProps) {
-      const [initialized, setInitialized] = useState(false)
-      const [storeInitialized, setStoreInitialized] = useState(storeReady)
-      const debugIdRef = useRef(`synapse-${synapseStore?.storage.name || 'initializing'}`)
-
-      // Отслеживаем инициализацию хранилища, если оно еще не готово
       useEffect(() => {
-        if (!storeReady) {
-          initPromise.then(() => {
-            setStoreInitialized(true)
-          })
-        }
-      }, [])
-
-      // Инициализируем контекст при монтировании компонента
-      useEffect(() => {
-        // Не начинаем инициализацию контекста, пока хранилище не готово
-        if (!storeInitialized) return
-
         let mounted = true
 
         const initializeContext = async () => {
           try {
-            if (synapseStore && contextProps && Object.keys(contextProps).length > 0) {
-              await synapseStore.storage.update((state) => {
-                mergeFn(state, contextProps)
-              })
-            }
+            const store = await storeInitPromise
 
             if (mounted) {
-              setInitialized(true)
+              setSynapseStore(store)
+              setIsReady(true)
             }
-          } catch (error) {
-            console.error(`[${debugIdRef.current}] ${ERROR_CONTEXT_INIT}`, error)
+          } catch (err) {
+            if (mounted) {
+              setError(err instanceof Error ? err : new Error(String(err)))
+            }
           }
         }
 
@@ -170,16 +140,13 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
         return () => {
           mounted = false
         }
-      }, [contextProps, storeInitialized])
+      }, [])
 
-      // Проверяем инициализацию хранилища и контекста
-      if (!storeInitialized) {
-        return loadingComponent || <div>Загрузка хранилища...</div>
-      }
+      // Показываем ошибку если что-то пошло не так
+      if (error) return <div>{`${ERROR_CONTEXT_INIT}: ${error.message}`}</div>
 
-      if (!initialized) {
-        return loadingComponent || <div>Инициализация контекста...</div>
-      }
+      // Показываем загрузку пока все не готово
+      if (!isReady || !synapseStore) return <>{loadingComponent}</>
 
       return (
         <SynapseContext.Provider value={synapseStore}>
@@ -196,8 +163,12 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
   }
 
   const cleanupSynapse = async (): Promise<void> => {
-    await initPromise // Ждем завершения инициализации
-    return synapseStore?.destroy() || Promise.resolve()
+    try {
+      const store = await storeInitPromise
+      return store?.destroy() || Promise.resolve()
+    } catch (error) {
+      console.error('Ошибка при очистке Synapse:', error)
+    }
   }
 
   return {
