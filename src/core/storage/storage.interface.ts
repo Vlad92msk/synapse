@@ -91,9 +91,9 @@ export interface StorageSingletonConfig<T extends Record<string, any> = Record<s
 export type StorageType = 'memory' | 'localStorage' | 'indexedDB'
 
 // Уточним специфичные конфиги для разных типов хранилищ
-export interface MemoryStorageConfig<T extends Record<string, any> = Record<string, any>> extends StorageSingletonConfig<T> {}
+export type MemoryStorageConfig<T extends Record<string, any> = Record<string, any>> = StorageSingletonConfig<T>
 
-export interface LocalStorageConfig<T extends Record<string, any> = Record<string, any>> extends StorageSingletonConfig<T> {}
+export type LocalStorageConfig<T extends Record<string, any> = Record<string, any>> = StorageSingletonConfig<T>
 
 export interface IndexedDBStorageConfig<T extends Record<string, any> = Record<string, any>> extends StorageSingletonConfig<T> {
   options: IndexedDBConfig

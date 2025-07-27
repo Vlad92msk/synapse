@@ -1,13 +1,6 @@
 import { IPluginExecutor } from '../modules/plugin/plugin.interface'
 import { SingletonMixin } from '../modules/singleton/mixin.util'
-import {
-  ConfigureMiddlewares,
-  IEventEmitter,
-  ILogger,
-  IndexedDBStorageConfig,
-  StorageConfig,
-  StorageType,
-} from '../storage.interface'
+import { ConfigureMiddlewares, IEventEmitter, ILogger, IndexedDBStorageConfig, StorageConfig, StorageType } from '../storage.interface'
 import { StorageKey, StorageKeyType } from '../utils/storage-key'
 import { BaseStorage } from './base-storage.service'
 import { getValueByPath, parsePath, setValueByPath } from './path.utils'
