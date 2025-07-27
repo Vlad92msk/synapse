@@ -251,7 +251,6 @@ export const {
     userInfoSynapse,
     {
       loadingComponent: <div>loading</div>, // Pass component that will be displayed during initialization loading
-      // mergeFn: // Function for merging passed parameters into initialState (deep copy is performed by default)
     },
 )
 ```

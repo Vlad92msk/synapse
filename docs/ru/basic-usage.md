@@ -11,6 +11,7 @@ import {
   MemoryStorage,
   IndexedDBStorage,
   LocalStorage,
+  StorageFactory,
 
   // Интерфейсы для хранилищ
   IStorage,
@@ -97,6 +98,9 @@ const { counter3 } = await IndexedDBStorage.createStorages<{ counter3: Counter }
 )
 ```
 
+## Создание хранилищ
+
+> **⚠️ Важно (v3.0.16+):** Для создания хранилищ рекомендуется использовать [StorageFactory](./additional.md#-storage-factory), который предоставляет более удобный API. Примеры ниже показывают классический подход.
 
 ## Способы изменения значений (основные)
 

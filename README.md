@@ -151,16 +151,16 @@ Don't need everything? Import only what you use:
 
 ```typescript
 // 📦 Minimal project - storage only
-import { MemoryStorage } from 'synapse-storage/core'        // 42KB
+import { MemoryStorage } from 'synapse-storage/core'
 
 // 📦 + Add HTTP client when needed  
-import { ApiClient } from 'synapse-storage/api'             // +13KB
+import { ApiClient } from 'synapse-storage/api'
 
 // 📦 + Add reactive effects when required
-import { createDispatcher } from 'synapse-storage/reactive' // +8KB
+import { createDispatcher } from 'synapse-storage/reactive'
 
 // 📦 + Add React hooks for UI
-import { useSelector } from 'synapse-storage/react'         // +5KB
+import { useSelector } from 'synapse-storage/react'
 ```
 
 ### 🔧 Or Create Your Own Implementation
@@ -187,32 +187,5 @@ const useMyCustomHook = () => { /* your logic */ }
 - **📈 Scalability** - from simple state to full-featured architecture
 
 > **💡 Evolution Example:** Started with MemoryStorage → added ApiClient → connected reactive effects → integrated React hooks. **Each step is optional!**
-> 
----
-
-## 📁 Documentation Structure
-
-```
-docs/
-├── ru/                           # 🇷🇺 Russian documentation
-│   └── ...
-│   
-└── en/                          # 🇺🇸 English documentation
-    ├── README.md               # Main page
-    ├── basic-usage.md          # Basic Usage
-    ├── storage-creation.md     # Storage Creation
-    ├── value-updates.md        # Value Updates
-    ├── subscriptions.md        # Subscriptions
-    ├── redux-selectors.md      # Redux-style Selectors
-    ├── middlewares.md          # Middlewares
-    ├── api-client.md           # API Client
-    ├── reactive.md             # Reactive Approach
-    ├── create-dispatcher.md    # Create Dispatcher
-    ├── create-effects.md       # Create Effects
-    ├── create-synapse.md       # createSynapse Utility
-    ├── custom-plugins.md       # Custom Plugins
-    ├── custom-middlewares.md   # Custom Middlewares
-    └── additional.md           # Additional
-```
 
 ---

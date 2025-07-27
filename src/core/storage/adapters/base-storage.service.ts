@@ -1,7 +1,19 @@
 import { batchingMiddleware } from '../middlewares/storage-batching.middleware'
 import { shallowCompareMiddleware } from '../middlewares/storage-shallow-compare.middleware'
 import { IPluginExecutor } from '../modules/plugin/plugin.interface'
-import { DefaultMiddlewares, IEventEmitter, ILogger, IStorage, StorageConfig, StorageEvent, StorageEvents, StorageInitStatus, StorageStatus } from '../storage.interface'
+import { SingletonKeyGenerator, SingletonManager } from '../modules/singleton/singleton.util'
+import {
+  DefaultMiddlewares,
+  IEventEmitter,
+  ILogger,
+  IStorage,
+  StorageEvent,
+  StorageEvents,
+  StorageInitStatus,
+  StorageSingletonConfig,
+  StorageStatus,
+  StorageType,
+} from '../storage.interface'
 import { Middleware, MiddlewareModule } from '../utils/middleware-module'
 import { StorageKeyType } from '../utils/storage-key'
 import { getValueByPath } from './path.utils'
@@ -12,6 +24,7 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
   // Константа для глобальной подписки
   protected static readonly GLOBAL_SUBSCRIPTION_KEY = '*'
 
+  protected static readonly STORAGE_TYPE: StorageType
   name: string
 
   // Статус инициализации
@@ -31,7 +44,7 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
   protected subscribers = new Map<StorageKeyType, Set<(value: any) => void>>()
 
   constructor(
-    protected readonly config: StorageConfig,
+    protected readonly config: StorageSingletonConfig<T>,
     protected readonly pluginExecutor?: IPluginExecutor,
     protected readonly eventEmitter?: IEventEmitter,
     protected readonly logger?: ILogger,
@@ -593,6 +606,7 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
     return this.subscribeBySelector(keyOrSelector, callback)
   }
 
+
   public async destroy(): Promise<void> {
     try {
       await this.clear()
@@ -600,7 +614,6 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
 
       // Очищаем middleware и соединения
       if (this.initializedMiddlewares) {
-        // Если у middleware есть метод cleanup/destroy - вызываем его
         await Promise.all(
           this.initializedMiddlewares.map(async (middleware) => {
             if ('cleanup' in middleware) {
@@ -613,6 +626,13 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
 
       // Очищаем подписчиков статуса
       this.statusSubscribers.clear()
+
+      // Если это singleton, удаляем из реестра
+      if (this.config.singleton?.enabled) {
+        const storageType = (this.constructor as typeof BaseStorage).STORAGE_TYPE
+        const key = SingletonKeyGenerator.generate(this.config, storageType)
+        SingletonManager.remove(key)
+      }
 
       // Сбрасываем статус
       this.updateInitStatus({

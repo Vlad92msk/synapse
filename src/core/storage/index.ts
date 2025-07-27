@@ -1,6 +1,7 @@
 // Экспортируем публичные интерфейсы
 export * from './modules/plugin/plugin.interface'
 export * from './modules/plugin/plugin.service'
+export { ConfigMergeStrategy } from './modules/singleton/models'
 export * from './storage.interface'
 
 // Экспортируем публичные middleware
@@ -16,4 +17,5 @@ export { MemoryStorage } from './adapters/memory-storage.service'
 
 // Экспортируем утилиты, которые нужны в публичном API
 export { type Middleware, type MiddlewareAPI, type NextFunction, type StorageAction } from './utils/middleware-module'
+export { StorageFactory } from './utils/storage-factory.util'
 export { type StorageKeyType } from './utils/storage-key'
