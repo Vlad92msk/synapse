@@ -606,7 +606,6 @@ export abstract class BaseStorage<T extends Record<string, any>> implements ISto
     return this.subscribeBySelector(keyOrSelector, callback)
   }
 
-
   public async destroy(): Promise<void> {
     try {
       await this.clear()
