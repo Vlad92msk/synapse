@@ -123,16 +123,16 @@ npm install synapse-storage rxjs react react-dom
 
 ```typescript
 // 📦 Минимальный проект - только хранилище
-import { MemoryStorage } from 'synapse-storage/core'        // 42KB
+import { MemoryStorage } from 'synapse-storage/core'
 
 // 📦 + Добавить HTTP клиент по необходимости  
-import { ApiClient } from 'synapse-storage/api'             // +13KB
+import { ApiClient } from 'synapse-storage/api'
 
 // 📦 + Добавить реактивные эффекты когда понадобятся
-import { createDispatcher } from 'synapse-storage/reactive' // +8KB
+import { createDispatcher } from 'synapse-storage/reactive'
 
 // 📦 + Добавить React хуки для UI
-import { useSelector } from 'synapse-storage/react'         // +5KB
+import { useSelector } from 'synapse-storage/react'
 ```
 
 ### 🔧 Или создайте свою реализацию

@@ -1,6 +1,7 @@
 // storage.interface.ts
 import { IndexedDBConfig } from './adapters/indexed-DB.service'
 import { BatchingMiddlewareOptions, ShallowCompareMiddlewareOptions } from './middlewares'
+import { SingletonOptions } from './modules/singleton/models'
 import { Middleware } from './utils/middleware-module'
 import { StorageKeyType } from './utils/storage-key'
 
@@ -76,24 +77,30 @@ export type GetDefaultMiddleware = () => DefaultMiddlewares
 export type ConfigureMiddlewares = (getDefaultMiddleware: GetDefaultMiddleware) => Middleware[]
 
 // Основной интерфейс конфигурации
-export interface StorageConfig {
+export interface StorageConfig<T extends Record<string, any> = Record<string, any>> {
   name: string
-  initialState?: Record<string, any>
+  initialState?: Partial<T>
   middlewares?: ConfigureMiddlewares
+}
+
+// Конфигурация с поддержкой singleton
+export interface StorageSingletonConfig<T extends Record<string, any> = Record<string, any>> extends StorageConfig<T> {
+  singleton?: SingletonOptions
 }
 
 export type StorageType = 'memory' | 'localStorage' | 'indexedDB'
 
 // Уточним специфичные конфиги для разных типов хранилищ
-export interface MemoryStorageConfig extends StorageConfig {
-  type: 'memory'
-}
+export interface MemoryStorageConfig<T extends Record<string, any> = Record<string, any>> extends StorageSingletonConfig<T> {}
 
-export interface LocalStorageConfig extends StorageConfig {
-  type: 'localStorage'
-}
+export interface LocalStorageConfig<T extends Record<string, any> = Record<string, any>> extends StorageSingletonConfig<T> {}
 
-export interface IndexedDBStorageConfig extends StorageConfig {
-  type: 'indexedDB'
+export interface IndexedDBStorageConfig<T extends Record<string, any> = Record<string, any>> extends StorageSingletonConfig<T> {
   options: IndexedDBConfig
+}
+
+// Для универсальных методов - конфиг с явным типом
+export interface UniversalStorageConfig<T extends Record<string, any> = Record<string, any>> extends StorageSingletonConfig<T> {
+  type: StorageType
+  options?: IndexedDBConfig // Опционально для IndexedDB
 }

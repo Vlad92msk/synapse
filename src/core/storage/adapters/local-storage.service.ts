@@ -1,12 +1,24 @@
 import { IPluginExecutor } from '../modules/plugin/plugin.interface'
-import { IEventEmitter, ILogger, StorageConfig } from '../storage.interface'
+import { SingletonMixin } from '../modules/singleton/mixin.util'
+import { IEventEmitter, ILogger, LocalStorageConfig, StorageType } from '../storage.interface'
 import { StorageKey, StorageKeyType } from '../utils/storage-key'
 import { BaseStorage } from './base-storage.service'
 import { getValueByPath, parsePath, setValueByPath } from './path.utils'
 
 export class LocalStorage<T extends Record<string, any>> extends BaseStorage<T> {
-  constructor(config: StorageConfig, pluginExecutor?: IPluginExecutor, eventEmitter?: IEventEmitter, logger?: ILogger) {
+  protected static readonly STORAGE_TYPE: StorageType = 'localStorage'
+
+  constructor(config: LocalStorageConfig<T>, pluginExecutor?: IPluginExecutor, eventEmitter?: IEventEmitter, logger?: ILogger) {
     super(config, pluginExecutor, eventEmitter, logger)
+  }
+
+  static create<T extends Record<string, any>>(config: LocalStorageConfig, pluginExecutor?: IPluginExecutor, eventEmitter?: IEventEmitter, logger?: ILogger): LocalStorage<T> {
+    return SingletonMixin.handleSingletonCreation(
+      config,
+      this.STORAGE_TYPE,
+      (finalConfig) => new LocalStorage<T>(finalConfig as LocalStorageConfig<T>, pluginExecutor, eventEmitter, logger),
+      logger,
+    )
   }
 
   protected async doInitialize(): Promise<this> {

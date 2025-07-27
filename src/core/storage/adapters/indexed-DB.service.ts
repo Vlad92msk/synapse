@@ -1,5 +1,13 @@
 import { IPluginExecutor } from '../modules/plugin/plugin.interface'
-import { ConfigureMiddlewares, IEventEmitter, ILogger, StorageConfig } from '../storage.interface'
+import { SingletonMixin } from '../modules/singleton/mixin.util'
+import {
+  ConfigureMiddlewares,
+  IEventEmitter,
+  ILogger,
+  IndexedDBStorageConfig,
+  StorageConfig,
+  StorageType,
+} from '../storage.interface'
 import { StorageKey, StorageKeyType } from '../utils/storage-key'
 import { BaseStorage } from './base-storage.service'
 import { getValueByPath, parsePath, setValueByPath } from './path.utils'
@@ -288,19 +296,13 @@ class DBVersionManager {
 }
 
 export class IndexedDBStorage<T extends Record<string, any>> extends BaseStorage<T> {
+  protected static readonly STORAGE_TYPE: StorageType = 'memory'
   private readonly DB_NAME: string
   private readonly STORE_NAME: string
   private readonly DB_VERSION: number
   private dbManager: IndexedDBManager
 
-  constructor(
-    config: StorageConfig & {
-      options: IndexedDBConfig
-    },
-    pluginExecutor?: IPluginExecutor,
-    eventEmitter?: IEventEmitter,
-    logger?: ILogger,
-  ) {
+  constructor(config: IndexedDBStorageConfig<T>, pluginExecutor?: IPluginExecutor, eventEmitter?: IEventEmitter, logger?: ILogger) {
     super(config, pluginExecutor, eventEmitter, logger)
 
     const options = config.options
@@ -310,6 +312,24 @@ export class IndexedDBStorage<T extends Record<string, any>> extends BaseStorage
 
     // Get database manager instance
     this.dbManager = IndexedDBManager.getInstance(this.DB_NAME, this.DB_VERSION, logger)
+  }
+
+  protected getStorageType(): StorageType {
+    return 'memory'
+  }
+
+  static create<T extends Record<string, any>>(
+    config: IndexedDBStorageConfig,
+    pluginExecutor?: IPluginExecutor,
+    eventEmitter?: IEventEmitter,
+    logger?: ILogger,
+  ): IndexedDBStorage<T> {
+    return SingletonMixin.handleSingletonCreation(
+      config,
+      this.STORAGE_TYPE,
+      (finalConfig) => new IndexedDBStorage<T>(finalConfig as IndexedDBStorageConfig<T>, pluginExecutor, eventEmitter, logger),
+      logger,
+    )
   }
 
   protected async doInitialize(): Promise<this> {

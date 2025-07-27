@@ -11,6 +11,7 @@ import {
   MemoryStorage,
   IndexedDBStorage,
   LocalStorage,
+  StorageFactory,
 
   // Storage interfaces
   IStorage,
@@ -97,6 +98,7 @@ const { counter3 } = await IndexedDBStorage.createStorages<{ counter3: Counter }
 )
 ```
 
+> **⚠️ Important (v3.0.16+):** It is recommended to use [StorageFactory](./additional.md#-storage-factory) to create storages, which provides a more convenient API. The examples below show the classic approach.
 
 ## Ways to Change Values (Main)
 
