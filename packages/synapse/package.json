@@ -1,0 +1,111 @@
+{
+  "name": "synapse-storage",
+  "version": "3.0.19",
+  "description": "Набор инструментов для управления состоянием и апи-запросами",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "state-management",
+    "typescript",
+    "state",
+    "api-requests",
+    "redux-alternative",
+    "framework-agnostic",
+    "rxjs",
+    "reactive",
+    "indexeddb",
+    "localstorage",
+    "esm-only"
+  ],
+  "author": "Vlad Firsov",
+  "homepage": "https://synapse-homepage.web.app/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Vlad92msk/synapse"
+  },
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "build": "rslib build",
+    "watch": "rslib build --watch",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint --config eslint.config.mjs src --ext .ts,.tsx --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "fix": "yarn format && yarn lint:fix",
+    "prepublishOnly": "yarn fix && yarn build",
+    "release:patch": "npm version patch && npm publish --tag beta --access public",
+    "release:minor": "npm version minor && npm publish --tag beta --access public",
+    "release:major": "npm version major && npm publish --tag beta --access public",
+    "release:patch:stable": "npm version patch && npm publish --access public",
+    "release:minor:stable": "npm version minor && npm publish --access public",
+    "release:major:stable": "npm version major && npm publish --access public"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    },
+    "./reactive": {
+      "types": "./dist/reactive/index.d.ts",
+      "import": "./dist/reactive/index.js"
+    },
+    "./api": {
+      "types": "./dist/api/index.d.ts",
+      "import": "./dist/api/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "import": "./dist/utils/index.js"
+    }
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "rxjs": ">=7.8.2"
+  },
+  "peerDependenciesMeta": {
+    "rxjs": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.27.0",
+    "@humanwhocodes/retry": "^0.4.3",
+    "@rslib/core": "0.21.5",
+    "@types/node": "^22.15.18",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@typescript-eslint/eslint-plugin": "^8.26.0",
+    "@typescript-eslint/parser": "^8.26.0",
+    "eslint": "^9.27.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-prettier": "^5.4.0",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "prettier": "^3.5.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "rxjs": "^7.8.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.32.1"
+  }
+}
