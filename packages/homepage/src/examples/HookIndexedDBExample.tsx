@@ -15,7 +15,6 @@ export function HookIndexedDBExample() {
     name: 'hook-notes',
     type: 'indexedDB',
     initialState: { notes: [], nextId: 1 },
-    options: { dbVersion: 1 },
   })
 
   if (isLoading) return <div>Loading...</div>

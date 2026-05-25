@@ -12,10 +12,14 @@ export interface Subscriber<T> {
 }
 
 export interface SelectorAPI<T> {
-  select: () => Promise<T>
-  selectSync: () => T | undefined
+  select: () => T
+  selectSync: () => T
   subscribe: (subscriber: Subscriber<T>) => VoidFunction
   getId: () => string
+  /** @internal — проверка готовности источника данных */
+  isSourceReady: () => boolean
+  /** @internal — подписка на изменение статуса источника */
+  onSourceStatusChange: (callback: (isReady: boolean) => void) => VoidFunction
 }
 
 /**

@@ -1,4 +1,3 @@
-import { logError } from '../../../_utils/error-handling.util'
 import { IAsyncPluginExecutor } from '../modules/plugin/plugin.interface'
 import { SingletonMixin } from '../modules/singleton/mixin.util'
 import { ConfigureAsyncMiddlewares, IEventEmitter, ILogger, IndexedDBStorageConfig, StorageType } from '../storage.interface'
@@ -8,7 +7,6 @@ import { getValueByPath, parsePath, setValueByPath } from './path.utils'
 
 export interface IndexedDBConfig {
   dbName?: string
-  dbVersion: number
 }
 
 // Управляет соединением с базой данных
@@ -48,10 +46,36 @@ export class IndexedDBManager {
     }
 
     if (!this.initPromise) {
-      this.initPromise = this.openDatabase()
+      this.initPromise = this.autoDetectAndOpen()
     }
 
     return this.initPromise
+  }
+
+  private async autoDetectAndOpen(): Promise<IDBDatabase> {
+    // Auto-detect the current DB version to avoid VersionError
+    const currentVersion = await this.detectCurrentVersion()
+    if (currentVersion > this.dbVersion) {
+      this.logger?.debug(`Auto-detected higher DB version: ${currentVersion} (requested: ${this.dbVersion})`)
+      this.dbVersion = currentVersion
+    }
+    return this.openDatabase()
+  }
+
+  private detectCurrentVersion(): Promise<number> {
+    return new Promise<number>((resolve) => {
+      try {
+        const request = indexedDB.open(this.dbName)
+        request.onsuccess = () => {
+          const version = request.result.version
+          request.result.close()
+          resolve(version)
+        }
+        request.onerror = () => resolve(0)
+      } catch {
+        resolve(0)
+      }
+    })
   }
 
   async ensureStoreExists(storeName: string): Promise<IDBDatabase> {
@@ -89,8 +113,20 @@ export class IndexedDBManager {
         reject(request.error)
       }
 
+      request.onblocked = () => {
+        this.logger?.warn(`Database "${this.dbName}" upgrade blocked by another connection. Close other tabs or connections.`)
+        reject(new Error(`Database "${this.dbName}" upgrade blocked — close other tabs using this database`))
+      }
+
       request.onsuccess = () => {
         this.db = request.result
+
+        // Auto-close when another connection requests a version upgrade
+        this.db.onversionchange = () => {
+          this.db?.close()
+          this.db = null
+          this.initPromise = null
+        }
 
         // Add existing stores to our set
         for (let i = 0; i < this.db.objectStoreNames.length; i++) {
@@ -186,19 +222,16 @@ export class IndexedDBStorage<T extends Record<string, any>> extends AsyncBaseSt
 
   private readonly DB_NAME: string
   private readonly STORE_NAME: string
-  private readonly DB_VERSION: number
   private dbManager: IndexedDBManager
 
   constructor(config: IndexedDBStorageConfig<T>, pluginExecutor?: IAsyncPluginExecutor, eventEmitter?: IEventEmitter, logger?: ILogger) {
     super(config, pluginExecutor, eventEmitter, logger)
 
-    const options = config.options
-    this.DB_NAME = options.dbName || 'app_storage'
+    this.DB_NAME = config.options?.dbName || 'app_storage'
     this.STORE_NAME = config.name
-    this.DB_VERSION = options.dbVersion || 1
 
-    // Get database manager instance
-    this.dbManager = IndexedDBManager.getInstance(this.DB_NAME, this.DB_VERSION, logger)
+    // Get database manager instance (version is auto-detected internally)
+    this.dbManager = IndexedDBManager.getInstance(this.DB_NAME, 1, logger)
   }
 
   static create<T extends Record<string, any>>(
@@ -242,28 +275,6 @@ export class IndexedDBStorage<T extends Record<string, any>> extends AsyncBaseSt
     }
   }
 
-  static async getCurrentDBVersion(dbName: string): Promise<number> {
-    return new Promise((resolve) => {
-      try {
-        const request = indexedDB.open(dbName)
-
-        request.onsuccess = () => {
-          const version = request.result.version
-          request.result.close() // Важно закрыть соединение
-          resolve(version)
-        }
-
-        request.onerror = () => {
-          logError(`IndexedDBManager: error detecting DB version for "${dbName}"`, request.error, null, 'warn')
-          resolve(0) // В случае ошибки возвращаем 0
-        }
-      } catch (error) {
-        logError(`IndexedDBManager: exception detecting DB version for "${dbName}"`, error, null, 'warn')
-        resolve(0)
-      }
-    })
-  }
-
   static async createStorages<S extends Record<string, any>>(
     dbName: string,
     configs: {
@@ -277,12 +288,8 @@ export class IndexedDBStorage<T extends Record<string, any>> extends AsyncBaseSt
     },
     logger?: ILogger,
   ): Promise<{ [K in keyof S]: IndexedDBStorage<S[K]> }> {
-    // Получаем текущую версию базы данных
-    const currentVersion = await this.getCurrentDBVersion(dbName)
-    const initialVersion = currentVersion || 1
-
-    // Используем единый IndexedDBManager
-    const dbManager = IndexedDBManager.getInstance(dbName, initialVersion, logger)
+    // Используем единый IndexedDBManager (версия определяется автоматически)
+    const dbManager = IndexedDBManager.getInstance(dbName, 1, logger)
 
     // Получаем имена всех хранилищ, которые нужно создать
     const storeNames = Object.values(configs).map((config) => config.name)
@@ -297,10 +304,7 @@ export class IndexedDBStorage<T extends Record<string, any>> extends AsyncBaseSt
       const storage = new IndexedDBStorage(
         {
           ...config,
-          options: {
-            dbName,
-            dbVersion: dbManager.getCurrentVersion(),
-          },
+          options: { dbName },
         },
         config.pluginExecutor,
         config.eventEmitter,
@@ -699,16 +703,17 @@ export class IndexedDBStorage<T extends Record<string, any>> extends AsyncBaseSt
     return value !== undefined
   }
 
-  protected async doDestroy(): Promise<void> {
-    try {
-      await this.doClear()
+  /**
+   * Override performCleanup: persistent storage should NOT clear data on destroy.
+   * Only clean up middleware and runtime resources, not persisted data.
+   */
+  protected async performCleanup(): Promise<void> {
+    await this.pluginExecutor?.executeOnClear()
+    await this.doDestroy()
+  }
 
-      // Note: We don't actually delete the object store from the database
-      // as that would require reopening the DB with a higher version.
-      // An empty object store takes minimal space.
-    } catch (error) {
-      this.logger?.error(`Error destroying store "${this.STORE_NAME}"`, { error })
-      throw error
-    }
+  protected async doDestroy(): Promise<void> {
+    // Persistent storage: do NOT clear data on destroy.
+    // Only release runtime resources. Data persists across component lifecycles.
   }
 }

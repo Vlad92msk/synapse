@@ -1,8 +1,6 @@
-import { ILogger, IStorage } from '../storage'
-import { ISelectorModule, Selector, SelectorAPI, SelectorOptions, Subscriber } from './selector.interface'
-
-// Глобальный автоинкрементный счётчик для генерации уникальных ID селекторов
-let selectorIdCounter = 0
+import type { ILogger, IStorage, StorageInitStatus } from '../storage'
+import { StorageStatus } from '../storage'
+import type { ISelectorModule, Selector, SelectorAPI, SelectorOptions, Subscriber } from './selector.interface'
 
 /**
  * Reference equality (===) — поведение по умолчанию
@@ -54,16 +52,42 @@ export function deepEquals<T>(a: T, b: T, depth = 0, visited = new WeakSet()): b
   })
 }
 
-// Мемоизирует функцию селектора для оптимизации
-function memoizeSelector<S, R>(selectorFn: (state: S) => R, equals: (a: R, b: R) => boolean = defaultEquals): (state: S) => R {
+/**
+ * Оборачивает state в Proxy для отслеживания обращений к ключам верхнего уровня.
+ * Возвращает проксированный state и Set с именами ключей, к которым обратился селектор.
+ */
+function trackDependencies<S extends Record<string, any>>(state: S): { proxy: S; accessedKeys: Set<string> } {
+  const accessedKeys = new Set<string>()
+
+  const proxy = new Proxy(state, {
+    get(target, prop, receiver) {
+      if (typeof prop === 'string') {
+        accessedKeys.add(prop)
+      }
+      return Reflect.get(target, prop, receiver)
+    },
+  })
+
+  return { proxy, accessedKeys }
+}
+
+// Мемоизирует функцию селектора для оптимизации + трекинг зависимостей через Proxy
+function memoizeSelector<S extends Record<string, any>, R>(
+  selectorFn: (state: S) => R,
+  equals: (a: R, b: R) => boolean = defaultEquals,
+): { memoized: (state: S) => R; getTrackedKeys: () => Set<string> | null } {
   let lastState: S | undefined
   let lastResult: R | undefined
   let hasResult = false
+  let trackedKeys: Set<string> | null = null
 
-  return function memoized(state: S): R {
+  const memoized = function (state: S): R {
     // Если это первый вызов или состояние изменилось
     if (!hasResult || lastState !== state) {
-      const newResult = selectorFn(state)
+      // Трекаем зависимости через Proxy при каждом реальном пересчёте
+      const { proxy, accessedKeys } = trackDependencies(state)
+      const newResult = selectorFn(proxy)
+      trackedKeys = accessedKeys
 
       // Проверяем, изменился ли результат
       if (!hasResult || !equals(newResult, lastResult as R)) {
@@ -76,75 +100,44 @@ function memoizeSelector<S, R>(selectorFn: (state: S) => R, equals: (a: R, b: R)
 
     return lastResult as R
   }
+
+  return { memoized, getTrackedKeys: () => trackedKeys }
 }
 
 class SelectorSubscription<T> {
   private readonly id: string
   readonly subscribers = new Set<Subscriber<T>>()
   private lastValue?: T
-  private readonly memoizedGetState: () => Promise<T>
-  private notifyVersion = 0
+  private hasValue = false
 
   constructor(
     private readonly name: string,
-    getState: () => Promise<T>,
+    private readonly getState: () => T,
     private readonly equals: (a: T, b: T) => boolean = defaultEquals,
     private readonly logger?: ILogger,
   ) {
     this.id = name
-
-    // Создаем мемоизированную версию getState
-    this.memoizedGetState = this.createMemoizedGetState(getState)
-
     this.logger?.debug(`[${this.id}] SelectorSubscription created`)
   }
 
-  // Создает мемоизированную версию getState с кешированием результата
-  private createMemoizedGetState(getState: () => Promise<T>): () => Promise<T> {
-    let lastPromise: Promise<T> | null = null
-    let isExecuting = false
-
-    return async () => {
-      // Если уже выполняется запрос, возвращаем его
-      if (isExecuting && lastPromise) {
-        return lastPromise
-      }
-
-      isExecuting = true
-
-      try {
-        lastPromise = getState()
-        return await lastPromise
-      } finally {
-        isExecuting = false
-      }
-    }
-  }
-
-  async notify(): Promise<void> {
-    const version = ++this.notifyVersion
-
+  notify(): void {
     try {
-      const newValue = await this.memoizedGetState()
-
-      // Если за время await был вызван более новый notify — отменяем текущий
-      if (version !== this.notifyVersion) return
+      const newValue = this.getState()
 
       // Проверка на изменение значения с использованием функции сравнения
-      if (this.lastValue === undefined || !this.equals(newValue, this.lastValue)) {
+      if (!this.hasValue || !this.equals(newValue, this.lastValue as T)) {
         this.logger?.debug(`[${this.id}] Value changed, notify()`)
 
         this.lastValue = newValue
+        this.hasValue = true
 
-        const promises = Array.from(this.subscribers).map(async (subscriber) => {
+        for (const subscriber of this.subscribers) {
           try {
-            await subscriber.notify(newValue)
+            subscriber.notify(newValue)
           } catch (error) {
             this.logger?.error(`[${this.id}] Ошибка в уведомлении подписчика`, { error })
           }
-        })
-
-        await Promise.all(promises)
+        }
       }
     } catch (error: any) {
       this.logger?.error(`[${this.id}] Ошибка в notify()`, { error })
@@ -152,21 +145,19 @@ class SelectorSubscription<T> {
     }
   }
 
-  subscribe(subscriber: Subscriber<T>): () => void {
+  subscribe(subscriber: Subscriber<T>): VoidFunction {
     this.subscribers.add(subscriber)
 
-    // Отправляем текущее значение синхронно, если оно есть
-    if (this.lastValue !== undefined) {
+    // Отправляем текущее значение синхронно
+    if (this.hasValue) {
       try {
         subscriber.notify(this.lastValue as T)
       } catch (error) {
         this.logger?.error(`[${this.id}] Ошибка в первоначальном уведомлении`, { error })
       }
     } else {
-      // Если значения нет - запрашиваем его
-      this.notify().catch((error) => {
-        this.logger?.error(`[${this.id}] Ошибка в первоначальном уведомлении`, { error })
-      })
+      // Вычисляем значение синхронно
+      this.notify()
     }
 
     return () => {
@@ -177,10 +168,19 @@ class SelectorSubscription<T> {
   cleanup(): void {
     this.subscribers.clear()
     this.lastValue = undefined
+    this.hasValue = false
   }
 
   getLastValue(): T | undefined {
     return this.lastValue
+  }
+
+  getValue(): T {
+    if (!this.hasValue) {
+      this.lastValue = this.getState()
+      this.hasValue = true
+    }
+    return this.lastValue as T
   }
 
   getId(): string {
@@ -191,6 +191,7 @@ class SelectorSubscription<T> {
 export class SelectorModule<S extends Record<string, any>> implements ISelectorModule<S> {
   storageName: string
 
+  private selectorIdCounter = 0
   private subscriptions = new Map<string, SelectorSubscription<any>>()
 
   private localSelectorCache = new Map<
@@ -205,7 +206,6 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
   // Флаг для батчинга обновлений
   private batchUpdateInProgress = false
   private pendingUpdates = new Set<string>()
-  private batchTimerId: ReturnType<typeof setTimeout> | null = null
 
   constructor(
     private readonly source: IStorage<S>,
@@ -214,54 +214,57 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
     this.storageName = source.name
   }
 
+  private isSourceReady = (): boolean => {
+    return this.source.initStatus.status === StorageStatus.READY
+  }
+
+  private onSourceStatusChange = (callback: (isReady: boolean) => void): VoidFunction => {
+    return this.source.onStatusChange((status: StorageInitStatus) => {
+      callback(status.status === StorageStatus.READY)
+    })
+  }
+
   /**
    * Генерирует уникальное имя для селектора через автоинкрементный счётчик
    */
   private generateName(): string {
-    return `${this.storageName}_selector_${selectorIdCounter++}`
+    return `${this.storageName}_selector_${this.selectorIdCounter++}`
   }
 
   /**
-   * Обрабатывает отложенные обновления, чтобы избежать каскадных уведомлений
+   * Обрабатывает отложенные обновления синхронно
    */
   private processPendingUpdates(): void {
     if (this.pendingUpdates.size === 0 || this.batchUpdateInProgress) return
 
     this.batchUpdateInProgress = true
 
-    // Используем setTimeout для обеспечения асинхронности и батчинга обновлений
-    this.batchTimerId = setTimeout(async () => {
-      this.batchTimerId = null
-      try {
-        // Копируем список селекторов для обновления
-        const subscriptionsToUpdate = Array.from(this.pendingUpdates)
-        this.pendingUpdates.clear()
+    try {
+      // Копируем список селекторов для обновления
+      const subscriptionsToUpdate = Array.from(this.pendingUpdates)
+      this.pendingUpdates.clear()
 
-        // Обновляем все ожидающие селекторы
-        const updatePromises = subscriptionsToUpdate.map(async (id) => {
-          const subscription = this.subscriptions.get(id)
-          if (subscription) {
-            try {
-              return await subscription.notify()
-            } catch (error) {
-              this.logger?.error(`Ошибка уведомления подписчика ${id}`, { error })
-            }
+      // Обновляем все ожидающие селекторы синхронно
+      for (const id of subscriptionsToUpdate) {
+        const subscription = this.subscriptions.get(id)
+        if (subscription) {
+          try {
+            subscription.notify()
+          } catch (error) {
+            this.logger?.error(`Ошибка уведомления подписчика ${id}`, { error })
           }
-          return Promise.resolve()
-        })
-
-        await Promise.all(updatePromises)
-      } catch (error) {
-        this.logger?.error('Ошибка обработки ожидающих обновлений', { error })
-      } finally {
-        this.batchUpdateInProgress = false
-
-        // Если появились новые обновления во время обработки, запускаем процесс снова
-        if (this.pendingUpdates.size > 0) {
-          this.processPendingUpdates()
         }
       }
-    }, 0)
+    } catch (error) {
+      this.logger?.error('Ошибка обработки ожидающих обновлений', { error })
+    } finally {
+      this.batchUpdateInProgress = false
+
+      // Если появились новые обновления во время обработки, запускаем процесс снова
+      if (this.pendingUpdates.size > 0) {
+        this.processPendingUpdates()
+      }
+    }
   }
 
   createSelector<T>(selector: Selector<S, T>, options?: SelectorOptions<T>): SelectorAPI<T>
@@ -295,10 +298,10 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
     let unsubscribeFunctions: VoidFunction[] = []
 
     if (isSimpleSelector) {
-      // Простой селектор с мемоизацией
-      const memoized = memoizeSelector(selectorOrDeps as Selector<S, T>, options.equals || defaultEquals)
+      // Простой селектор с мемоизацией и трекингом зависимостей
+      const { memoized, getTrackedKeys } = memoizeSelector(selectorOrDeps as Selector<S, T>, options.equals || defaultEquals)
 
-      const created = this.createSimpleSelector(memoized, { ...options, name: selectorId, equals: options.equals || defaultEquals })
+      const created = this.createSimpleSelector(memoized, getTrackedKeys, { ...options, name: selectorId, equals: options.equals || defaultEquals })
 
       result = created.api
       unsubscribeFunctions = created.unsubscribeFunctions
@@ -328,15 +331,15 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
 
   private createSimpleSelector<T>(
     selector: Selector<S, T>,
+    getTrackedKeys: () => Set<string> | null,
     options: SelectorOptions<T> & { name: string },
   ): {
     api: SelectorAPI<T>
     unsubscribeFunctions: VoidFunction[]
   } {
-    // Функция для получения данных — всегда из source напрямую,
-    // мемоизация в memoizeSelector предотвращает лишние пересчёты
-    const getState = async (): Promise<T> => {
-      const state = await this.source.getState()
+    // Синхронное получение состояния из кеша
+    const getState = (): T => {
+      const state = this.source.getStateSync()
       return selector(state as S)
     }
 
@@ -345,10 +348,23 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
     const id = subscription.getId()
     this.subscriptions.set(id, subscription)
 
-    // Подписка на обновления хранилища с батчингом
-    const unsubscribeFromStorage = this.source.subscribeToAll(async (event: any) => {
+    // Подписка на обновления хранилища с фильтрацией по changedPaths
+    const unsubscribeFromStorage = this.source.subscribeToAll((event: any) => {
       if (event?.type === 'storage:update') {
-        // Добавляем селектор в список ожидающих обновления
+        // Фильтруем по changedPaths: если зависимости известны и нет пересечения — пропускаем
+        const changedPaths: string[] | undefined = event?.changedPaths
+        const deps = getTrackedKeys()
+
+        if (changedPaths && deps && deps.size > 0) {
+          const hasRelevantChange = changedPaths.some((path) => {
+            // changedPaths может содержать вложенные пути ("users.0.name")
+            // берём ключ верхнего уровня для сравнения с deps
+            const topLevelKey = path.split('.')[0]
+            return deps.has(topLevelKey)
+          })
+          if (!hasRelevantChange) return
+        }
+
         this.pendingUpdates.add(id)
         this.processPendingUpdates()
       }
@@ -359,11 +375,13 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
     return {
       api: {
         select: () => getState(),
-        selectSync: () => subscription.getLastValue(),
+        selectSync: () => subscription.getValue(),
         subscribe: (subscriber) => {
           return subscription.subscribe(subscriber)
         },
         getId: () => id,
+        isSourceReady: this.isSourceReady,
+        onSourceStatusChange: this.onSourceStatusChange,
       },
       unsubscribeFunctions,
     }
@@ -375,7 +393,7 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
     options: SelectorOptions<T> & { name: string },
   ): {
     api: SelectorAPI<T>
-    unsubscribeFunctions: Array<() => void>
+    unsubscribeFunctions: Array<VoidFunction>
   } {
     // Мемоизация для combined selectors: поэлементное сравнение аргументов по ссылке (как reselect)
     let lastArgs: Deps | undefined
@@ -409,8 +427,8 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
       return lastResult as T
     }
 
-    const getState = async () => {
-      const values = await Promise.all(selectors.map((s) => s.select())) as Deps
+    const getState = (): T => {
+      const values = selectors.map((s) => s.selectSync()) as Deps
       return memoizedResultFn(values)
     }
 
@@ -429,13 +447,17 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
         queueMicrotask(() => {
           pendingNotify = false
           if (!destroyed) {
-            subscription.notify().catch((error) => this.logger?.error(`[${id}] Ошибка в объединенном уведомлении:`, { error }))
+            try {
+              subscription.notify()
+            } catch (error) {
+              this.logger?.error(`[${id}] Ошибка в объединенном уведомлении:`, { error })
+            }
           }
         })
       }
     }
 
-    const unsubscribeFunctions: Array<() => void> = selectors.map((selector) =>
+    const unsubscribeFunctions: Array<VoidFunction> = selectors.map((selector) =>
       selector.subscribe({
         notify: () => {
           triggerUpdate()
@@ -451,11 +473,13 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
     return {
       api: {
         select: () => getState(),
-        selectSync: () => subscription.getLastValue(),
+        selectSync: () => subscription.getValue(),
         subscribe: (subscriber) => {
           return subscription.subscribe(subscriber)
         },
         getId: () => id,
+        isSourceReady: this.isSourceReady,
+        onSourceStatusChange: this.onSourceStatusChange,
       },
       unsubscribeFunctions,
     }
@@ -468,12 +492,6 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
 
     // Очищаем список ожидающих обновлений
     this.pendingUpdates.clear()
-
-    // Отменяем отложенный таймер батчинга
-    if (this.batchTimerId !== null) {
-      clearTimeout(this.batchTimerId)
-      this.batchTimerId = null
-    }
 
     // Очищаем подписки из локального кеша
     this.localSelectorCache.forEach((cached) => {

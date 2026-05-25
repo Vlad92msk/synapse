@@ -19,7 +19,8 @@
       "Bash(brew list:*)",
       "Bash(/usr/local/bin/node:*)",
       "Read(//Users/vlad/.claude-ios/.nvm/versions/**)",
-      "Bash(nvm ls:*)"
+      "Bash(nvm ls:*)",
+      "Bash(grep -n \"export\" /Users/vlad/web_dev/synapse/packages/synapse/src/react/hooks/*.ts)"
     ]
   }
 }

@@ -122,10 +122,10 @@ function SelectorUI() {
     return unsub
   }, [])
 
-  // Programmatic select (async)
+  // Programmatic select (sync)
   const [asyncResult, setAsyncResult] = useState<string>('')
-  const fetchAsync = useCallback(async () => {
-    const result = await selectors.adminNames.select()
+  const fetchAsync = useCallback(() => {
+    const result = selectors.adminNames.select()
     setAsyncResult(JSON.stringify(result))
   }, [])
 

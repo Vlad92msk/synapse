@@ -25,6 +25,7 @@ import { ApiClientExample } from './examples/ApiClientExample'
 import { DependenciesExample } from './examples/DependenciesExample'
 
 const examples = [
+  // Создание хранилищ
   { id: 'memory', label: '1. MemoryStorage (new)', component: MemoryStorageExample },
   { id: 'local', label: '2. LocalStorage (new)', component: LocalStorageExample },
   { id: 'indexeddb', label: '3. IndexedDBStorage (new)', component: IndexedDBExample },
@@ -33,12 +34,14 @@ const examples = [
   { id: 'hook-local', label: '6. useCreateStorage (localStorage)', component: HookLocalStorageExample },
   { id: 'hook-idb', label: '7. useCreateStorage (indexedDB)', component: HookIndexedDBExample },
   { id: 'static', label: '8. Static .create()', component: StaticCreateExample },
+  // Получение данных
+  { id: 'selector-system', label: '14. Selector system', component: SelectorSystemExample },
   { id: 'subscriptions', label: '9. Subscription patterns', component: SubscriptionPatternsExample },
+  // Прочее
   { id: 'operations', label: '10. delete/has/keys/clear', component: DeleteHasKeysExample },
   { id: 'synapse-basic', label: '11. createSynapse (basic)', component: CreateSynapseBasicExample },
   { id: 'synapse-dispatcher', label: '12. createSynapse (dispatcher)', component: CreateSynapseDispatcherExample },
   { id: 'synapse-effects', label: '13. createSynapse (effects)', component: CreateSynapseEffectsExample },
-  { id: 'selector-system', label: '14. Selector system', component: SelectorSystemExample },
   { id: 'dispatcher-detail', label: '15. Dispatcher detailed', component: DispatcherDetailedExample },
   { id: 'synapse-ctx', label: '16. createSynapseCtx (context)', component: SynapseCtxExample },
   { id: 'await-synapse', label: '17. awaitSynapse (ready)', component: AwaitSynapseExample },

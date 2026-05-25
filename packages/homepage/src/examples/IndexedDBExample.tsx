@@ -9,18 +9,19 @@ interface TodoState {
 
 /**
  * Пример 3: Создание IndexedDBStorage через new
- * Требует дополнительного конфига options: { dbVersion }
+ * Требует дополнительного конфига options (dbName опционален)
  */
 export function IndexedDBExample() {
   const [storage] = useState(() =>
     new IndexedDBStorage<TodoState>({
       name: 'todo-store',
       initialState: { items: [], filter: 'all' },
-      options: { dbVersion: 1 },
+      options: {},
     }),
   )
   const [state, setState] = useState<TodoState>({ items: [], filter: 'all' })
   const [isReady, setIsReady] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
   const [inputVal, setInputVal] = useState('')
 
   useEffect(() => {
@@ -31,6 +32,8 @@ export function IndexedDBExample() {
         setIsReady(true)
         setState(storage.getStateSync())
       }
+    }).catch((err) => {
+      if (!cancelled) setError(err)
     })
 
     return () => {
@@ -46,6 +49,7 @@ export function IndexedDBExample() {
     })
   }, [storage, isReady])
 
+  if (error) return <div>Error: {error.message}</div>
   if (!isReady) return <div>Initializing IndexedDBStorage...</div>
 
   return (

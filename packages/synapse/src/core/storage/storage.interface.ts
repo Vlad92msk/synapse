@@ -115,6 +115,9 @@ export interface IStorageBase<T extends Record<string, any> = any> {
   /** Подписка на все изменения хранилища */
   subscribeToAll(callback: (event: { type: string; changedPaths?: string[]; key?: StorageKeyType[] | StorageKeyType; value?: any }) => void): VoidFunction
 
+  /** Текущий статус инициализации */
+  readonly initStatus: StorageInitStatus
+
   /** Подписка на изменение статуса инициализации */
   onStatusChange(callback: (status: StorageInitStatus) => void): VoidFunction
 }

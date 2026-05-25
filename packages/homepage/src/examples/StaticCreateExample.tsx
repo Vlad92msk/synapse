@@ -21,7 +21,7 @@ export function StaticCreateExample() {
     IndexedDBStorage.create<AppState>({
       name: 'static-idb',
       initialState: { value: 300 },
-      options: { dbVersion: 1 },
+      options: {},
     }),
   )
 

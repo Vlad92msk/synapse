@@ -89,7 +89,8 @@ export function useCreateStorage<T extends Record<string, any>>(
   eventEmitter?: IEventEmitter,
   logger?: ILogger,
 ): UseSynapseStorageReturn<IStorage<T>> {
-  const { autoInitialize = true, destroyOnUnmount = true } = options
+  const destroyDefault = config.type === 'indexedDB' ? false : true
+  const { autoInitialize = true, destroyOnUnmount = destroyDefault } = options
 
   const [status, setStatus] = useState<StorageInitStatus>({
     status: StorageStatus.IDLE,

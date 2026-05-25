@@ -163,6 +163,9 @@ export abstract class StorageCore<T extends Record<string, any>> implements ISto
     if (this._initStatus.status === StorageStatus.READY) return this
     if (this._initStatus.status === StorageStatus.LOADING) return this.waitForReady()
 
+    // Allow re-initialization after destroy
+    this._isDestroyed = false
+
     this.updateInitStatus({ status: StorageStatus.LOADING, error: undefined })
 
     try {
