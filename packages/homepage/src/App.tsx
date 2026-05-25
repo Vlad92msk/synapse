@@ -8,6 +8,8 @@ import { HookLocalStorageExample } from './examples/HookLocalStorageExample'
 import { HookIndexedDBExample } from './examples/HookIndexedDBExample'
 import { StaticCreateExample } from './examples/StaticCreateExample'
 import { SubscriptionPatternsExample } from './examples/SubscriptionPatternsExample'
+import { ReadingDataExample } from './examples/ReadingDataExample'
+import { WritingDataExample } from './examples/WritingDataExample'
 import { DeleteHasKeysExample } from './examples/DeleteHasKeysExample'
 import { CreateSynapseBasicExample } from './examples/CreateSynapseBasicExample'
 import { CreateSynapseDispatcherExample } from './examples/CreateSynapseDispatcherExample'
@@ -24,34 +26,48 @@ import { SingletonExample } from './examples/SingletonExample'
 import { ApiClientExample } from './examples/ApiClientExample'
 import { DependenciesExample } from './examples/DependenciesExample'
 
+const groupLabels: Record<string, string> = {
+  create: 'Создание хранилищ',
+  data: 'Работа с данными',
+  synapse: 'createSynapse',
+  react: 'React',
+  patterns: 'Паттерны',
+  utils: 'Утилиты',
+}
+
 const examples = [
   // Создание хранилищ
-  { id: 'memory', label: '1. MemoryStorage (new)', component: MemoryStorageExample },
-  { id: 'local', label: '2. LocalStorage (new)', component: LocalStorageExample },
-  { id: 'indexeddb', label: '3. IndexedDBStorage (new)', component: IndexedDBExample },
-  { id: 'factory', label: '4. StorageFactory', component: FactoryExample },
-  { id: 'hook-memory', label: '5. useCreateStorage (memory)', component: HookExample },
-  { id: 'hook-local', label: '6. useCreateStorage (localStorage)', component: HookLocalStorageExample },
-  { id: 'hook-idb', label: '7. useCreateStorage (indexedDB)', component: HookIndexedDBExample },
-  { id: 'static', label: '8. Static .create()', component: StaticCreateExample },
-  // Получение данных
-  { id: 'selector-system', label: '14. Selector system', component: SelectorSystemExample },
-  { id: 'subscriptions', label: '9. Subscription patterns', component: SubscriptionPatternsExample },
-  // Прочее
-  { id: 'operations', label: '10. delete/has/keys/clear', component: DeleteHasKeysExample },
-  { id: 'synapse-basic', label: '11. createSynapse (basic)', component: CreateSynapseBasicExample },
-  { id: 'synapse-dispatcher', label: '12. createSynapse (dispatcher)', component: CreateSynapseDispatcherExample },
-  { id: 'synapse-effects', label: '13. createSynapse (effects)', component: CreateSynapseEffectsExample },
-  { id: 'dispatcher-detail', label: '15. Dispatcher detailed', component: DispatcherDetailedExample },
-  { id: 'synapse-ctx', label: '16. createSynapseCtx (context)', component: SynapseCtxExample },
-  { id: 'await-synapse', label: '17. awaitSynapse (ready)', component: AwaitSynapseExample },
-  { id: 'synapse-awaiter', label: '18. createSynapseAwaiter', component: SynapseAwaiterExample },
-  { id: 'event-bus', label: '19. createEventBus', component: EventBusExample },
-  { id: 'middlewares', label: '20. Middlewares', component: MiddlewaresExample },
-  { id: 'plugins', label: '21. Plugins (IStoragePlugin)', component: PluginsExample },
-  { id: 'singleton', label: '22. Singleton pattern', component: SingletonExample },
-  { id: 'api-client', label: '23. ApiClient', component: ApiClientExample },
-  { id: 'dependencies', label: '24. Dependencies', component: DependenciesExample },
+  { id: 'memory', label: 'MemoryStorage (new)', component: MemoryStorageExample, group: 'create' },
+  { id: 'local', label: 'LocalStorage (new)', component: LocalStorageExample, group: 'create' },
+  { id: 'indexeddb', label: 'IndexedDBStorage (new)', component: IndexedDBExample, group: 'create' },
+  { id: 'factory', label: 'StorageFactory', component: FactoryExample, group: 'create' },
+  { id: 'hook-memory', label: 'useCreateStorage (memory)', component: HookExample, group: 'create' },
+  { id: 'hook-local', label: 'useCreateStorage (localStorage)', component: HookLocalStorageExample, group: 'create' },
+  { id: 'hook-idb', label: 'useCreateStorage (indexedDB)', component: HookIndexedDBExample, group: 'create' },
+  { id: 'static', label: 'Static .create()', component: StaticCreateExample, group: 'create' },
+  // Работа с данными
+  { id: 'reading-data', label: 'Чтение данных (get/getState)', component: ReadingDataExample, group: 'data' },
+  { id: 'writing-data', label: 'Запись данных (set/update)', component: WritingDataExample, group: 'data' },
+  { id: 'operations', label: 'remove / has / keys / clear / reset', component: DeleteHasKeysExample, group: 'data' },
+  { id: 'subscriptions', label: 'Подписки (subscribe)', component: SubscriptionPatternsExample, group: 'data' },
+  { id: 'selector-system', label: 'Селекторы (createSelector)', component: SelectorSystemExample, group: 'data' },
+  // createSynapse
+  { id: 'synapse-basic', label: 'createSynapse (basic)', component: CreateSynapseBasicExample, group: 'synapse' },
+  { id: 'synapse-dispatcher', label: 'createSynapse (dispatcher)', component: CreateSynapseDispatcherExample, group: 'synapse' },
+  { id: 'synapse-effects', label: 'createSynapse (effects)', component: CreateSynapseEffectsExample, group: 'synapse' },
+  { id: 'dispatcher-detail', label: 'Dispatcher (подробно)', component: DispatcherDetailedExample, group: 'synapse' },
+  { id: 'dependencies', label: 'Dependencies', component: DependenciesExample, group: 'synapse' },
+  // React
+  { id: 'synapse-ctx', label: 'createSynapseCtx', component: SynapseCtxExample, group: 'react' },
+  { id: 'await-synapse', label: 'awaitSynapse', component: AwaitSynapseExample, group: 'react' },
+  // Паттерны
+  { id: 'middlewares', label: 'Middlewares', component: MiddlewaresExample, group: 'patterns' },
+  { id: 'plugins', label: 'Plugins (IStoragePlugin)', component: PluginsExample, group: 'patterns' },
+  { id: 'singleton', label: 'Singleton pattern', component: SingletonExample, group: 'patterns' },
+  // Утилиты
+  { id: 'api-client', label: 'ApiClient', component: ApiClientExample, group: 'utils' },
+  { id: 'synapse-awaiter', label: 'createSynapseAwaiter', component: SynapseAwaiterExample, group: 'utils' },
+  { id: 'event-bus', label: 'createEventBus', component: EventBusExample, group: 'utils' },
 ]
 
 export function App() {
@@ -59,7 +75,7 @@ export function App() {
   const ActiveComponent = examples.find((e) => e.id === active)!.component
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'system-ui, sans-serif', height: '100vh', position: 'relative', overflow: 'auto' }}>
       <nav style={{
         width: 280,
         padding: 16,
@@ -67,28 +83,45 @@ export function App() {
         background: '#fafafa',
         flexShrink: 0,
         overflowY: 'auto',
+        position: 'sticky',
+        top: '0'
       }}>
         <h2 style={{ marginTop: 0 }}>Synapse API Audit</h2>
-        {examples.map((ex) => (
-          <button
-            key={ex.id}
-            onClick={() => setActive(ex.id)}
-            style={{
-              display: 'block',
-              width: '100%',
-              textAlign: 'left',
-              padding: '8px 12px',
+        {Object.entries(groupLabels).map(([group, label]) => (
+          <div key={group} style={{ marginBottom: 16 }}>
+            <div style={{
+              fontSize: 11,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              color: '#888',
+              padding: '4px 12px',
               marginBottom: 4,
-              border: 'none',
-              borderRadius: 6,
-              cursor: 'pointer',
-              background: active === ex.id ? '#0066cc' : 'transparent',
-              color: active === ex.id ? 'white' : '#333',
-              fontSize: 14,
-            }}
-          >
-            {ex.label}
-          </button>
+            }}>
+              {label}
+            </div>
+            {examples.filter((ex) => ex.group === group).map((ex) => (
+              <button
+                key={ex.id}
+                onClick={() => setActive(ex.id)}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '8px 12px',
+                  marginBottom: 4,
+                  border: 'none',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  background: active === ex.id ? '#0066cc' : 'transparent',
+                  color: active === ex.id ? 'white' : '#333',
+                  fontSize: 14,
+                }}
+              >
+                {ex.label}
+              </button>
+            ))}
+          </div>
         ))}
       </nav>
 
@@ -98,3 +131,5 @@ export function App() {
     </div>
   )
 }
+
+

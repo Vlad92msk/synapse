@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react'
 import { MemoryStorage } from 'synapse-storage/core'
 import { createSynapse, createSynapseAwaiter } from 'synapse-storage/utils'
-import { cardStyle, buttonRow } from './styles'
+import { cardStyle, buttonRow, codeBlock, sectionTitle } from './styles'
 
-/**
- * Пример 7: createSynapseAwaiter() — framework-agnostic утилита ожидания готовности
- * В отличие от awaitSynapse (React-специфичный), работает в любом JS окружении
- */
+// ─── Типы ───────────────────────────────────────────────────────────────────
 
 interface ConfigState {
   locale: string
@@ -14,10 +11,11 @@ interface ConfigState {
   featureFlags: Record<string, boolean>
 }
 
-// Эмулируем длительную инициализацию (загрузка конфига с сервера)
+// ─── Создание store с задержкой (эмуляция загрузки конфига) ─────────────────
+
 const configStorePromise = createSynapse({
   createStorageFn: async () => {
-    await new Promise((r) => setTimeout(r, 2000))
+    await new Promise((r) => setTimeout(r, 2000)) // эмуляция сетевого запроса
     const storage = new MemoryStorage<ConfigState>({
       name: 'app-config-awaiter',
       initialState: {
@@ -31,18 +29,213 @@ const configStorePromise = createSynapse({
   },
 })
 
-// Создаем awaiter — framework-agnostic
+// ─── Создание awaiter ───────────────────────────────────────────────────────
+
 const configAwaiter = createSynapseAwaiter(configStorePromise)
 
-// --- Пример использования в vanilla JS (имитация) ---
+// ─── Компонент-пример ───────────────────────────────────────────────────────
+
+export function SynapseAwaiterExample() {
+  return (
+    <div style={cardStyle}>
+      <h2>createSynapseAwaiter — framework-agnostic awaiter</h2>
+      <p>
+        Обёртка для ожидания асинхронной инициализации store.
+        Работает в любом JS-окружении: Node.js, браузер, React Native.
+      </p>
+
+      {/* ─── Импорты ──────────────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>Импорты</h3>
+      <pre style={codeBlock}>{`import { createSynapse, createSynapseAwaiter } from 'synapse-storage/utils'`}</pre>
+
+      {/* ─── Создание ─────────────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>Создание</h3>
+      <pre style={codeBlock}>{`// createSynapseAwaiter принимает Promise<SynapseStore> или готовый SynapseStore
+
+// Вариант 1: Promise (типичный кейс — async инициализация)
+const storePromise = createSynapse({
+  createStorageFn: async () => {
+    const config = await fetch('/api/config').then(r => r.json())
+    const storage = new MemoryStorage<ConfigState>({
+      name: 'app-config',
+      initialState: config,
+    })
+    storage.initialize()
+    return storage
+  },
+})
+
+const awaiter = createSynapseAwaiter(storePromise)
+
+// Вариант 2: уже готовый store (оборачивается в Promise.resolve)
+const readyStore = await createSynapse({ storage: myStorage })
+const awaiter2 = createSynapseAwaiter(readyStore)`}</pre>
+
+      {/* ─── isReady / getStatus / getError ────────────────────────────── */}
+      <h3 style={sectionTitle}>isReady() / getStatus() / getError()</h3>
+      <pre style={codeBlock}>{`// Синхронная проверка готовности
+awaiter.isReady()     // boolean
+
+// Текущий статус
+awaiter.getStatus()   // 'pending' | 'ready' | 'error'
+
+// Ошибка инициализации (если была)
+awaiter.getError()    // Error | null`}</pre>
+
+      {/* ─── getStoreIfReady ──────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>getStoreIfReady()</h3>
+      <pre style={codeBlock}>{`// Возвращает store, если он готов, или undefined
+const store = awaiter.getStoreIfReady()
+
+if (store) {
+  // SynapseStore — тип зависит от конфигурации createSynapse:
+  // - SynapseStoreBasic      (без dispatcher)
+  // - SynapseStoreWithDispatcher
+  // - SynapseStoreWithEffects
+  //
+  // Всегда есть:
+  //   store.storage   — ISyncStorage | IAsyncStorage
+  //   store.selectors — объект с селекторами
+  //   store.destroy() — очистка ресурсов
+  //
+  // С dispatcher дополнительно:
+  //   store.actions    — типизированные action'ы
+  //   store.dispatcher — raw dispatcher
+  //
+  // С effects дополнительно:
+  //   store.state$     — Observable<TStore>
+
+  const state = store.storage.getStateSync()
+  console.log(state.locale)  // 'ru'
+}`}</pre>
+
+      {/* ─── waitForReady ─────────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>waitForReady()</h3>
+      <pre style={codeBlock}>{`// Асинхронное ожидание — возвращает Promise<SynapseStore>
+const store = await awaiter.waitForReady()
+
+// Безопасно вызывать многократно — возвращает тот же store
+const store1 = await awaiter.waitForReady()
+const store2 = await awaiter.waitForReady()
+// store1 === store2`}</pre>
+
+      {/* ─── onReady / onError ────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>onReady() / onError()</h3>
+      <pre style={codeBlock}>{`// Подписка на готовность — возвращает функцию отписки
+const unsub = awaiter.onReady((store) => {
+  console.log('Store ready!')
+  const state = store.storage.getStateSync()
+  console.log(state)
+})
+
+// Если store уже ready — callback вызовется сразу (синхронно)
+// Можно подписать несколько обработчиков
+
+// Подписка на ошибку
+const unsubErr = awaiter.onError((error) => {
+  console.error('Init failed:', error.message)
+})
+
+// Если ошибка уже произошла — callback вызовется сразу
+
+// Отписка
+unsub()
+unsubErr()`}</pre>
+
+      {/* ─── destroy ──────────────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>destroy()</h3>
+      <pre style={codeBlock}>{`// Очистка ресурсов: сбрасывает подписки, статус -> 'pending', store -> undefined
+awaiter.destroy()
+
+// После destroy:
+awaiter.isReady()        // false
+awaiter.getStatus()      // 'pending'
+awaiter.getStoreIfReady() // undefined`}</pre>
+
+      {/* ─── Пример: React-компонент ──────────────────────────────────── */}
+      <h3 style={sectionTitle}>Пример: использование в React-компоненте</h3>
+      <pre style={codeBlock}>{`function ConfigPanel() {
+  const [status, setStatus] = useState(awaiter.getStatus())
+  const [config, setConfig] = useState<ConfigState | null>(null)
+
+  useEffect(() => {
+    const unsubReady = awaiter.onReady((store) => {
+      setStatus('ready')
+      setConfig(store.storage.getStateSync())
+    })
+
+    const unsubError = awaiter.onError(() => {
+      setStatus('error')
+    })
+
+    // Если уже ready — обновим сразу
+    if (awaiter.isReady()) {
+      setStatus('ready')
+      setConfig(awaiter.getStoreIfReady()?.storage.getStateSync() ?? null)
+    }
+
+    return () => { unsubReady(); unsubError() }
+  }, [])
+
+  if (status === 'pending') return <div>Loading config...</div>
+  if (status === 'error') return <div>Error!</div>
+  return <div>Locale: {config?.locale}</div>
+}`}</pre>
+
+      {/* ─── Live demo ────────────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>Live Demo</h3>
+      <ReactStatusPanel />
+      <VanillaJsUsagePanel />
+    </div>
+  )
+}
+
+// ─── Демо-компоненты ────────────────────────────────────────────────────────
+
+function ReactStatusPanel() {
+  const [status, setStatus] = useState(configAwaiter.getStatus())
+  const [config, setConfig] = useState<ConfigState | null>(null)
+
+  useEffect(() => {
+    const unsubReady = configAwaiter.onReady((store) => {
+      setStatus('ready')
+      setConfig(store.storage.getStateSync())
+    })
+
+    const unsubError = configAwaiter.onError(() => {
+      setStatus('error')
+    })
+
+    if (configAwaiter.isReady()) {
+      setStatus('ready')
+      const s = configAwaiter.getStoreIfReady()?.storage.getStateSync()
+      if (s) setConfig(s)
+    }
+
+    return () => { unsubReady(); unsubError() }
+  }, [])
+
+  return (
+    <div style={{ padding: 8, background: '#e8f5e9', borderRadius: 4, marginTop: 8 }}>
+      <strong>Demo: React component</strong>
+      <div>Status: <code>{status}</code></div>
+      {config && (
+        <div style={{ fontSize: 12, marginTop: 4 }}>
+          locale: {config.locale}, apiUrl: {config.apiUrl}, flags: {JSON.stringify(config.featureFlags)}
+        </div>
+      )}
+      {status === 'pending' && <div style={{ color: '#888' }}>Waiting for initialization (2 sec)...</div>}
+    </div>
+  )
+}
+
 function VanillaJsUsagePanel() {
   const [log, setLog] = useState<string[]>([])
-
   const addLog = (msg: string) => setLog((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`])
 
   return (
-    <div style={{ marginTop: 12 }}>
-      <h4>Vanilla JS API (без React)</h4>
+    <div style={{ padding: 8, background: '#fff3e0', borderRadius: 4, marginTop: 8 }}>
+      <strong>Demo: Vanilla JS API</strong>
       <div style={buttonRow}>
         <button onClick={() => addLog(`isReady(): ${configAwaiter.isReady()}`)}>
           isReady()
@@ -56,13 +249,13 @@ function VanillaJsUsagePanel() {
             const s = store.storage.getStateSync()
             addLog(`getStoreIfReady() -> locale: ${s.locale}`)
           } else {
-            addLog('getStoreIfReady() -> undefined (not ready yet)')
+            addLog('getStoreIfReady() -> undefined (not ready)')
           }
         }}>
           getStoreIfReady()
         </button>
         <button onClick={async () => {
-          addLog('waitForReady() called, waiting...')
+          addLog('waitForReady() called...')
           const store = await configAwaiter.waitForReady()
           const state = store.storage.getStateSync()
           addLog(`waitForReady() resolved -> apiUrl: ${state.apiUrl}`)
@@ -71,108 +264,39 @@ function VanillaJsUsagePanel() {
         </button>
       </div>
 
-      <div style={{ marginTop: 8 }}>
-        <strong>onReady / onError callbacks:</strong>
-        <div style={buttonRow}>
-          <button onClick={() => {
-            const unsub = configAwaiter.onReady((store) => {
-              const s = store.storage.getStateSync()
-              addLog(`onReady callback -> featureFlags: ${JSON.stringify(s.featureFlags)}`)
-            })
-            addLog('Subscribed to onReady (auto-fires if already ready)')
-            // Cleanup after demo
-            setTimeout(unsub, 5000)
-          }}>
-            onReady(cb)
-          </button>
-          <button onClick={() => {
-            const unsub = configAwaiter.onError((err) => {
-              addLog(`onError callback -> ${err.message}`)
-            })
-            addLog('Subscribed to onError')
-            setTimeout(unsub, 5000)
-          }}>
-            onError(cb)
-          </button>
-        </div>
+      <div style={{ ...buttonRow, marginTop: 4 }}>
+        <button onClick={() => {
+          const unsub = configAwaiter.onReady((store) => {
+            const s = store.storage.getStateSync()
+            addLog(`onReady() -> flags: ${JSON.stringify(s.featureFlags)}`)
+          })
+          addLog('onReady() subscribed (fires immediately if ready)')
+          setTimeout(unsub, 5000)
+        }}>
+          onReady(cb)
+        </button>
+        <button onClick={() => {
+          const unsub = configAwaiter.onError((err) => {
+            addLog(`onError() -> ${err.message}`)
+          })
+          addLog('onError() subscribed')
+          setTimeout(unsub, 5000)
+        }}>
+          onError(cb)
+        </button>
+        <button onClick={() => addLog(`getError(): ${configAwaiter.getError()}`)}>
+          getError()
+        </button>
       </div>
 
       {log.length > 0 && (
-        <pre style={{ fontSize: 11, background: '#f5f5f5', padding: 8, borderRadius: 4, maxHeight: 200, overflow: 'auto' }}>
-          {log.join('\n')}
-        </pre>
+        <>
+          <pre style={{ ...codeBlock, fontSize: 11, maxHeight: 200, overflow: 'auto', marginTop: 8 }}>
+            {log.join('\n')}
+          </pre>
+          <button onClick={() => setLog([])} style={{ fontSize: 11 }}>Clear log</button>
+        </>
       )}
-      {log.length > 0 && (
-        <button onClick={() => setLog([])} style={{ fontSize: 11 }}>Clear log</button>
-      )}
-    </div>
-  )
-}
-
-// --- Пример: React-обертка поверх createSynapseAwaiter ---
-function ReactStatusPanel() {
-  const [status, setStatus] = useState(configAwaiter.getStatus())
-  const [config, setConfig] = useState<ConfigState | null>(null)
-
-  useEffect(() => {
-    // Подписываемся на готовность
-    const unsubReady = configAwaiter.onReady((store) => {
-      setStatus('ready')
-      const state = store.storage.getStateSync()
-      setConfig(state)
-    })
-
-    const unsubError = configAwaiter.onError(() => {
-      setStatus('error')
-    })
-
-    // Проверяем текущий статус
-    if (configAwaiter.isReady()) {
-      setStatus('ready')
-      const s = configAwaiter.getStoreIfReady()?.storage.getStateSync()
-      if (s) setConfig(s)
-    }
-
-    return () => { unsubReady(); unsubError() }
-  }, [])
-
-  return (
-    <div style={{ padding: 8, background: '#f0f8ff', borderRadius: 4, marginTop: 8 }}>
-      <strong>React component using createSynapseAwaiter:</strong>
-      <div>Status: <code>{status}</code></div>
-      {config && (
-        <div style={{ fontSize: 12, marginTop: 4 }}>
-          locale: {config.locale}, apiUrl: {config.apiUrl}
-        </div>
-      )}
-      {status === 'pending' && <div style={{ color: '#888' }}>Waiting for initialization (2 sec)...</div>}
-    </div>
-  )
-}
-
-export function SynapseAwaiterExample() {
-  return (
-    <div style={cardStyle}>
-      <h2>createSynapseAwaiter() — framework-agnostic awaiter</h2>
-      <p style={{ fontSize: 13, color: '#666' }}>
-        Работает в любом JS окружении: Node.js, браузер, React Native.
-        Для React рекомендуется <code>awaitSynapse()</code> (пункт 17).
-      </p>
-
-      <ReactStatusPanel />
-      <VanillaJsUsagePanel />
-
-      <h4>API заметки:</h4>
-      <ul style={{ fontSize: 12, color: '#666' }}>
-        <li><code>createSynapseAwaiter(promise | store)</code> — создает awaiter</li>
-        <li><code>waitForReady()</code> — Promise, резолвится при готовности</li>
-        <li><code>isReady()</code> — синхронная проверка</li>
-        <li><code>getStoreIfReady()</code> — store | undefined</li>
-        <li><code>onReady(cb)</code> / <code>onError(cb)</code> — подписки (возвращают unsubscribe)</li>
-        <li><code>getStatus()</code> — 'pending' | 'ready' | 'error'</li>
-        <li><code>getError()</code> — Error | null</li>
-        <li><code>destroy()</code> — очистка ресурсов</li>
-      </ul>
     </div>
   )
 }

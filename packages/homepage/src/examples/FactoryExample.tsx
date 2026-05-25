@@ -1,109 +1,143 @@
 import { useState, useEffect } from 'react'
-import { StorageFactory, MemoryStorage, LocalStorage } from 'synapse-storage/core'
-import type { IStorage } from 'synapse-storage/core'
-import { cardStyle, buttonRow } from './styles'
+import { StorageFactory } from 'synapse-storage/core'
+import { cardStyle, buttonRow, codeBlock, sectionTitle } from './styles'
 
 interface UserState {
   name: string
   age: number
 }
 
-/**
- * Пример 4: Создание хранилищ через StorageFactory
- * Три варианта: createMemory, createLocal, и универсальный create
- */
+// ─── Создание через фабрику ─────────────────────────────────────────────────
+
+const memStorage = StorageFactory.createMemory<UserState>({
+  name: 'factory-memory',
+  initialState: { name: 'Alice', age: 25 },
+})
+
+const localStore = StorageFactory.createLocal<UserState>({
+  name: 'factory-local',
+  initialState: { name: 'Bob', age: 30 },
+})
+
+const idbStore = StorageFactory.createIndexedDB<UserState>({
+  name: 'factory-idb',
+  initialState: { name: 'Charlie', age: 35 },
+  options: {},
+})
+
+// ─── Компонент-пример ───────────────────────────────────────────────────────
+
 export function FactoryExample() {
-  // Вариант 1: StorageFactory.createMemory
-  const [memStorage] = useState(() =>
-    StorageFactory.createMemory<UserState>({
-      name: 'factory-memory',
-      initialState: { name: 'Alice', age: 25 },
-    }),
-  )
-
-  // Вариант 2: StorageFactory.createLocal
-  const [localStore] = useState(() =>
-    StorageFactory.createLocal<UserState>({
-      name: 'factory-local',
-      initialState: { name: 'Bob', age: 30 },
-    }),
-  )
-
-  // Вариант 3: StorageFactory.create (универсальный, возвращает IStorage)
-  const [universalStore] = useState(() =>
-    StorageFactory.create<UserState>({
-      name: 'factory-universal',
-      type: 'memory',
-      initialState: { name: 'Charlie', age: 35 },
-    }),
-  )
-
-  const [readyCount, setReadyCount] = useState(0)
   const [states, setStates] = useState<Record<string, UserState>>({})
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-    const storages = [memStorage, localStore, universalStore]
+    const storages = [memStorage, localStore, idbStore]
 
     Promise.all(storages.map((s) => s.initialize())).then(() => {
       if (cancelled) return
-      setReadyCount(3)
-      refreshStates()
+      setReady(true)
+      refresh()
     })
 
-    function refreshStates() {
+    function refresh() {
       setStates({
         memory: memStorage.getStateSync(),
         local: localStore.getStateSync(),
-        universal: universalStore.getStateSync(),
+        idb: idbStore.getStateSync(),
       })
     }
 
-    const unsubs = storages.map((s) =>
-      s.subscribeToAll(() => refreshStates()),
-    )
+    const unsubs = storages.map((s) => s.subscribeToAll(() => refresh()))
 
     return () => {
       cancelled = true
       unsubs.forEach((u) => u())
-      storages.forEach((s) => s.destroy())
     }
-  }, [memStorage, localStore, universalStore])
+  }, [])
 
-  if (readyCount < 3) return <div>Initializing factories...</div>
+  if (!ready) return <div>Initializing...</div>
 
   return (
     <div style={cardStyle}>
       <h2>StorageFactory</h2>
+      <p>Фабрика для создания хранилищ. Альтернатива прямому <code>new MemoryStorage()</code>.</p>
 
-      <h4>createMemory → MemoryStorage</h4>
-      <StorageControls storage={memStorage} state={states.memory} label="memory" />
+      {/* ─── Типизированные методы ────────────────────────────────────── */}
+      <h3 style={sectionTitle}>Типизированные методы</h3>
+      <pre style={codeBlock}>{`import { StorageFactory } from 'synapse-storage/core'
 
-      <h4>createLocal → LocalStorage</h4>
-      <StorageControls storage={localStore} state={states.local} label="local" />
-
-      <h4>create(type: 'memory') → IStorage</h4>
-      <StorageControls storage={universalStore} state={states.universal} label="universal" />
-
-      <h4>Проверка типов:</h4>
-      <ul>
-        <li><code>memStorage instanceof MemoryStorage</code> → <strong>{String(memStorage instanceof MemoryStorage)}</strong></li>
-        <li><code>localStore instanceof LocalStorage</code> → <strong>{String(localStore instanceof LocalStorage)}</strong></li>
-        <li><code>universalStore instanceof MemoryStorage</code> → <strong>{String(universalStore instanceof MemoryStorage)}</strong></li>
-      </ul>
-    </div>
-  )
+interface UserState {
+  name: string
+  age: number
 }
 
-function StorageControls({ storage, state, label }: { storage: IStorage<UserState>; state?: UserState; label: string }) {
-  if (!state) return null
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <p>{label}: {JSON.stringify(state)}</p>
-      <div style={buttonRow}>
-        <button onClick={() => storage.set('age', (state.age || 0) + 1)}>age +1</button>
-        <button onClick={() => storage.update((s) => { s.name = s.name + '!' })}>name + !</button>
-      </div>
+// createMemory → MemoryStorage<T> (sync)
+const memStorage = StorageFactory.createMemory<UserState>({
+  name: 'factory-memory',
+  initialState: { name: 'Alice', age: 25 },
+})
+
+// createLocal → LocalStorage<T> (sync)
+const localStore = StorageFactory.createLocal<UserState>({
+  name: 'factory-local',
+  initialState: { name: 'Bob', age: 30 },
+})
+
+// createIndexedDB → IndexedDBStorage<T> (async)
+const idbStore = StorageFactory.createIndexedDB<UserState>({
+  name: 'factory-idb',
+  initialState: { name: 'Charlie', age: 35 },
+  options: {},
+})
+
+// Инициализация каждого
+await memStorage.initialize()
+await localStore.initialize()
+await idbStore.initialize()`}</pre>
+
+      {/* ─── Универсальный create ─────────────────────────────────────── */}
+      <h3 style={sectionTitle}>Универсальный create()</h3>
+      <pre style={codeBlock}>{`// create() — выбор типа через поле type
+// Возвращает ISyncStorage или IAsyncStorage в зависимости от type
+
+const sync = StorageFactory.create<UserState>({
+  type: 'memory',                 // → ISyncStorage<UserState>
+  name: 'universal-mem',
+  initialState: { name: 'A', age: 1 },
+})
+
+const sync = StorageFactory.create<UserState>({
+  type: 'localStorage',           // → ISyncStorage<UserState>
+  name: 'universal-local',
+  initialState: { name: 'B', age: 2 },
+})
+
+const async = StorageFactory.create<UserState>({
+  type: 'indexedDB',              // → IAsyncStorage<UserState>
+  name: 'universal-idb',
+  initialState: { name: 'C', age: 3 },
+  options: {},
+})`}</pre>
+
+      {/* ─── Демо ─────────────────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>Демо</h3>
+      {Object.entries(states).map(([key, st]) => (
+        <div key={key} style={{ marginBottom: 12 }}>
+          <strong>{key}:</strong> <code>{JSON.stringify(st)}</code>
+          <div style={buttonRow}>
+            <button onClick={() => {
+              const store = key === 'memory' ? memStorage : key === 'local' ? localStore : idbStore
+              store.set('age', (st.age || 0) + 1)
+            }}>age +1</button>
+            <button onClick={() => {
+              const store = key === 'memory' ? memStorage : key === 'local' ? localStore : idbStore
+              store.update((s) => { s.name = s.name + '!' })
+            }}>name + !</button>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

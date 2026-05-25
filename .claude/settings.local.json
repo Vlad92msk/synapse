@@ -20,7 +20,9 @@
       "Bash(/usr/local/bin/node:*)",
       "Read(//Users/vlad/.claude-ios/.nvm/versions/**)",
       "Bash(nvm ls:*)",
-      "Bash(grep -n \"export\" /Users/vlad/web_dev/synapse/packages/synapse/src/react/hooks/*.ts)"
+      "Bash(grep -n \"export\" /Users/vlad/web_dev/synapse/packages/synapse/src/react/hooks/*.ts)",
+      "Bash(npx vite:*)",
+      "Bash(grep:*)"
     ]
   }
 }

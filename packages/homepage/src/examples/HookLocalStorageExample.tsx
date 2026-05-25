@@ -1,6 +1,6 @@
-import type { IStorage } from 'synapse-storage/core'
+import type { ISyncStorage } from 'synapse-storage/core'
 import { useCreateStorage, useStorageSubscribe } from 'synapse-storage/react'
-import { cardStyle } from './styles'
+import { cardStyle, codeBlock, sectionTitle } from './styles'
 
 interface SettingsState {
   lang: string
@@ -9,7 +9,7 @@ interface SettingsState {
 }
 
 /**
- * Пример 6: useCreateStorage с type: 'localStorage'
+ * useCreateStorage с type: 'localStorage'
  */
 export function HookLocalStorageExample() {
   const { storage, isReady, isLoading } = useCreateStorage<SettingsState>({
@@ -19,19 +19,49 @@ export function HookLocalStorageExample() {
   })
 
   if (isLoading) return <div>Loading...</div>
-  if (!isReady || !storage) return <div>Initializing...</div>
+  if (!isReady) return <div>Initializing...</div>
 
   return (
     <div style={cardStyle}>
       <h2>useCreateStorage (localStorage)</h2>
-      <p>Перезагрузите страницу — данные сохранятся</p>
+      <p>Тот же хук, только с <code>type: 'localStorage'</code>. Данные переживают перезагрузку.</p>
 
+      {/* ─── Код ──────────────────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>Использование</h3>
+      <pre style={codeBlock}>{`import { useCreateStorage, useStorageSubscribe } from 'synapse-storage/react'
+
+interface SettingsState {
+  lang: string
+  notifications: boolean
+  volume: number
+}
+
+function SettingsPage() {
+  const { storage, isReady } = useCreateStorage<SettingsState>({
+    type: 'localStorage',         // ← единственное отличие от memory
+    name: 'hook-settings',
+    initialState: { lang: 'ru', notifications: true, volume: 50 },
+  })
+
+  if (!isReady) return <div>Loading...</div>
+
+  // Используем useStorageSubscribe для подписки на поля
+  const lang = useStorageSubscribe(storage, (s) => s.lang)
+  const volume = useStorageSubscribe(storage, (s) => s.volume)
+
+  // set/update/clear/reset — всё как с memory
+  storage.set('lang', 'en')
+  storage.set('volume', 75)
+}`}</pre>
+
+      {/* ─── Демо ─────────────────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>Демо (перезагрузите страницу — данные сохранятся)</h3>
       <SettingsDisplay storage={storage} />
     </div>
   )
 }
 
-function SettingsDisplay({ storage }: { storage: IStorage<SettingsState> }) {
+function SettingsDisplay({ storage }: { storage: ISyncStorage<SettingsState> }) {
   const lang = useStorageSubscribe(storage, (s) => s.lang)
   const notifications = useStorageSubscribe(storage, (s) => s.notifications)
   const volume = useStorageSubscribe(storage, (s) => s.volume)
@@ -46,32 +76,17 @@ function SettingsDisplay({ storage }: { storage: IStorage<SettingsState> }) {
           <option value="de">Deutsch</option>
         </select>
       </div>
-
       <div style={{ marginBottom: 8 }}>
         <label>
-          <input
-            type="checkbox"
-            checked={notifications ?? true}
-            onChange={(e) => storage.set('notifications', e.target.checked)}
-          />
+          <input type="checkbox" checked={notifications ?? true} onChange={(e) => storage.set('notifications', e.target.checked)} />
           {' '}Notifications
         </label>
       </div>
-
       <div style={{ marginBottom: 8 }}>
         <label>Volume: {volume}</label>
-        <input
-          type="range"
-          min={0}
-          max={100}
-          value={volume ?? 50}
-          onChange={(e) => storage.set('volume', Number(e.target.value))}
-        />
+        <input type="range" min={0} max={100} value={volume ?? 50} onChange={(e) => storage.set('volume', Number(e.target.value))} />
       </div>
-
-      <pre style={{ background: '#f5f5f5', padding: 8 }}>
-        {JSON.stringify({ lang, notifications, volume }, null, 2)}
-      </pre>
+      <pre style={codeBlock}>{JSON.stringify({ lang, notifications, volume }, null, 2)}</pre>
     </div>
   )
 }

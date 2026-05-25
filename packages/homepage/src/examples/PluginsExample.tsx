@@ -1,14 +1,10 @@
 import { useState, useEffect } from 'react'
-import { MemoryStorage } from 'synapse-storage/core'
+import { MemoryStorage, SyncStoragePluginModule } from 'synapse-storage/core'
 import type { ISyncStoragePlugin, PluginContext, StorageKeyType } from 'synapse-storage/core'
 import { useStorageSubscribe } from 'synapse-storage/react'
-import { cardStyle, buttonRow } from './styles'
+import { cardStyle, buttonRow, codeBlock, sectionTitle } from './styles'
 
-/**
- * Пример 10: Plugins — IStoragePlugin, хуки onBeforeSet/onAfterSet и т.д.
- */
-
-// --- Plugin 1: Логирование всех операций ---
+// ─── Plugin implementations ────────────────────────────────────────────────
 
 class LoggerPlugin implements ISyncStoragePlugin {
   name = 'logger'
@@ -21,58 +17,51 @@ class LoggerPlugin implements ISyncStoragePlugin {
 
   private log(msg: string) {
     this.logs.push(`[${new Date().toLocaleTimeString()}] ${msg}`)
-    if (this.logs.length > 20) this.logs.shift()
+    if (this.logs.length > 15) this.logs.shift()
     this.onUpdate?.()
   }
 
-  async initialize() {
-    this.log('Plugin initialized')
-  }
-
-  async destroy() {
-    this.log('Plugin destroyed')
-  }
+  async initialize() { this.log('Plugin initialized') }
+  async destroy() { this.log('Plugin destroyed') }
 
   onBeforeSet<T>(value: T, context: PluginContext): T {
-    this.log(`onBeforeSet: storage="${context.storageName}", value=${JSON.stringify(value).slice(0, 50)}`)
+    this.log(`beforeSet: storage="${context.storageName}"`)
     return value
   }
 
-  onAfterSet<T>(key: StorageKeyType, value: T, context: PluginContext): T {
-    this.log(`onAfterSet: key="${key}"`)
+  onAfterSet<T>(key: StorageKeyType, value: T, _ctx: PluginContext): T {
+    this.log(`afterSet: key="${key}"`)
     return value
   }
 
-  onBeforeGet(key: StorageKeyType, context: PluginContext): StorageKeyType {
-    this.log(`onBeforeGet: key="${key}"`)
+  onBeforeGet(key: StorageKeyType, _ctx: PluginContext): StorageKeyType {
+    this.log(`beforeGet: key="${key}"`)
     return key
   }
 
-  onAfterGet<T>(key: StorageKeyType, value: T | undefined, context: PluginContext): T | undefined {
-    this.log(`onAfterGet: key="${key}", found=${value !== undefined}`)
+  onAfterGet<T>(key: StorageKeyType, value: T | undefined, _ctx: PluginContext): T | undefined {
+    this.log(`afterGet: key="${key}", found=${value !== undefined}`)
     return value
   }
 
-  onBeforeDelete(key: StorageKeyType, context: PluginContext): boolean {
-    this.log(`onBeforeDelete: key="${key}" -> allowed`)
+  onBeforeDelete(key: StorageKeyType, _ctx: PluginContext): boolean {
+    this.log(`beforeDelete: key="${key}" → allowed`)
     return true
   }
 
-  onAfterDelete(key: StorageKeyType, context: PluginContext): void {
-    this.log(`onAfterDelete: key="${key}"`)
+  onAfterDelete(key: StorageKeyType, _ctx: PluginContext): void {
+    this.log(`afterDelete: key="${key}"`)
   }
 
-  onClear(context: PluginContext): void {
-    this.log('onClear: storage cleared')
+  onClear(_ctx: PluginContext): void {
+    this.log('onClear')
   }
 }
-
-// --- Plugin 2: Валидация (блокировка удаления защищенных ключей) ---
 
 class ProtectedKeysPlugin implements ISyncStoragePlugin {
   name = 'protected-keys'
   private protectedKeys: Set<string>
-  blockedAttempts: string[] = []
+  blockedLog: string[] = []
   private onUpdate?: () => void
 
   constructor(keys: string[], onUpdate?: () => void) {
@@ -80,22 +69,21 @@ class ProtectedKeysPlugin implements ISyncStoragePlugin {
     this.onUpdate = onUpdate
   }
 
-  onBeforeDelete(key: StorageKeyType, _context: PluginContext): boolean {
+  onBeforeDelete(key: StorageKeyType, _ctx: PluginContext): boolean {
     if (this.protectedKeys.has(String(key))) {
-      this.blockedAttempts.push(`Blocked delete of "${key}" at ${new Date().toLocaleTimeString()}`)
+      this.blockedLog.push(`Blocked delete "${key}" at ${new Date().toLocaleTimeString()}`)
+      if (this.blockedLog.length > 10) this.blockedLog.shift()
       this.onUpdate?.()
-      return false // Запрещаем удаление
+      return false // блокируем удаление
     }
     return true
   }
 }
 
-// --- Plugin 3: Трансформация данных (автоматический timestamp) ---
-
 class TimestampPlugin implements ISyncStoragePlugin {
   name = 'timestamp'
 
-  onBeforeSet<T>(value: T, _context: PluginContext): T {
+  onBeforeSet<T>(value: T, _ctx: PluginContext): T {
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
       return { ...value, _updatedAt: Date.now() } as T
     }
@@ -103,11 +91,12 @@ class TimestampPlugin implements ISyncStoragePlugin {
   }
 }
 
-// --- Демо компонент ---
+// ─── Demo ──────────────────────────────────────────────────────────────────
 
-// Внешние переменные для плагинов (нужен доступ для отображения логов)
-let loggerPlugin: LoggerPlugin
-let protectedPlugin: ProtectedKeysPlugin
+let loggerRef: LoggerPlugin
+let protectedRef: ProtectedKeysPlugin
+
+const pluginModule = new SyncStoragePluginModule(undefined, undefined, 'plugin-demo')
 
 const pluginStorage = new MemoryStorage<{
   user: { name: string; role: string; _updatedAt?: number }
@@ -120,139 +109,249 @@ const pluginStorage = new MemoryStorage<{
     settings: { theme: 'light' },
     systemConfig: { version: '1.0.0' },
   },
-})
+}, pluginModule)
 
 function PluginDemo() {
   const [, forceUpdate] = useState(0)
   const rerender = () => forceUpdate((c) => c + 1)
+  const [ready, setReady] = useState(false)
 
-  const [initialized, setInitialized] = useState(false)
   const user = useStorageSubscribe(pluginStorage, (s) => s.user)
   const settings = useStorageSubscribe(pluginStorage, (s) => s.settings)
+  const systemConfig = useStorageSubscribe(pluginStorage, (s) => s.systemConfig)
 
   useEffect(() => {
-    const init = async () => {
+    ;(async () => {
+      loggerRef = new LoggerPlugin(rerender)
+      protectedRef = new ProtectedKeysPlugin(['systemConfig'], rerender)
+
+      await pluginModule.add(loggerRef)
+      await pluginModule.add(protectedRef)
+      await pluginModule.add(new TimestampPlugin())
       await pluginStorage.initialize()
-
-      // Создаем и добавляем плагины
-      loggerPlugin = new LoggerPlugin(rerender)
-      protectedPlugin = new ProtectedKeysPlugin(['systemConfig'], rerender)
-      const timestampPlugin = new TimestampPlugin()
-
-      // Добавляем через pluginManager (доступен через storage)
-      // Плагины добавляются через конструктор или через прямой доступ
-      // В текущей реализации плагины передаются через pluginExecutor в BaseStorage
-      // Для демо используем прямой вызов хуков плагинов перед операциями
-
-      setInitialized(true)
-    }
-    init()
+      setReady(true)
+    })()
   }, [])
 
-  if (!initialized) return <div>Initializing...</div>
+  if (!ready) return <div>Initializing...</div>
 
   return (
     <div>
-      <h4>Storage State</h4>
-      <div style={{ fontSize: 12, fontFamily: 'monospace', background: '#f5f5f5', padding: 8, borderRadius: 4 }}>
-        <div>user: {JSON.stringify(user)}</div>
-        <div>settings: {JSON.stringify(settings)}</div>
-      </div>
+      <p>State:</p>
+      <pre style={{ ...codeBlock, fontSize: 11 }}>{JSON.stringify({ user, settings, systemConfig }, null, 2)}</pre>
 
-      <h4>Operations</h4>
       <div style={buttonRow}>
-        <button onClick={() => {
-          pluginStorage.set('user', { name: 'Bob', role: 'viewer' })
-        }}>
-          Set user to Bob
+        <button onClick={() => pluginStorage.set('user', { name: 'Bob', role: 'viewer' })}>
+          set user → Bob
         </button>
-        <button onClick={() => {
-          pluginStorage.set('settings', { theme: 'dark' })
-        }}>
-          Set theme to dark
+        <button onClick={() => pluginStorage.set('settings', { theme: 'dark' })}>
+          set theme → dark
         </button>
-        <button onClick={() => {
-          pluginStorage.remove('settings')
-        }}>
-          Remove settings (allowed)
+        <button onClick={() => pluginStorage.remove('settings')}>
+          remove settings (ok)
         </button>
-        <button onClick={() => {
-          pluginStorage.remove('systemConfig')
-        }}>
-          Remove systemConfig (protected)
+        <button onClick={() => pluginStorage.remove('systemConfig')}>
+          remove systemConfig (blocked)
         </button>
-        <button onClick={() => {
-          const val = pluginStorage.get('user')
-          alert(`get('user') -> ${JSON.stringify(val)}`)
-        }}>
-          Get user
+        <button onClick={() => { pluginStorage.get('user') }}>
+          get user
+        </button>
+        <button onClick={() => pluginStorage.reset()}>
+          reset
         </button>
       </div>
+
+      {loggerRef && loggerRef.logs.length > 0 && (
+        <div>
+          <p>Logger plugin log:</p>
+          <pre style={{ ...codeBlock, fontSize: 11, maxHeight: 150, overflow: 'auto' }}>
+            {loggerRef.logs.join('\n')}
+          </pre>
+        </div>
+      )}
+
+      {protectedRef && protectedRef.blockedLog.length > 0 && (
+        <div>
+          <p>Protected keys blocked:</p>
+          <pre style={{ ...codeBlock, fontSize: 11, color: '#c62828' }}>
+            {protectedRef.blockedLog.join('\n')}
+          </pre>
+        </div>
+      )}
     </div>
   )
 }
 
-// --- Plugin Interface Reference ---
-
-function PluginInterfaceReference() {
-  return (
-    <div style={{ padding: 8, background: '#f5f5f5', borderRadius: 4, marginTop: 8 }}>
-      <h4>ISyncStoragePlugin Interface</h4>
-      <pre style={{ fontSize: 11, overflow: 'auto', maxHeight: 250 }}>
-{`interface ISyncStoragePlugin {
-  name: string
-  initialize?(): Promise<void>
-  destroy?(): Promise<void>
-
-  // Хуки операции SET
-  onBeforeSet?<T>(value: T, context: PluginContext): T
-  onAfterSet?<T>(key: StorageKeyType, value: T, context: PluginContext): T
-
-  // Хуки операции GET
-  onBeforeGet?(key: StorageKeyType, context: PluginContext): StorageKeyType
-  onAfterGet?<T>(key: StorageKeyType, value: T | undefined, context: PluginContext): T | undefined
-
-  // Хуки операции DELETE
-  onBeforeDelete?(key: StorageKeyType, context: PluginContext): boolean  // false = block
-  onAfterDelete?(key: StorageKeyType, context: PluginContext): void
-
-  // Хук операции CLEAR
-  onClear?(context: PluginContext): void
-}
-
-interface PluginContext {
-  storageName: string
-  timestamp: number
-  metadata?: Record<string, any>
-}`}
-      </pre>
-    </div>
-  )
-}
+// ─── Main ──────────────────────────────────────────────────────────────────
 
 export function PluginsExample() {
   return (
     <div style={cardStyle}>
-      <h2>Storage Plugins (IStoragePlugin)</h2>
-      <p style={{ fontSize: 13, color: '#666' }}>
-        Плагины позволяют перехватывать и модифицировать операции хранилища через хуки жизненного цикла.
+      <h2>Plugins (ISyncStoragePlugin / IAsyncStoragePlugin)</h2>
+      <p>
+        Плагины перехватывают операции хранилища через хуки жизненного цикла.
+        Можно трансформировать данные, блокировать операции, логировать.
       </p>
 
-      <PluginDemo />
-      <PluginInterfaceReference />
+      {/* ─── Интерфейс ───────────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>Интерфейс плагина</h3>
+      <pre style={codeBlock}>{`import type { ISyncStoragePlugin, PluginContext, StorageKeyType } from 'synapse-storage/core'
 
-      <h4>API заметки:</h4>
-      <ul style={{ fontSize: 12, color: '#666' }}>
-        <li><code>ISyncStoragePlugin</code> / <code>IAsyncStoragePlugin</code> — интерфейсы плагинов с хуками жизненного цикла</li>
-        <li><code>onBeforeSet</code> — может трансформировать значение перед записью</li>
-        <li><code>onAfterSet</code> — пост-обработка после записи</li>
-        <li><code>onBeforeGet</code> — может модифицировать ключ запроса</li>
-        <li><code>onAfterGet</code> — может модифицировать полученное значение</li>
-        <li><code>onBeforeDelete</code> — возвращает boolean, false блокирует удаление</li>
-        <li><code>PluginContext</code> — содержит storageName, timestamp, metadata</li>
-        <li>Плагины выполняются последовательно в порядке добавления</li>
-        <li><code>IPluginManager</code> — add/remove/get/getAll/initialize/destroy</li>
-      </ul>
+// Для sync-хранилищ (MemoryStorage, LocalStorage)
+interface ISyncStoragePlugin {
+  name: string                    // уникальное имя плагина
+  initialize?(): Promise<void>    // вызывается при добавлении
+  destroy?(): Promise<void>       // вызывается при удалении
+
+  // SET hooks
+  onBeforeSet?<T>(value: T, context: PluginContext): T        // трансформация значения
+  onAfterSet?<T>(key: StorageKeyType, value: T, context: PluginContext): T
+
+  // GET hooks
+  onBeforeGet?(key: StorageKeyType, context: PluginContext): StorageKeyType  // модификация ключа
+  onAfterGet?<T>(key: StorageKeyType, value: T | undefined, context: PluginContext): T | undefined
+
+  // DELETE hooks
+  onBeforeDelete?(key: StorageKeyType, context: PluginContext): boolean  // false = блокировать
+  onAfterDelete?(key: StorageKeyType, context: PluginContext): void
+
+  // CLEAR hook
+  onClear?(context: PluginContext): void
+}
+
+// Контекст, доступный в каждом хуке
+interface PluginContext {
+  storageName: string
+  timestamp: number
+  metadata?: Record<string, any>
+}
+
+// Для async-хранилищ (IndexedDB) — IAsyncStoragePlugin
+// Тот же интерфейс, но хуки возвращают Promise<T>`}</pre>
+
+      {/* ─── Создание плагина ─────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>Создание плагина</h3>
+      <pre style={codeBlock}>{`// Пример 1: Logger — логирует все операции
+class LoggerPlugin implements ISyncStoragePlugin {
+  name = 'logger'
+
+  onBeforeSet<T>(value: T, context: PluginContext): T {
+    console.log(\`[set] storage="\${context.storageName}"\`, value)
+    return value  // ВАЖНО: вернуть value (можно модифицированный)
+  }
+
+  onBeforeDelete(key: StorageKeyType, context: PluginContext): boolean {
+    console.log(\`[delete] key="\${key}"\`)
+    return true   // true = разрешить, false = заблокировать
+  }
+}
+
+// Пример 2: Protected keys — блокирует удаление определённых ключей
+class ProtectedKeysPlugin implements ISyncStoragePlugin {
+  name = 'protected-keys'
+  private protectedKeys: Set<string>
+
+  constructor(keys: string[]) {
+    this.protectedKeys = new Set(keys)
+  }
+
+  onBeforeDelete(key: StorageKeyType): boolean {
+    return !this.protectedKeys.has(String(key))  // false = блокировать
+  }
+}
+
+// Пример 3: Timestamp — автоматически добавляет _updatedAt
+class TimestampPlugin implements ISyncStoragePlugin {
+  name = 'timestamp'
+
+  onBeforeSet<T>(value: T): T {
+    if (typeof value === 'object' && value !== null) {
+      return { ...value, _updatedAt: Date.now() } as T
+    }
+    return value
+  }
+}`}</pre>
+
+      {/* ─── Подключение к хранилищу ──────────────────────────────────── */}
+      <h3 style={sectionTitle}>Подключение к хранилищу</h3>
+      <pre style={codeBlock}>{`import { MemoryStorage, SyncStoragePluginModule } from 'synapse-storage/core'
+
+// 1. Создаём модуль плагинов
+const pluginModule = new SyncStoragePluginModule(
+  undefined,        // parentExecutor (для цепочек)
+  undefined,        // logger
+  'my-store',       // storageName (для PluginContext)
+)
+
+// 2. Добавляем плагины
+await pluginModule.add(new LoggerPlugin())
+await pluginModule.add(new ProtectedKeysPlugin(['config']))
+await pluginModule.add(new TimestampPlugin())
+
+// 3. Передаём модуль в хранилище
+const storage = new MemoryStorage<MyState>({
+  name: 'my-store',
+  initialState: { ... },
+}, pluginModule)  // <-- второй аргумент конструктора
+
+await storage.initialize()
+
+// Теперь все операции проходят через плагины:
+storage.set('user', { name: 'Bob' })
+// → LoggerPlugin.onBeforeSet (логирует)
+// → TimestampPlugin.onBeforeSet (добавляет _updatedAt)
+// → записывает в хранилище
+// → LoggerPlugin.onAfterSet
+
+storage.remove('config')
+// → ProtectedKeysPlugin.onBeforeDelete → false → удаление заблокировано`}</pre>
+
+      {/* ─── Управление плагинами ─────────────────────────────────────── */}
+      <h3 style={sectionTitle}>Управление плагинами (IPluginManager)</h3>
+      <pre style={codeBlock}>{`// SyncStoragePluginModule реализует IPluginManager<ISyncStoragePlugin>
+
+// Добавить плагин (вызывает plugin.initialize())
+await pluginModule.add(new LoggerPlugin())
+
+// Удалить плагин (вызывает plugin.destroy())
+await pluginModule.remove('logger')
+
+// Получить плагин по имени
+const logger = pluginModule.get('logger')  // ISyncStoragePlugin | undefined
+
+// Получить все плагины
+const all = pluginModule.getAll()  // ISyncStoragePlugin[]
+
+// Инициализировать все плагины
+await pluginModule.initialize()
+
+// Уничтожить все плагины
+await pluginModule.destroy()
+
+// Для IndexedDB: AsyncStoragePluginModule + IAsyncStoragePlugin`}</pre>
+
+      {/* ─── Live demo ───────────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>Live demo</h3>
+      <p style={{ fontSize: 12, color: '#666' }}>
+        3 плагина: Logger (логирует), ProtectedKeys (блокирует удаление systemConfig),
+        Timestamp (добавляет _updatedAt к объектам).
+      </p>
+      <PluginDemo />
+
+      {/* ─── Порядок выполнения ───────────────────────────────────────── */}
+      <h3 style={sectionTitle}>Порядок выполнения</h3>
+      <pre style={codeBlock}>{`// Плагины выполняются последовательно в порядке добавления
+await pluginModule.add(pluginA)  // первый
+await pluginModule.add(pluginB)  // второй
+
+storage.set('key', value)
+// 1. pluginA.onBeforeSet(value) → transformedA
+// 2. pluginB.onBeforeSet(transformedA) → transformedB
+// 3. запись transformedB в хранилище
+// 4. pluginA.onAfterSet(key, transformedB)
+// 5. pluginB.onAfterSet(key, transformedB)
+
+// onBeforeDelete: если любой вернёт false — удаление блокируется`}</pre>
     </div>
   )
 }

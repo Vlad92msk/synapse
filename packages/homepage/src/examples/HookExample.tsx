@@ -1,6 +1,6 @@
-import type { IStorage } from 'synapse-storage/core'
+import type { ISyncStorage } from 'synapse-storage/core'
 import { useCreateStorage, useStorageSubscribe } from 'synapse-storage/react'
-import { cardStyle, buttonRow } from './styles'
+import { cardStyle, buttonRow, codeBlock, sectionTitle } from './styles'
 
 interface FormState {
   username: string
@@ -9,8 +9,7 @@ interface FormState {
 }
 
 /**
- * Пример 5: Создание хранилища через useCreateStorage хук
- * + чтение данных через useStorageSubscribe
+ * useCreateStorage (memory) + useStorageSubscribe
  */
 export function HookExample() {
   const { storage, isReady, isLoading, hasError, status } = useCreateStorage<FormState>({
@@ -21,24 +20,72 @@ export function HookExample() {
 
   if (isLoading) return <div>Loading...</div>
   if (hasError) return <div>Error: {status.error?.message}</div>
-  if (!isReady || !storage) return <div>Initializing...</div>
+  if (!isReady) return <div>Initializing...</div>
 
   return (
     <div style={cardStyle}>
-      <h2>useCreateStorage + useStorageSubscribe</h2>
-      <p>Хук создает, инициализирует и уничтожает storage автоматически</p>
+      <h2>useCreateStorage (memory)</h2>
+      <p>React-хук для создания хранилища. Автоматически инициализирует и уничтожает при размонтировании.</p>
 
+      {/* ─── useCreateStorage ─────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>useCreateStorage</h3>
+      <pre style={codeBlock}>{`import { useCreateStorage } from 'synapse-storage/react'
+
+interface FormState {
+  username: string
+  email: string
+  agreed: boolean
+}
+
+function MyComponent() {
+  const { storage, isReady, isLoading, hasError, status } = useCreateStorage<FormState>({
+    type: 'memory',           // 'memory' | 'localStorage' | 'indexedDB'
+    name: 'hook-form',
+    initialState: { username: '', email: '', agreed: false },
+  })
+
+  // Опционально: настройки lifecycle
+  const result = useCreateStorage<FormState>(
+    { type: 'memory', name: 'hook-form', initialState: { ... } },
+    {
+      autoInitialize: true,    // авто-инициализация (default: true)
+      destroyOnUnmount: true,  // уничтожить при unmount (default: true для memory/local)
+    }
+  )
+
+  // isReady = true  → storage доступен (тип: ISyncStorage<FormState>)
+  // isReady = false → storage = null
+  if (!isReady) return <div>Loading...</div>
+
+  // После isReady, storage гарантированно не null
+  storage.set('username', 'John')
+}`}</pre>
+
+      {/* ─── useStorageSubscribe ──────────────────────────────────────── */}
+      <h3 style={sectionTitle}>useStorageSubscribe</h3>
+      <pre style={codeBlock}>{`import { useStorageSubscribe } from 'synapse-storage/react'
+
+function FormFields({ storage }: { storage: ISyncStorage<FormState> }) {
+  // Подписка на конкретное поле через selector
+  const username = useStorageSubscribe(storage, (s) => s.username)
+  const email = useStorageSubscribe(storage, (s) => s.email)
+  const agreed = useStorageSubscribe(storage, (s) => s.agreed)
+
+  // Подписка на всё состояние
+  const fullState = useStorageSubscribe(storage, (s) => s)
+
+  return <div>{username} — {email} — {String(agreed)}</div>
+}`}</pre>
+
+      {/* ─── Демо ─────────────────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>Демо</h3>
       <FormFields storage={storage} />
       <FormDisplay storage={storage} />
     </div>
   )
 }
 
-/**
- * useStorageSubscribe с разными селекторами
- */
-function FormFields({ storage }: { storage: IStorage<FormState> }) {
-  // Подписка на конкретное поле через selector
+function FormFields({ storage }: { storage: ISyncStorage<FormState> }) {
   const username = useStorageSubscribe(storage, (s) => s.username)
   const email = useStorageSubscribe(storage, (s) => s.email)
   const agreed = useStorageSubscribe(storage, (s) => s.agreed)
@@ -47,25 +94,15 @@ function FormFields({ storage }: { storage: IStorage<FormState> }) {
     <div>
       <div style={{ marginBottom: 8 }}>
         <label>Username: </label>
-        <input
-          value={username ?? ''}
-          onChange={(e) => storage.set('username', e.target.value)}
-        />
+        <input value={username ?? ''} onChange={(e) => storage.set('username', e.target.value)} />
       </div>
       <div style={{ marginBottom: 8 }}>
         <label>Email: </label>
-        <input
-          value={email ?? ''}
-          onChange={(e) => storage.set('email', e.target.value)}
-        />
+        <input value={email ?? ''} onChange={(e) => storage.set('email', e.target.value)} />
       </div>
       <div style={{ marginBottom: 8 }}>
         <label>
-          <input
-            type="checkbox"
-            checked={agreed ?? false}
-            onChange={(e) => storage.set('agreed', e.target.checked)}
-          />
+          <input type="checkbox" checked={agreed ?? false} onChange={(e) => storage.set('agreed', e.target.checked)} />
           {' '}I agree
         </label>
       </div>
@@ -73,29 +110,19 @@ function FormFields({ storage }: { storage: IStorage<FormState> }) {
   )
 }
 
-/**
- * Подписка на всё состояние целиком
- */
-function FormDisplay({ storage }: { storage: IStorage<FormState> }) {
-  // Подписка на всё состояние
+function FormDisplay({ storage }: { storage: ISyncStorage<FormState> }) {
   const fullState = useStorageSubscribe(storage, (s) => s)
 
   return (
     <div>
-      <h4>Полное состояние (useStorageSubscribe с identity selector):</h4>
-      <pre style={{ background: '#f5f5f5', padding: 8 }}>{JSON.stringify(fullState, null, 2)}</pre>
-
+      <h4>Полное состояние:</h4>
+      <pre style={codeBlock}>{JSON.stringify(fullState, null, 2)}</pre>
       <div style={buttonRow}>
-        <button onClick={() => storage.update((s) => {
-          s.username = ''
-          s.email = ''
-          s.agreed = false
-        })}>
+        <button onClick={() => storage.update((s) => { s.username = ''; s.email = ''; s.agreed = false })}>
           reset via update()
         </button>
-        <button onClick={() => storage.clear()}>
-          clear()
-        </button>
+        <button onClick={() => storage.clear()}>clear()</button>
+        <button onClick={() => storage.reset()}>reset()</button>
       </div>
     </div>
   )
