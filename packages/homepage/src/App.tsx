@@ -25,6 +25,7 @@ import { PluginsExample } from './examples/PluginsExample'
 import { SingletonExample } from './examples/SingletonExample'
 import { ApiClientExample } from './examples/ApiClientExample'
 import { DependenciesExample } from './examples/DependenciesExample'
+import { PokemonAdvancedExample } from './examples/pokemon-advanced'
 
 const groupLabels: Record<string, string> = {
   create: 'Создание хранилищ',
@@ -57,6 +58,7 @@ const examples = [
   { id: 'synapse-effects', label: 'createSynapse (effects)', component: CreateSynapseEffectsExample, group: 'synapse' },
   { id: 'dispatcher-detail', label: 'Dispatcher (подробно)', component: DispatcherDetailedExample, group: 'synapse' },
   { id: 'dependencies', label: 'Dependencies', component: DependenciesExample, group: 'synapse' },
+  { id: 'pokemon-advanced', label: 'Pokemon Pokedex (advanced)', component: PokemonAdvancedExample, group: 'synapse' },
   // React
   { id: 'synapse-ctx', label: 'createSynapseCtx', component: SynapseCtxExample, group: 'react' },
   { id: 'await-synapse', label: 'awaitSynapse', component: AwaitSynapseExample, group: 'react' },

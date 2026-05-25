@@ -1,0 +1,1 @@
+export { PokemonAdvancedExample } from './PokemonAdvancedExample'

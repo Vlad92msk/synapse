@@ -23,6 +23,8 @@ type BaseSynapseConfig<TStore extends Record<string, any>, TSelectors = any, TEx
   | { storage: IStorage<TStore>; createStorageFn?: undefined }
   | { storage?: undefined; createStorageFn: StorageCreatorFunction<TStore> }
 ) & {
+  // Асинхронная функция инициализации, вызывается после готовности зависимостей, до инициализации хранилища
+  setup?: () => Promise<void> | void
   // Зависимости от других synapse
   dependencies?: SynapseDependency[]
   // Таймаут ожидания готовности зависимостей (мс, по умолчанию 30000)
@@ -122,6 +124,11 @@ function validateSynapseConfig(config: any): void {
         throw new Error(`Effect at index ${index} must be a function`)
       }
     })
+  }
+
+  // Проверяем setup
+  if (config.setup && typeof config.setup !== 'function') {
+    throw new Error('"setup" must be a function')
   }
 
   // Проверяем внешние селекторы
@@ -292,6 +299,15 @@ export async function createSynapse<
   // 1. Сначала ждем готовности всех зависимостей
   await waitForDependencies(config.dependencies, config.dependencyTimeout)
 
+  // 1.5. Выполняем setup (например, инициализация API-клиентов)
+  if (config.setup) {
+    try {
+      await config.setup()
+    } catch (error) {
+      handleOperationError('createSynapse: setup failed', error)
+    }
+  }
+
   // 2. Создаем и инициализируем хранилище
   const storageInstance = (config.createStorageFn ? await config.createStorageFn() : config.storage!) as TStorage
 
@@ -383,3 +399,4 @@ export async function createSynapse<
 
   return result
 }
+

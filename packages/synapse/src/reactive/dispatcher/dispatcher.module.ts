@@ -57,8 +57,8 @@ interface ActionExecutionOptions<TParams, TResult> {
  * Параметры для создания действия
  */
 export interface ActionDefinition<TParams, TResult> {
-  /** Тип действия для идентификации в потоке и эффектах */
-  type: string
+  /** Тип действия для идентификации в потоке и эффектах. Если не указан — будет выведен из имени ключа в createDispatcher */
+  type?: string
   /** Функция, выполняющая действие и возвращающая результат (payload) */
   action: (params: TParams) => Promise<TResult> | TResult
   /** Дополнительные метаданные (опционально) */
@@ -69,7 +69,8 @@ export interface ActionDefinition<TParams, TResult> {
  * Определение типа для watcher'а
  */
 interface WatcherDefinition<T, R> {
-  type: string
+  /** Тип watcher'а для идентификации в потоке. Если не указан — будет выведен из имени ключа в createDispatcher */
+  type?: string
   selector: (state: T) => R
   meta?: Record<string, any>
   // Опционально - функция для определения, изменилось ли значение
@@ -360,13 +361,16 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
     actionConfig: ActionDefinition<TParams, TResult>,
     executionOptions?: ActionExecutionOptions<TParams, TResult>,
   ): DispatchFunction<TParams, TResult> {
-    const actionType = `[${this.storage.name}]${actionConfig.type}`
+    const hasExplicitType = !!actionConfig.type
+    let actionType = hasExplicitType ? `[${this.storage.name}]${actionConfig.type}` : ''
 
-    // Register action executor in the registry
-    this.actionRegistry.set(actionType, {
-      action: actionConfig.action,
-      worker: executionOptions?.worker,
-    })
+    // Register action executor in the registry (сразу, если тип известен)
+    if (hasExplicitType) {
+      this.actionRegistry.set(actionType, {
+        action: actionConfig.action,
+        worker: executionOptions?.worker,
+      })
+    }
 
     // Для мемоизации храним последние аргументы и результат
     let lastParams: TParams | undefined
@@ -375,6 +379,10 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
 
     // Создаем функцию диспетчеризации
     const dispatchFn = async (params: TParams): Promise<TResult> => {
+      if (!actionType) {
+        throw new Error('Action type not assigned. Provide "type" in config or use within createDispatcher.')
+      }
+
       // Проверяем мемоизацию
       if (executionOptions?.memoize && hasCached) {
         if (executionOptions.memoize(params, lastParams!, lastResult!)) {
@@ -403,11 +411,12 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
     }
 
     dispatchFn._type = 'dispatch'
-    // Добавляем тип действия как свойство функции
+    // Добавляем тип действия как свойство функции (configurable для deferred assignment)
     Object.defineProperty(dispatchFn, 'actionType', {
       value: actionType,
       writable: false,
       enumerable: true,
+      configurable: true,
     })
 
     // Добавляем метаданные, если они есть
@@ -419,13 +428,34 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
       })
     }
 
+    // Deferred type assignment — используется в createDispatcher для авто-генерации типа из имени ключа
+    if (!hasExplicitType) {
+      const self = this
+      ;(dispatchFn as any)._assignType = (name: string) => {
+        actionType = `[${self.storage.name}]${name}`
+
+        self.actionRegistry.set(actionType, {
+          action: actionConfig.action,
+          worker: executionOptions?.worker,
+        })
+
+        Object.defineProperty(dispatchFn, 'actionType', {
+          value: actionType,
+          writable: false,
+          enumerable: true,
+          configurable: true,
+        })
+      }
+    }
+
     return dispatchFn as DispatchFunction<TParams, TResult>
   }
   /**
    * Создает watcher для отслеживания изменений в хранилище
    */
   public createWatcher<R>(config: WatcherDefinition<T, R>): WatcherFunction<R> {
-    const actionType = `[${this.storage.name}]${config.type}`
+    const hasExplicitType = !!config.type
+    let actionType = hasExplicitType ? `[${this.storage.name}]${config.type}` : ''
 
     // Lazy-подписка: подписываемся на storage только при первом subscribe на Observable
     let storageUnsubscribe: VoidFunction | null = null
@@ -504,6 +534,7 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
       value: actionType,
       writable: false,
       enumerable: true,
+      configurable: true,
     })
 
     if (config.meta) {
@@ -524,6 +555,21 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
       writable: false,
       enumerable: true,
     })
+
+    // Deferred type assignment — используется в createDispatcher для авто-генерации типа из имени ключа
+    if (!hasExplicitType) {
+      const self = this
+      ;(watcherFn as any)._assignType = (name: string) => {
+        actionType = `[${self.storage.name}]${name}`
+
+        Object.defineProperty(watcherFn, 'actionType', {
+          value: actionType,
+          writable: false,
+          enumerable: true,
+          configurable: true,
+        })
+      }
+    }
 
     //@ts-ignore
     return watcherFn as WatcherFunction<R>
@@ -595,6 +641,11 @@ export function createDispatcher<TState extends Record<string, any>, TActions ex
     if (typeof fn === 'function') {
       const type = (fn as any)._type
       if (type === 'dispatch' || type === 'watchers') {
+        // Авто-назначение типа из имени ключа, если type не был указан явно
+        if (typeof (fn as any)._assignType === 'function') {
+          ;(fn as any)._assignType(key)
+          delete (fn as any)._assignType
+        }
         // @ts-ignore
         dispatcher[type][key] = fn
       }
