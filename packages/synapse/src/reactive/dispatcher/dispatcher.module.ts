@@ -47,8 +47,6 @@ export interface Action<T = unknown> {
 
 // Параметры исполнения функции действия
 interface ActionExecutionOptions<TParams, TResult> {
-  // Веб-воркер для выполнения действия
-  worker?: Worker
   // Функция мемоизации
   memoize?: (currentArgs: TParams, previousArgs: TParams, previousResult: TResult) => boolean
 }
@@ -92,7 +90,7 @@ export interface WatcherFunction<R> {
 /**
  * Расширенный тип для функции настройки действий с поддержкой дополнительных утилит
  */
-export type ActionsSetupWithUtils<T extends Record<string, unknown>> = (
+export type ActionsSetupWithUtils<T extends Record<string, any>> = (
   storage: IStorage<T>,
   utils: {
     createAction: ActionCreatorFactory
@@ -152,25 +150,8 @@ export type WatcherActions<T> = {
 interface DispatcherOptions<T extends Record<string, any>> {
   // Хранилище - обязательный параметр
   storage: IStorage<T>
-  // Опциональные параметры
-  worker?: Worker
   // DispatcherMiddleware для обработки действий
   middlewares?: EnhancedMiddleware<T>[]
-}
-
-/**
- * Интерфейс для API middleware
- */
-export interface DispatcherMiddlewareAPI<T extends Record<string, any>> {
-  getState: () => T | Promise<T>
-  dispatch: (action: Action) => Promise<any>
-}
-
-/**
- * Интерфейс для middleware
- */
-export interface DispatcherMiddleware<T extends Record<string, any> = any> {
-  (api: DispatcherMiddlewareAPI<T>): (next: (action: Action) => Promise<any>) => (action: Action) => Promise<any>
 }
 
 /**
@@ -199,7 +180,7 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
   private dispatchChain: ((action: Action) => Promise<any>) | null = null
 
   // Registry of action executors by action type
-  private actionRegistry = new Map<string, { action: (params: any) => Promise<any> | any; worker?: Worker }>()
+  private actionRegistry = new Map<string, { action: (params: any) => Promise<any> | any }>()
 
   // Temporary storage for passing params through middleware chain without polluting action object
   private actionParams = new WeakMap<object, any>()
@@ -210,7 +191,7 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
   /**
    * Создает новый экземпляр Dispatcher
    */
-  constructor(private options: DispatcherOptions<T>) {
+  constructor(options: DispatcherOptions<T>) {
     this.storage = options.storage
 
     // Создаем API для middleware сразу
@@ -264,10 +245,6 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
     }
 
     const params = this.actionParams.get(action)
-
-    if (entry.worker) {
-      return this.executeInWorker(entry.worker, action.type, [params], entry.action)
-    }
     return Promise.resolve(entry.action(params))
   }
 
@@ -366,10 +343,7 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
 
     // Register action executor in the registry (сразу, если тип известен)
     if (hasExplicitType) {
-      this.actionRegistry.set(actionType, {
-        action: actionConfig.action,
-        worker: executionOptions?.worker,
-      })
+      this.actionRegistry.set(actionType, { action: actionConfig.action })
     }
 
     // Для мемоизации храним последние аргументы и результат
@@ -434,10 +408,7 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
       ;(dispatchFn as any)._assignType = (name: string) => {
         actionType = `[${self.storage.name}]${name}`
 
-        self.actionRegistry.set(actionType, {
-          action: actionConfig.action,
-          worker: executionOptions?.worker,
-        })
+        self.actionRegistry.set(actionType, { action: actionConfig.action })
 
         Object.defineProperty(dispatchFn, 'actionType', {
           value: actionType,
@@ -575,46 +546,6 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
     return watcherFn as WatcherFunction<R>
   }
 
-  /**
-   * Выполняет действие в worker
-   */
-  private async executeInWorker<TParams, TResult>(
-    worker: Worker,
-    actionType: string,
-    args: TParams[],
-    fallbackAction?: (params: TParams) => Promise<TResult> | TResult,
-  ): Promise<TResult> {
-    // Логика остается без изменений
-    return new Promise((resolve, reject) => {
-      const requestId = `${actionType}_${Date.now()}_${Math.random()}`
-
-      const timeoutId = setTimeout(() => {
-        worker.removeEventListener('message', handleMessage)
-        reject(new Error(`Worker execution timeout for action: ${actionType}`))
-      }, 30000)
-
-      const handleMessage = (event: MessageEvent) => {
-        if (event.data.requestId === requestId) {
-          clearTimeout(timeoutId)
-          worker.removeEventListener('message', handleMessage)
-
-          if (event.data.error) {
-            reject(new Error(event.data.error))
-          } else {
-            resolve(event.data.result)
-          }
-        }
-      }
-
-      worker.addEventListener('message', handleMessage)
-
-      worker.postMessage({
-        type: actionType,
-        args,
-        requestId,
-      })
-    })
-  }
 }
 
 /**
@@ -658,3 +589,33 @@ export function createDispatcher<TState extends Record<string, any>, TActions ex
   }
 }
 export type CreateDispatcherType = ReturnType<typeof createDispatcher>
+
+/**
+ * Хелпер для определения экшенов с сохранением узких типов.
+ *
+ * Проблема `ActionsSetupWithUtils<T>`: явная аннотация расширяет return type
+ * до `Record<string, DispatchFunction<any,any> | WatcherFunction<any>>`,
+ * из-за чего `DispatchActions<ReturnType<…>>` схлопывается в `never`.
+ *
+ * `defineActions` решает это: параметры (`storage`, `createAction`, `createWatcher`)
+ * типизируются через constraint, а return type **инферится** из тела функции.
+ *
+ * @example
+ * ```ts
+ * export const myActions = defineActions<MyState>((storage, { createAction, createWatcher }) => ({
+ *   doSomething: createAction<void, string>({ action: () => { ... } }),
+ *   watchCount: createWatcher({ selector: s => s.items.length }),
+ * }))
+ * ```
+ */
+export function defineActions<TState extends Record<string, any>>() {
+  return <TReturn extends Record<string, DispatchFunction<any, any> | WatcherFunction<any>>>(
+    fn: (
+      storage: IStorage<TState>,
+      utils: {
+        createAction: ActionCreatorFactory
+        createWatcher: <R>(config: WatcherDefinition<TState, R>) => WatcherFunction<R>
+      },
+    ) => TReturn,
+  ) => fn
+}

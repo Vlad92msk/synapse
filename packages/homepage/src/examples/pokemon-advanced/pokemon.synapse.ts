@@ -24,7 +24,6 @@ export const synapsePromise = createSynapse({
   }),
 
   effects: [pokemonEffects],
-  dependencies: []
 })
 
 export type PokemonSynapse = Awaited<typeof synapsePromise>

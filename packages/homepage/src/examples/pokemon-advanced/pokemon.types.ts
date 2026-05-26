@@ -15,7 +15,7 @@ export interface PokemonDetails {
   weight: number
 }
 
-export type ApiStatus = 'idle' | 'loading' | 'success' | 'error'
+export type ApiStatus = 'idle' | 'loading' | 'success' | 'error' | 'reset'
 
 export interface ApiRequestState {
   status: ApiStatus
