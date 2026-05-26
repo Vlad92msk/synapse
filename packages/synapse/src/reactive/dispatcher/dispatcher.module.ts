@@ -3,6 +3,7 @@ import { Observable, Subject, share } from 'rxjs'
 import { handleCallbackError } from '../../_utils/error-handling.util'
 import type { IStorage } from '../../core'
 import { TypedAction } from '../effects'
+import type { ActionExecutionOptions, ActionRecipe, WatcherRecipe } from './standalone'
 
 /**
  * Расширенное API для middleware
@@ -45,11 +46,7 @@ export interface Action<T = unknown> {
   meta?: Record<string, any>
 }
 
-// Параметры исполнения функции действия
-interface ActionExecutionOptions<TParams, TResult> {
-  // Функция мемоизации
-  memoize?: (currentArgs: TParams, previousArgs: TParams, previousResult: TResult) => boolean
-}
+// ActionExecutionOptions импортирован из ./standalone
 
 /**
  * Параметры для создания действия
@@ -96,7 +93,7 @@ export type ActionsSetupWithUtils<T extends Record<string, any>> = (
     createAction: ActionCreatorFactory
     createWatcher: <R>(config: WatcherDefinition<T, R>) => WatcherFunction<R>
   },
-) => Record<string, DispatchFunction<any, any> | WatcherFunction<any>>
+) => Record<string, DispatchFunction<any, any> | WatcherFunction<any> | ActionRecipe<T, any, any> | WatcherRecipe<T, any>>
 
 /**
  * Расширенная функция диспетчеризации
@@ -115,7 +112,7 @@ export interface DispatchFunction<TParams, TResult> {
 /**
  * Тип для фабрики создателей действий
  */
-type ActionCreatorFactory = <TParams, TResult>(
+type ActionCreatorFactory = <TParams = void, TResult = void>(
   config: ActionDefinition<TParams, TResult>,
   executionOptions?: ActionExecutionOptions<TParams, TResult>,
 ) => DispatchFunction<TParams, TResult>
@@ -133,15 +130,27 @@ export type ActionsResult<F> = F extends (create: ActionCreatorFactory, storage:
 /**
  * Типизированный объект действий
  */
+type ResolveDispatch<T> = T extends DispatchFunction<any, any>
+  ? T
+  : T extends ActionRecipe<any, infer P, infer R>
+    ? DispatchFunction<P, R>
+    : never
+
 export type DispatchActions<T> = {
-  [K in keyof T]: T[K] extends DispatchFunction<any, any> ? T[K] : never
+  [K in keyof T]: ResolveDispatch<T[K]>
 }
 
 /**
  * Типизированный объект watchers
  */
+type ResolveWatcher<T> = T extends WatcherFunction<any>
+  ? T
+  : T extends WatcherRecipe<any, infer R>
+    ? WatcherFunction<R>
+    : never
+
 export type WatcherActions<T> = {
-  [K in keyof T]: T[K] extends WatcherFunction<any> ? T[K] : never
+  [K in keyof T]: ResolveWatcher<T[K]>
 }
 
 /**
@@ -334,7 +343,7 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
   /**
    * Создает действие
    */
-  public createAction<TParams, TResult>(
+  public createAction<TParams = void, TResult = void>(
     actionConfig: ActionDefinition<TParams, TResult>,
     executionOptions?: ActionExecutionOptions<TParams, TResult>,
   ): DispatchFunction<TParams, TResult> {
@@ -549,26 +558,98 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
 }
 
 /**
- * Функция для создания типизированного диспетчера
+ * Функция для создания типизированного диспетчера.
+ *
+ * Поддерживает два варианта:
+ * 1. Объект standalone-рецептов (ActionRecipe / WatcherRecipe)
+ * 2. Setup-функция с доступом к createAction / createWatcher (inline-определение)
+ *
+ * @example
+ * ```ts
+ * // Вариант 1: объект рецептов (рекомендуемый)
+ * createDispatcher({ storage }, {
+ *   loadList,
+ *   loadListLoading: listRequest.loading,
+ *   watchCount,
+ * })
+ *
+ * // Вариант 2: setup-функция (для смешанного использования)
+ * createDispatcher({ storage }, (storage, { createAction }) => ({
+ *   loadList,
+ *   custom: createAction({ action: () => { ... } }),
+ * }))
+ * ```
  */
+
+// Overload: объект standalone-рецептов
+export function createDispatcher<
+  TState extends Record<string, any>,
+  TRecord extends Record<string, ActionRecipe<TState, any, any> | WatcherRecipe<TState, any>>,
+>(
+  options: DispatcherOptions<TState>,
+  actions: TRecord,
+): Dispatcher<TState> & {
+  dispatch: DispatchActions<TRecord>
+  watchers: WatcherActions<TRecord>
+}
+
+// Overload: setup-функция
 export function createDispatcher<TState extends Record<string, any>, TActions extends ActionsSetupWithUtils<TState>>(
   options: DispatcherOptions<TState>,
   actionsSetup: TActions,
 ): Dispatcher<TState, TActions> & {
   dispatch: DispatchActions<ReturnType<TActions>>
   watchers: WatcherActions<ReturnType<TActions>>
-} {
-  // Создаем экземпляр диспетчера
-  const dispatcher = new Dispatcher<TState, TActions>(options)
+}
 
-  // Вызываем функцию настройки действий с обновленной структурой аргументов
-  const actions = actionsSetup(options.storage, {
-    createAction: (actionConfig, executionOptions) => dispatcher.createAction(actionConfig, executionOptions),
-    createWatcher: (config) => dispatcher.createWatcher(config),
-  })
+// Implementation
+export function createDispatcher<TState extends Record<string, any>>(
+  options: DispatcherOptions<TState>,
+  actionsOrSetup: Record<string, any> | ((...args: any[]) => any),
+) {
+  // Создаем экземпляр диспетчера
+  const dispatcher = new Dispatcher<TState>(options)
+
+  // Получаем объект действий: из функции или напрямую
+  const actions =
+    typeof actionsOrSetup === 'function'
+      ? actionsOrSetup(options.storage, {
+          createAction: (actionConfig: any, executionOptions: any) => dispatcher.createAction(actionConfig, executionOptions),
+          createWatcher: (config: any) => dispatcher.createWatcher(config),
+        })
+      : actionsOrSetup
 
   // Регистрируем все созданные объекты в соответствующих коллекциях
   for (const [key, fn] of Object.entries(actions)) {
+    // Standalone action recipe — привязываем к storage и создаём реальный action
+    if (typeof fn === 'object' && fn !== null && (fn as any)._type === 'action-recipe') {
+      const recipe = fn as ActionRecipe<TState, any, any>
+      const boundConfig = {
+        meta: recipe._config.meta,
+        action: (params: any) => recipe._config.action(options.storage, params),
+      }
+      const dispatchFn = dispatcher.createAction(boundConfig, recipe._executionOptions)
+      if (typeof (dispatchFn as any)._assignType === 'function') {
+        ;(dispatchFn as any)._assignType(key)
+        delete (dispatchFn as any)._assignType
+      }
+      dispatcher.dispatch[key] = dispatchFn
+      continue
+    }
+
+    // Standalone watcher recipe — привязываем к storage и создаём реальный watcher
+    if (typeof fn === 'object' && fn !== null && (fn as any)._type === 'watcher-recipe') {
+      const recipe = fn as WatcherRecipe<TState, any>
+      const watcherFn = dispatcher.createWatcher(recipe._config)
+      if (typeof (watcherFn as any)._assignType === 'function') {
+        ;(watcherFn as any)._assignType(key)
+        delete (watcherFn as any)._assignType
+      }
+      dispatcher.watchers[key] = watcherFn
+      continue
+    }
+
+    // Inline action/watcher (существующая логика)
     if (typeof fn === 'function') {
       const type = (fn as any)._type
       if (type === 'dispatch' || type === 'watchers') {
@@ -583,39 +664,6 @@ export function createDispatcher<TState extends Record<string, any>, TActions ex
     }
   }
 
-  return dispatcher as Dispatcher<TState, TActions> & {
-    dispatch: DispatchActions<ReturnType<TActions>>
-    watchers: WatcherActions<ReturnType<TActions>>
-  }
+  return dispatcher
 }
 export type CreateDispatcherType = ReturnType<typeof createDispatcher>
-
-/**
- * Хелпер для определения экшенов с сохранением узких типов.
- *
- * Проблема `ActionsSetupWithUtils<T>`: явная аннотация расширяет return type
- * до `Record<string, DispatchFunction<any,any> | WatcherFunction<any>>`,
- * из-за чего `DispatchActions<ReturnType<…>>` схлопывается в `never`.
- *
- * `defineActions` решает это: параметры (`storage`, `createAction`, `createWatcher`)
- * типизируются через constraint, а return type **инферится** из тела функции.
- *
- * @example
- * ```ts
- * export const myActions = defineActions<MyState>((storage, { createAction, createWatcher }) => ({
- *   doSomething: createAction<void, string>({ action: () => { ... } }),
- *   watchCount: createWatcher({ selector: s => s.items.length }),
- * }))
- * ```
- */
-export function defineActions<TState extends Record<string, any>>() {
-  return <TReturn extends Record<string, DispatchFunction<any, any> | WatcherFunction<any>>>(
-    fn: (
-      storage: IStorage<TState>,
-      utils: {
-        createAction: ActionCreatorFactory
-        createWatcher: <R>(config: WatcherDefinition<TState, R>) => WatcherFunction<R>
-      },
-    ) => TReturn,
-  ) => fn
-}

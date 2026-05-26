@@ -21,12 +21,8 @@ const initialState: CounterState = {
 
 const storage = new MemoryStorage<CounterState>({ name: 'counter-dispatcher', initialState })
 
-let dispatcher: ReturnType<typeof createDispatcher>
-
-const initPromise = (async () => {
-  await storage.initialize()
-
-  dispatcher = createDispatcher(
+const createCounterDispatcher = () =>
+  createDispatcher(
     { storage },
     (_storage, { createAction, createWatcher }) => {
       // Простой action без параметров
@@ -109,6 +105,12 @@ const initPromise = (async () => {
       return { increment, decrement, setStep, reset, setStepMemoized, watchValue, watchBigChanges, watchStep }
     },
   )
+
+let dispatcher: ReturnType<typeof createCounterDispatcher>
+
+const initPromise = (async () => {
+  await storage.initialize()
+  dispatcher = createCounterDispatcher()
 })()
 
 // ─── Компонент-пример ──────────────────────────────────────────────────────────

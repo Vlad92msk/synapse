@@ -1,143 +1,76 @@
-import { createDispatcher, defineActions } from 'synapse-storage/reactive'
+import { createDispatcher } from 'synapse-storage/reactive'
 import type { IStorage } from 'synapse-storage/core'
-import type { PokemonState, PokemonBrief, PokemonDetails } from './pokemon.types'
 
-/**
- * defineActions<PokemonState>() — сохраняет узкие типы каждого экшена.
- * TypeScript инферит return type, поэтому DispatchActions / store.actions
- * знают конкретные сигнатуры (loadList: void → void, и т.д.).
- *
- * 5 состояний на каждый API-запрос:
- *   idle     — намерение (ещё не решено, будет ли реальный запрос)
- *   loading  — запрос отправлен, UI показывает спиннер
- *   success  — данные получены
- *   failure  — ошибка
- *   reset    — сброс в начальное состояние (валидация не прошла / отмена)
- *
- * Экшен из UI (loadList, loadMore, selectPokemon) ставит status = 'idle'.
- * Эффект решает — вызывать запрос (→ loading) или сбросить (→ reset).
- */
-export const pokemonActions = defineActions<PokemonState>()((storage, { createAction, createWatcher }) => ({
-  // ─── List: intent ─────────────────────────────────────────────────────────
-  loadList: createAction<void, void>({
+import type { PokemonBrief, PokemonDetails, PokemonState } from './pokemon.types'
+import { createApiActions, defineAction, defineWatcher } from 'synapse-storage'
+
+
+/** Функция создания диспетчера — используется в createSynapse и для вывода типа */
+export const createPokemonDispatcher = (storage: IStorage<PokemonState>) => {
+  const action = defineAction<PokemonState>()
+  const watcher = defineWatcher<PokemonState>()
+
+  const listRequest = createApiActions<PokemonState>((draft) => draft.api.listRequest)
+  const detailsRequest = createApiActions<PokemonState>((draft) => draft.api.detailsRequest)
+
+  const loadList = action({
     meta: { description: 'Намерение загрузить список покемонов' },
-    action: () => {
+    action: (storage) => {
       storage.update((s) => {
         s.api.listRequest = { status: 'idle', error: null }
       })
     },
-  }),
+  })
 
-  loadMore: createAction<void, void>({
+  const loadMore = action({
     meta: { description: 'Намерение загрузить следующую страницу' },
-    action: () => {
+    action: (storage) => {
       storage.update((s) => {
         s.api.listRequest = { status: 'idle', error: null }
       })
     },
-  }),
+  })
 
-  // ─── List: lifecycle ──────────────────────────────────────────────────────
-  loadListLoading: createAction<void, void>({
-    action: () => {
+  const selectPokemon = action({
+    action: (storage, id: number | null) => {
       storage.update((s) => {
-        s.api.listRequest = { status: 'loading', error: null }
+        s.selectedPokemonId = id
+        if (id === null) {
+          s.selectedPokemon = null
+        }
+        s.api.detailsRequest = { status: 'idle', error: null }
       })
+      return id
     },
-  }),
+  })
 
-  loadListSuccess: createAction({
-    action: (data: { list: PokemonBrief[]; hasMore: boolean; append: boolean }) => {
+  const applyPokemonList = action({
+    action: (storage, data: { list: PokemonBrief[]; hasMore: boolean; append: boolean }) => {
       storage.update((s) => {
         s.pokemonList = data.append ? [...s.pokemonList, ...data.list] : data.list
         s.offset = s.pokemonList.length
         s.hasMore = data.hasMore
-        s.api.listRequest = { status: 'success', error: null }
-      })
-      return data
-    },
-  }),
-
-  loadListFailure: createAction({
-    action: (error: string) => {
-      storage.update((s) => {
-        s.api.listRequest = { status: 'error', error }
-      })
-      return error
-    },
-  }),
-
-  loadListReset: createAction<void, void>({
-    action: () => {
-      storage.update((s) => {
-        s.api.listRequest = { status: 'reset', error: null }
       })
     },
-  }),
+  })
 
-  // ─── Details: intent ──────────────────────────────────────────────────────
-  selectPokemon: createAction({
-    action: (id: number | null) => {
-      storage.update((s) => {
-        s.selectedPokemonId = id
-        if (id !== null) {
-          s.api.detailsRequest = { status: 'idle', error: null }
-        } else {
-          s.selectedPokemon = null
-          s.api.detailsRequest = { status: 'idle', error: null }
-        }
-      })
-      return id
-    },
-  }),
-
-  // ─── Details: lifecycle ───────────────────────────────────────────────────
-  loadDetailsLoading: createAction<void, void>({
-    action: () => {
-      storage.update((s) => {
-        s.api.detailsRequest = { status: 'loading', error: null }
-      })
-    },
-  }),
-
-  loadDetailsSuccess: createAction({
-    action: (details: PokemonDetails) => {
+  const applyPokemonDetails = action({
+    action: (storage, details: PokemonDetails) => {
       storage.update((s) => {
         s.selectedPokemon = details
-        s.api.detailsRequest = { status: 'success', error: null }
-      })
-      return details
-    },
-  }),
-
-  loadDetailsFailure: createAction({
-    action: (error: string) => {
-      storage.update((s) => {
-        s.selectedPokemon = null
-        s.api.detailsRequest = { status: 'error', error }
-      })
-      return error
-    },
-  }),
-
-  loadDetailsReset: createAction<void, void>({
-    action: () => {
-      storage.update((s) => {
-        s.api.detailsRequest = { status: 'reset', error: null }
       })
     },
-  }),
+  })
 
-  // ─── UI actions (не связаны с API) ────────────────────────────────────────
-  setSearchQuery: createAction({
-    action: (query: string) => {
+  const setSearchQuery = action({
+    action: (storage, query: string) => {
       storage.set('searchQuery', query)
       return query
     },
-  }),
+  })
 
-  toggleFavorite: createAction({
-    action: (id: number) => {
+  const toggleFavorite = action({
+    action: (storage, id: number) => {
       storage.update((s) => {
         const idx = s.favorites.indexOf(id)
         if (idx >= 0) {
@@ -148,19 +81,40 @@ export const pokemonActions = defineActions<PokemonState>()((storage, { createAc
       })
       return id
     },
-  }),
+  })
 
-  // ─── Watchers ─────────────────────────────────────────────────────────────
-  watchFavoriteCount: createWatcher({
+  const watchFavoriteCount = watcher({
     selector: (s) => s.favorites.length,
     meta: { description: 'отслеживание кол-ва избранных' },
     notifyAfterSubscribe: true,
-  }),
-}))
+  })
 
-/** Функция создания диспетчера — используется в createSynapse и для вывода типа */
-export const createPokemonDispatcher = (storage: IStorage<PokemonState>) =>
-  createDispatcher({ storage }, pokemonActions)
+  return createDispatcher({ storage }, {
+    loadList,
+    loadMore,
+    selectPokemon,
+
+    loadListInit: listRequest.init,
+    loadListLoading: listRequest.loading,
+    loadListSuccess: listRequest.success,
+    loadListFailure: listRequest.failure,
+    loadListReset: listRequest.reset,
+
+    loadDetailsInit: detailsRequest.init,
+    loadDetailsLoading: detailsRequest.loading,
+    loadDetailsSuccess: detailsRequest.success,
+    loadDetailsFailure: detailsRequest.failure,
+    loadDetailsReset: detailsRequest.reset,
+
+    applyPokemonList,
+    applyPokemonDetails,
+
+    setSearchQuery,
+    toggleFavorite,
+
+    watchFavoriteCount,
+  })
+}
 
 /** Тип диспетчера с конкретными типами всех экшенов */
 export type PokemonDispatcher = ReturnType<typeof createPokemonDispatcher>

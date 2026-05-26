@@ -40,7 +40,10 @@ const loadListEffect: PokemonEffect = (action$, state$, { dispatcher, services: 
       },
       apiCall: ([_action, _state, { pageSize }]) =>
         from(api.request('getList', { limit: pageSize, offset: 0 })).pipe(
-          apiResult((data) => dispatcher.dispatch.loadListSuccess({ ...mapListResponse(data), append: false })),
+          apiResult((data) => {
+            dispatcher.dispatch.applyPokemonList({ ...mapListResponse(data), append: false })
+            dispatcher.dispatch.loadListSuccess()
+          }),
         ),
     }),
   )
@@ -72,7 +75,10 @@ const loadMoreEffect: PokemonEffect = (action$, state$, { dispatcher, services: 
       },
       apiCall: ([_action, { offset }, { pageSize }]) =>
         from(api.request('getList', { limit: pageSize, offset })).pipe(
-          apiResult((data) => dispatcher.dispatch.loadListSuccess({ ...mapListResponse(data), append: true })),
+          apiResult((data) => {
+            dispatcher.dispatch.applyPokemonList({ ...mapListResponse(data), append: true })
+            dispatcher.dispatch.loadListSuccess()
+          }),
         ),
     }),
   )
@@ -96,7 +102,10 @@ const loadDetailsEffect: PokemonEffect = (action$, state$, { dispatcher, service
       },
       apiCall: ([_action, [selectedId]]) =>
         from(api.request('getDetails', { id: selectedId! })).pipe(
-          apiResult((data) => dispatcher.dispatch.loadDetailsSuccess(mapDetailsResponse(data))),
+          apiResult((data) => {
+            dispatcher.dispatch.applyPokemonDetails(mapDetailsResponse(data))
+            dispatcher.dispatch.loadDetailsSuccess()
+          }),
         ),
       errorAction: (err, pipeData) => {
         dispatcher.dispatch.loadDetailsFailure(String(err))
@@ -129,7 +138,8 @@ const loadDetailsWaitEffect: PokemonEffect = (action$, state$, { dispatcher, ser
             },
             success: (data) => {
               if (data) {
-                dispatcher.dispatch.loadDetailsSuccess(mapDetailsResponse(data))
+                dispatcher.dispatch.applyPokemonDetails(mapDetailsResponse(data))
+                dispatcher.dispatch.loadDetailsSuccess()
               }
             },
             error: (error) => {
