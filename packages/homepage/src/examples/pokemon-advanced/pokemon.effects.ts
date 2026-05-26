@@ -7,19 +7,18 @@ import { type pokemonApiClient, mapListResponse, mapDetailsResponse } from './po
 
 // ─── Типы для эффектов (определяем один раз) ────────────────────────────────
 
-type Dispatchers = { pokemonDispatcher: PokemonDispatcher }
 type Services = { pokemonApi: typeof pokemonApiClient }
 
 /** Общий тип эффекта — параметры типизированы автоматически */
-type PokemonEffect = Effect<PokemonState, Dispatchers, Services>
+type PokemonEffect = Effect<PokemonState, PokemonDispatcher, Services>
 
 // ─── Effect 1: Загрузка списка ──────────────────────────────────────────────
 // Поток: loadList (idle) → validateMap → loadListLoading → API → success/failure
 // Валидация: не загружаем если уже идёт загрузка
 
-const loadListEffect: PokemonEffect = (action$, state$, _ext, { pokemonDispatcher }, { pokemonApi: api }) =>
+const loadListEffect: PokemonEffect = (action$, state$, { dispatcher, services: { pokemonApi: api } }) =>
   action$.pipe(
-    ofType(pokemonDispatcher.dispatch.loadList),
+    ofType(dispatcher.dispatch.loadList),
     withLatestFrom(
       selectorObject(state$, {
         listStatus: (s) => s.api.listRequest.status,
@@ -28,17 +27,17 @@ const loadListEffect: PokemonEffect = (action$, state$, _ext, { pokemonDispatche
     validateMap({
       validator: ([_action, { listStatus }]) => ({
         conditions: [listStatus !== 'loading'],
-        skipAction: () => pokemonDispatcher.dispatch.loadListReset(),
+        skipAction: () => dispatcher.dispatch.loadListReset(),
       }),
       loadingAction: () => {
-        pokemonDispatcher.dispatch.loadListLoading()
+        dispatcher.dispatch.loadListLoading()
       },
       errorAction: (err) => {
-        pokemonDispatcher.dispatch.loadListFailure(String(err))
+        dispatcher.dispatch.loadListFailure(String(err))
       },
       apiCall: () =>
         from(api.request('getList', { limit: 12, offset: 0 })).pipe(
-          apiResult((data) => pokemonDispatcher.dispatch.loadListSuccess({ ...mapListResponse(data), append: false })),
+          apiResult((data) => dispatcher.dispatch.loadListSuccess({ ...mapListResponse(data), append: false })),
         ),
     }),
   )
@@ -46,9 +45,9 @@ const loadListEffect: PokemonEffect = (action$, state$, _ext, { pokemonDispatche
 // ─── Effect 2: Подгрузка следующей страницы ─────────────────────────────────
 // selectorObject — именованный объект для withLatestFrom
 
-const loadMoreEffect: PokemonEffect = (action$, state$, _ext, { pokemonDispatcher }, { pokemonApi: api }) =>
+const loadMoreEffect: PokemonEffect = (action$, state$, { dispatcher, services: { pokemonApi: api } }) =>
   action$.pipe(
-    ofType(pokemonDispatcher.dispatch.loadMore),
+    ofType(dispatcher.dispatch.loadMore),
     withLatestFrom(
       selectorObject(state$, {
         offset: (s) => s.offset,
@@ -59,17 +58,17 @@ const loadMoreEffect: PokemonEffect = (action$, state$, _ext, { pokemonDispatche
     validateMap({
       validator: ([_action, { hasMore, listStatus }]) => ({
         conditions: [hasMore, listStatus !== 'loading'],
-        skipAction: () => pokemonDispatcher.dispatch.loadListReset(),
+        skipAction: () => dispatcher.dispatch.loadListReset(),
       }),
       loadingAction: () => {
-        pokemonDispatcher.dispatch.loadListLoading()
+        dispatcher.dispatch.loadListLoading()
       },
       errorAction: (err) => {
-        pokemonDispatcher.dispatch.loadListFailure(String(err))
+        dispatcher.dispatch.loadListFailure(String(err))
       },
       apiCall: ([_action, { offset }]) =>
         from(api.request('getList', { limit: 12, offset })).pipe(
-          apiResult((data) => pokemonDispatcher.dispatch.loadListSuccess({ ...mapListResponse(data), append: true })),
+          apiResult((data) => dispatcher.dispatch.loadListSuccess({ ...mapListResponse(data), append: true })),
         ),
     }),
   )
@@ -77,26 +76,26 @@ const loadMoreEffect: PokemonEffect = (action$, state$, _ext, { pokemonDispatche
 // ─── Effect 3: Загрузка деталей (apiResult) ────────────────────────────────
 // selectorMap — позиционный массив (компактнее для 1-2 полей)
 
-const loadDetailsEffect: PokemonEffect = (action$, state$, _ext, { pokemonDispatcher }, { pokemonApi: api }) =>
+const loadDetailsEffect: PokemonEffect = (action$, state$, { dispatcher, services: { pokemonApi: api } }) =>
   action$.pipe(
-    ofType(pokemonDispatcher.dispatch.selectPokemon),
+    ofType(dispatcher.dispatch.selectPokemon),
     withLatestFrom(
       selectorMap(state$, (s) => s.selectedPokemonId, (s) => s.api.detailsRequest.status),
     ),
     validateMap({
       validator: ([_action, [selectedId, detailsStatus]]) => ({
         conditions: [selectedId !== null, detailsStatus !== 'loading'],
-        skipAction: () => pokemonDispatcher.dispatch.loadDetailsReset(),
+        skipAction: () => dispatcher.dispatch.loadDetailsReset(),
       }),
       loadingAction: (pipeData) => {
-        pokemonDispatcher.dispatch.loadDetailsLoading()
+        dispatcher.dispatch.loadDetailsLoading()
       },
       apiCall: ([_action, [selectedId]]) =>
         from(api.request('getDetails', { id: selectedId! })).pipe(
-          apiResult((data) => pokemonDispatcher.dispatch.loadDetailsSuccess(mapDetailsResponse(data))),
+          apiResult((data) => dispatcher.dispatch.loadDetailsSuccess(mapDetailsResponse(data))),
         ),
       errorAction: (err, pipeData) => {
-        pokemonDispatcher.dispatch.loadDetailsFailure(String(err))
+        dispatcher.dispatch.loadDetailsFailure(String(err))
       },
     }),
   )
@@ -106,31 +105,31 @@ const loadDetailsEffect: PokemonEffect = (action$, state$, _ext, { pokemonDispat
 // Lifecycle управляется самим request'ом через колбэки,
 // не нужно вручную вызывать loadDetailsLoading перед запросом.
 
-const loadDetailsWaitEffect: PokemonEffect = (action$, state$, _ext, { pokemonDispatcher }, { pokemonApi: api }) =>
+const loadDetailsWaitEffect: PokemonEffect = (action$, state$, { dispatcher, services: { pokemonApi: api } }) =>
   action$.pipe(
-    ofType(pokemonDispatcher.dispatch.selectPokemon),
+    ofType(dispatcher.dispatch.selectPokemon),
     withLatestFrom(
       selectorMap(state$, (s) => s.selectedPokemonId, (s) => s.api.detailsRequest.status),
     ),
     validateMap({
       validator: ([_action, [selectedId, detailsStatus]]) => ({
         conditions: [selectedId !== null, detailsStatus !== 'loading'],
-        skipAction: () => pokemonDispatcher.dispatch.loadDetailsReset(),
+        skipAction: () => dispatcher.dispatch.loadDetailsReset(),
       }),
       apiCall: ([_action, [selectedId]]) => {
         const endpoints = api.getEndpoints()
         return from(
           endpoints.getDetails.request({ id: selectedId! }).waitWithCallbacks({
             loading: () => {
-              pokemonDispatcher.dispatch.loadDetailsLoading()
+              dispatcher.dispatch.loadDetailsLoading()
             },
             success: (data) => {
               if (data) {
-                pokemonDispatcher.dispatch.loadDetailsSuccess(mapDetailsResponse(data))
+                dispatcher.dispatch.loadDetailsSuccess(mapDetailsResponse(data))
               }
             },
             error: (error) => {
-              pokemonDispatcher.dispatch.loadDetailsFailure(String(error))
+              dispatcher.dispatch.loadDetailsFailure(String(error))
             },
           }),
         )
@@ -172,6 +171,7 @@ const loadDetailsWaitEffect: PokemonEffect = (action$, state$, _ext, { pokemonDi
 //
 // 1. Нативный RxJS — полный контроль, ничего от библиотеки:
 //
+//    (action$, state$, { dispatcher }) =>
 //    action$.pipe(
 //      ofType(dispatcher.dispatch.loadList),
 //      switchMap(() =>
@@ -190,6 +190,7 @@ const loadDetailsWaitEffect: PokemonEffect = (action$, state$, _ext, { pokemonDi
 //
 // 2. waitWithCallbacks — lifecycle управляется request'ом:
 //
+//    (action$, state$, { dispatcher }) =>
 //    action$.pipe(
 //      ofType(dispatcher.dispatch.loadList),
 //      switchMap(() => from(
@@ -206,6 +207,7 @@ const loadDetailsWaitEffect: PokemonEffect = (action$, state$, _ext, { pokemonDi
 //
 // 3. validateMap + apiResult — полный протокол с валидацией:
 //
+//    (action$, state$, { dispatcher, services: { api } }) =>
 //    action$.pipe(
 //      ofType(dispatcher.dispatch.loadList),
 //      withLatestFrom(selectorObject(state$, { ... })),

@@ -41,21 +41,21 @@ export type CreateSynapseConfigWithEffects<
   TStore extends Record<string, any>,
   TSelectors = any,
   TDispatcher = any,
-  TApi extends Record<string, any> = Record<string, never>,
+  TServices extends Record<string, any> = Record<string, never>,
   TConfig extends Record<string, any> = Record<string, never>,
   TExternalSelectors extends Record<string, any> = Record<string, any>,
 > = BaseSynapseConfig<TStore, TSelectors, TExternalSelectors> & {
   // Функция создания диспетчера (обязательная)
   createDispatcherFn: (storage: IStorage<TStore>) => TDispatcher
-  // Функция создания конфигурации для эффектов (обязательная)
-  createEffectConfig: (dispatcher: TDispatcher) => {
-    dispatchers: Record<string, any>
-    api?: TApi
+  // Функция создания конфигурации для эффектов (dispatcher передаётся автоматически)
+  createEffectConfig: () => {
+    services?: TServices
     config?: TConfig
+    externalDispatchers?: Record<string, any>
     externalStates?: ExternalStates
   }
   // Эффекты
-  effects?: Effect<TStore, any, TApi, TConfig, any>[]
+  effects?: Effect<TStore, any, TServices, TConfig, any>[]
 }
 
 /**

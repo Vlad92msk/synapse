@@ -62,14 +62,13 @@ function cleanupOldEvents(storage: ISyncStorage<EventBusState>, maxEvents: numbe
  * // Использование в Synapse
  * const mySynapse = await createSynapse({
  *   dependencies: [eventBus],
- *   createEffectConfig: (dispatcher) => ({
- *     dispatchers: {
- *       dispatcher,
+ *   createEffectConfig: () => ({
+ *     externalDispatchers: {
  *       eventBus: eventBus.dispatcher
  *     }
  *   }),
  *   effects: [
- *     createEffect((action$, _, __, { eventBus }) => {
+ *     createEffect((action$, _, { dispatcher, externalDispatchers: { eventBus } }) => {
  *       // Публикация события
  *       eventBus.dispatch.publish({
  *         event: 'USER_UPDATED',

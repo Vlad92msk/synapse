@@ -81,29 +81,27 @@ const synapsePromise = createSynapse({
       return { setQuery, searchSuccess, searchError }
     }),
 
-  // Конфигурация эффектов — связывает dispatcher с effects module
-  createEffectConfig: (dispatcher) => ({
-    dispatchers: { main: dispatcher },
-  }),
+  // Конфигурация эффектов — dispatcher передаётся автоматически
+  createEffectConfig: () => ({}),
 
   // Effects — RxJS side-effects
   effects: [
-    createEffect((action$, _state$, _ext, dispatchers) =>
+    createEffect((action$, _state$, { dispatcher }) =>
       action$.pipe(
-        ofType(dispatchers.main.dispatch.setQuery),          // фильтр по типу action
+        ofType(dispatcher.dispatch.setQuery),                // фильтр по типу action
         debounceTime(400),                                    // debounce
         switchMap((action) => {
           const query = action.payload as string
           if (!query) {
-            return of(null).pipe(tap(() => dispatchers.main.dispatch.searchSuccess([])))
+            return of(null).pipe(tap(() => dispatcher.dispatch.searchSuccess([])))
           }
           return of(query).pipe(
             switchMap(async (q) => {
               try {
                 const results = await fakeSearch(q)
-                dispatchers.main.dispatch.searchSuccess(results)
+                dispatcher.dispatch.searchSuccess(results)
               } catch (e) {
-                dispatchers.main.dispatch.searchError(String(e))
+                dispatcher.dispatch.searchError(String(e))
               }
             }),
           )
@@ -152,12 +150,11 @@ const synapsePromise = createSynapse({
       return { setQuery, searchSuccess }
     }),
 
-  // Связывает dispatcher с модулем эффектов
-  createEffectConfig: (dispatcher) => ({
-    dispatchers: { main: dispatcher },
-    // api?: {},         // сервисы для эффектов
-    // config?: {},      // конфигурация для эффектов
-    // externalStates?: {} // внешние Observable
+  // Dispatcher передаётся автоматически
+  createEffectConfig: () => ({
+    // services?: {},            // сервисы (API-клиенты и т.д.)
+    // config?: {},              // конфигурация для эффектов
+    // externalDispatchers?: {}, // dispatcher'ы из других synapse
   }),
 
   // Массив эффектов
@@ -168,17 +165,17 @@ const synapsePromise = createSynapse({
       <h3 style={sectionTitle}>createEffect</h3>
       <pre style={codeBlock}>{`import { createEffect, ofType } from 'synapse-storage/reactive'
 
-// Effect — функция, принимающая потоки и возвращающая Observable
-createEffect((action$, state$, externalStates, dispatchers, services, config) =>
+// Effect — функция, принимающая потоки и контекст, возвращающая Observable
+createEffect((action$, state$, { dispatcher, services, config }) =>
   action$.pipe(
-    ofType(dispatchers.main.dispatch.setQuery),  // фильтр по action
+    ofType(dispatcher.dispatch.setQuery),  // фильтр по action
     debounceTime(400),
     switchMap((action) => {
       const query = action.payload as string
       return of(query).pipe(
         switchMap(async (q) => {
           const results = await fetchResults(q)
-          dispatchers.main.dispatch.searchSuccess(results)
+          dispatcher.dispatch.searchSuccess(results)
         }),
       )
     }),
@@ -186,12 +183,9 @@ createEffect((action$, state$, externalStates, dispatchers, services, config) =>
 )
 
 // Аргументы effect:
-// action$        — Observable всех dispatched actions
-// state$         — Observable текущего state
-// externalStates — внешние Observable (из createEffectConfig)
-// dispatchers    — { main: dispatcher } (из createEffectConfig)
-// services       — api/сервисы (из createEffectConfig)
-// config         — конфигурация (из createEffectConfig)`}</pre>
+// action$  — Observable всех dispatched actions
+// state$   — Observable текущего state
+// context  — { dispatcher, externalDispatchers, services, config }`}</pre>
 
       {/* ─── ofType ───────────────────────────────────────────────────── */}
       <h3 style={sectionTitle}>ofType / ofTypes</h3>

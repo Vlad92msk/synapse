@@ -18,9 +18,8 @@ export const synapsePromise = createSynapse({
 
   createDispatcherFn: createPokemonDispatcher,
 
-  createEffectConfig: (dispatcher) => ({
-    dispatchers: { pokemonDispatcher: dispatcher },
-    api: { pokemonApi: pokemonApiClient },
+  createEffectConfig: () => ({
+    services: { pokemonApi: pokemonApiClient },
   }),
 
   effects: [pokemonEffects],

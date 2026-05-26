@@ -23,12 +23,12 @@ export function createSynapse<
   TStore extends Record<string, any>,
   TSelectors = any,
   TDispatcher = any,
-  TApi extends Record<string, any> = Record<string, never>,
+  TServices extends Record<string, any> = Record<string, never>,
   TConfig extends Record<string, any> = Record<string, never>,
   TExternalSelectors extends Record<string, any> = Record<string, any>,
   TStorage extends IStorage<TStore> = IStorage<TStore>,
 >(
-  config: CreateSynapseConfigWithEffects<TStore, TSelectors, TDispatcher, TApi, TConfig, TExternalSelectors>,
+  config: CreateSynapseConfigWithEffects<TStore, TSelectors, TDispatcher, TServices, TConfig, TExternalSelectors>,
 ): Promise<SynapseStoreWithEffects<TStore, TStorage, TSelectors, ExtractDispatchType<TDispatcher>>>
 
 // Случай 2: Только с dispatcher
@@ -137,11 +137,15 @@ export async function createSynapse<
   // 6. Создаем и настраиваем модуль эффектов
   if (config.createEffectConfig && dispatcher) {
     try {
-      const { dispatchers, api, config: effectConfig, externalStates } = config.createEffectConfig(dispatcher)
+      const { services, config: effectConfig, externalDispatchers, externalStates } = config.createEffectConfig()
 
-      const effectExternalStates = externalStates || {}
-
-      effectsModule = new EffectsModule(storageInstance, effectExternalStates, dispatchers, api, effectConfig)
+      effectsModule = new EffectsModule(
+        storageInstance,
+        dispatcher as any,
+        externalDispatchers || {},
+        services,
+        effectConfig,
+      )
 
       if (Array.isArray(config.effects)) {
         // @ts-ignore

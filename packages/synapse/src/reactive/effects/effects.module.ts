@@ -20,30 +20,37 @@ export interface TypedAction<P> extends Action<P> {
 export type ExternalStates = Record<string, Observable<any>>
 
 /**
- * Тип для базового эффекта без доступа к состоянию
+ * Контекст эффекта — объект с зависимостями, передаваемый третьим аргументом
  */
-export type EffectBase<TDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>, TServices extends Record<string, any> = Record<string, never>> = (
-  action$: Observable<Action>,
-  dispatchers: TDispatchers,
-  services: TServices,
-) => Observable<unknown>
+export interface EffectContext<
+  TDispatcher = any,
+  TServices extends Record<string, any> = Record<string, never>,
+  TConfig extends Record<string, any> = Record<string, never>,
+  TExternalDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>,
+> {
+  /** Основной dispatcher текущего synapse */
+  dispatcher: TDispatcher
+  /** Внешние dispatcher'ы из других synapse */
+  externalDispatchers: TExternalDispatchers
+  /** Сервисы (API-клиенты и т.д.) */
+  services: TServices
+  /** Глобальная конфигурация для эффектов */
+  config: TConfig
+}
 
 /**
- * Тип для эффекта с доступом к состоянию и конфигурации - это основной тип, который используется по умолчанию
+ * Тип для эффекта с доступом к состоянию и контексту — основной тип
  */
 export type Effect<
   TState extends Record<string, any> = any,
-  TDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>,
+  TDispatcher = any,
   TServices extends Record<string, any> = Record<string, never>,
   TConfig extends Record<string, any> = Record<string, never>,
-  TExternalStates extends ExternalStates = Record<string, never>,
+  TExternalDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>,
 > = (
   action$: Observable<Action>,
   state$: Observable<TState>,
-  externalStates: TExternalStates,
-  dispatchers: TDispatchers,
-  services: TServices,
-  config: TConfig,
+  context: EffectContext<TDispatcher, TServices, TConfig, TExternalDispatchers>,
 ) => Observable<unknown>
 
 /**
@@ -329,17 +336,17 @@ export function apiResult<TData, TResult = void>(
 }
 
 /**
- * Класс для управления эффектами с поддержкой доступа к состоянию и конфигурации
+ * Класс для управления эффектами с поддержкой доступа к состоянию и контексту
  * Основной класс, который следует использовать
  */
 export class EffectsModule<
   TState extends Record<string, any> = any,
-  TDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>,
+  TDispatcher = any,
   TServices extends Record<string, any> = Record<string, never>,
   TConfig extends Record<string, any> = Record<string, never>,
-  TExternalStates extends ExternalStates = Record<string, never>,
+  TExternalDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>,
 > {
-  private effects: Effect<TState, TDispatchers, TServices, TConfig, TExternalStates>[] = []
+  private effects: Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers>[] = []
   private subscriptions: Array<{ unsubscribe: VoidFunction }> = []
   private running = false
   private action$ = new Subject<Action>()
@@ -350,17 +357,17 @@ export class EffectsModule<
   public readonly state$: Observable<TState>
 
   /**
-   * Создает модуль эффектов с доступом к состоянию, внешним состояниям и конфигурации
+   * Создает модуль эффектов
    * @param storage Хранилище состояния
-   * @param externalStates Внешние состояния
-   * @param dispatchers Объект с диспетчерами
-   * @param services Объект с сервисами
+   * @param dispatcher Основной dispatcher текущего synapse
+   * @param externalDispatchers Внешние dispatcher'ы из других synapse
+   * @param services Сервисы (API-клиенты и т.д.)
    * @param config Глобальная конфигурация для всех эффектов
    */
   constructor(
     private storage: IStorage<TState>,
-    private externalStates: TExternalStates = {} as TExternalStates,
-    private dispatchers: TDispatchers,
+    private dispatcher: TDispatcher & { actions: Observable<Action> },
+    private externalDispatchers: TExternalDispatchers = {} as TExternalDispatchers,
     private services: TServices = {} as TServices,
     private config: TConfig = {} as TConfig,
   ) {
@@ -382,19 +389,25 @@ export class EffectsModule<
   }
 
   /**
-   * Подписывается на действия от всех диспетчеров
+   * Подписывается на действия от основного dispatcher'а и внешних dispatcher'ов
    */
   private subscribeToDispatchers() {
-    for (const [_, dispatcher] of Object.entries(this.dispatchers)) {
+    // Основной dispatcher
+    const mainSub = this.dispatcher.actions.subscribe((action) => {
+      this.action$.next(action)
+    })
+    this.subscriptions.push(mainSub)
+
+    // Внешние dispatcher'ы
+    for (const [_, dispatcher] of Object.entries(this.externalDispatchers)) {
       const subscription = dispatcher.actions.subscribe((action) => {
         this.action$.next(action)
       })
-
       this.subscriptions.push(subscription)
     }
   }
 
-  add(effect: Effect<TState, TDispatchers, TServices, TConfig, TExternalStates>): this {
+  add(effect: Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers>): this {
     this.effects.push(effect)
 
     if (this.running) {
@@ -409,7 +422,7 @@ export class EffectsModule<
    * @param effects Эффекты для добавления
    * @returns Текущий модуль
    */
-  addEffects(effects: Effect<TState, TDispatchers, TServices, TConfig, TExternalStates>[]): this {
+  addEffects(effects: Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers>[]): this {
     effects.forEach((effect) => this.add(effect))
     return this
   }
@@ -452,9 +465,16 @@ export class EffectsModule<
    * Подписывается на конкретный эффект
    * @param effect Эффект для подписки
    */
-  private subscribeToEffect(effect: Effect<TState, TDispatchers, TServices, TConfig, TExternalStates>): void {
+  private subscribeToEffect(effect: Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers>): void {
     try {
-      const output$ = effect(this.action$.asObservable(), this.state$, this.externalStates, this.dispatchers, this.services, this.config).pipe(
+      const context: EffectContext<TDispatcher, TServices, TConfig, TExternalDispatchers> = {
+        dispatcher: this.dispatcher,
+        externalDispatchers: this.externalDispatchers,
+        services: this.services,
+        config: this.config,
+      }
+
+      const output$ = effect(this.action$.asObservable(), this.state$, context).pipe(
         catchError((err) => {
           handleCallbackError('EffectsModule: error in effect', err)
           return of(null)
@@ -483,25 +503,15 @@ export class EffectsModule<
 }
 
 /**
- * Вспомогательная функция для создания типизированного эффекта без состояния
- * @deprecated Используйте createEffect вместо этого
- */
-export function createEffectBase<TDispatchers extends Record<string, Dispatcher<any, any>>, TServices extends Record<string, any>>(
-  effect: EffectBase<TDispatchers, TServices>,
-): EffectBase<TDispatchers, TServices> {
-  return effect
-}
-
-/**
- * Вспомогательная функция для создания типизированного эффекта с состоянием и конфигурацией
+ * Вспомогательная функция для создания типизированного эффекта
  */
 export function createEffect<
   TState extends Record<string, any>,
-  TDispatchers extends Record<string, Dispatcher<any, any>>,
-  TServices extends Record<string, any>,
+  TDispatcher = any,
+  TServices extends Record<string, any> = Record<string, never>,
   TConfig extends Record<string, any> = Record<string, never>,
-  TExternalStates extends ExternalStates = Record<string, never>,
->(effect: Effect<TState, TDispatchers, TServices, TConfig, TExternalStates>): Effect<TState, TDispatchers, TServices, TConfig, TExternalStates> {
+  TExternalDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>,
+>(effect: Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers>): Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers> {
   return effect
 }
 
@@ -512,15 +522,15 @@ export function createEffect<
  */
 export function combineEffects<
   TState extends Record<string, any>,
-  TDispatchers extends Record<string, Dispatcher<any, any>>,
-  TServices extends Record<string, any>,
+  TDispatcher = any,
+  TServices extends Record<string, any> = Record<string, never>,
   TConfig extends Record<string, any> = Record<string, never>,
-  TExternalStates extends ExternalStates = Record<string, never>,
->(...effects: Effect<TState, TDispatchers, TServices, TConfig, TExternalStates>[]): Effect<TState, TDispatchers, TServices, TConfig, TExternalStates> {
-  return (action$, state$, externalStates, dispatchers, services, config) => {
+  TExternalDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>,
+>(...effects: Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers>[]): Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers> {
+  return (action$, state$, context) => {
     const outputs = effects.map((effect) => {
       try {
-        return effect(action$, state$, externalStates, dispatchers, services, config)
+        return effect(action$, state$, context)
       } catch (error) {
         handleCallbackError('combineEffects: error in one of combined effects', error)
         return of(null)
