@@ -54,7 +54,7 @@ interface SettingsState {
 }
 
 const settingsStorePromise = createSynapse({
-  dependencies: [authStorePromise as any],
+  dependencies: [authStorePromise],
   dependencyTimeout: 5000,
 
   createStorageFn: async () => {

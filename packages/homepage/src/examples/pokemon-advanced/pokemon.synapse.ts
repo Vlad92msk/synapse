@@ -6,6 +6,7 @@ import { createPokemonSelectors } from './pokemon.selectors'
 import { createPokemonDispatcher } from './pokemon.dispatcher'
 import { pokemonEffects } from './pokemon.effects'
 import { pokemonApiClient, initPokemonApi } from './pokemon.api'
+import { settingsStorage } from './pokemon.settings'
 
 export const synapsePromise = createSynapse({
   setup: async () => {
@@ -20,6 +21,10 @@ export const synapsePromise = createSynapse({
 
   createEffectConfig: () => ({
     services: { pokemonApi: pokemonApiClient },
+    externalStates: {
+      // IStorageBase — автоматически конвертируется в Observable внутри EffectsModule
+      settings: settingsStorage,
+    },
   }),
 
   effects: [pokemonEffects],

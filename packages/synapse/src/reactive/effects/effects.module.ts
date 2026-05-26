@@ -2,9 +2,9 @@ import { combineLatest, EMPTY, from, merge, Observable, of, OperatorFunction, pi
 import { catchError, filter, map, share, switchMap, take } from 'rxjs/operators'
 
 import { handleCallbackError, logError } from '../../_utils/error-handling.util'
-import { IStorage } from '../../core'
+import { IStorage, IStorageBase } from '../../core'
 import { Action, ActionsResult, Dispatcher, DispatchFunction, ExtractResultType, WatcherFunction } from '../dispatcher'
-import { ChunkRequestConsistent, chunkRequestConsistent, ChunkRequestParallel, chunkRequestParallel } from './utils'
+import { ChunkRequestConsistent, chunkRequestConsistent, ChunkRequestParallel, chunkRequestParallel, isStorage, toObservable } from './utils'
 
 /**
  * Тип действия с типизированным payload
@@ -15,9 +15,9 @@ export interface TypedAction<P> extends Action<P> {
 }
 
 /**
- * Тип для внешних состояний
+ * Тип для внешних состояний — Observable или хранилище (IStorageBase), которое автоматически конвертируется в Observable
  */
-export type ExternalStates = Record<string, Observable<any>>
+export type ExternalStates = Record<string, Observable<any> | IStorageBase<any>>
 
 /**
  * Контекст эффекта — объект с зависимостями, передаваемый третьим аргументом
@@ -355,6 +355,7 @@ export class EffectsModule<
   private subscriptions: Array<{ unsubscribe: VoidFunction }> = []
   private running = false
   private action$ = new Subject<Action>()
+  private externalStates: TExternalStates
 
   /**
    * Поток состояния
@@ -376,8 +377,11 @@ export class EffectsModule<
     private externalDispatchers: TExternalDispatchers = {} as TExternalDispatchers,
     private services: TServices = {} as TServices,
     private config: TConfig = {} as TConfig,
-    private externalStates: TExternalStates = {} as TExternalStates,
+    externalStates: TExternalStates = {} as TExternalStates,
   ) {
+    // Нормализуем externalStates: конвертируем storage → Observable
+    this.externalStates = this.normalizeExternalStates(externalStates)
+
     this.subscribeToDispatchers()
 
     // Создаем поток состояния
@@ -393,6 +397,17 @@ export class EffectsModule<
       // Отписываемся при завершении
       return () => unsubscribe()
     }).pipe(share())
+  }
+
+  /**
+   * Нормализует externalStates: конвертирует IStorageBase в Observable, пропускает Observable как есть
+   */
+  private normalizeExternalStates(states: TExternalStates): TExternalStates {
+    const normalized = {} as Record<string, Observable<any>>
+    for (const [key, value] of Object.entries(states)) {
+      normalized[key] = isStorage(value) ? toObservable(value) : value
+    }
+    return normalized as TExternalStates
   }
 
   /**

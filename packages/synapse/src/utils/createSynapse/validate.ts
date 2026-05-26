@@ -28,6 +28,11 @@ export function validateSynapseConfig(config: any): void {
         throw new Error(`Dependency at index ${index} must be an object`)
       }
 
+      // Skip validation for Promises — they will be resolved and validated in waitForDependencies
+      if (dependency instanceof Promise || typeof dependency.then === 'function') {
+        return
+      }
+
       if (!dependency.storage || typeof dependency.storage.waitForReady !== 'function') {
         throw new Error(`Dependency at index ${index} must have a storage with waitForReady method`)
       }

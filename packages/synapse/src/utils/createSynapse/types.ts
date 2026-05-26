@@ -12,7 +12,6 @@ export type StorageCreatorFunction<T extends Record<string, any>> = () => Promis
 
 export type SynapseDependency = {
   storage: IStorageBase<any>
-  [key: string]: any // Для других свойств synapse (dispatcher, selectors, etc.)
 }
 
 /**
@@ -25,7 +24,7 @@ export type BaseSynapseConfig<TStore extends Record<string, any>, TSelectors = a
   // Асинхронная функция инициализации, вызывается после готовности зависимостей, до инициализации хранилища
   setup?: () => Promise<void> | void
   // Зависимости от других synapse
-  dependencies?: SynapseDependency[]
+  dependencies?: (SynapseDependency | Promise<AnySynapseStore>)[]
   // Таймаут ожидания готовности зависимостей (мс, по умолчанию 30000)
   dependencyTimeout?: number
   // Внешние селекторы
@@ -55,7 +54,7 @@ export type CreateSynapseConfigWithEffects<
     externalStates?: ExternalStates
   }
   // Эффекты
-  effects?: Effect<TStore, any, TServices, TConfig, any>[]
+  effects?: Effect<TStore, any, TServices, TConfig, any, any>[]
 }
 
 /**

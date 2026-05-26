@@ -1,28 +1,31 @@
-import { from, withLatestFrom } from 'rxjs'
+import { Observable, from, withLatestFrom } from 'rxjs'
 import { ofType, combineEffects, selectorObject, selectorMap, validateMap, apiResult } from 'synapse-storage/reactive'
 import type { Effect } from 'synapse-storage/reactive'
 import type { PokemonState } from './pokemon.types'
 import type { PokemonDispatcher } from './pokemon.dispatcher'
 import { type pokemonApiClient, mapListResponse, mapDetailsResponse } from './pokemon.api'
+import type { PokemonSettings } from './pokemon.settings'
 
 // ─── Типы для эффектов (определяем один раз) ────────────────────────────────
 
 type Services = { pokemonApi: typeof pokemonApiClient }
+type ExtStates = { settings: Observable<PokemonSettings> }
 
 /** Общий тип эффекта — параметры типизированы автоматически */
-type PokemonEffect = Effect<PokemonState, PokemonDispatcher, Services>
+type PokemonEffect = Effect<PokemonState, PokemonDispatcher, Services, Record<string, never>, Record<string, never>, ExtStates>
 
 // ─── Effect 1: Загрузка списка ──────────────────────────────────────────────
 // Поток: loadList (idle) → validateMap → loadListLoading → API → success/failure
 // Валидация: не загружаем если уже идёт загрузка
 
-const loadListEffect: PokemonEffect = (action$, state$, { dispatcher, services: { pokemonApi: api } }) =>
+const loadListEffect: PokemonEffect = (action$, state$, { dispatcher, services: { pokemonApi: api }, externalStates: { settings } }) =>
   action$.pipe(
     ofType(dispatcher.dispatch.loadList),
     withLatestFrom(
       selectorObject(state$, {
         listStatus: (s) => s.api.listRequest.status,
       }),
+      settings,
     ),
     validateMap({
       validator: ([_action, { listStatus }]) => ({
@@ -35,8 +38,8 @@ const loadListEffect: PokemonEffect = (action$, state$, { dispatcher, services: 
       errorAction: (err) => {
         dispatcher.dispatch.loadListFailure(String(err))
       },
-      apiCall: () =>
-        from(api.request('getList', { limit: 12, offset: 0 })).pipe(
+      apiCall: ([_action, _state, { pageSize }]) =>
+        from(api.request('getList', { limit: pageSize, offset: 0 })).pipe(
           apiResult((data) => dispatcher.dispatch.loadListSuccess({ ...mapListResponse(data), append: false })),
         ),
     }),
@@ -45,7 +48,7 @@ const loadListEffect: PokemonEffect = (action$, state$, { dispatcher, services: 
 // ─── Effect 2: Подгрузка следующей страницы ─────────────────────────────────
 // selectorObject — именованный объект для withLatestFrom
 
-const loadMoreEffect: PokemonEffect = (action$, state$, { dispatcher, services: { pokemonApi: api } }) =>
+const loadMoreEffect: PokemonEffect = (action$, state$, { dispatcher, services: { pokemonApi: api }, externalStates: { settings } }) =>
   action$.pipe(
     ofType(dispatcher.dispatch.loadMore),
     withLatestFrom(
@@ -54,6 +57,7 @@ const loadMoreEffect: PokemonEffect = (action$, state$, { dispatcher, services: 
         hasMore: (s) => s.hasMore,
         listStatus: (s) => s.api.listRequest.status,
       }),
+      settings,
     ),
     validateMap({
       validator: ([_action, { hasMore, listStatus }]) => ({
@@ -66,8 +70,8 @@ const loadMoreEffect: PokemonEffect = (action$, state$, { dispatcher, services: 
       errorAction: (err) => {
         dispatcher.dispatch.loadListFailure(String(err))
       },
-      apiCall: ([_action, { offset }]) =>
-        from(api.request('getList', { limit: 12, offset })).pipe(
+      apiCall: ([_action, { offset }, { pageSize }]) =>
+        from(api.request('getList', { limit: pageSize, offset })).pipe(
           apiResult((data) => dispatcher.dispatch.loadListSuccess({ ...mapListResponse(data), append: true })),
         ),
     }),
