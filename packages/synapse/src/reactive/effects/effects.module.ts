@@ -203,11 +203,14 @@ export function selectorObject<TState, TResult extends Record<string, any>>(
 export function validateMap<T, TResult = any>({
   validator,
   loadingAction,
+  errorAction,
   apiCall,
 }: {
   validator?: (value: T) => ValidateConfig
   /** Вызывается после успешной валидации, перед apiCall. Типичное использование — dispatch loading-статуса. */
   loadingAction?: (value: T) => void
+  /** Вызывается при ошибке в apiCall (catchError). Получает ошибку + те же данные что loadingAction/apiCall. */
+  errorAction?: (error: any, value: T) => void
   apiCall: (value: T, utils: ValidateMapRequestUtils) => Observable<TResult>
 }): OperatorFunction<T, any> {
   return pipe(
@@ -217,10 +220,20 @@ export function validateMap<T, TResult = any>({
        */
       const callApi = () => {
         if (loadingAction) loadingAction(pipeData)
-        return apiCall(pipeData, {
+
+        const apiCall$ = apiCall(pipeData, {
           chunkRequest: chunkRequestParallel,
           chunkRequestConsistent: chunkRequestConsistent,
         })
+
+        if (!errorAction) return apiCall$
+
+        return apiCall$.pipe(
+          catchError((err) => {
+            errorAction(err, pipeData)
+            return EMPTY
+          }),
+        )
       }
 
       /**
@@ -259,33 +272,45 @@ export interface ApiResultMeta {
 }
 
 /**
- * Оператор для обработки результата API-запроса (QueryResult).
+ * Ошибка API-запроса. Бросается apiResult при !result.ok.
+ * Ловится errorAction в validateMap.
+ */
+export class ApiError extends Error {
+  constructor(
+    public readonly originalError: any,
+    public readonly meta: ApiResultMeta,
+  ) {
+    super(typeof originalError === 'string' ? originalError : originalError?.message ?? 'API request failed')
+    this.name = 'ApiError'
+  }
+}
+
+/**
+ * Оператор для обработки успешного результата API-запроса (QueryResult).
  *
- * Заменяет повторяющийся паттерн `tap(r => { if (r.ok && r.data) ... else ... })`.
- * Ошибки из catchError тоже попадают в `error`-колбэк.
+ * При `result.ok` — вызывает callback с `data` и `meta`.
+ * При `!result.ok` — бросает `ApiError`, который ловится `errorAction` в `validateMap`.
  *
  * @example
  * ```ts
- * // Простой случай — только data
- * apiResult({
- *   success: (data) => dispatcher.dispatch.loadSuccess(data),
- *   error: (err) => dispatcher.dispatch.loadError(String(err)),
+ * // Простой случай
+ * validateMap({
+ *   errorAction: (err) => dispatcher.dispatch.loadError(String(err)),
+ *   apiCall: () => from(api.request('getList', params)).pipe(
+ *     apiResult((data) => dispatcher.dispatch.loadSuccess(data)),
+ *   ),
  * })
  *
- * // С доступом к headers / status (пагинация и т.д.)
- * apiResult({
- *   success: (data, meta) => {
- *     const total = Number(meta.headers.get('X-Total-Count'))
- *     dispatcher.dispatch.loadSuccess({ items: data, total })
- *   },
- *   error: (err, meta) => dispatcher.dispatch.loadError({ message: String(err), status: meta?.status }),
+ * // С доступом к headers (пагинация)
+ * apiResult((data, meta) => {
+ *   const total = Number(meta.headers.get('X-Total-Count'))
+ *   dispatcher.dispatch.loadSuccess({ items: data, total })
  * })
  * ```
  */
-export function apiResult<TData, TResult = void>(callbacks: {
-  success: (data: TData, meta: ApiResultMeta) => TResult | Promise<TResult>
-  error: (error: any, meta?: ApiResultMeta) => any
-}): OperatorFunction<{ ok: boolean; data?: TData; error?: any; status?: number; statusText?: string; headers?: Headers; fromCache?: boolean }, TResult> {
+export function apiResult<TData, TResult = void>(
+  onSuccess: (data: TData, meta: ApiResultMeta) => TResult | Promise<TResult>,
+): OperatorFunction<{ ok: boolean; data?: TData; error?: any; status?: number; statusText?: string; headers?: Headers; fromCache?: boolean }, TResult> {
   return pipe(
     switchMap((result) => {
       const meta: ApiResultMeta = {
@@ -295,15 +320,10 @@ export function apiResult<TData, TResult = void>(callbacks: {
         fromCache: result.fromCache,
       }
       if (result.ok && result.data !== undefined) {
-        const out = callbacks.success(result.data, meta)
+        const out = onSuccess(result.data, meta)
         return from(Promise.resolve(out))
       }
-      callbacks.error(result.error ?? 'Unknown error', meta)
-      return EMPTY as Observable<TResult>
-    }),
-    catchError((err) => {
-      callbacks.error(err)
-      return EMPTY as Observable<TResult>
+      throw new ApiError(result.error ?? 'Unknown error', meta)
     }),
   )
 }
