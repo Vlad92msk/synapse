@@ -88,16 +88,16 @@ const loadDetailsEffect: PokemonEffect = (action$, state$, _ext, { pokemonDispat
         conditions: [selectedId !== null, detailsStatus !== 'loading'],
         skipAction: () => pokemonDispatcher.dispatch.loadDetailsReset(),
       }),
-      loadingAction: () => {
+      loadingAction: (pipeData) => {
         pokemonDispatcher.dispatch.loadDetailsLoading()
-      },
-      errorAction: (err, pipeData) => {
-        pokemonDispatcher.dispatch.loadDetailsFailure(String(err))
       },
       apiCall: ([_action, [selectedId]]) =>
         from(api.request('getDetails', { id: selectedId! })).pipe(
           apiResult((data) => pokemonDispatcher.dispatch.loadDetailsSuccess(mapDetailsResponse(data))),
         ),
+      errorAction: (err, pipeData) => {
+        pokemonDispatcher.dispatch.loadDetailsFailure(String(err))
+      },
     }),
   )
 
@@ -166,6 +166,65 @@ const loadDetailsWaitEffect: PokemonEffect = (action$, state$, _ext, { pokemonDi
 //       │       ├─ API OK  →  apiResult(success) → status = 'success' (данные)
 //       │       └─ API ERR →  errorAction        → status = 'error'   (ошибка)
 //       └─ validation FAIL →  skipAction         → status = 'reset'   (без UI-мерцания)
+//
+
+// ─── Три уровня абстракции для работы с API в эффектах ──────────────────────
+//
+// 1. Нативный RxJS — полный контроль, ничего от библиотеки:
+//
+//    action$.pipe(
+//      ofType(dispatcher.dispatch.loadList),
+//      switchMap(() =>
+//        from(api.request('getList', params)).pipe(
+//          tap((result) => {
+//            if (result.ok && result.data) dispatcher.dispatch.loadSuccess(...)
+//            else dispatcher.dispatch.loadError(...)
+//          }),
+//          catchError((err) => { dispatcher.dispatch.loadError(...); return EMPTY }),
+//        ),
+//      ),
+//    )
+//
+//    Когда использовать: нестандартная логика, сложные цепочки операторов,
+//    retry/debounce/race и другие RxJS-паттерны.
+//
+// 2. waitWithCallbacks — lifecycle управляется request'ом:
+//
+//    action$.pipe(
+//      ofType(dispatcher.dispatch.loadList),
+//      switchMap(() => from(
+//        endpoints.getList.request(params).waitWithCallbacks({
+//          loading: () => dispatcher.dispatch.loadLoading(),
+//          success: (data) => dispatcher.dispatch.loadSuccess(data),
+//          error:   (err) => dispatcher.dispatch.loadError(err),
+//        }),
+//      )),
+//    )
+//
+//    Когда использовать: нужен доступ к RequestState (params, status),
+//    loading вызывается самим request'ом, автоматическая отписка.
+//
+// 3. validateMap + apiResult — полный протокол с валидацией:
+//
+//    action$.pipe(
+//      ofType(dispatcher.dispatch.loadList),
+//      withLatestFrom(selectorObject(state$, { ... })),
+//      validateMap({
+//        validator:     ([_, state]) => ({ conditions: [...], skipAction: ... }),
+//        loadingAction: ()    => dispatcher.dispatch.loadLoading(),
+//        errorAction:   (err) => dispatcher.dispatch.loadError(String(err)),
+//        apiCall:       ()    => from(api.request(...)).pipe(
+//          apiResult((data) => dispatcher.dispatch.loadSuccess(data)),
+//        ),
+//      }),
+//    )
+//
+//    Когда использовать: стандартные CRUD-запросы с валидацией,
+//    5-state протокол (idle → loading → success/failure/reset),
+//    единообразная структура эффектов в проекте.
+//
+// Все три подхода комбинируются через combineEffects и могут
+// сосуществовать в одном проекте — выбирайте по ситуации.
 //
 
 // Effect 4 (waitWithCallbacks) — альтернативный пример, не включён в основной набор
