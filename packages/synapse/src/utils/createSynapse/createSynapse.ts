@@ -145,6 +145,7 @@ export async function createSynapse<
         externalDispatchers || {},
         services,
         effectConfig,
+        externalStates || {},
       )
 
       if (Array.isArray(config.effects)) {
