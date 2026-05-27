@@ -221,6 +221,17 @@ export class EndpointClass<RequestParams extends Record<string, any>, RequestRes
       if (shouldCache && this.inflightRequests.has(cacheKeyStr)) {
         notify({ fromCache: false, status: 'loading' })
         const result = await this.inflightRequests.get(cacheKeyStr)!
+        if (!result.ok) {
+          notify({
+            fromCache: true,
+            status: 'error',
+            data: undefined,
+            error: result.error,
+            headers: result.headers,
+            requestParams: params,
+          })
+          return { ...result, fromCache: true }
+        }
         notify({
           fromCache: true,
           status: 'success',
@@ -241,7 +252,7 @@ export class EndpointClass<RequestParams extends Record<string, any>, RequestRes
       // Регистрируем в inflight для дедупликации (только для кэшируемых)
       if (shouldCache) {
         this.inflightRequests.set(cacheKeyStr, fetchPromise)
-        fetchPromise.finally(() => this.inflightRequests.delete(cacheKeyStr))
+        fetchPromise.finally(() => this.inflightRequests.delete(cacheKeyStr)).catch(() => {})
       }
 
       const response = await fetchPromise
@@ -352,8 +363,8 @@ export class EndpointClass<RequestParams extends Record<string, any>, RequestRes
     let lastResponse!: QueryResult<RequestResponse, Error>
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      // Если запрос отменён — не делаем следующую попытку
-      if (controller.signal.aborted) break
+      // Если запрос отменён — бросаем ошибку (перехватывается в executeRequest)
+      if (controller.signal.aborted) throw new DOMException('The operation was aborted.', 'AbortError')
 
       const mergedOptions: QueryOptions = { ...options, signal: controller.signal }
       lastResponse = await this.queryFunction<RequestResponse, RequestParams>(requestDefinition, mergedOptions, headers)

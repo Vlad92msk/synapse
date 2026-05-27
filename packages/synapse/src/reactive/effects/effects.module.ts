@@ -382,8 +382,6 @@ export class EffectsModule<
     // Нормализуем externalStates: конвертируем storage → Observable
     this.externalStates = this.normalizeExternalStates(externalStates)
 
-    this.subscribeToDispatchers()
-
     // Создаем поток состояния
     this.state$ = new Observable<TState>((observer) => {
       // Отправляем начальное состояние

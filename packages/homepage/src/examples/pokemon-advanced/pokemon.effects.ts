@@ -1,5 +1,5 @@
 import { Observable, from, withLatestFrom } from 'rxjs'
-import { ofType, combineEffects, selectorObject, selectorMap, validateMap, apiResult } from 'synapse-storage/reactive'
+import { ofType, combineEffects, selectorObject, selectorMap, validateMap, apiResult, fromRequest } from 'synapse-storage/reactive'
 import type { Effect } from 'synapse-storage/reactive'
 import type { PokemonState } from './pokemon.types'
 import type { PokemonDispatcher } from './pokemon.dispatcher'
@@ -39,7 +39,7 @@ const loadListEffect: PokemonEffect = (action$, state$, { dispatcher, services: 
         dispatcher.dispatch.loadListFailure(String(err))
       },
       apiCall: ([_action, _state, { pageSize }]) =>
-        from(getList.request({ limit: pageSize, offset: 0 }).wait()).pipe(
+        fromRequest(getList.request({ limit: pageSize, offset: 0 })).pipe(
           apiResult((data) => {
             dispatcher.dispatch.applyPokemonList({ ...mapListResponse(data), append: false })
             dispatcher.dispatch.loadListSuccess()
@@ -74,7 +74,7 @@ const loadMoreEffect: PokemonEffect = (action$, state$, { dispatcher, services: 
         dispatcher.dispatch.loadListFailure(String(err))
       },
       apiCall: ([_action, { offset }, { pageSize }]) =>
-        from(getList.request({ limit: pageSize, offset }).wait()).pipe(
+        fromRequest(getList.request({ limit: pageSize, offset })).pipe(
           apiResult((data) => {
             dispatcher.dispatch.applyPokemonList({ ...mapListResponse(data), append: true })
             dispatcher.dispatch.loadListSuccess()
@@ -101,7 +101,7 @@ const loadDetailsEffect: PokemonEffect = (action$, state$, { dispatcher, service
         dispatcher.dispatch.loadDetailsLoading()
       },
       apiCall: ([_action, [selectedId]]) =>
-        from(getDetails.request({ id: selectedId! })).pipe(
+        fromRequest(getDetails.request({ id: selectedId! })).pipe(
           apiResult((data) => {
             dispatcher.dispatch.applyPokemonDetails(mapDetailsResponse(data))
             dispatcher.dispatch.loadDetailsSuccess()
