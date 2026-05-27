@@ -1,7 +1,7 @@
 import { handleCleanupError, handleOperationError } from '../../_utils/error-handling.util'
 import { IStorage, StorageKeyType } from '../../core'
 import { CacheEntry, CacheUtils } from '../../core/storage/utils/cache.util'
-import { CacheConfig, CreateApiClientOptions } from '../types/api.interface'
+import { CacheConfig, CreateApiClientOptions, StorageOption } from '../types/api.interface'
 import { EndpointConfig } from '../types/endpoint.interface'
 import { QueryOptions } from '../types/query.interface'
 
@@ -35,7 +35,7 @@ export class QueryStorage {
   private _initPromise: Promise<this> | null = null
 
   constructor(
-    private readonly storageExternal: CreateApiClientOptions['storage'],
+    private readonly storageExternal: StorageOption,
     private readonly globalCacheConfig: CreateApiClientOptions['cache'],
   ) {}
 
@@ -66,7 +66,10 @@ export class QueryStorage {
 
   private async createStorage() {
     try {
-      const s: IStorage = this.storageExternal
+      // Резолвим storage: может быть инстанс или фабрика
+      const s: IStorage = typeof this.storageExternal === 'function'
+        ? await this.storageExternal()
+        : this.storageExternal
 
       await s.initialize()
       this.storage = s

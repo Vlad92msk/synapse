@@ -92,8 +92,26 @@ export interface FetchBaseQueryArgs {
   credentials?: RequestCredentials
 }
 
+/**
+ * Конфигурация повторных попыток запроса
+ */
+export interface RetryConfig {
+  /** Количество повторных попыток (0 = без retry) */
+  count: number
+  /** Задержка между попытками в мс, или функция (attempt) => ms для кастомной стратегии */
+  delay?: number | ((attempt: number) => number)
+  /** HTTP-статусы, при которых делать retry (по умолчанию: 0, 408, 429, 500, 502, 503, 504) */
+  retryOn?: number[]
+}
+
+/**
+ * Storage или фабрика для ленивого создания storage
+ * Фабрика вызывается при init() — удобно для универсального кода (SSR + клиент)
+ */
+export type StorageOption = IStorage | (() => IStorage | Promise<IStorage>)
+
 export interface CreateApiClientOptions<T extends Record<string, EndpointConfig<any, any>> = Record<string, EndpointConfig<any, any>>> {
-  storage: IStorage
+  storage: StorageOption
   /** Настройки кэша
    * если явно указан false - значит ни один запрос НЕ будет кэшироваться, даже если в эндпоинтах указаны параметры
    * */
@@ -104,6 +122,8 @@ export interface CreateApiClientOptions<T extends Record<string, EndpointConfig<
   endpoints?: (create: CreateEndpoint) => Promise<T>
   /** Глобальные заголовки, влияющие на кэш */
   cacheableHeaderKeys?: string[]
+  /** Глобальная конфигурация retry (применяется ко всем эндпоинтам по умолчанию) */
+  retry?: RetryConfig
 }
 
 /**

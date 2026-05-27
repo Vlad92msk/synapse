@@ -1,4 +1,4 @@
-import { CreateApiClientOptions } from '../types/api.interface'
+import { CreateApiClientOptions, RetryConfig } from '../types/api.interface'
 import { Endpoint as EndpointType, EndpointConfig, EndpointState, RequestResponseModify, RequestState } from '../types/endpoint.interface'
 import { QueryOptions, QueryResult, Unsubscribe } from '../types/query.interface'
 import { createUniqueId, headersToObject } from '../utils/api-helpers'
@@ -8,12 +8,16 @@ import { fetchBaseQuery } from '../utils/fetch-base-query'
 import { getCacheableHeaders } from '../utils/get-cacheable-headers'
 import { QueryStorage } from './query-storage'
 
+/** HTTP-статусы, при которых делать retry по умолчанию */
+const DEFAULT_RETRY_ON = [0, 408, 429, 500, 502, 503, 504]
+
 export interface EndpointClassOptions<RequestParams extends Record<string, any>, RequestResponse> {
   name: string
   queryStorage: QueryStorage
   config: EndpointConfig<RequestParams, RequestResponse>
   cacheableHeaderKeys: CreateApiClientOptions['cacheableHeaderKeys']
   globalCacheConfig: CreateApiClientOptions['cache']
+  globalRetryConfig: CreateApiClientOptions['retry']
   baseQueryConfig: CreateApiClientOptions['baseQuery']
 }
 
@@ -34,6 +38,7 @@ export class EndpointClass<RequestParams extends Record<string, any>, RequestRes
   private readonly queryStorage: QueryStorage
   private readonly configCurrentEndpoint: EndpointConfig<RequestParams, RequestResponse>
   private readonly cacheableHeaderKeys: CreateApiClientOptions['cacheableHeaderKeys']
+  private readonly globalRetryConfig: CreateApiClientOptions['retry']
   private readonly baseQueryConfig: CreateApiClientOptions['baseQuery']
 
   private readonly queryFunction: ReturnType<typeof fetchBaseQuery>
@@ -51,6 +56,7 @@ export class EndpointClass<RequestParams extends Record<string, any>, RequestRes
     this.queryStorage = options.queryStorage
     this.configCurrentEndpoint = options.config
     this.cacheableHeaderKeys = options.cacheableHeaderKeys
+    this.globalRetryConfig = options.globalRetryConfig
     this.baseQueryConfig = options.baseQueryConfig
 
     // 1. Создаем функцию подготовки заголовков
@@ -165,7 +171,14 @@ export class EndpointClass<RequestParams extends Record<string, any>, RequestRes
   }
 
   /**
-   * Выполняет сетевой запрос с кэшированием и дедупликацией
+   * Определяет итоговую конфигурацию retry: вызов → эндпоинт → глобальная
+   */
+  private resolveRetryConfig(options?: QueryOptions): RetryConfig | undefined {
+    return options?.retry ?? this.configCurrentEndpoint.retry ?? this.globalRetryConfig
+  }
+
+  /**
+   * Выполняет сетевой запрос с кэшированием, дедупликацией и retry
    */
   private async executeRequest(
     params: RequestParams,
@@ -219,10 +232,11 @@ export class EndpointClass<RequestParams extends Record<string, any>, RequestRes
         return { ...result, fromCache: true }
       }
 
-      // 6. Выполняем запрос
+      // 6. Выполняем запрос (с retry и post-processing)
       notify({ fromCache: false, status: 'loading' })
 
-      const fetchPromise = this.executeFetch(requestDefinition, options, controller, headers, shouldCache, cacheKey, cacheKeyStr, cacheParams ?? {})
+      const retryConfig = this.resolveRetryConfig(options)
+      const fetchPromise = this.executeFetch(requestDefinition, options, controller, headers, retryConfig, shouldCache, cacheKey, cacheParams ?? {})
 
       // Регистрируем в inflight для дедупликации (только для кэшируемых)
       if (shouldCache) {
@@ -278,21 +292,22 @@ export class EndpointClass<RequestParams extends Record<string, any>, RequestRes
   }
 
   /**
-   * Выполняет HTTP-запрос, обрабатывает инвалидацию и кэширование результата
+   * Выполняет HTTP-запрос с retry, инвалидацией тегов и кэшированием результата
    */
   private async executeFetch(
     requestDefinition: ReturnType<EndpointConfig<RequestParams, RequestResponse>['request']>,
     options: QueryOptions | undefined,
     controller: AbortController,
     headers: Headers,
+    retryConfig: RetryConfig | undefined,
     shouldCache: boolean,
     cacheKey: ReturnType<QueryStorage['createCacheKey']>[0],
-    cacheKeyStr: string,
     cacheParams: Record<string, any>,
   ): Promise<QueryResult<RequestResponse, Error>> {
-    const mergedOptions: QueryOptions = { ...options, signal: controller.signal }
-    const response = await this.queryFunction<RequestResponse, RequestParams>(requestDefinition, mergedOptions, headers)
+    // Выполняем HTTP-запрос (с retry если настроен)
+    const response = await this.fetchWithRetry(requestDefinition, options, controller, headers, retryConfig)
 
+    // Post-processing при успешном ответе
     if (response.ok) {
       const { headers: responseHeaders, ...restResponse } = response
 
@@ -315,6 +330,49 @@ export class EndpointClass<RequestParams extends Record<string, any>, RequestRes
     }
 
     return response
+  }
+
+  /**
+   * Выполняет HTTP-запрос с повторными попытками
+   */
+  private async fetchWithRetry(
+    requestDefinition: ReturnType<EndpointConfig<RequestParams, RequestResponse>['request']>,
+    options: QueryOptions | undefined,
+    controller: AbortController,
+    headers: Headers,
+    retryConfig?: RetryConfig,
+  ): Promise<QueryResult<RequestResponse, Error>> {
+    const maxAttempts = (retryConfig?.count ?? 0) + 1
+    const retryOn = retryConfig?.retryOn ?? DEFAULT_RETRY_ON
+    const getDelay = (attempt: number): number => {
+      if (typeof retryConfig?.delay === 'function') return retryConfig.delay(attempt)
+      return retryConfig?.delay ?? 1000
+    }
+
+    let lastResponse!: QueryResult<RequestResponse, Error>
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      // Если запрос отменён — не делаем следующую попытку
+      if (controller.signal.aborted) break
+
+      const mergedOptions: QueryOptions = { ...options, signal: controller.signal }
+      lastResponse = await this.queryFunction<RequestResponse, RequestParams>(requestDefinition, mergedOptions, headers)
+
+      // Успех или не-retryable статус — возвращаем сразу
+      if (lastResponse.ok || !retryOn.includes(lastResponse.status) || attempt === maxAttempts - 1) {
+        return lastResponse
+      }
+
+      // Ждём перед следующей попыткой
+      const delay = getDelay(attempt)
+      await new Promise<void>((resolve) => {
+        const timer = setTimeout(resolve, delay)
+        // Если запрос отменили во время ожидания — прерываем delay
+        controller.signal.addEventListener('abort', () => { clearTimeout(timer); resolve() }, { once: true })
+      })
+    }
+
+    return lastResponse
   }
 
   /**

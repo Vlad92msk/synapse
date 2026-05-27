@@ -31,6 +31,8 @@ export class ApiClient<EndpointsFn extends (create: CreateEndpoint) => Promise<R
 
   private readonly storageExternal: CreateApiClientOptions['storage']
 
+  private readonly globalRetryConfig: CreateApiClientOptions['retry']
+
   private readonly createEndpoints: EndpointsFn
 
   /** Реестр эндпоинтов */
@@ -44,6 +46,7 @@ export class ApiClient<EndpointsFn extends (create: CreateEndpoint) => Promise<R
     this.globalCacheConfig = options.cache
     this.baseQueryConfig = options.baseQuery
     this.storageExternal = options.storage
+    this.globalRetryConfig = options.retry
     this.createEndpoints = options.endpoints
   }
 
@@ -86,6 +89,7 @@ export class ApiClient<EndpointsFn extends (create: CreateEndpoint) => Promise<R
         config: endpointConfig,
         cacheableHeaderKeys: this.cacheableHeaderKeys,
         globalCacheConfig: this.globalCacheConfig,
+        globalRetryConfig: this.globalRetryConfig,
         baseQueryConfig: this.baseQueryConfig,
       })
     }

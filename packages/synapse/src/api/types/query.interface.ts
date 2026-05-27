@@ -1,4 +1,4 @@
-import { ResponseFormat } from './api.interface'
+import { ResponseFormat, RetryConfig } from './api.interface'
 
 /**
  * Тип для функции отписки от событий
@@ -29,6 +29,8 @@ export interface QueryOptions {
   fileType?: string
   /** Автоматически скачать файл после получения */
   downloadFile?: boolean
+  /** Конфигурация retry для этого запроса (переопределяет эндпоинт и глобальную) */
+  retry?: RetryConfig
 }
 
 /**

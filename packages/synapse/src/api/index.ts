@@ -1,5 +1,5 @@
 export * from './api.module'
-export { ResponseFormat } from './types/api.interface'
+export { ResponseFormat, type RetryConfig } from './types/api.interface'
 export * from './utils/api-helpers'
 // export * from './_utils/file-_utils'
 // export * from './_utils/get-cacheable-headers'

@@ -1,4 +1,4 @@
-import { ApiContext, CacheConfig, RequestDefinition } from './api.interface'
+import { ApiContext, CacheConfig, RequestDefinition, RetryConfig } from './api.interface'
 import { QueryOptions, QueryResult, Unsubscribe } from './query.interface'
 
 /**
@@ -19,6 +19,8 @@ export interface EndpointConfig<RequestParams extends Record<string, any> = any,
   includeCacheableHeaderKeys?: string[]
   /** Исключить ключи заголовков, влияющие на кэш (Дополняет глобавльные ключи) */
   excludeCacheableHeaderKeys?: string[]
+  /** Конфигурация retry для этого эндпоинта (переопределяет глобальную) */
+  retry?: RetryConfig
 }
 
 /**
