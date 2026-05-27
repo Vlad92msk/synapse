@@ -14,6 +14,9 @@ export type SynapseDependency = {
   storage: IStorageBase<any>
 }
 
+/** Всё что можно передать в dependencies[]: raw storage, обёртка { storage }, или Promise от другого synapse */
+export type DependencyInput = IStorageBase<any> | SynapseDependency | Promise<AnySynapseStore>
+
 /**
  * Базовая конфигурация хранилища
  */
@@ -24,7 +27,7 @@ export type BaseSynapseConfig<TStore extends Record<string, any>, TSelectors = a
   // Асинхронная функция инициализации, вызывается после готовности зависимостей, до инициализации хранилища
   setup?: () => Promise<void> | void
   // Зависимости от других synapse
-  dependencies?: (SynapseDependency | Promise<AnySynapseStore>)[]
+  dependencies?: DependencyInput[]
   // Таймаут ожидания готовности зависимостей (мс, по умолчанию 30000)
   dependencyTimeout?: number
   // Внешние селекторы

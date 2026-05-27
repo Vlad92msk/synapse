@@ -1,5 +1,5 @@
-import { MemoryStorage } from 'synapse-storage/core'
 import { ApiClient } from 'synapse-storage/api'
+import { MemoryStorage } from 'synapse-storage/core'
 import type { PokemonBrief, PokemonDetails } from './pokemon.types'
 
 // ─── Raw API response types ─────────────────────────────────────────────────
@@ -23,13 +23,11 @@ interface PokemonApiResponse {
 
 // ─── ApiClient ───────────────────────────────────────────────────────────────
 
-const apiCacheStorage = new MemoryStorage<Record<string, any>>({
-  name: 'pokemon-advanced-api-cache',
-  initialState: {},
-})
-
 export const pokemonApiClient = new ApiClient({
-  storage: apiCacheStorage as any,
+  storage: new MemoryStorage<Record<string, any>>({
+    name: 'pokemon-advanced-api-cache',
+    initialState: {},
+  }),
 
   baseQuery: {
     baseUrl: 'https://pokeapi.co/api/v2',
@@ -63,10 +61,9 @@ export const pokemonApiClient = new ApiClient({
   }),
 })
 
-export async function initPokemonApi() {
-  await apiCacheStorage.initialize()
-  await pokemonApiClient.init()
-}
+export const initPokemonApi = () => pokemonApiClient.init()
+
+export type PokemonApiEndpoints = ReturnType<typeof pokemonApiClient.getEndpoints>
 
 // ─── Response mappers ────────────────────────────────────────────────────────
 

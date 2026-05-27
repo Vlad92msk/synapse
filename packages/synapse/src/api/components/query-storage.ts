@@ -15,6 +15,9 @@ export class QueryStorage {
 
   private cleanupInterval: NodeJS.Timeout | number | null = null
 
+  /** Индекс тегов: tag → Set<cacheKey> для быстрой инвалидации */
+  private tagIndex = new Map<string, Set<string>>()
+
   /** Настройки кэша по умолчанию */
   private defaultCacheOptions: Exclude<CacheConfig, boolean> = {
     ttl: 5 * 60 * 1000, // 5 минут по умолчанию
@@ -25,18 +28,40 @@ export class QueryStorage {
     invalidateOnError: true,
   }
 
+  /** Флаг завершённой инициализации */
+  private _initialized = false
+
+  /** Промис текущей инициализации */
+  private _initPromise: Promise<this> | null = null
+
   constructor(
     private readonly storageExternal: CreateApiClientOptions['storage'],
     private readonly globalCacheConfig: CreateApiClientOptions['cache'],
   ) {}
 
   public async initialize(): Promise<this> {
-    // 1. Создаем хранилище
-    await this.createStorage()
-    // 2. Запускаем периодическую очистку, если это указано в настройках
-    this.startCleanupInterval()
+    if (this._initialized) return this
+    if (this._initPromise) return this._initPromise
 
-    return this
+    this._initPromise = this._doInitialize()
+    return this._initPromise
+  }
+
+  private async _doInitialize(): Promise<this> {
+    try {
+      // 1. Создаем хранилище
+      await this.createStorage()
+      // 2. Перестраиваем индекс тегов из существующих записей в storage
+      await this.rebuildTagIndex()
+      // 3. Запускаем периодическую очистку, если это указано в настройках
+      this.startCleanupInterval()
+
+      this._initialized = true
+      return this
+    } catch (error) {
+      this._initPromise = null
+      throw error
+    }
   }
 
   private async createStorage() {
@@ -94,6 +119,7 @@ export class QueryStorage {
 
     // Проверяем срок годности кэша
     if (CacheUtils.isExpired(cachedEntry.metadata)) {
+      this.removeKeyFromTagIndex(String(cacheKey), cachedEntry.metadata.tags)
       await this.storage.remove(cacheKey)
       return undefined
     }
@@ -136,15 +162,29 @@ export class QueryStorage {
     }
 
     await this.storage.set(cacheKey, cacheEntry)
+
+    // Обновляем индекс тегов
+    const keyStr = String(cacheKey)
+    for (const tag of tags) {
+      let keys = this.tagIndex.get(tag)
+      if (!keys) {
+        keys = new Set()
+        this.tagIndex.set(tag, keys)
+      }
+      keys.add(keyStr)
+    }
   }
 
   /**
    * Проверяет, должен ли запрос быть кэширован
    * @param endpointConfig Конфигурация эндпоинта
    * @param options Опции запроса
+   * @param method HTTP-метод запроса (только GET кэшируется по REST-стандарту)
    * @returns true если запрос должен кэшироваться
    */
-  public shouldCache(endpointConfig?: EndpointConfig, options?: QueryOptions) {
+  public shouldCache(endpointConfig?: EndpointConfig, options?: QueryOptions, method?: string) {
+    // Мутации (POST/PUT/DELETE/PATCH) не кэшируются по REST-стандарту
+    if (method && method !== 'GET') return false
     // Если глобальный кэш отключен, возвращаем false
     if (this.globalCacheConfig === false) return false
     // Если эндпоинт явно отключает кэш, возвращаем false
@@ -161,7 +201,7 @@ export class QueryStorage {
 
   /**
    * Создает итоговую конфигурацию кэширования для конкретного эндпоинта
-   * Объединяет глабальный конфиг с текущим
+   * Объединяет глобальный конфиг с текущим
    * @param endpointConfig Конфигурация эндпоинта
    */
   public createCacheConfig(endpointConfig?: EndpointConfig) {
@@ -174,9 +214,8 @@ export class QueryStorage {
     }
     // Если в настройках эндпоинта кэш как объект - дополняем этими параметрами итоговый объект кэша
     if (typeof endpointConfig?.cache === 'object') {
-      const endpointCache = endpointConfig.cache
+      const endpointCache = endpointConfig.cache as Exclude<CacheConfig, boolean>
       resultConfig = {
-        // @ts-ignore
         ...resultConfig,
         ...endpointCache,
       }
@@ -186,19 +225,32 @@ export class QueryStorage {
   }
 
   /**
-   * Инвалидирует кэш по тегам
+   * Инвалидирует кэш по тегам (использует индекс для O(1) поиска по тегу)
    * @param tags Теги для инвалидации
    */
   public async invalidateCacheByTags(tags: string[]): Promise<void> {
     if (!this.storage) throw new Error('Хранилище не инициализировано')
 
-    const keys = await this.storage.keys()
-    for (const key of keys) {
-      const cachedEntry = await this.storage.get<CacheEntry<any>>(key)
-      if (cachedEntry && CacheUtils.hasAnyTag(cachedEntry.metadata, tags)) {
-        await this.storage.remove(key)
+    // Собираем все ключи для удаления через индекс
+    const keysToRemove = new Set<string>()
+    for (const tag of tags) {
+      const keys = this.tagIndex.get(tag)
+      if (keys) {
+        keys.forEach((k) => keysToRemove.add(k))
+        this.tagIndex.delete(tag)
       }
     }
+
+    // Удаляем из остальных тегов индекса (ключ может быть в нескольких тегах)
+    for (const key of keysToRemove) {
+      for (const [tag, keys] of this.tagIndex) {
+        keys.delete(key)
+        if (keys.size === 0) this.tagIndex.delete(tag)
+      }
+    }
+
+    // Удаляем записи из хранилища
+    await Promise.all([...keysToRemove].map((key) => this.storage!.remove(key)))
   }
 
   /**
@@ -207,6 +259,12 @@ export class QueryStorage {
    */
   public async invalidateCache(cacheKey: StorageKeyType): Promise<void> {
     if (!this.storage) throw new Error('Хранилище не инициализировано')
+
+    // Читаем теги записи для очистки индекса
+    const cachedEntry = await this.storage.get<CacheEntry<any>>(cacheKey)
+    if (cachedEntry) {
+      this.removeKeyFromTagIndex(String(cacheKey), cachedEntry.metadata.tags)
+    }
 
     await this.storage.remove(cacheKey)
   }
@@ -223,6 +281,7 @@ export class QueryStorage {
     for (const key of keys) {
       const value = await this.storage.get<CacheEntry<any>>(key)
       if (value && CacheUtils.isExpired(value.metadata)) {
+        this.removeKeyFromTagIndex(String(key), value.metadata.tags)
         await this.storage.remove(key)
       }
     }
@@ -238,10 +297,63 @@ export class QueryStorage {
       this.cleanupInterval = null
     }
 
+    // Очищаем индекс тегов
+    this.tagIndex.clear()
+
     // Очищаем хранилище
     if (this.storage) {
       await this.storage.destroy()
       this.storage = null
+    }
+
+    // Сбрасываем состояние инициализации
+    this._initialized = false
+    this._initPromise = null
+  }
+
+  /**
+   * Перестраивает индекс тегов из существующих записей в storage
+   * Вызывается при инициализации для восстановления после перезагрузки
+   */
+  private async rebuildTagIndex(): Promise<void> {
+    if (!this.storage) return
+
+    this.tagIndex.clear()
+    const keys = await this.storage.keys()
+
+    for (const key of keys) {
+      const entry = await this.storage.get<CacheEntry<any>>(key)
+      if (!entry?.metadata?.tags) continue
+
+      // Удаляем протухшие записи сразу
+      if (CacheUtils.isExpired(entry.metadata)) {
+        await this.storage.remove(key)
+        continue
+      }
+
+      const keyStr = String(key)
+      for (const tag of entry.metadata.tags) {
+        let tagKeys = this.tagIndex.get(tag)
+        if (!tagKeys) {
+          tagKeys = new Set()
+          this.tagIndex.set(tag, tagKeys)
+        }
+        tagKeys.add(keyStr)
+      }
+    }
+  }
+
+  /**
+   * Удаляет ключ из индекса тегов
+   */
+  private removeKeyFromTagIndex(key: string, tags?: string[]): void {
+    if (!tags) return
+    for (const tag of tags) {
+      const keys = this.tagIndex.get(tag)
+      if (keys) {
+        keys.delete(key)
+        if (keys.size === 0) this.tagIndex.delete(tag)
+      }
     }
   }
 }

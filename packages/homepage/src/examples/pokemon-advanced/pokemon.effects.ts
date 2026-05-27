@@ -3,12 +3,12 @@ import { ofType, combineEffects, selectorObject, selectorMap, validateMap, apiRe
 import type { Effect } from 'synapse-storage/reactive'
 import type { PokemonState } from './pokemon.types'
 import type { PokemonDispatcher } from './pokemon.dispatcher'
-import { type pokemonApiClient, mapListResponse, mapDetailsResponse } from './pokemon.api'
+import { type PokemonApiEndpoints, mapListResponse, mapDetailsResponse } from './pokemon.api'
 import type { PokemonSettings } from './pokemon.settings'
 
 // ─── Типы для эффектов (определяем один раз) ────────────────────────────────
 
-type Services = { pokemonApi: typeof pokemonApiClient }
+type Services = { pokemonApi: PokemonApiEndpoints }
 type ExtStates = { settings: Observable<PokemonSettings> }
 
 /** Общий тип эффекта — параметры типизированы автоматически */
@@ -18,7 +18,7 @@ type PokemonEffect = Effect<PokemonState, PokemonDispatcher, Services, Record<st
 // Поток: loadList (idle) → validateMap → loadListLoading → API → success/failure
 // Валидация: не загружаем если уже идёт загрузка
 
-const loadListEffect: PokemonEffect = (action$, state$, { dispatcher, services: { pokemonApi: api }, externalStates: { settings } }) =>
+const loadListEffect: PokemonEffect = (action$, state$, { dispatcher, services: { pokemonApi: { getList } }, externalStates: { settings } }) =>
   action$.pipe(
     ofType(dispatcher.dispatch.loadList),
     withLatestFrom(
@@ -39,7 +39,7 @@ const loadListEffect: PokemonEffect = (action$, state$, { dispatcher, services: 
         dispatcher.dispatch.loadListFailure(String(err))
       },
       apiCall: ([_action, _state, { pageSize }]) =>
-        from(api.request('getList', { limit: pageSize, offset: 0 })).pipe(
+        from(getList.request({ limit: pageSize, offset: 0 }).wait()).pipe(
           apiResult((data) => {
             dispatcher.dispatch.applyPokemonList({ ...mapListResponse(data), append: false })
             dispatcher.dispatch.loadListSuccess()
@@ -51,7 +51,7 @@ const loadListEffect: PokemonEffect = (action$, state$, { dispatcher, services: 
 // ─── Effect 2: Подгрузка следующей страницы ─────────────────────────────────
 // selectorObject — именованный объект для withLatestFrom
 
-const loadMoreEffect: PokemonEffect = (action$, state$, { dispatcher, services: { pokemonApi: api }, externalStates: { settings } }) =>
+const loadMoreEffect: PokemonEffect = (action$, state$, { dispatcher, services: { pokemonApi: { getList } }, externalStates: { settings } }) =>
   action$.pipe(
     ofType(dispatcher.dispatch.loadMore),
     withLatestFrom(
@@ -74,7 +74,7 @@ const loadMoreEffect: PokemonEffect = (action$, state$, { dispatcher, services: 
         dispatcher.dispatch.loadListFailure(String(err))
       },
       apiCall: ([_action, { offset }, { pageSize }]) =>
-        from(api.request('getList', { limit: pageSize, offset })).pipe(
+        from(getList.request({ limit: pageSize, offset }).wait()).pipe(
           apiResult((data) => {
             dispatcher.dispatch.applyPokemonList({ ...mapListResponse(data), append: true })
             dispatcher.dispatch.loadListSuccess()
@@ -86,7 +86,7 @@ const loadMoreEffect: PokemonEffect = (action$, state$, { dispatcher, services: 
 // ─── Effect 3: Загрузка деталей (apiResult) ────────────────────────────────
 // selectorMap — позиционный массив (компактнее для 1-2 полей)
 
-const loadDetailsEffect: PokemonEffect = (action$, state$, { dispatcher, services: { pokemonApi: api } }) =>
+const loadDetailsEffect: PokemonEffect = (action$, state$, { dispatcher, services: { pokemonApi: { getDetails } } }) =>
   action$.pipe(
     ofType(dispatcher.dispatch.selectPokemon),
     withLatestFrom(
@@ -101,7 +101,7 @@ const loadDetailsEffect: PokemonEffect = (action$, state$, { dispatcher, service
         dispatcher.dispatch.loadDetailsLoading()
       },
       apiCall: ([_action, [selectedId]]) =>
-        from(api.request('getDetails', { id: selectedId! })).pipe(
+        from(getDetails.request({ id: selectedId! })).pipe(
           apiResult((data) => {
             dispatcher.dispatch.applyPokemonDetails(mapDetailsResponse(data))
             dispatcher.dispatch.loadDetailsSuccess()
@@ -118,7 +118,7 @@ const loadDetailsEffect: PokemonEffect = (action$, state$, { dispatcher, service
 // Lifecycle управляется самим request'ом через колбэки,
 // не нужно вручную вызывать loadDetailsLoading перед запросом.
 
-const loadDetailsWaitEffect: PokemonEffect = (action$, state$, { dispatcher, services: { pokemonApi: api } }) =>
+const loadDetailsWaitEffect: PokemonEffect = (action$, state$, { dispatcher, services: { pokemonApi: { getDetails } } }) =>
   action$.pipe(
     ofType(dispatcher.dispatch.selectPokemon),
     withLatestFrom(
@@ -130,9 +130,8 @@ const loadDetailsWaitEffect: PokemonEffect = (action$, state$, { dispatcher, ser
         skipAction: () => dispatcher.dispatch.loadDetailsReset(),
       }),
       apiCall: ([_action, [selectedId]]) => {
-        const endpoints = api.getEndpoints()
         return from(
-          endpoints.getDetails.request({ id: selectedId! }).waitWithCallbacks({
+          getDetails.request({ id: selectedId! }).waitWithCallbacks({
             loading: () => {
               dispatcher.dispatch.loadDetailsLoading()
             },
@@ -168,7 +167,7 @@ const loadDetailsWaitEffect: PokemonEffect = (action$, state$, { dispatcher, ser
 //   endpoint.request().waitWithCallbacks({ loading, success, error })
 //   ✅ Декларативный — колбэки привязаны к lifecycle запроса
 //   ✅ loading вызывается самим request'ом
-//   ❌ Нужен endpoint напрямую (api.getEndpoints())
+//   ✅ Endpoints доступны напрямую через services
 //
 // ─── 5 состояний запроса ────────────────────────────────────────────────────
 //

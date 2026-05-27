@@ -1,7 +1,13 @@
-import type { ISelectorModule } from 'synapse-storage/core'
+import type { ISelectorModule, IStorageBase } from 'synapse-storage/core'
 import type { PokemonState } from './pokemon.types'
+import type { PokemonSettings } from './pokemon.settings'
 
-export function createPokemonSelectors(sm: ISelectorModule<PokemonState>) {
+// Тип внешних селекторов — соответствует externalSelectors в createSynapse
+type ExternalSelectors = {
+  settings: IStorageBase<PokemonSettings>
+}
+
+export function createPokemonSelectors(sm: ISelectorModule<PokemonState>, ext: ExternalSelectors) {
   const api = sm.createSelector((s) => s.api)
   const pokemonList = sm.createSelector((s) => s.pokemonList)
   const searchQuery = sm.createSelector((s) => s.searchQuery)

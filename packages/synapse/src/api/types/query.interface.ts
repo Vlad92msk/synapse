@@ -29,10 +29,6 @@ export interface QueryOptions {
   fileType?: string
   /** Автоматически скачать файл после получения */
   downloadFile?: boolean
-  /**
-   * Функция для повторного выполнения запроса
-   */
-  retry?: <T = any, R = any>(params: T, options?: QueryOptions) => Promise<R>
 }
 
 /**

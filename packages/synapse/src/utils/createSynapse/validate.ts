@@ -33,9 +33,17 @@ export function validateSynapseConfig(config: any): void {
         return
       }
 
-      if (!dependency.storage || typeof dependency.storage.waitForReady !== 'function') {
-        throw new Error(`Dependency at index ${index} must have a storage with waitForReady method`)
+      // Raw IStorageBase (имеет waitForReady напрямую)
+      if (typeof dependency.waitForReady === 'function') {
+        return
       }
+
+      // Обёртка { storage: IStorageBase }
+      if (dependency.storage && typeof dependency.storage.waitForReady === 'function') {
+        return
+      }
+
+      throw new Error(`Dependency at index ${index} must be IStorageBase, { storage: IStorageBase }, or Promise<SynapseStore>`)
     })
   }
 

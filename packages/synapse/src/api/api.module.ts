@@ -8,10 +8,20 @@ import { apiLogger } from './utils/api-helpers'
 // Тип для извлечения типов из функции endpoints
 type EndpointsResult<F> = F extends (create: any) => Promise<infer R> ? R : never
 
+// Тип для готовой карты эндпоинтов (без optional)
+type EndpointsMap<EndpointsFn> = {
+  [K in keyof EndpointsResult<EndpointsFn>]: EndpointType<ExtractParamsType<EndpointsResult<EndpointsFn>[K]>, ExtractResultType<EndpointsResult<EndpointsFn>[K]>>
+}
+
 export class ApiClient<EndpointsFn extends (create: CreateEndpoint) => Promise<Record<string, EndpointConfig<any, any>>>> {
   /** Хранилище запросов */
-  // @ts-ignore
-  private queryStorage: QueryStorage
+  private queryStorage!: QueryStorage
+
+  /** Флаг завершённой инициализации */
+  private _initialized = false
+
+  /** Промис текущей инициализации (для дедупликации параллельных вызовов) */
+  private _initPromise: Promise<this> | null = null
 
   private readonly cacheableHeaderKeys: CreateApiClientOptions['cacheableHeaderKeys']
 
@@ -38,25 +48,52 @@ export class ApiClient<EndpointsFn extends (create: CreateEndpoint) => Promise<R
   }
 
   public async init(): Promise<this> {
-    // 1. Создаем кэшированное хранилище запросов
-    this.queryStorage = await new QueryStorage(this.storageExternal, this.globalCacheConfig).initialize()
+    if (this._initialized) return this
+    if (this._initPromise) return this._initPromise
 
-    // 2. Создаем эндпоинты
-    await this.initializeEndpoints()
+    this._initPromise = this._doInit()
+    return this._initPromise
+  }
 
-    return this
+  private async _doInit(): Promise<this> {
+    try {
+      // 1. Создаем кэшированное хранилище запросов (storage инициализируется внутри QueryStorage)
+      this.queryStorage = await new QueryStorage(this.storageExternal, this.globalCacheConfig).initialize()
+
+      // 2. Создаем эндпоинты
+      await this.initializeEndpoints()
+
+      this._initialized = true
+      return this
+    } catch (error) {
+      this._initPromise = null
+      throw error
+    }
   }
 
   private async initializeEndpoints() {
     // Получаем конфигурацию будущих эндпоинтов
     const create: CreateEndpoint = <TParams extends Record<string, any>, TResult>(config: EndpointConfig<TParams, TResult>) => config
     // Создаем объект с конфигурациями для эндпоинтов
-    const endpointsConfig = (await this.createEndpoints(create)) || {}
+    const endpointsConfig = await this.createEndpoints(create)
 
     // Создаем эндпоинты
     for (const [endpointKey, endpointConfig] of Object.entries(endpointsConfig)) {
       const key = endpointKey as keyof EndpointsResult<EndpointsFn>
-      this.endpoints[key] = new EndpointClass(endpointKey, this.queryStorage, endpointConfig, this.cacheableHeaderKeys, this.globalCacheConfig, this.baseQueryConfig)
+      this.endpoints[key] = new EndpointClass({
+        name: endpointKey,
+        queryStorage: this.queryStorage,
+        config: endpointConfig,
+        cacheableHeaderKeys: this.cacheableHeaderKeys,
+        globalCacheConfig: this.globalCacheConfig,
+        baseQueryConfig: this.baseQueryConfig,
+      })
+    }
+  }
+
+  private ensureInitialized(): void {
+    if (!this._initialized) {
+      throw new Error('ApiClient не инициализирован. Вызовите await api.init() перед использованием.')
     }
   }
 
@@ -64,10 +101,9 @@ export class ApiClient<EndpointsFn extends (create: CreateEndpoint) => Promise<R
    * Получает все эндпоинты с улучшенной типизацией
    * @returns Типизированный объект эндпоинтов
    */
-  public getEndpoints(): {
-    [K in keyof EndpointsResult<EndpointsFn>]: EndpointType<ExtractParamsType<EndpointsResult<EndpointsFn>[K]>, ExtractResultType<EndpointsResult<EndpointsFn>[K]>>
-  } {
-    return this.endpoints as any
+  public getEndpoints(): EndpointsMap<EndpointsFn> {
+    this.ensureInitialized()
+    return this.endpoints as EndpointsMap<EndpointsFn>
   }
 
   /**
@@ -82,6 +118,8 @@ export class ApiClient<EndpointsFn extends (create: CreateEndpoint) => Promise<R
     params: ExtractParamsType<EndpointsResult<EndpointsFn>[K]>,
     options?: QueryOptions,
   ): Promise<QueryResult<ExtractResultType<EndpointsResult<EndpointsFn>[K]>, Error>> {
+    this.ensureInitialized()
+
     const endpoints = this.getEndpoints()
     const endpoint = endpoints[endpointName]
 
@@ -99,17 +137,18 @@ export class ApiClient<EndpointsFn extends (create: CreateEndpoint) => Promise<R
   }
 
   public async destroy() {
-    // 1. Сначала уничтожаем каждый эндпоинт
-    await Promise.all(
-      Object.values(this.endpoints).map(async (endpoint) => {
-        endpoint.destroy()
-        return Promise.resolve()
-      }),
-    )
+    if (!this._initialized) return
+
+    // 1. Уничтожаем каждый эндпоинт
+    Object.values(this.endpoints).forEach((endpoint) => endpoint.destroy())
 
     // 2. Очищаем коллекцию эндпоинтов
     this.endpoints = {}
     // 3. Уничтожаем хранилище
     await this.queryStorage.destroy()
+
+    // 4. Сбрасываем состояние инициализации (позволяет повторный init)
+    this._initialized = false
+    this._initPromise = null
   }
 }

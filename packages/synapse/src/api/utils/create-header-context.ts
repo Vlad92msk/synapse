@@ -19,6 +19,7 @@ export function createHeaderContext<RequestParams extends Record<string, any>>(
       context.getFromStorage ||
       ((key: string) => {
         try {
+          if (typeof globalThis.localStorage === 'undefined') return undefined
           const item = localStorage.getItem(key)
           return item ? JSON.parse(item) : undefined
         } catch (error) {
@@ -30,6 +31,7 @@ export function createHeaderContext<RequestParams extends Record<string, any>>(
       context.getCookie ||
       ((name: string) => {
         try {
+          if (typeof globalThis.document === 'undefined') return undefined
           const matches = document.cookie.match(new RegExp(`(?:^|; )${name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1')}=([^;]*)`))
           return matches ? decodeURIComponent(matches[1]) : undefined
         } catch (error) {
