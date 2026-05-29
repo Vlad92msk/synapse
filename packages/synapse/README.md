@@ -44,7 +44,7 @@ const synapse = createSynapse({
 
 ## Documentation
 
-Full documentation and API reference available on [GitHub](https://github.com/Vlad92msk/synapse).
+Full documentation, API reference, and examples available on [GitHub](https://github.com/Vlad92msk/synapse).
 
 ## License
 

@@ -7,8 +7,8 @@
   "scripts": {
     "build": "yarn workspace synapse-storage build",
     "watch": "yarn workspace synapse-storage watch",
-    "dev:homepage": "yarn workspace homepage dev",
-    "build:homepage": "yarn workspace homepage build",
+    "dev:examples": "yarn workspace examples dev",
+    "build:examples": "yarn workspace examples build",
     "lint": "yarn workspace synapse-storage lint",
     "lint:fix": "yarn workspace synapse-storage lint:fix",
     "fix": "yarn workspace synapse-storage fix"

@@ -102,7 +102,7 @@ const synapse = createSynapse({
 
 ## Примеры
 
-- [GitHub Examples](https://github.com/Vlad92msk/synapse-examples)
+Примеры находятся в [`packages/examples/src/examples`](../../packages/examples/src/examples).
 
 ## Автор
 

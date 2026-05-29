@@ -100,7 +100,7 @@ const synapse = createSynapse({
 
 ## Examples
 
-- [GitHub Examples](https://github.com/Vlad92msk/synapse-examples)
+Examples are located in [`packages/examples/src/examples`](./packages/examples/src/examples).
 
 ## Author
 
