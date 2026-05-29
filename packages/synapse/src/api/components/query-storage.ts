@@ -67,9 +67,7 @@ export class QueryStorage {
   private async createStorage() {
     try {
       // Резолвим storage: может быть инстанс или фабрика
-      const s: IStorage = typeof this.storageExternal === 'function'
-        ? await this.storageExternal()
-        : this.storageExternal
+      const s: IStorage = typeof this.storageExternal === 'function' ? await this.storageExternal() : this.storageExternal
 
       await s.initialize()
       this.storage = s

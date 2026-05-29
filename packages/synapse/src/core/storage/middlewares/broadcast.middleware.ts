@@ -147,36 +147,39 @@ export const broadcastMiddleware = (props: SharedStateMiddlewareProps): Middlewa
         })
 
         // Запрашиваем начальную синхронизацию для MemoryStorage
-        channel.requestSync().then(async (action) => {
-          if (action?.type === 'update' && Array.isArray(action.value)) {
-            try {
-              const validUpdates = action.value.every((update) => update && typeof update === 'object' && 'key' in update && 'value' in update)
+        channel
+          .requestSync()
+          .then(async (action) => {
+            if (action?.type === 'update' && Array.isArray(action.value)) {
+              try {
+                const validUpdates = action.value.every((update) => update && typeof update === 'object' && 'key' in update && 'value' in update)
 
-              if (!validUpdates) {
-                logError('broadcastMiddleware: invalid sync response updates structure', action.value)
-                return
+                if (!validUpdates) {
+                  logError('broadcastMiddleware: invalid sync response updates structure', action.value)
+                  return
+                }
+
+                await api.storage.doUpdate(action.value)
+
+                // Уведомляем подписчиков о каждом обновленном значении
+                action.value.forEach(({ key, value }) => {
+                  api.storage.notifySubscribers(key, value)
+                })
+
+                // Уведомляем глобальных подписчиков
+                api.storage.notifySubscribers('*', {
+                  type: StorageEvents.STORAGE_UPDATE,
+                  value: action.value,
+                  source: 'broadcast',
+                })
+              } catch (error) {
+                handleCallbackError('broadcastMiddleware: error applying sync updates', error)
               }
-
-              await api.storage.doUpdate(action.value)
-
-              // Уведомляем подписчиков о каждом обновленном значении
-              action.value.forEach(({ key, value }) => {
-                api.storage.notifySubscribers(key, value)
-              })
-
-              // Уведомляем глобальных подписчиков
-              api.storage.notifySubscribers('*', {
-                type: StorageEvents.STORAGE_UPDATE,
-                value: action.value,
-                source: 'broadcast',
-              })
-            } catch (error) {
-              handleCallbackError('broadcastMiddleware: error applying sync updates', error)
             }
-          }
-        }).catch((error) => {
-          logError('broadcastMiddleware: initial sync failed', error, null, 'warn')
-        })
+          })
+          .catch((error) => {
+            logError('broadcastMiddleware: initial sync failed', error, null, 'warn')
+          })
       }
 
       // Подписка на сообщения от других вкладок

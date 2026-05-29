@@ -20,11 +20,7 @@ export function createDummyState<T>(): T {
  * - Does not support destructuring or array methods (map, filter, etc.)
  * - For such cases use string-based subscription: `storage.subscribe('user.permissions', callback)`
  */
-export function extractPath<T>(
-  selector: (state: T) => any,
-  dummyState: T,
-  cache?: WeakMap<Function, string>,
-): string {
+export function extractPath<T>(selector: (state: T) => any, dummyState: T, cache?: WeakMap<(...args: any[]) => any, string>): string {
   if (cache?.has(selector)) {
     return cache.get(selector)!
   }

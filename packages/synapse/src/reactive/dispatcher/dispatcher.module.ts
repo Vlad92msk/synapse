@@ -1,4 +1,4 @@
-import { Observable, Subject, share } from 'rxjs'
+import { Observable, share, Subject } from 'rxjs'
 
 import { handleCallbackError } from '../../_utils/error-handling.util'
 import type { IStorage } from '../../core'
@@ -130,11 +130,7 @@ export type ActionsResult<F> = F extends (create: ActionCreatorFactory, storage:
 /**
  * Типизированный объект действий
  */
-type ResolveDispatch<T> = T extends DispatchFunction<any, any>
-  ? T
-  : T extends ActionRecipe<any, infer P, infer R>
-    ? DispatchFunction<P, R>
-    : never
+type ResolveDispatch<T> = T extends DispatchFunction<any, any> ? T : T extends ActionRecipe<any, infer P, infer R> ? DispatchFunction<P, R> : never
 
 export type DispatchActions<T> = {
   [K in keyof T]: ResolveDispatch<T[K]>
@@ -143,11 +139,7 @@ export type DispatchActions<T> = {
 /**
  * Типизированный объект watchers
  */
-type ResolveWatcher<T> = T extends WatcherFunction<any>
-  ? T
-  : T extends WatcherRecipe<any, infer R>
-    ? WatcherFunction<R>
-    : never
+type ResolveWatcher<T> = T extends WatcherFunction<any> ? T : T extends WatcherRecipe<any, infer R> ? WatcherFunction<R> : never
 
 export type WatcherActions<T> = {
   [K in keyof T]: ResolveWatcher<T[K]>
@@ -413,11 +405,10 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
 
     // Deferred type assignment — используется в createDispatcher для авто-генерации типа из имени ключа
     if (!hasExplicitType) {
-      const self = this
       ;(dispatchFn as any)._assignType = (name: string) => {
-        actionType = `[${self.storage.name}]${name}`
+        actionType = `[${this.storage.name}]${name}`
 
-        self.actionRegistry.set(actionType, { action: actionConfig.action })
+        this.actionRegistry.set(actionType, { action: actionConfig.action })
 
         Object.defineProperty(dispatchFn, 'actionType', {
           value: actionType,
@@ -538,9 +529,8 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
 
     // Deferred type assignment — используется в createDispatcher для авто-генерации типа из имени ключа
     if (!hasExplicitType) {
-      const self = this
       ;(watcherFn as any)._assignType = (name: string) => {
-        actionType = `[${self.storage.name}]${name}`
+        actionType = `[${this.storage.name}]${name}`
 
         Object.defineProperty(watcherFn, 'actionType', {
           value: actionType,
@@ -554,7 +544,6 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
     //@ts-ignore
     return watcherFn as WatcherFunction<R>
   }
-
 }
 
 /**
@@ -582,10 +571,7 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
  */
 
 // Overload: объект standalone-рецептов
-export function createDispatcher<
-  TState extends Record<string, any>,
-  TRecord extends Record<string, ActionRecipe<TState, any, any> | WatcherRecipe<TState, any>>,
->(
+export function createDispatcher<TState extends Record<string, any>, TRecord extends Record<string, ActionRecipe<TState, any, any> | WatcherRecipe<TState, any>>>(
   options: DispatcherOptions<TState>,
   actions: TRecord,
 ): Dispatcher<TState> & {
@@ -603,10 +589,7 @@ export function createDispatcher<TState extends Record<string, any>, TActions ex
 }
 
 // Implementation
-export function createDispatcher<TState extends Record<string, any>>(
-  options: DispatcherOptions<TState>,
-  actionsOrSetup: Record<string, any> | ((...args: any[]) => any),
-) {
+export function createDispatcher<TState extends Record<string, any>>(options: DispatcherOptions<TState>, actionsOrSetup: Record<string, any> | ((...args: any[]) => any)) {
   // Создаем экземпляр диспетчера
   const dispatcher = new Dispatcher<TState>(options)
 

@@ -1,7 +1,6 @@
 import { handleCallbackError, handleOperationError } from '../../_utils/error-handling.util'
 import { ISelectorModule, IStorage, SelectorModule } from '../../core'
 import { EffectsModule } from '../../reactive'
-
 import type {
   CreateSynapseConfigBasic,
   CreateSynapseConfigWithDispatcher,
@@ -139,14 +138,7 @@ export async function createSynapse<
     try {
       const { services, config: effectConfig, externalDispatchers, externalStates } = config.createEffectConfig()
 
-      effectsModule = new EffectsModule(
-        storageInstance,
-        dispatcher as any,
-        externalDispatchers || {},
-        services,
-        effectConfig,
-        externalStates || {},
-      )
+      effectsModule = new EffectsModule(storageInstance, dispatcher as any, externalDispatchers || {}, services, effectConfig, externalStates || {})
 
       if (Array.isArray(config.effects)) {
         // @ts-ignore

@@ -125,12 +125,7 @@ export interface SynapseStoreBasic<TStore extends Record<string, any>, TStorage 
 /**
  * Union-тип для всех возможных результатов createSynapse
  */
-export type AnySynapseStore<
-  TStore extends Record<string, any> = any,
-  TStorage extends IStorageBase<TStore> = IStorage<any>,
-  TSelectors = any,
-  TActions = any,
-> =
+export type AnySynapseStore<TStore extends Record<string, any> = any, TStorage extends IStorageBase<TStore> = IStorage<any>, TSelectors = any, TActions = any> =
   | SynapseStoreWithEffects<TStore, TStorage, TSelectors, TActions>
   | SynapseStoreWithDispatcher<TStore, TStorage, TSelectors, TActions>
   | SynapseStoreBasic<TStore, TStorage, TSelectors>

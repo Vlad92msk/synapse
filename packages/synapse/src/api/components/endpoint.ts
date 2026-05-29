@@ -379,7 +379,14 @@ export class EndpointClass<RequestParams extends Record<string, any>, RequestRes
       await new Promise<void>((resolve) => {
         const timer = setTimeout(resolve, delay)
         // Если запрос отменили во время ожидания — прерываем delay
-        controller.signal.addEventListener('abort', () => { clearTimeout(timer); resolve() }, { once: true })
+        controller.signal.addEventListener(
+          'abort',
+          () => {
+            clearTimeout(timer)
+            resolve()
+          },
+          { once: true },
+        )
       })
     }
 

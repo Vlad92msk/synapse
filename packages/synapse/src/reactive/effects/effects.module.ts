@@ -51,11 +51,7 @@ export type Effect<
   TConfig extends Record<string, any> = Record<string, never>,
   TExternalDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>,
   TExternalStates extends ExternalStates = Record<string, never>,
-> = (
-  action$: Observable<Action>,
-  state$: Observable<TState>,
-  context: EffectContext<TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates>,
-) => Observable<unknown>
+> = (action$: Observable<Action>, state$: Observable<TState>, context: EffectContext<TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates>) => Observable<unknown>
 
 /**
  * Тип для получения типов действий диспетчера
@@ -291,7 +287,7 @@ export class ApiError extends Error {
     public readonly originalError: any,
     public readonly meta: ApiResultMeta,
   ) {
-    super(typeof originalError === 'string' ? originalError : originalError?.message ?? 'API request failed')
+    super(typeof originalError === 'string' ? originalError : (originalError?.message ?? 'API request failed'))
     this.name = 'ApiError'
   }
 }
@@ -533,7 +529,9 @@ export function createEffect<
   TConfig extends Record<string, any> = Record<string, never>,
   TExternalDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>,
   TExternalStates extends ExternalStates = Record<string, never>,
->(effect: Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates>): Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates> {
+>(
+  effect: Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates>,
+): Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates> {
   return effect
 }
 
@@ -549,7 +547,9 @@ export function combineEffects<
   TConfig extends Record<string, any> = Record<string, never>,
   TExternalDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>,
   TExternalStates extends ExternalStates = Record<string, never>,
->(...effects: Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates>[]): Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates> {
+>(
+  ...effects: Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates>[]
+): Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates> {
   return (action$, state$, context) => {
     const outputs = effects.map((effect) => {
       try {

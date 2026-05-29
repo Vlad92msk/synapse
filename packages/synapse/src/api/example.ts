@@ -109,7 +109,6 @@ export const api = new ApiClient({
   // Типизированные endpoints
   endpoints: async (create) => ({
     updatePokemonById: create<{ id: number }, PokemonDetails>({
-
       request: ({ id }) => ({
         path: `/pokemon/${id}`,
         method: 'PUT',

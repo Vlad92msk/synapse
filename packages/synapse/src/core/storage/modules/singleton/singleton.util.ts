@@ -1,4 +1,4 @@
-import { ILogger, BaseStorageConfig, StorageType } from '../../storage.interface'
+import { BaseStorageConfig, ILogger, StorageType } from '../../storage.interface'
 import { ConfigMergeStrategy } from './models'
 
 interface SingletonResult<T> {

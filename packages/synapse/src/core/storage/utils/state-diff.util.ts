@@ -32,13 +32,7 @@ export function isEqual(a: any, b: any): boolean {
 /**
  * Finds all changed paths between two objects.
  */
-export function findChangedPaths(
-  oldObj: any,
-  newObj: any,
-  prefix = '',
-  changedPaths: Set<string> = new Set<string>(),
-  visited = new WeakMap<any, boolean>(),
-): Set<string> {
+export function findChangedPaths(oldObj: any, newObj: any, prefix = '', changedPaths: Set<string> = new Set<string>(), visited = new WeakMap<any, boolean>()): Set<string> {
   if (oldObj === newObj) return changedPaths
 
   if (typeof oldObj !== 'object' || typeof newObj !== 'object' || oldObj === null || newObj === null) {
@@ -60,14 +54,7 @@ export function findChangedPaths(
 
     const path = prefix ? `${prefix}.${key}` : key
 
-    if (
-      oldValue &&
-      newValue &&
-      typeof oldValue === 'object' &&
-      typeof newValue === 'object' &&
-      !Array.isArray(oldValue) &&
-      !Array.isArray(newValue)
-    ) {
+    if (oldValue && newValue && typeof oldValue === 'object' && typeof newValue === 'object' && !Array.isArray(oldValue) && !Array.isArray(newValue)) {
       findChangedPaths(oldValue, newValue, path, changedPaths, visited)
     } else if (Array.isArray(oldValue) && Array.isArray(newValue)) {
       if (!isEqual(oldValue, newValue)) {

@@ -1,4 +1,4 @@
-import { SyncMiddleware, SyncMiddlewareAPI, SyncNextFunction, StorageAction } from '../utils/middleware-module'
+import { StorageAction, SyncMiddleware, SyncMiddlewareAPI, SyncNextFunction } from '../utils/middleware-module'
 
 export interface SyncBatchingMiddlewareOptions {
   batchSize?: number

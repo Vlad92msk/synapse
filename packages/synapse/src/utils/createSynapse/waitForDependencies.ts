@@ -36,10 +36,7 @@ export async function waitForDependencies(dependencies: DependencyInput[] = [], 
         await Promise.race([
           storage.waitForReady(),
           new Promise<never>((_, reject) =>
-            globalThis.setTimeout(
-              () => reject(new Error(`Dependency ${index} ("${name}") timed out after ${timeoutMs}ms. Check that it initializes correctly.`)),
-              timeoutMs,
-            ),
+            globalThis.setTimeout(() => reject(new Error(`Dependency ${index} ("${name}") timed out after ${timeoutMs}ms. Check that it initializes correctly.`)), timeoutMs),
           ),
         ])
       } catch (error) {

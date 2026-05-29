@@ -1,4 +1,4 @@
-import { SyncMiddleware, SyncMiddlewareAPI, SyncNextFunction, StorageAction, VALUE_NOT_CHANGED } from '../utils/middleware-module'
+import { StorageAction, SyncMiddleware, SyncMiddlewareAPI, SyncNextFunction, VALUE_NOT_CHANGED } from '../utils/middleware-module'
 import { StorageKeyType } from '../utils/storage-key'
 
 export interface SyncShallowCompareMiddlewareOptions {

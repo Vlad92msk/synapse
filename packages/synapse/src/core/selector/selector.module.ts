@@ -291,7 +291,6 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
       return this.localSelectorCache.get(selectorId)!.api
     }
 
-
     // Создаем новый селектор
     let result: SelectorAPI<T>
     let dependencies: SelectorAPI<any>[] | undefined

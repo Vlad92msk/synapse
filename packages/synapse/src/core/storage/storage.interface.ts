@@ -62,18 +62,7 @@ export interface ILogger {
 
 // ─── Middleware Types (re-exported from middleware-module) ─────────────────────
 
-export type {
-  AsyncMiddleware,
-  AsyncMiddlewareAPI,
-  AsyncNextFunction,
-  Middleware,
-  MiddlewareAPI,
-  NextFunction,
-  StorageAction,
-  SyncMiddleware,
-  SyncMiddlewareAPI,
-  SyncNextFunction,
-}
+export type { AsyncMiddleware, AsyncMiddlewareAPI, AsyncNextFunction, Middleware, MiddlewareAPI, NextFunction, StorageAction, SyncMiddleware, SyncMiddlewareAPI, SyncNextFunction }
 
 // ─── Storage Interfaces ────────────────────────────────────────────────────────
 

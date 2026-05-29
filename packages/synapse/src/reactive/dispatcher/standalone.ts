@@ -167,9 +167,7 @@ function setByPath(obj: any, path: string[], value: any): void {
  * })
  * ```
  */
-export function createApiActions<TState extends Record<string, any>>(
-  accessor: (draft: TState) => ApiRequestState,
-) {
+export function createApiActions<TState extends Record<string, any>>(accessor: (draft: TState) => ApiRequestState) {
   const path = resolvePath(accessor)
   const action = defineAction<TState>()
 

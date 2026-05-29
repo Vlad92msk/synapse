@@ -30,12 +30,7 @@ type LogMethod = 'error' | 'warn'
 /**
  * Логирует ошибку через ILogger (если есть) или через console-fallback.
  */
-export function logError(
-  message: string,
-  error: unknown,
-  logger?: ILogger | null,
-  level: LogMethod = 'error',
-): void {
+export function logError(message: string, error: unknown, logger?: ILogger | null, level: LogMethod = 'error'): void {
   const meta = { error: error instanceof Error ? error.message : String(error) }
   if (logger) {
     logger[level](message, meta)
@@ -48,11 +43,7 @@ export function logError(
  * OPERATION pattern: логирует и пробрасывает ошибку.
  * Для CRUD-операций (get, set, update, delete) и инициализации.
  */
-export function handleOperationError(
-  context: string,
-  error: unknown,
-  logger?: ILogger | null,
-): never {
+export function handleOperationError(context: string, error: unknown, logger?: ILogger | null): never {
   logError(context, error, logger)
   throw error
 }
@@ -62,11 +53,7 @@ export function handleOperationError(
  * Для пользовательских callback'ов, подписчиков, эффектов.
  * Ошибка в одном callback'е не должна ломать остальные.
  */
-export function handleCallbackError(
-  context: string,
-  error: unknown,
-  logger?: ILogger | null,
-): void {
+export function handleCallbackError(context: string, error: unknown, logger?: ILogger | null): void {
   logError(context, error, logger)
 }
 
@@ -74,11 +61,7 @@ export function handleCallbackError(
  * CLEANUP pattern: логирует предупреждение и продолжает.
  * Для destroy(), unsubscribe() и прочих cleanup-операций.
  */
-export function handleCleanupError(
-  context: string,
-  error: unknown,
-  logger?: ILogger | null,
-): void {
+export function handleCleanupError(context: string, error: unknown, logger?: ILogger | null): void {
   logError(context, error, logger, 'warn')
 }
 
@@ -86,11 +69,7 @@ export function handleCleanupError(
  * Обёртка для безопасного вызова callback'а (CALLBACK pattern).
  * Возвращает результат или undefined при ошибке.
  */
-export function safeCallback<T>(
-  fn: () => T,
-  context: string,
-  logger?: ILogger | null,
-): T | undefined {
+export function safeCallback<T>(fn: () => T, context: string, logger?: ILogger | null): T | undefined {
   try {
     return fn()
   } catch (error) {
@@ -102,10 +81,6 @@ export function safeCallback<T>(
 /**
  * Обёртка для promise в fire-and-forget сценариях (CLEANUP pattern).
  */
-export function safePromise(
-  promise: Promise<unknown>,
-  context: string,
-  logger?: ILogger | null,
-): void {
+export function safePromise(promise: Promise<unknown>, context: string, logger?: ILogger | null): void {
   promise.catch((error) => handleCleanupError(context, error, logger))
 }

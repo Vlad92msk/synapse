@@ -1,7 +1,7 @@
 import { handleCallbackError, logError } from '../../../_utils/error-handling.util'
 import { StorageEvents, StorageType } from '../storage.interface'
 import { SyncBroadcastChannel } from '../utils/broadcast.util'
-import { SyncMiddleware, SyncMiddlewareAPI, SyncNextFunction, StorageAction } from '../utils/middleware-module'
+import { StorageAction, SyncMiddleware, SyncMiddlewareAPI, SyncNextFunction } from '../utils/middleware-module'
 
 interface SyncSharedStateMiddlewareProps {
   storageType: StorageType
@@ -131,34 +131,37 @@ export const syncBroadcastMiddleware = (props: SyncSharedStateMiddlewareProps): 
         })
 
         // Начальная синхронизация (fire-and-forget)
-        channel.requestSync().then((action) => {
-          if (action?.type === 'update' && Array.isArray(action.value)) {
-            try {
-              const validUpdates = action.value.every((update) => update && typeof update === 'object' && 'key' in update && 'value' in update)
+        channel
+          .requestSync()
+          .then((action) => {
+            if (action?.type === 'update' && Array.isArray(action.value)) {
+              try {
+                const validUpdates = action.value.every((update) => update && typeof update === 'object' && 'key' in update && 'value' in update)
 
-              if (!validUpdates) {
-                logError('syncBroadcastMiddleware: invalid sync response updates structure', action.value)
-                return
+                if (!validUpdates) {
+                  logError('syncBroadcastMiddleware: invalid sync response updates structure', action.value)
+                  return
+                }
+
+                api.storage.doUpdate(action.value)
+
+                action.value.forEach(({ key, value }) => {
+                  api.storage.notifySubscribers(key, value)
+                })
+
+                api.storage.notifySubscribers('*', {
+                  type: StorageEvents.STORAGE_UPDATE,
+                  value: action.value,
+                  source: 'broadcast',
+                })
+              } catch (error) {
+                handleCallbackError('syncBroadcastMiddleware: error applying sync updates', error)
               }
-
-              api.storage.doUpdate(action.value)
-
-              action.value.forEach(({ key, value }) => {
-                api.storage.notifySubscribers(key, value)
-              })
-
-              api.storage.notifySubscribers('*', {
-                type: StorageEvents.STORAGE_UPDATE,
-                value: action.value,
-                source: 'broadcast',
-              })
-            } catch (error) {
-              handleCallbackError('syncBroadcastMiddleware: error applying sync updates', error)
             }
-          }
-        }).catch((error) => {
-          logError('syncBroadcastMiddleware: initial sync failed', error, null, 'warn')
-        })
+          })
+          .catch((error) => {
+            logError('syncBroadcastMiddleware: initial sync failed', error, null, 'warn')
+          })
       }
 
       // Подписка на сообщения (BroadcastChannel API всегда async)
