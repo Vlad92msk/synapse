@@ -86,6 +86,48 @@ async function getResponseData<T, E extends Error>(response: Response, format?: 
 }
 
 /**
+ * Собирает абсолютный URL запроса из `path` и `baseUrl`.
+ *
+ * Важно: сохраняется поведение конкатенации (`baseUrl + path`), а не
+ * резолвинг через `new URL(path, baseUrl)`. Резолвинг отбросил бы префикс
+ * базы для абсолютных путей (например, `new URL('/api/x', 'http://host/_api')`
+ * даёт `http://host/api/x`, теряя `/_api`), что сломало бы проксирование.
+ *
+ * Покрываемые кейсы:
+ *  - абсолютный `path` (`http(s)://...`) → используется как есть;
+ *  - относительный `path` + абсолютный `baseUrl` → конкатенация даёт абсолютный URL;
+ *  - относительный `path` + относительный `baseUrl` (браузер, напр. `/_api`) →
+ *    результат резолвится относительно `window.location.origin`, чтобы
+ *    `new URL(...)` не падал с `Invalid URL` (same-origin сохраняется).
+ *
+ * @param path Путь запроса
+ * @param baseUrl Базовый URL клиента (может быть абсолютным или относительным)
+ * @returns Готовый объект URL
+ */
+export function buildRequestUrl(path: string, baseUrl: string): URL {
+  // Путь уже абсолютный — база не нужна.
+  if (/^https?:\/\//i.test(path)) {
+    return new URL(path)
+  }
+
+  const combined = `${baseUrl}${path}`
+
+  // Конкатенация уже дала абсолютный URL (абсолютный baseUrl).
+  if (/^https?:\/\//i.test(combined)) {
+    return new URL(combined)
+  }
+
+  // Относительный результат — резолвим относительно origin'а в браузере.
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return new URL(combined, window.location.origin)
+  }
+
+  // Сервер с относительной базой: явный resolve невозможен. Пробуем как есть —
+  // даст понятную ошибку, если база действительно относительна.
+  return new URL(combined)
+}
+
+/**
  * Создает базовый fetch-клиент для запросов с поддержкой файлов
  * @param options Настройки базового клиента
  * @returns Функция для выполнения запросов
@@ -106,7 +148,7 @@ export function fetchBaseQuery(options: Omit<FetchBaseQueryArgs, 'prepareHeaders
     const responseFormat = optResponseFormat || reqResponseFormat
 
     // Строим URL с учетом api параметров
-    const url = new URL(path.startsWith('http') ? path : `${baseUrl}${path}`)
+    const url = buildRequestUrl(path, baseUrl)
 
     // Добавляем query-параметры в URL
     if (query) {

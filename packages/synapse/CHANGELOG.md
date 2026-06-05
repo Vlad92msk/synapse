@@ -1,6 +1,10 @@
 # Changelog
 
-# Changelog
+## [4.1.1] - 2026-06-05
+
+### Исправления
+
+- **`Failed to construct 'URL': Invalid URL` — падали все запросы в браузере** — `fetchBaseQuery` строил URL как `new URL(\`${baseUrl}${path}\`)` без base. При относительной базе в браузере (`baseUrl = '/_api'`, `path = '/api/...'`) результат `/_api/api/...` — относительная строка, которую `new URL` с одним аргументом не парсит. Сборка URL вынесена в `buildRequestUrl(path, baseUrl)`: сохраняется конкатенация `baseUrl + path` (а не резолвинг через `new URL(path, baseUrl)`, который отбросил бы префикс базы для абсолютных путей), относительный результат резолвится относительно `window.location.origin` — same-origin и проксирование через rewrites сохраняются. Покрыты кейсы: абсолютный `path`, относительный `path` + абсолютный `baseUrl`, относительный `path` + относительный `baseUrl` (браузер). `buildRequestUrl` экспортируется из пакета.
 
 ## [4.1.0] - 2026-06-05
 
