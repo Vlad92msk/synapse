@@ -1,9 +1,9 @@
 import { ComponentType, createContext, forwardRef, PropsWithChildren, useContext, useEffect, useState } from 'react'
 import { Observable } from 'rxjs'
 
-import { handleCleanupError, handleOperationError } from '../../_utils/error-handling.util'
+import { handleCleanupError } from '../../_utils/error-handling.util'
 import { IStorage } from '../../core'
-import { AnySynapseStore, SynapseStoreBasic, SynapseStoreWithDispatcher, SynapseStoreWithEffects } from '../../utils'
+import { AnySynapseStore, createSynapseAwaiter, SynapseStoreBasic, SynapseStoreWithDispatcher, SynapseStoreWithEffects } from '../../utils'
 
 const ERROR_HOOK_MESSAGE = 'Хук необходимо использовать внутри компонента contextSynapse'
 const ERROR_CONTEXT_INIT = 'Ошибка при инициализации контекста:'
@@ -59,22 +59,13 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
 ) {
   const { loadingComponent = <div>Инициализация контекста...</div> } = options || {}
 
-  // Lazy-инициализация: Promise создаётся при первом обращении и сбрасывается при cleanup
-  let storeInitPromise: Promise<AnySynapseStore<TStore, TStorage, TSelectors, TActions>> | null = null
+  // Lazy-инициализация: awaiter создаётся при первом обращении и сбрасывается при cleanup.
+  // Сам awaiter (createSynapseAwaiter) инкапсулирует ожидание готовности, статус и подписки.
+  let awaiter: ReturnType<typeof createSynapseAwaiter<TStore, TStorage, TSelectors, TActions>> | null = null
 
-  const getStoreInitPromise = () => {
-    if (!storeInitPromise) {
-      storeInitPromise = (async () => {
-        try {
-          const store = await (synapseStorePromise instanceof Promise ? synapseStorePromise : Promise.resolve(synapseStorePromise))
-          await store.storage.waitForReady()
-          return store
-        } catch (error) {
-          handleOperationError('createSynapseCtx: Synapse storage initialization error', error)
-        }
-      })()
-    }
-    return storeInitPromise
+  const getAwaiter = () => {
+    if (!awaiter) awaiter = createSynapseAwaiter(synapseStorePromise)
+    return awaiter
   }
 
   const SynapseContext = createContext<AnySynapseStore<TStore, TStorage, TSelectors, TActions> | null>(null)
@@ -120,40 +111,35 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
    */
   function contextSynapse<SelfComponentProps>(Component: ComponentType<SelfComponentProps>) {
     const WrappedComponent = forwardRef<unknown, SelfComponentProps>(function WrappedComponent(props, ref) {
-      const [synapseStore, setSynapseStore] = useState<AnySynapseStore<TStore, TStorage, TSelectors, TActions> | null>(null)
-      const [isReady, setIsReady] = useState(false)
-      const [error, setError] = useState<Error | null>(null)
+      const [synapseStore, setSynapseStore] = useState<AnySynapseStore<TStore, TStorage, TSelectors, TActions> | undefined>(() => getAwaiter().getStoreIfReady())
+      const [error, setError] = useState<Error | null>(() => getAwaiter().getError())
 
       useEffect(() => {
-        let mounted = true
+        // awaiter мог поменять состояние между рендером и эффектом — синхронизируемся
+        const instance = getAwaiter()
+        setSynapseStore(instance.getStoreIfReady())
+        setError(instance.getError())
 
-        const initializeContext = async () => {
-          try {
-            const store = await getStoreInitPromise()
-
-            if (mounted) {
-              setSynapseStore(store)
-              setIsReady(true)
-            }
-          } catch (err) {
-            if (mounted) {
-              setError(err instanceof Error ? err : new Error(String(err)))
-            }
-          }
-        }
-
-        initializeContext()
+        const unsubscribeReady = instance.onReady((store) => {
+          setSynapseStore(store)
+          setError(null)
+        })
+        const unsubscribeError = instance.onError((err) => {
+          setSynapseStore(undefined)
+          setError(err)
+        })
 
         return () => {
-          mounted = false
+          unsubscribeReady()
+          unsubscribeError()
         }
       }, [])
 
       // Показываем ошибку если что-то пошло не так
-      if (error) return <div>{`${ERROR_CONTEXT_INIT}: ${error.message}`}</div>
+      if (error) return <div>{`${ERROR_CONTEXT_INIT} ${error.message}`}</div>
 
-      // Показываем загрузку пока все не готово
-      if (!isReady || !synapseStore) return <>{loadingComponent}</>
+      // Показываем загрузку пока store не готов
+      if (!synapseStore) return <>{loadingComponent}</>
 
       return (
         <SynapseContext.Provider value={synapseStore}>
@@ -178,14 +164,17 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
   }
 
   const cleanupSynapse = async (): Promise<void> => {
+    if (!awaiter) return
+
+    const instance = awaiter
+    awaiter = null // сбрасываем сразу, чтобы следующий маунт создал новый awaiter
+
     try {
-      if (storeInitPromise) {
-        const store = await storeInitPromise
-        storeInitPromise = null
-        return store?.destroy() || Promise.resolve()
-      }
+      const store = instance.getStoreIfReady() ?? (await instance.waitForReady())
+      instance.destroy()
+      await store?.destroy()
     } catch (error) {
-      storeInitPromise = null
+      instance.destroy()
       handleCleanupError('createSynapseCtx: error during Synapse cleanup', error)
     }
   }

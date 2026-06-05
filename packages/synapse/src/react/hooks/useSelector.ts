@@ -16,6 +16,7 @@ interface UseSelectorOptions<T> {
  */
 export function useSelector<T>(selector: SelectorAPI<T>): T
 export function useSelector<T>(selector: SelectorAPI<T>, options: UseSelectorOptions<T> & { withLoading: true }): { data: T; isLoading: boolean }
+export function useSelector<T>(selector: SelectorAPI<T>, options: UseSelectorOptions<T> & { withLoading?: false }): T
 export function useSelector<T>(selector: SelectorAPI<T>, options?: UseSelectorOptions<T>): { data: T; isLoading: boolean } | T {
   const equalsRef = useRef(options?.equals)
 
@@ -69,4 +70,22 @@ export function useSelector<T>(selector: SelectorAPI<T>, options?: UseSelectorOp
   }
 
   return value
+}
+
+/**
+ * Изоляция ре-рендеров для keyed-map стора (паттерн «equals»). Подписка идёт на
+ * ВЕСЬ map (`selector`), но `equals` сравнивает только срез по `key` → компонент
+ * ре-рендерится лишь когда меняется его `map[key]` по ссылке. Работает, т.к.
+ * иммутабельные мутации по одному ключу не трогают ссылку чужих срезов.
+ * Гранулярность живёт в месте вызова, а селекторы остаются плоскими (без фабрик
+ * с `Map<key, selector>`).
+ *
+ * `fallback` ОБЯЗАН быть стабильной ссылкой (module-level константа), иначе
+ * `?? fallback` будет давать новый объект каждый тик и рвать нижестоящие `useMemo`.
+ */
+export function useKeyedSliceSelector<V>(selector: SelectorAPI<Record<string, V>>, key: string, fallback: V): V {
+  const map = useSelector(selector, {
+    equals: (a, b) => a[key] === b[key],
+  })
+  return map[key] ?? fallback
 }

@@ -16,6 +16,12 @@ export class IndexedDBManager {
   private initPromise: Promise<IDBDatabase> | null = null
   private storeNames: Set<string> = new Set()
   private dbVersion: number
+  // Последовательная очередь операций изменения схемы (создание сторов).
+  // На одну БД (singleton по dbName) обычно инициализируется сразу несколько
+  // ApiClient-ов (comments, posts, reactions, ...). Без сериализации их
+  // ensureStoreExists перекрывались: один обнулял this.db между close() и
+  // переоткрытием, второй в этот момент читал this.db.objectStoreNames → null.
+  private opQueue: Promise<unknown> = Promise.resolve()
 
   private constructor(
     private readonly dbName: string,
@@ -79,27 +85,53 @@ export class IndexedDBManager {
   }
 
   async ensureStoreExists(storeName: string): Promise<IDBDatabase> {
-    await this.initialize()
+    return this.enqueue(() => this.ensureStoresInternal([storeName]))
+  }
 
-    if (this.db!.objectStoreNames.contains(storeName)) {
-      this.storeNames.add(storeName)
-      return this.db!
+  /**
+   * Ставит операцию изменения схемы в последовательную очередь, чтобы создания
+   * сторов на одной БД не перекрывались между await-точками. Очередь не должна
+   * "застревать" из-за упавшей операции — ошибку прокидываем вызывающему, но
+   * следующий элемент очереди стартует независимо от результата предыдущего.
+   */
+  private enqueue<R>(operation: () => Promise<R>): Promise<R> {
+    const result = this.opQueue.then(operation, operation)
+    this.opQueue = result.then(
+      () => undefined,
+      () => undefined,
+    )
+    return result
+  }
+
+  /**
+   * Идемпотентно гарантирует наличие переданных сторов. Никогда не обращается к
+   * this.db после await — работает с локальной ссылкой, возвращённой initialize()
+   * / openDatabase(), поэтому параллельное обнуление this.db (другим клиентом
+   * или onversionchange) не приводит к чтению свойств у null.
+   */
+  private async ensureStoresInternal(storeNames: string[]): Promise<IDBDatabase> {
+    let db = await this.initialize()
+
+    const missingStores = storeNames.filter((name) => !db.objectStoreNames.contains(name))
+    if (missingStores.length === 0) {
+      for (const name of storeNames) this.storeNames.add(name)
+      return db
     }
 
-    this.logger?.debug(`Store "${storeName}" not found, upgrading database`, {
+    this.logger?.debug(`Создание недостающих хранилищ: ${missingStores.join(', ')}`, {
       dbName: this.dbName,
-      currentStores: Array.from(this.db!.objectStoreNames),
+      currentStores: Array.from(db.objectStoreNames),
     })
 
-    this.db!.close()
+    db.close()
     this.db = null
 
     this.dbVersion++
-    this.initPromise = this.openDatabase([storeName])
+    this.initPromise = this.openDatabase(missingStores)
+    db = await this.initPromise
 
-    const newDb = await this.initPromise
-    this.storeNames.add(storeName)
-    return newDb
+    for (const name of storeNames) this.storeNames.add(name)
+    return db
   }
 
   private async openDatabase(newStores: string[] = []): Promise<IDBDatabase> {
@@ -182,32 +214,7 @@ export class IndexedDBManager {
     })
   }
   async ensureStoresExist(storeNames: string[]): Promise<IDBDatabase> {
-    // Сначала инициализируем базу
-    await this.initialize()
-
-    // Проверяем, какие хранилища уже существуют
-    const missingStores = storeNames.filter((name) => !this.db!.objectStoreNames.contains(name))
-
-    // Если все хранилища уже существуют, просто возвращаем базу
-    if (missingStores.length === 0) {
-      return this.db!
-    }
-
-    // Иначе нам нужно обновить базу для создания новых хранилищ
-    this.logger?.debug(`Создание недостающих хранилищ: ${missingStores.join(', ')}`, {
-      dbName: this.dbName,
-      currentStores: Array.from(this.db!.objectStoreNames),
-    })
-
-    // Закрываем текущее соединение
-    this.db!.close()
-    this.db = null
-
-    // Увеличиваем версию один раз для всех новых хранилищ
-    this.dbVersion++
-    this.initPromise = this.openDatabase(missingStores)
-
-    return this.initPromise
+    return this.enqueue(() => this.ensureStoresInternal(storeNames))
   }
 
   // Метод для получения текущей версии

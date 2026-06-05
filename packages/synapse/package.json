@@ -1,6 +1,6 @@
 {
   "name": "synapse-storage",
-  "version": "4.0.1",
+  "version": "4.1.0",
   "description": "Набор инструментов для управления состоянием и апи-запросами",
   "type": "module",
   "main": "./dist/index.js",

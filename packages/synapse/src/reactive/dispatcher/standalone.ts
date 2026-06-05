@@ -38,10 +38,31 @@ export interface WatcherRecipe<TState extends Record<string, any>, R> {
 }
 
 /**
- * Состояние API-запроса для createApiActions
+ * Статусы жизненного цикла API-запроса.
+ *
+ * Сделано const-объектом (а не TS `enum`) намеренно: значения остаются обычными
+ * строковыми литералами, поэтому `ApiStatus.Loading` и строка `'loading'`
+ * взаимозаменяемы и тип обратно совместим с прежним строковым union'ом. С `enum`
+ * это не так — его член не присваивается к литералу и наоборот.
+ *
+ * `ApiStatus` — одновременно значение (для `ApiStatus.Loading` в коде) и тип
+ * (union всех статусов).
+ */
+export const ApiStatus = {
+  Idle: 'idle',
+  Loading: 'loading',
+  Success: 'success',
+  Error: 'error',
+  Reset: 'reset',
+} as const
+
+export type ApiStatus = (typeof ApiStatus)[keyof typeof ApiStatus]
+
+/**
+ * Состояние API-запроса для createApiActions / createKeyedApiActions
  */
 export interface ApiRequestState {
-  status: 'idle' | 'loading' | 'success' | 'error' | 'reset'
+  status: ApiStatus
   error: string | null
 }
 
@@ -151,6 +172,11 @@ function setByPath(obj: any, path: string[], value: any): void {
  *
  * @param accessor - Функция-accessor, указывающая на поле ApiRequestState в стейте
  *
+ * @typeParam TInitPayload - Тип payload'а `init`-экшена. По умолчанию `void`
+ *   (init без параметров). Если задать — `init` принимает payload и возвращает
+ *   его, что удобно для intent-паттерна: эффект слушает `init` и читает payload
+ *   намерения (target, фильтры и т.п.), а статус при этом сбрасывается в `idle`.
+ *
  * @example
  * ```ts
  * const listRequest = createApiActions<MyState>(
@@ -165,9 +191,14 @@ function setByPath(obj: any, path: string[], value: any): void {
  *   loadListFailure: listRequest.failure,
  *   loadListReset:   listRequest.reset,
  * })
+ *
+ * // init с payload (intent): эффект получит { entityId } из возврата экшена.
+ * const usersReq = createApiActions<MyState, { entityId: string }>(
+ *   (draft) => draft.api.usersRequest
+ * )
  * ```
  */
-export function createApiActions<TState extends Record<string, any>>(accessor: (draft: TState) => ApiRequestState) {
+export function createApiActions<TState extends Record<string, any>, TInitPayload = void>(accessor: (draft: TState) => ApiRequestState) {
   const path = resolvePath(accessor)
   const action = defineAction<TState>()
 
@@ -176,24 +207,91 @@ export function createApiActions<TState extends Record<string, any>>(accessor: (
   }
 
   return {
-    init: action({
-      action: (storage) => update(storage, { status: 'idle', error: null }),
+    init: action<TInitPayload, TInitPayload>({
+      // Сбрасываем статус в idle и пробрасываем payload намерения дальше (эффектам).
+      action: (storage, payload: TInitPayload) => {
+        update(storage, { status: ApiStatus.Idle, error: null })
+        return payload
+      },
     }),
 
     loading: action({
-      action: (storage) => update(storage, { status: 'loading', error: null }),
+      action: (storage) => update(storage, { status: ApiStatus.Loading, error: null }),
     }),
 
     success: action({
-      action: (storage) => update(storage, { status: 'success', error: null }),
+      action: (storage) => update(storage, { status: ApiStatus.Success, error: null }),
     }),
 
     failure: action({
-      action: (storage, error: string) => update(storage, { status: 'error', error }),
+      action: (storage, error: string) => update(storage, { status: ApiStatus.Error, error }),
     }),
 
     reset: action({
-      action: (storage) => update(storage, { status: 'reset', error: null }),
+      action: (storage) => update(storage, { status: ApiStatus.Reset, error: null }),
+    }),
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// createKeyedApiActions
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Keyed-вариант createApiActions: статус хранится ПО КЛЮЧУ в `Record<string,
+ * ApiRequestState>`, а не один на весь запрос. Нужен, когда один и тот же запрос
+ * летит параллельно для нескольких независимых ключей и у каждого свой
+ * loading/error: комменты по таргетам, детали сущностей по id, per-row действия
+ * в таблице/ленте, пагинация по секциям — всё, что лежит как `Record<key, data>`.
+ *
+ * Все статус-экшены принимают `key` (и возвращают его — удобно эффектам), кроме
+ * `failure`, который принимает `{ key, error }`. Записи мутируются иммутабельно
+ * по одному ключу — соседние ключи (их срезы) по ссылке не затрагиваются, что и
+ * нужно для гранулярной изоляции ре-рендеров (см. useKeyedSliceSelector).
+ *
+ * @param accessor - Функция-accessor, указывающая на поле `Record<string, ApiRequestState>`
+ *
+ * @example
+ * ```ts
+ * const commentsReq = createKeyedApiActions<MyState>((d) => d.api.commentsRequest)
+ *
+ * createDispatcher({ storage }, {
+ *   commentsInit:    commentsReq.init,     // (key) => key
+ *   commentsLoading: commentsReq.loading,  // (key) => key
+ *   commentsSuccess: commentsReq.success,  // (key) => key
+ *   commentsFailure: commentsReq.failure,  // ({ key, error })
+ *   commentsReset:   commentsReq.reset,    // (key) => key
+ * })
+ * ```
+ */
+export function createKeyedApiActions<TState extends Record<string, any>>(accessor: (draft: TState) => Record<string, ApiRequestState>) {
+  const path = resolvePath(accessor)
+  const action = defineAction<TState>()
+
+  const write = (storage: IStorage<TState>, key: string, request: ApiRequestState) => {
+    // [...path, key] → setByPath доходит до самого Record и кладёт значение по ключу
+    storage.update((s) => setByPath(s, [...path, key], request))
+  }
+
+  const writer = (status: ApiStatus) =>
+    action<string, string>({
+      action: (storage, key: string) => {
+        write(storage, key, { status, error: null })
+        return key
+      },
+    })
+
+  return {
+    init: writer(ApiStatus.Idle),
+    loading: writer(ApiStatus.Loading),
+    success: writer(ApiStatus.Success),
+    reset: writer(ApiStatus.Reset),
+
+    failure: action<{ key: string; error: string }, { key: string; error: string }>({
+      action: (storage, payload: { key: string; error: string }) => {
+        write(storage, payload.key, { status: ApiStatus.Error, error: payload.error })
+        return payload
+      },
     }),
   }
 }

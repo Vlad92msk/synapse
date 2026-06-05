@@ -2,6 +2,21 @@
 
 # Changelog
 
+## [4.1.0] - 2026-06-05
+
+### Исправления
+
+- **`React is not defined`** — `rslib.config.ts` переведён на автоматический JSX-рантайм (`tools.swc.jsc.transform.react.runtime: 'automatic'`). Раньше SWC собирал JSX в классический `React.createElement` / `React.Fragment`, а файлы импортируют только именованные хуки из `react` → в браузере падал `ReferenceError` при рендере любого синапс-обёрнутого компонента. Фикс распространяется на весь пакет.
+- **IndexedDB: гонка `Cannot read properties of null (reading 'objectStoreNames')`** — `IndexedDBManager` сериализует схемные операции через очередь (`opQueue` + `enqueue`), а `ensureStoreExists` / `ensureStoresExist` больше не обращаются к `this.db` после `await` (работают с локальной ссылкой). Снимает падение при параллельной инициализации нескольких `ApiClient` на одну БД (общий стор). Дублирующее тело `ensureStoresExist` объединено с `ensureStoreExists` в общий `ensureStoresInternal`.
+
+### Новое
+
+- **`useSelector` без обязательного `withLoading` при `equals`** — добавлена перегрузка `useSelector(selector, options & { withLoading?: false }): T`. Теперь `useSelector(sel, { equals })` возвращает `T` без каста. Полностью обратно совместимо.
+- **`useKeyedSliceSelector(selector, key, fallback)`** — хук изоляции ре-рендеров для keyed-map сторов: подписка на весь map, но ре-рендер только при изменении `map[key]` по ссылке. `fallback` обязан быть стабильной ссылкой.
+- **`createApiActions` — payload в `init`** — добавлен дженерик `TInitPayload = void`. `init` теперь может принимать и возвращать payload (intent-паттерн: эффект слушает `init` и читает намерение). По умолчанию `void` — обратно совместимо.
+- **`ApiStatus`** — экспортируемый const-объект статусов запроса (`Idle`/`Loading`/`Success`/`Error`/`Reset`). Одновременно значение и тип; значения — обычные строковые литералы, поэтому взаимозаменяемы со строками и не ломают существующий код (в отличие от TS `enum`). `ApiRequestState.status` типизирован как `ApiStatus`.
+- **`createKeyedApiActions(accessor)`** — keyed-вариант `createApiActions`: статус хранится по ключу в `Record<string, ApiRequestState>`. Все писатели (`init`/`loading`/`success`/`reset`) принимают `key` и возвращают его, `failure` — `{ key, error }`. Для случаев, когда один запрос летит параллельно по нескольким независимым ключам (комменты по таргетам, детали по id, per-row действия, пагинация по секциям).
+
 ## [4.0.0-alpha] - 2026-05-25
 
 ### Рефакторинг: Sync/Async разделение (8 фаз — все done)
