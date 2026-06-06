@@ -32,7 +32,7 @@ export function isEqual(a: any, b: any): boolean {
 /**
  * Finds all changed paths between two objects.
  */
-export function findChangedPaths(oldObj: any, newObj: any, prefix = '', changedPaths: Set<string> = new Set<string>(), visited = new WeakMap<any, boolean>()): Set<string> {
+export function findChangedPaths(oldObj: any, newObj: any, prefix = '', changedPaths: Set<string> = new Set<string>(), visited = new WeakMap<any, WeakSet<any>>()): Set<string> {
   if (oldObj === newObj) return changedPaths
 
   if (typeof oldObj !== 'object' || typeof newObj !== 'object' || oldObj === null || newObj === null) {
@@ -42,8 +42,17 @@ export function findChangedPaths(oldObj: any, newObj: any, prefix = '', changedP
     return changedPaths
   }
 
-  if (visited.has(oldObj)) return changedPaths
-  visited.set(oldObj, true)
+  // Cycle/dedup guard keyed by the (oldObj, newObj) PAIR, not by oldObj alone.
+  // structuredClone deduplicates shared references, so a single `oldObj` can be
+  // reached via different paths leading to DIFFERENT `newObj`s. Keying on oldObj
+  // alone would skip the second, genuinely-changed branch entirely.
+  const seenNew = visited.get(oldObj)
+  if (seenNew) {
+    if (seenNew.has(newObj)) return changedPaths
+    seenNew.add(newObj)
+  } else {
+    visited.set(oldObj, new WeakSet([newObj]))
+  }
 
   const allKeys = new Set([...Object.keys(oldObj || {}), ...Object.keys(newObj || {})])
 
