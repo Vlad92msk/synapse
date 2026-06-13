@@ -1,5 +1,55 @@
 # Changelog
 
+## [4.2.0] - 2026-06-12
+
+### Новое: class-based BL-слой
+
+Четыре тонких публичных класса поверх **неизменных** существующих движков
+(`DispatcherCore`, `SelectorModule`, `EffectsModule`) и новая перегрузка сборщика.
+Старый API (`createSynapse(config)`, `createDispatcher`, `defineAction`,
+`createApiActions`, все операторы) **работает без изменений** — это minor-релиз,
+ломающих изменений нет. Обе ветки совместимы в `dependencies` друг друга.
+
+- **`Dispatcher<TState>`** (`synapse-storage/reactive`) — абстрактный класс: экшены
+  объявляются как поля через фабрики `this.action` / `this.signal` / `this.apiActions`
+  / `this.keyedApiActions` / `this.watcher`. Имя экшена = имя поля (`actionType`
+  назначается сборщиком на шаге финализации; standalone — ленивая само-финализация при
+  первом dispatch). `this.apiActions(accessor)` возвращает **вызываемую группу**:
+  `d.loadPosts(params)` — это init-намерение, `d.loadPosts.loading/.success/.failure/.reset`
+  — жизненный цикл (убирает ручное «расплющивание» пятёрок). Dev-проверки: коллизия с
+  зарезервированным именем и поле-алиас бросают понятную ошибку.
+- **`Selectors<TState>`** (`synapse-storage/core`) — абстрактный класс: селекторы как
+  поля через `this.select` / `this.combine` / `this.keyed`, eager (поля сразу настоящие
+  `SelectorAPI`). Внешние (cross-store) селекторы — параметры конструктора. `this.keyed`
+  даёт один `SelectorAPI` на ключ с кэшем. Класс владеет своим модулем только если создан
+  из `storage`; переданный модуль при `destroy()` чистится точечно (`removeSelector`).
+- **`Effects<TState, TDispatcher, TExternalDispatchers?>`** (`synapse-storage/reactive`) —
+  абстрактный класс: эффекты как поля через `this.effect(fn)`; сервисы и внешние сторы —
+  через конструктор, захватываются в замыкание рецепта. `ctx.dispatcher` — инстанс
+  class-диспетчера, `ctx.external` — внешние диспетчеры. Опциональный `onDestroy()`.
+  Dev-warning о поле-функции, не обёрнутом в `this.effect`.
+- **`createSynapse(factory)`** (`synapse-storage/utils`, реэкспорт из корня) — новая
+  перегрузка: `typeof arg === 'function'` → ленивый синглтон-handle (`SynapseModule`),
+  объект-конфиг → старый путь. Фабрика исполняется один раз при первом `await`/`ready()`,
+  а не на импорте (поглощает userland `createFeatureSynapse`). Пайплайн: fail-fast (любая
+  ошибка = rejection, никаких тихих частичных инициализаций), LIFO-teardown, `state$`
+  присутствует ВСЕГДА, `dispatcher` полностью типизирован. `handle.destroy()` сбрасывает
+  мемоизацию — handle пересоздаваемый (HMR/тесты).
+- **`resubscribeOnError`** — опция эффекта (`this.effect(fn, { resubscribeOnError: true })`):
+  retry с лимитом/бэкоффом вместо терминального `catchError`.
+- **`SelectorAPI.$: Observable<T>`** — Observable-вид селектора (emit текущего значения при
+  подписке + при каждом реальном изменении). Совместим с `pipe(debounceTime(...))`.
+- **React-хуки** (`synapse-storage/react`): `useObservable(source$ | factory, initialValue, deps?)`
+  и `useSubscription(factory, deps)` — мост Rx → React на `useSyncExternalStore`.
+  `createSynapseCtx` принимает `SynapseModule`-handle (ленивый запуск при первом монтировании
+  Provider'а).
+- **`toObservable(storage)`** — вынесена в публичный API (`synapse-storage/reactive`).
+
+Все новые символы доступны как из соответствующих entry (`/core`, `/reactive`, `/utils`,
+`/react`), так и из корня `synapse-storage`. Отдельный entry `synapse-storage/bl`
+**не добавляется**: класс-слой распределён по существующим семантическим entry, а не
+вынесен в отдельный бакет.
+
 ## [4.1.2] - 2026-06-06
 
 ### Исправления

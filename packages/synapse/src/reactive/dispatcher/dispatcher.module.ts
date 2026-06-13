@@ -156,9 +156,14 @@ interface DispatcherOptions<T extends Record<string, any>> {
 }
 
 /**
- * Класс Dispatcher для интеграции хранилищ с реактивной системой
+ * Внутренний движок диспетчера для интеграции хранилищ с реактивной системой.
+ *
+ * Прежнее имя — `Dispatcher`. Переименован в `DispatcherCore`, поскольку публичным
+ * `Dispatcher` теперь является abstract class-based слой (`dispatcher.base.ts`),
+ * который строится поверх этого движка. `createDispatcher` продолжает работать
+ * поверх `DispatcherCore` без изменений.
  */
-export class Dispatcher<T extends Record<string, any>, TActionsFn extends ActionsSetupWithUtils<T> = ActionsSetupWithUtils<T>> {
+export class DispatcherCore<T extends Record<string, any>, TActionsFn extends ActionsSetupWithUtils<T> = ActionsSetupWithUtils<T>> {
   // Поток действий
   private actions$ = new Subject<Action>()
 
@@ -574,7 +579,7 @@ export class Dispatcher<T extends Record<string, any>, TActionsFn extends Action
 export function createDispatcher<TState extends Record<string, any>, TRecord extends Record<string, ActionRecipe<TState, any, any> | WatcherRecipe<TState, any>>>(
   options: DispatcherOptions<TState>,
   actions: TRecord,
-): Dispatcher<TState> & {
+): DispatcherCore<TState> & {
   dispatch: DispatchActions<TRecord>
   watchers: WatcherActions<TRecord>
 }
@@ -583,7 +588,7 @@ export function createDispatcher<TState extends Record<string, any>, TRecord ext
 export function createDispatcher<TState extends Record<string, any>, TActions extends ActionsSetupWithUtils<TState>>(
   options: DispatcherOptions<TState>,
   actionsSetup: TActions,
-): Dispatcher<TState, TActions> & {
+): DispatcherCore<TState, TActions> & {
   dispatch: DispatchActions<ReturnType<TActions>>
   watchers: WatcherActions<ReturnType<TActions>>
 }
@@ -591,7 +596,7 @@ export function createDispatcher<TState extends Record<string, any>, TActions ex
 // Implementation
 export function createDispatcher<TState extends Record<string, any>>(options: DispatcherOptions<TState>, actionsOrSetup: Record<string, any> | ((...args: any[]) => any)) {
   // Создаем экземпляр диспетчера
-  const dispatcher = new Dispatcher<TState>(options)
+  const dispatcher = new DispatcherCore<TState>(options)
 
   // Получаем объект действий: из функции или напрямую
   const actions =

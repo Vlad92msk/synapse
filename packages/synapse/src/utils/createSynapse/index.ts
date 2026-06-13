@@ -1,4 +1,5 @@
 export { createSynapse } from './createSynapse'
+export type { Synapse, SynapseConfig, SynapseModule } from './synapse.types'
 export type {
   AnySynapseStore,
   CreateSynapseConfigBasic,

@@ -18,7 +18,9 @@ export default defineConfig({
   ],
   source: {
     entry: {
-      index: './src/**/*.{ts,tsx}',
+      // Исключаем тесты из сборки — иначе rslib подхватит src/**/__tests__/*.test.ts
+      // (с импортами vitest) в dist.
+      index: ['./src/**/*.{ts,tsx}', '!./src/**/__tests__/**'],
     },
   },
   output: {

@@ -3,7 +3,7 @@ import { Observable } from 'rxjs'
 
 import { handleCleanupError } from '../../_utils/error-handling.util'
 import { IStorage } from '../../core'
-import { AnySynapseStore, createSynapseAwaiter, SynapseStoreBasic, SynapseStoreWithDispatcher, SynapseStoreWithEffects } from '../../utils'
+import { AnySynapseStore, createSynapseAwaiter, SynapseModule, SynapseStoreBasic, SynapseStoreWithDispatcher, SynapseStoreWithEffects } from '../../utils'
 
 const ERROR_HOOK_MESSAGE = 'Хук необходимо использовать внутри компонента contextSynapse'
 const ERROR_CONTEXT_INIT = 'Ошибка при инициализации контекста:'
@@ -13,8 +13,37 @@ interface SimplifiedOptions {
 }
 
 /**
+ * Runtime-детектор class-based handle (`SynapseModule`): у него есть собственный
+ * ленивый жизненный цикл (`ready`/`destroy`/`isReady`), поэтому очистка делегируется
+ * ему, а не самому synapse — это сбрасывает мемоизацию и даёт пересоздаваемость.
+ */
+function isSynapseModule(value: unknown): value is SynapseModule<any, any, any> {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    typeof (value as SynapseModule<any, any, any>).ready === 'function' &&
+    typeof (value as SynapseModule<any, any, any>).isReady === 'function' &&
+    typeof (value as SynapseModule<any, any, any>).destroy === 'function' &&
+    typeof (value as SynapseModule<any, any, any>).then === 'function'
+  )
+}
+
+/**
  * Перегрузки для createSynapseCtx в зависимости от типа хранилища
  */
+
+// Class-based handle (этап 5): ленивый запуск фабрики при первом монтировании Provider'а.
+export function createSynapseCtx<TState extends Record<string, any>, TDispatcher, TSelectors>(
+  synapseModule: SynapseModule<TState, TDispatcher, TSelectors>,
+  options?: SimplifiedOptions,
+): {
+  contextSynapse: <SelfComponentProps>(Component: ComponentType<SelfComponentProps>) => ComponentType<SelfComponentProps>
+  useSynapseStorage: () => IStorage<TState>
+  useSynapseSelectors: () => TSelectors
+  useSynapseActions: () => TDispatcher
+  useSynapseState$: () => Observable<TState>
+  cleanupSynapse: () => Promise<void>
+}
 
 // Для хранилища с effects
 export function createSynapseCtx<TStore extends Record<string, any>, TStorage extends IStorage<TStore>, TSelectors, TActions>(
@@ -54,7 +83,10 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
 
 // Основная реализация
 export function createSynapseCtx<TStore extends Record<string, any>, TStorage extends IStorage<TStore>, TSelectors = any, TActions = any>(
-  synapseStorePromise: Promise<AnySynapseStore<TStore, TStorage, TSelectors, TActions>> | AnySynapseStore<TStore, TStorage, TSelectors, TActions>,
+  synapseStorePromise:
+    | Promise<AnySynapseStore<TStore, TStorage, TSelectors, TActions>>
+    | AnySynapseStore<TStore, TStorage, TSelectors, TActions>
+    | SynapseModule<TStore, TActions, TSelectors>,
   options?: SimplifiedOptions,
 ) {
   const { loadingComponent = <div>Инициализация контекста...</div> } = options || {}
@@ -63,8 +95,12 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
   // Сам awaiter (createSynapseAwaiter) инкапсулирует ожидание готовности, статус и подписки.
   let awaiter: ReturnType<typeof createSynapseAwaiter<TStore, TStorage, TSelectors, TActions>> | null = null
 
+  // SynapseModule — PromiseLike: createSynapseAwaiter дожидается его через Promise.resolve,
+  // что лениво дёргает фабрику (handle.ready()) при создании awaiter, т.е. при первом mount.
+  const source = synapseStorePromise as Promise<AnySynapseStore<TStore, TStorage, TSelectors, TActions>> | AnySynapseStore<TStore, TStorage, TSelectors, TActions>
+
   const getAwaiter = () => {
-    if (!awaiter) awaiter = createSynapseAwaiter(synapseStorePromise)
+    if (!awaiter) awaiter = createSynapseAwaiter(source)
     return awaiter
   }
 
@@ -164,6 +200,16 @@ export function createSynapseCtx<TStore extends Record<string, any>, TStorage ex
   }
 
   const cleanupSynapse = async (): Promise<void> => {
+    // Class-based handle владеет жизненным циклом synapse (LIFO-teardown + сброс мемоизации):
+    // делегируем очистку ему, чтобы следующий mount заново исполнил фабрику.
+    if (isSynapseModule(synapseStorePromise)) {
+      const instance = awaiter
+      awaiter = null
+      instance?.destroy()
+      await synapseStorePromise.destroy()
+      return
+    }
+
     if (!awaiter) return
 
     const instance = awaiter

@@ -1,3 +1,5 @@
+import { Observable } from 'rxjs'
+
 import type { ILogger, IStorage, StorageInitStatus } from '../storage'
 import { StorageStatus } from '../storage'
 import type { ISelectorModule, Selector, SelectorAPI, SelectorOptions, Subscriber } from './selector.interface'
@@ -207,11 +209,51 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
   private batchUpdateInProgress = false
   private pendingUpdates = new Set<string>()
 
+  // Снятие подписки на статус источника (см. конструктор) — вызывается в destroy().
+  private readonly disposeStatusListener: VoidFunction
+
   constructor(
     private readonly source: IStorage<S>,
     private readonly logger?: ILogger,
   ) {
     this.storageName = source.name
+
+    // Селекторы конструируются ДО storage.initialize() (так устроен пайплайн createSynapse:
+    // фабрика создаёт селекторы, и только потом buildSynapse зовёт initialize()). На этот
+    // момент getStateSync() === {}. combine-селектор при создании эагерно подписывается на
+    // зависимости и СИНХРОННО вычисляет их (SelectorSubscription.subscribe при !hasValue),
+    // т.е. кеширует значение от пустого стора. А performInitialize наполняет _stateCache
+    // молча, без storage:update, — значит этот кеш сам по себе уже не обновится.
+    // Поэтому на переходе источника в READY принудительно пересчитываем все подписки.
+    // Порядок Map = порядок создания, а зависимость всегда создаётся раньше зависимого
+    // (combine([this.api]) невозможен до this.api) → пересчёт идёт «снизу вверх» корректно.
+    this.disposeStatusListener = this.source.onStatusChange((status) => {
+      if (status.status === StorageStatus.READY) {
+        this.subscriptions.forEach((sub) => {
+          try {
+            sub.notify()
+          } catch (error) {
+            this.logger?.error(`[${sub.getId()}] Ошибка пересчёта на READY`, { error })
+          }
+        })
+      }
+    })
+  }
+
+  /**
+   * Собирает публичный `SelectorAPI` поверх подписки. `$` — Observable-вид с той же
+   * семантикой, что у `subscribe`: синхронный снапшот при подписке + emit на изменение.
+   */
+  private buildSelectorApi<T>(id: string, subscription: SelectorSubscription<T>, getState: () => T): SelectorAPI<T> {
+    return {
+      select: () => getState(),
+      selectSync: () => subscription.getValue(),
+      subscribe: (subscriber) => subscription.subscribe(subscriber),
+      getId: () => id,
+      $: new Observable<T>((observer) => subscription.subscribe({ notify: (value) => observer.next(value) })),
+      isSourceReady: this.isSourceReady,
+      onSourceStatusChange: this.onSourceStatusChange,
+    }
   }
 
   private isSourceReady = (): boolean => {
@@ -372,16 +414,7 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
     const unsubscribeFunctions = [unsubscribeFromStorage]
 
     return {
-      api: {
-        select: () => getState(),
-        selectSync: () => subscription.getValue(),
-        subscribe: (subscriber) => {
-          return subscription.subscribe(subscriber)
-        },
-        getId: () => id,
-        isSourceReady: this.isSourceReady,
-        onSourceStatusChange: this.onSourceStatusChange,
-      },
+      api: this.buildSelectorApi(id, subscription, getState),
       unsubscribeFunctions,
     }
   }
@@ -470,21 +503,36 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
     })
 
     return {
-      api: {
-        select: () => getState(),
-        selectSync: () => subscription.getValue(),
-        subscribe: (subscriber) => {
-          return subscription.subscribe(subscriber)
-        },
-        getId: () => id,
-        isSourceReady: this.isSourceReady,
-        onSourceStatusChange: this.onSourceStatusChange,
-      },
+      api: this.buildSelectorApi(id, subscription, getState),
       unsubscribeFunctions,
     }
   }
 
+  /**
+   * Точечно удаляет селектор по id: снимает его подписки на хранилище, чистит подписку
+   * и кэш. Остальные селекторы модуля не затрагиваются. Имя кэша совпадает с id подписки
+   * (`generateName()`/`options.name`), поэтому достаточно одного ключа.
+   */
+  removeSelector(id: string): void {
+    const subscription = this.subscriptions.get(id)
+    if (subscription) {
+      subscription.cleanup()
+      this.subscriptions.delete(id)
+    }
+
+    this.pendingUpdates.delete(id)
+
+    const cached = this.localSelectorCache.get(id)
+    if (cached) {
+      cached.unsubscribeFunctions.forEach((unsub) => unsub())
+      this.localSelectorCache.delete(id)
+    }
+  }
+
   destroy(): void {
+    // Снимаем подписку на статус источника
+    this.disposeStatusListener()
+
     // Очищаем все подписки
     this.subscriptions.forEach((sub) => sub.cleanup())
     this.subscriptions.clear()

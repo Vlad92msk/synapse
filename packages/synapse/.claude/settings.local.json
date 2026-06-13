@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(yarn vitest *)",
+      "Bash(yarn add *)",
+      "Bash(yarn test *)",
+      "Bash(yarn test:coverage)",
+      "Bash(yarn build *)",
+      "Bash(yarn lint *)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(sed -n '1,20p' src/utils/createSynapse/__tests__/createSynapse.test.ts)",
+      "Bash(sed -n '1,60p' src/utils/createSynapse/validate.ts)",
+      "Bash(echo \"tsc EXIT: $?\")",
+      "Bash(grep -rln \"этап\\\\|Этап\\\\|ЭТАП\\\\|stage 2\\\\|Stage 2\" /Users/vlad/web_dev/synapse --include=\"*.md\" -not -path \"*/node_modules/*\")",
+      "Bash(perl -i -pe 's/, of\\\\\\(\\\\{ userId: null \\\\}\\\\\\), \\\\\\(\\\\\\) => \\\\{\\\\}\\\\\\)/, of\\({ userId: null }\\), { connect: \\(\\) => {} }\\)/g' effects.base.test.ts)",
+      "Bash(ls -la _fable/)",
+      "Bash(ls -la .claude/)",
+      "Bash(yarn tsc *)",
+      "Bash(perl -i -pe 's/=> \\([a-zA-Z]+\\)\\\\.push\\\\\\(\\(v|u\\)\\\\\\)/=> { $1.push\\($2\\) }/g' src/core/selector/__tests__/selectors.base.test.ts)",
+      "Bash(node -e ' *)",
+      "Bash(npx eslint *)",
+      "Bash(echo \"=== exit $? ===\")",
+      "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./package.json'\\).scripts,null,1\\)\\)\")",
+      "Bash(grep -n \"select\\(\\\\|selectSync\\\\|subscribe\\(\\\\|\\\\$:\\\\|getId\\\\|\\\\.\\\\$\\\\b\" core/selector/selector.interface.ts)",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\('name',p.name\\);console.log\\('scripts',JSON.stringify\\(p.scripts\\)\\);console.log\\('deps',JSON.stringify\\(p.dependencies\\)\\)\")",
+      "Bash(node -e \"const p=require\\('../synapse/package.json'\\); console.log\\(JSON.stringify\\(p.exports,null,1\\)\\)\")",
+      "Bash(yarn typecheck *)",
+      "Bash(node -e \"const r=require\\('rxjs'\\); console.log\\('Subscription' in r, typeof r.Subscription\\)\")",
+      "Bash(node -e \"console.log\\(require\\('react/package.json'\\).version\\)\")",
+      "Bash(echo \"tsc exit: $?\")",
+      "Bash(echo \"build exit: $?\")",
+      "Bash(echo \"exit: $?\")",
+      "Bash(node *)",
+      "Bash(npx vitest *)"
+    ]
+  }
+}

@@ -3,6 +3,10 @@
     // =================== КОМПИЛЯЦИЯ ===================
     "target": "ES2022",                    // Соответствует tsup target
     "module": "ES2022",                    // ES модули
+    // class-поля инициализируются в теле конструктора ПОСЛЕ super() и parameter properties —
+    // нужно для eager cross-store селекторов (`readonly x = this.combine([this.core.y], ...)`,
+    // где `core` — параметр конструктора подкласса). См. PROPOSAL §1.5/§2.2.
+    "useDefineForClassFields": false,
     "moduleResolution": "bundler",         // ✅ Современная резолюция для сложных exports
     "lib": ["ES2022", "dom"],              // API браузера и современный JS
 

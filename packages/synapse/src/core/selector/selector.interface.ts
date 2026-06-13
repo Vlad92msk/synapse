@@ -1,3 +1,5 @@
+import type { Observable } from 'rxjs'
+
 export interface Selector<T, R> {
   (state: T): R
 }
@@ -16,6 +18,12 @@ export interface SelectorAPI<T> {
   selectSync: () => T
   subscribe: (subscriber: Subscriber<T>) => VoidFunction
   getId: () => string
+  /**
+   * Observable-вид селектора: эмитит текущее значение при подписке и при каждом
+   * реальном изменении (та же семантика, что у `subscribe`). Позволяет реактивно
+   * трансформировать чтение прямо в компоненте — `selector.$.pipe(debounceTime(300))`.
+   */
+  readonly $: Observable<T>
   /** @internal — проверка готовности источника данных */
   isSourceReady: () => boolean
   /** @internal — подписка на изменение статуса источника */
@@ -63,6 +71,15 @@ export interface ISelectorModule<TStore extends Record<string, any>> {
    * );
    */
   createSelector<Deps extends unknown[], T>(dependencies: { [K in keyof Deps]: SelectorAPI<Deps[K]> }, resultFn: (...args: Deps) => T, options?: SelectorOptions<T>): SelectorAPI<T>
+
+  /**
+   * Точечно удаляет один селектор по его id (`SelectorAPI.getId()`): снимает подписки
+   * на хранилище и чистит кэш, не затрагивая остальные селекторы модуля. Нужен для
+   * keyed-кэша и для `destroy()` class-селекторов, владеющих общим модулем.
+   *
+   * @param id Идентификатор селектора (`selector.getId()`)
+   */
+  removeSelector(id: string): void
 
   /**
    * Освобождает ресурсы, связанные с модулем селекторов

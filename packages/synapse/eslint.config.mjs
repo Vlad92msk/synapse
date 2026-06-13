@@ -8,6 +8,9 @@ import './global.js';
 
 
 export default [
+  // Глобальный ignore: тесты не входят в tsconfig (typed-linting на них падает)
+  // и не попадают в сборку — линтятся средой vitest, а не eslint.
+  { ignores: ['src/**/__tests__/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

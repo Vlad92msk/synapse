@@ -1,6 +1,10 @@
 import { handleCallbackError, handleOperationError } from '../../_utils/error-handling.util'
+import type { Selectors } from '../../core'
 import { ISelectorModule, IStorage, SelectorModule } from '../../core'
+import type { Dispatcher, Effects } from '../../reactive'
 import { EffectsModule } from '../../reactive'
+import { createSynapseModule } from './factory'
+import type { SynapseConfig, SynapseModule } from './synapse.types'
 import type {
   CreateSynapseConfigBasic,
   CreateSynapseConfigWithDispatcher,
@@ -13,49 +17,11 @@ import type {
 import { validateSynapseConfig } from './validate'
 import { waitForDependencies } from './waitForDependencies'
 
-/**
- * Перегрузки функции createSynapse
- */
-
-// Случай 1: С dispatcher и effects
-export function createSynapse<
+// Старый пайплайн (объект-конфиг) — без изменений поведения.
+async function createSynapseFromConfig<
   TStore extends Record<string, any>,
   TSelectors = any,
   TDispatcher = any,
-  TServices extends Record<string, any> = Record<string, never>,
-  TConfig extends Record<string, any> = Record<string, never>,
-  TExternalSelectors extends Record<string, any> = Record<string, any>,
-  TStorage extends IStorage<TStore> = IStorage<TStore>,
->(
-  config: CreateSynapseConfigWithEffects<TStore, TSelectors, TDispatcher, TServices, TConfig, TExternalSelectors>,
-): Promise<SynapseStoreWithEffects<TStore, TStorage, TSelectors, ExtractDispatchType<TDispatcher>>>
-
-// Случай 2: Только с dispatcher
-export function createSynapse<
-  TStore extends Record<string, any>,
-  TSelectors = any,
-  TDispatcher = any,
-  TExternalSelectors extends Record<string, any> = Record<string, any>,
-  TStorage extends IStorage<TStore> = IStorage<TStore>,
->(
-  config: CreateSynapseConfigWithDispatcher<TStore, TSelectors, TDispatcher, TExternalSelectors>,
-): Promise<SynapseStoreWithDispatcher<TStore, TStorage, TSelectors, ExtractDispatchType<TDispatcher>>>
-
-// Случай 3: Без dispatcher
-export function createSynapse<
-  TStore extends Record<string, any>,
-  TSelectors = any,
-  TExternalSelectors extends Record<string, any> = Record<string, any>,
-  TStorage extends IStorage<TStore> = IStorage<TStore>,
->(config: CreateSynapseConfigBasic<TStore, TSelectors, TExternalSelectors>): Promise<SynapseStoreBasic<TStore, TStorage, TSelectors>>
-
-// Основная реализация
-export async function createSynapse<
-  TStore extends Record<string, any>,
-  TSelectors = any,
-  TDispatcher = any,
-  TApi extends Record<string, any> = Record<string, never>,
-  TConfig extends Record<string, any> = Record<string, never>,
   TExternalSelectors extends Record<string, any> = Record<string, any>,
   TStorage extends IStorage<TStore> = IStorage<TStore>,
 >(config: any): Promise<any> {
@@ -159,4 +125,58 @@ export async function createSynapse<
   }
 
   return result
+}
+
+/**
+ * Перегрузки функции createSynapse
+ */
+
+// Случай 0 (новая форма): фабрика-функция → ленивый class-based SynapseModule.
+export function createSynapse<
+  TState extends Record<string, any>,
+  TDispatcher extends Dispatcher<TState> | undefined = undefined,
+  TSelectors extends Selectors<TState> | undefined = undefined,
+  TEffects extends Effects<TState, NonNullable<TDispatcher>, any> | undefined = undefined,
+>(
+  factory: () => SynapseConfig<TState, TDispatcher, TSelectors, TEffects> | Promise<SynapseConfig<TState, TDispatcher, TSelectors, TEffects>>,
+): SynapseModule<TState, TDispatcher, TSelectors>
+
+// Случай 1: С dispatcher и effects
+export function createSynapse<
+  TStore extends Record<string, any>,
+  TSelectors = any,
+  TDispatcher = any,
+  TServices extends Record<string, any> = Record<string, never>,
+  TConfig extends Record<string, any> = Record<string, never>,
+  TExternalSelectors extends Record<string, any> = Record<string, any>,
+  TStorage extends IStorage<TStore> = IStorage<TStore>,
+>(
+  config: CreateSynapseConfigWithEffects<TStore, TSelectors, TDispatcher, TServices, TConfig, TExternalSelectors>,
+): Promise<SynapseStoreWithEffects<TStore, TStorage, TSelectors, ExtractDispatchType<TDispatcher>>>
+
+// Случай 2: Только с dispatcher
+export function createSynapse<
+  TStore extends Record<string, any>,
+  TSelectors = any,
+  TDispatcher = any,
+  TExternalSelectors extends Record<string, any> = Record<string, any>,
+  TStorage extends IStorage<TStore> = IStorage<TStore>,
+>(
+  config: CreateSynapseConfigWithDispatcher<TStore, TSelectors, TDispatcher, TExternalSelectors>,
+): Promise<SynapseStoreWithDispatcher<TStore, TStorage, TSelectors, ExtractDispatchType<TDispatcher>>>
+
+// Случай 3: Без dispatcher
+export function createSynapse<
+  TStore extends Record<string, any>,
+  TSelectors = any,
+  TExternalSelectors extends Record<string, any> = Record<string, any>,
+  TStorage extends IStorage<TStore> = IStorage<TStore>,
+>(config: CreateSynapseConfigBasic<TStore, TSelectors, TExternalSelectors>): Promise<SynapseStoreBasic<TStore, TStorage, TSelectors>>
+
+// Основная реализация: фабрика-функция → новый ленивый handle, объект → старый пайплайн.
+export function createSynapse(arg: any): any {
+  if (typeof arg === 'function') {
+    return createSynapseModule(arg)
+  }
+  return createSynapseFromConfig(arg)
 }

@@ -1,9 +1,9 @@
 import { combineLatest, EMPTY, from, merge, Observable, of, OperatorFunction, pipe, Subject } from 'rxjs'
-import { catchError, filter, map, share, switchMap, take } from 'rxjs/operators'
+import { catchError, filter, map, retry, share, switchMap, take } from 'rxjs/operators'
 
 import { handleCallbackError, logError } from '../../_utils/error-handling.util'
 import { IStorage, IStorageBase } from '../../core'
-import { Action, ActionsResult, Dispatcher, DispatchFunction, ExtractResultType, WatcherFunction } from '../dispatcher'
+import { Action, ActionsResult, DispatcherCore, DispatchFunction, ExtractResultType, WatcherFunction } from '../dispatcher'
 import { ChunkRequestConsistent, chunkRequestConsistent, ChunkRequestParallel, chunkRequestParallel, isStorage, toObservable } from './utils'
 
 /**
@@ -26,7 +26,7 @@ export interface EffectContext<
   TDispatcher = any,
   TServices extends Record<string, any> = Record<string, never>,
   TConfig extends Record<string, any> = Record<string, never>,
-  TExternalDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>,
+  TExternalDispatchers extends Record<string, DispatcherCore<any, any>> = Record<string, never>,
   TExternalStates extends ExternalStates = Record<string, never>,
 > {
   /** Основной dispatcher текущего synapse */
@@ -49,14 +49,38 @@ export type Effect<
   TDispatcher = any,
   TServices extends Record<string, any> = Record<string, never>,
   TConfig extends Record<string, any> = Record<string, never>,
-  TExternalDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>,
+  TExternalDispatchers extends Record<string, DispatcherCore<any, any>> = Record<string, never>,
   TExternalStates extends ExternalStates = Record<string, never>,
 > = (action$: Observable<Action>, state$: Observable<TState>, context: EffectContext<TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates>) => Observable<unknown>
 
 /**
+ * Опции конкретного эффекта. Прикрепляются к функции-эффекту через {@link EFFECT_OPTIONS}
+ * (это делает `Effects.effect(fn, options)` из базового класса). EffectsModule читает их
+ * при подписке.
+ */
+export interface EffectOptions {
+  /**
+   * Переподписаться на поток при непойманной ошибке вместо терминального завершения.
+   *
+   * - `true` — бесконечный немедленный resubscribe;
+   * - `{ count, delay }` — лимит ретраев и задержка (мс) между ними (см. rxjs `retry`).
+   *
+   * По умолчанию (опция не задана) — текущее поведение: ошибка завершает эффект,
+   * остальные продолжают работать.
+   */
+  resubscribeOnError?: boolean | { count?: number; delay?: number }
+}
+
+/**
+ * Symbol-маркер, под которым опции эффекта ({@link EffectOptions}) хранятся на функции-эффекте.
+ * @internal
+ */
+export const EFFECT_OPTIONS = Symbol('synapse.effect.options')
+
+/**
  * Тип для получения типов действий диспетчера
  */
-export type DispatcherActions<T> = T extends Dispatcher<any, infer A> ? ActionsResult<A> : Record<string, DispatchFunction<any, any>>
+export type DispatcherActions<T> = T extends DispatcherCore<any, infer A> ? ActionsResult<A> : Record<string, DispatchFunction<any, any>>
 
 /**
  * Конфигурация для валидации в validateMap
@@ -344,7 +368,7 @@ export class EffectsModule<
   TDispatcher = any,
   TServices extends Record<string, any> = Record<string, never>,
   TConfig extends Record<string, any> = Record<string, never>,
-  TExternalDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>,
+  TExternalDispatchers extends Record<string, DispatcherCore<any, any>> = Record<string, never>,
   TExternalStates extends ExternalStates = Record<string, never>,
 > {
   private effects: Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates>[] = []
@@ -491,7 +515,18 @@ export class EffectsModule<
         config: this.config,
       }
 
-      const output$ = effect(this.action$.asObservable(), this.state$, context).pipe(
+      let stream$ = effect(this.action$.asObservable(), this.state$, context)
+
+      // resubscribeOnError: переподписываемся на поток вместо терминального завершения.
+      // Лимит ретраев исчерпан → ошибка уходит в терминальный catchError ниже
+      // (эффект умирает, остальные продолжают работать).
+      const options = (effect as { [EFFECT_OPTIONS]?: EffectOptions })[EFFECT_OPTIONS]
+      if (options?.resubscribeOnError) {
+        const config = options.resubscribeOnError === true ? {} : options.resubscribeOnError
+        stream$ = stream$.pipe(retry({ count: config.count ?? Infinity, delay: config.delay, resetOnSuccess: true }))
+      }
+
+      const output$ = stream$.pipe(
         catchError((err) => {
           handleCallbackError('EffectsModule: error in effect', err)
           return of(null)
@@ -527,7 +562,7 @@ export function createEffect<
   TDispatcher = any,
   TServices extends Record<string, any> = Record<string, never>,
   TConfig extends Record<string, any> = Record<string, never>,
-  TExternalDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>,
+  TExternalDispatchers extends Record<string, DispatcherCore<any, any>> = Record<string, never>,
   TExternalStates extends ExternalStates = Record<string, never>,
 >(
   effect: Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates>,
@@ -545,7 +580,7 @@ export function combineEffects<
   TDispatcher = any,
   TServices extends Record<string, any> = Record<string, never>,
   TConfig extends Record<string, any> = Record<string, never>,
-  TExternalDispatchers extends Record<string, Dispatcher<any, any>> = Record<string, never>,
+  TExternalDispatchers extends Record<string, DispatcherCore<any, any>> = Record<string, never>,
   TExternalStates extends ExternalStates = Record<string, never>,
 >(
   ...effects: Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates>[]

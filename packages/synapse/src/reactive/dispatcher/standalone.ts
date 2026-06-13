@@ -1,4 +1,5 @@
 import type { IStorage } from '../../core'
+import { resolvePath, setByPath } from './path.util'
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -137,34 +138,6 @@ export function defineWatcher<TState extends Record<string, any>>() {
 // ────────────────────────────────────────────────────────────────────────────
 // createApiActions
 // ────────────────────────────────────────────────────────────────────────────
-
-/**
- * Вычисляет путь к свойству через Proxy-перехват обращений.
- */
-function resolvePath<T>(accessor: (draft: T) => any): string[] {
-  const path: string[] = []
-  const handler: ProxyHandler<any> = {
-    get(_, prop) {
-      if (typeof prop === 'string') {
-        path.push(prop)
-      }
-      return new Proxy({}, handler)
-    },
-  }
-  accessor(new Proxy({}, handler) as T)
-  return path
-}
-
-/**
- * Записывает значение по пути в объекте.
- */
-function setByPath(obj: any, path: string[], value: any): void {
-  let current = obj
-  for (let i = 0; i < path.length - 1; i++) {
-    current = current[path[i]]
-  }
-  current[path[path.length - 1]] = value
-}
 
 /**
  * Создаёт набор шаблонных lifecycle-действий для API-запроса.

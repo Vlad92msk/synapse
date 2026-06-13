@@ -7,10 +7,16 @@
   "scripts": {
     "build": "yarn workspace synapse-storage build",
     "watch": "yarn workspace synapse-storage watch",
+    "test": "yarn workspace synapse-storage test",
+    "test:watch": "yarn workspace synapse-storage test:watch",
+    "test:coverage": "yarn workspace synapse-storage test:coverage",
     "dev:examples": "yarn workspace examples dev",
     "build:examples": "yarn workspace examples build",
     "lint": "yarn workspace synapse-storage lint",
     "lint:fix": "yarn workspace synapse-storage lint:fix",
     "fix": "yarn workspace synapse-storage fix"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10"
   }
 }
