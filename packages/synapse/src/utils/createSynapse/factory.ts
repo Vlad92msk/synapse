@@ -188,6 +188,15 @@ export function createSynapseModule<TState extends Record<string, any>, TDispatc
       return settled !== undefined
     },
 
+    getSnapshot() {
+      return settled
+    },
+
+    fork() {
+      // Независимый handle из той же фабрики — со своим стором и жизненным циклом.
+      return createSynapseModule<TState, TDispatcher, TSelectors>(factory)
+    },
+
     async destroy() {
       const run = pending
       pending = undefined

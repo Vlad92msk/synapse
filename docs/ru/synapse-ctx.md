@@ -155,3 +155,70 @@ const ctx = createSynapseCtx(dispatcherSynapse)
 // Доступно: + useSynapseState$
 const ctx = createSynapseCtx(effectsSynapse)
 ```
+
+## SSR — серверный рендер засеянных sync-сторов
+
+> Доступно с **5.0.1**. Только классический `renderToString` (streaming/Suspense — вне скоупа).
+
+По умолчанию `createSynapseCtx` гейтит детей `loadingComponent`, пока модуль не готов — на сервере
+это даёт пустой HTML (нет SEO, нет первого кадра из server-state). Флаг `ssr: true` включает режим,
+в котором синхронно-готовый стор (Memory/LocalStorage) рендерит контент сразу.
+
+### Опции
+
+```typescript
+const PostsSynapse = createSynapseCtx(postsSynapse, {
+  loadingComponent: <Spinner />,
+  ssr: true, // включить серверный рендер засеянных sync-сторов
+})
+```
+
+Сигнатура помощника `dehydrate` и пропа Provider'а:
+
+```typescript
+// Серверный помощник: собрать сериализуемый снапшот стора.
+dehydrate(opts?: { initialState?: Partial<TState> }): Promise<TState>
+
+// Provider (любой HOC из contextSynapse) принимает снапшот пропом:
+<Wrapped dehydratedState={snapshot} />
+```
+
+### Сервер: собрать снапшот
+
+`dehydrate` создаёт **per-request форк** модуля (параллельные запросы не делят состояние —
+никакого request bleed), сеет `initialState` через `hydrate` и возвращает сериализуемый снапшот.
+При `ssr: true` он дополнительно прогревает основной handle тем же снапшотом, чтобы синхронный
+`renderToString` отдал готовый стор на первом рендере.
+
+```typescript
+// Любой контур добычи данных (generated requests и т.п.) → снапшот.
+const feed = await fetchFeed()
+const dehydrated = await PostsSynapse.dehydrate({ initialState: { posts: feed } })
+
+const html = renderToString(<PostsFeedWithCtx dehydratedState={dehydrated} />)
+// dehydrated сериализуем в HTML: window.__SYNAPSE_STATE__ = JSON.stringify(dehydrated)
+```
+
+### Клиент: гидрация тем же снапшотом
+
+Снапшот приезжает пропом и **синхронно** засевается в стор ДО первого рендера → HTML клиента
+совпадает с серверным → нет hydration mismatch. Дальше init/мутации/догрузка — на клиенте.
+
+```typescript
+const dehydrated = JSON.parse(window.__SYNAPSE_STATE__)
+
+hydrateRoot(container, <PostsFeedWithCtx dehydratedState={dehydrated} />)
+```
+
+### Гарантии и ограничения
+
+- **Per-request изоляция.** `dehydrate` форкает модуль; `seedHydration` в Provider переприменяет
+  именно переданный `dehydratedState` синхронно перед каждым рендером — два параллельных серверных
+  рендера с разными снапшотами не пересекаются.
+- **Эффекты не исполняются на сервере.** Подписки/`mountedEffect` потребителя стартуют только на
+  клиенте (через `useEffect`, который `renderToString` не вызывает) — аналог `enableStaticRendering`.
+- **Async-сторы (IndexedDB).** Синхронного серверного рендера контента нет (инициализация async):
+  на сервере остаётся прежний гейт `loadingComponent`, без краша и без request bleed; `dehydrate`
+  всё равно собирает корректный снапшот (дожидается async-`hydrate`).
+- **Обратная совместимость.** Без `ssr` и без `dehydratedState` поведение прежнее (ленивый старт +
+  `loadingComponent`); сигнатуры хуков не менялись.

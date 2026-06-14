@@ -50,7 +50,7 @@ export const counter = createSynapse(async () => {
 - **Selectors** — memoized computed values with dependency tracking
 - **Immer-like Updates** — mutate state directly inside `update()` callbacks
 - **API Client** — HTTP client with tag-based caching and invalidation
-- **React Integration** — hooks on `useSyncExternalStore` (Concurrent Mode safe)
+- **React Integration** — hooks on `useSyncExternalStore` (Concurrent Mode safe), with **SSR** support (`createSynapseCtx({ ssr: true })` + `dehydrate`)
 - **RxJS Effects** — dispatchers, effects, and watchers (Redux-Observable style)
 - **Middleware & Plugins** — extensible sync/async pipelines
 - **EventBus** — decoupled inter-module communication with wildcards
@@ -75,7 +75,7 @@ export const counter = createSynapse(async () => {
 | [useCreateStorage (Memory)](./docs/en/hook-memory.md)                  | Hook for MemoryStorage      |
 | [useCreateStorage (LocalStorage)](./docs/en/hook-local-storage.md)     | Hook for LocalStorage       |
 | [useCreateStorage (IndexedDB)](./docs/en/hook-indexeddb.md)            | Hook for IndexedDB          |
-| [createSynapseCtx](./docs/en/synapse-ctx.md)                          | React context integration   |
+| [createSynapseCtx](./docs/en/synapse-ctx.md)                          | React context integration + SSR (`ssr`, `dehydrate`) |
 | [awaitSynapse](./docs/en/await-synapse.md)                            | Async synapse in components |
 
 ### Working with Data

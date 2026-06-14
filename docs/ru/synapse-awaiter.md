@@ -44,6 +44,12 @@ awaiter.getError()    // Error | null
 
 ## getStoreIfReady()
 
+> **SSR sync-fast-path (5.0.1).** Если на вход подан уже собранный synapse (или handle, чей
+> `getSnapshot()` отдаёт synapse с `READY`-хранилищем), awaiter выставляет `store`/`status='ready'`
+> **синхронно в теле функции**, до возврата. Тогда `getStoreIfReady()`/`isReady()` отдают стор на
+> первом синхронном рендере (нужно для серверного `renderToString`). Не готовый handle уходит в
+> прежнюю async-ветку.
+
 ```typescript
 // Возвращает store если готов, или undefined
 const store = awaiter.getStoreIfReady()

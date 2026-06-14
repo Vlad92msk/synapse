@@ -1,5 +1,44 @@
 # Changelog
 
+## [5.0.1] - 2026-06-14
+
+### SSR-режим React-биндинга (server-render засеянных sync-сторов)
+
+Минорно-инвазивное расширение `createSynapseCtx` — фич-синапсы теперь серверно-рендеримы,
+когда данные уже на руках. Без флага `ssr` поведение прежнее; сигнатуры хуков не менялись.
+
+Добавлено:
+
+- **`createSynapseCtx(module, { ssr?: boolean })`** — флаг `ssr`. При `ssr: true` и синхронно
+  готовом сторе (Memory/LocalStorage) Provider рендерит children сразу (без `loadingComponent`) →
+  контент в серверном HTML и совпадающий первый кадр при гидрации.
+- **`dehydrate(opts?: { initialState?: Partial<TState> }): Promise<TState>`** — серверный помощник:
+  per-request форк модуля + `hydrate(initialState)` → сериализуемый снапшот (`getStateSync`). Для
+  async-стора (IndexedDB) дожидается async-`hydrate`. При `ssr: true` прогревает основной handle
+  тем же снапшотом для синхронного `renderToString`.
+- **Проп `dehydratedState`** у HOC из `contextSynapse` — снапшот синхронно засевается в стор ДО
+  первого рендера (одинаковый HTML сервер↔клиент, без hydration mismatch).
+- **`SynapseModule.getSnapshot()`** — синхронный доступ к собранному synapse (или `undefined`).
+- **`SynapseModule.fork()`** — независимый handle из той же фабрики (per-request изоляция).
+
+Исправлено:
+
+- **Request bleed на сервере.** Убран module-level синглтон awaiter на серверном пути: при наличии
+  `dehydratedState` awaiter живёт per-render-tree, а `dehydrate` форкает модуль — параллельные
+  серверные рендеры с разными снапшотами больше не пересекаются. На клиенте сохранена прежняя
+  синглтон-семантика (обратная совместимость).
+- **Sync-fast-path в `createSynapseAwaiter`.** Уже готовый synapse (READY-хранилище) выставляет
+  `store`/`status='ready'` синхронно в теле функции → `getStoreIfReady()` отдаёт стор на первом
+  синхронном рендере. Async-ветка (IndexedDB/pending) — без изменений.
+- **`getServerSnapshot` в `useSelector`.** `useSyncExternalStore` получает серверный снапшот
+  (`selectSync`) → на сервере не откатывается на client-only рендер, контент попадает в SSR-HTML.
+
+Заметки:
+
+- Эффекты потребителя на сервере не исполняются (подписки/`mountedEffect` стартуют через `useEffect`,
+  который `renderToString` не вызывает) — аналог `enableStaticRendering`.
+- Streaming SSR (Suspense) — вне скоупа; поддержан только классический `renderToString`.
+
 ## [5.0.0] - 2026-06-13
 
 ### BREAKING: удаление legacy-API (один способ делать каждую вещь)

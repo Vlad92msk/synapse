@@ -53,7 +53,7 @@ export const counter = createSynapse(async () => {
 - **API-клиент** — HTTP-клиент с кэшированием и инвалидацией на основе тегов
 - **Persist-миграции** — `version` + `migrate(oldState, oldVersion)` для localStorage/IndexedDB
 - **SSR-гидрация** — `storage.hydrate(state)` для серверного состояния
-- **React интеграция** — хуки на `useSyncExternalStore` (Concurrent Mode safe)
+- **React интеграция** — хуки на `useSyncExternalStore` (Concurrent Mode safe), с поддержкой **SSR** (`createSynapseCtx({ ssr: true })` + `dehydrate`)
 - **RxJS эффекты** — диспетчеры, эффекты и watchers (стиль Redux-Observable)
 - **Middleware** — расширяемые sync/async пайплайны (batching, shallowCompare, logger, broadcast)
 - **EventBus** — декаплинг межмодульного общения с wildcard-паттернами
@@ -86,7 +86,7 @@ export const counter = createSynapse(async () => {
 | [useCreateStorage (Memory)](./hook-memory.md)                          | Хук для MemoryStorage       |
 | [useCreateStorage (LocalStorage)](./hook-local-storage.md)             | Хук для LocalStorage        |
 | [useCreateStorage (IndexedDB)](./hook-indexeddb.md)                    | Хук для IndexedDB           |
-| [createSynapseCtx](./synapse-ctx.md)                                  | React context интеграция    |
+| [createSynapseCtx](./synapse-ctx.md)                                  | React context интеграция + SSR (`ssr`, `dehydrate`) |
 | [awaitSynapse](./await-synapse.md)                                    | Async synapse в компонентах |
 
 ### Работа с данными

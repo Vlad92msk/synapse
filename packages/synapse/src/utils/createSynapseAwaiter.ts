@@ -1,9 +1,31 @@
 import { handleCallbackError } from '../_utils/error-handling.util'
-import type { IStorageBase } from '../core'
+import { type IStorageBase, StorageStatus } from '../core'
 
 /** Минимальная форма готового synapse, нужная awaiter'у: доступ к storage. */
 export interface AwaitableSynapse {
   storage: IStorageBase<any>
+}
+
+/** Похож ли вход на thenable (handle/Promise), а не на уже готовый synapse. */
+const isThenable = (value: unknown): value is PromiseLike<unknown> => typeof (value as { then?: unknown } | null)?.then === 'function'
+
+/**
+ * Синхронно извлекает уже готовый synapse из входа, если это возможно:
+ *  - `SynapseModule`-handle, уже собранный (`getSnapshot()` отдаёт synapse);
+ *  - напрямую переданный synapse с уже инициализированным (READY) хранилищем.
+ * Иначе `undefined` — резолв уйдёт в async-ветку. Это и есть SSR sync-fast-path.
+ */
+const resolveSyncReady = <TStore extends AwaitableSynapse>(input: PromiseLike<TStore> | TStore): TStore | undefined => {
+  // Handle: синхронный снапшот уже собранного synapse (server после dehydrate / повторный mount).
+  const snapshot = (input as { getSnapshot?: () => TStore | undefined } | null)?.getSnapshot?.()
+  if (snapshot && snapshot.storage.initStatus.status === StorageStatus.READY) return snapshot
+
+  // Напрямую переданный готовый synapse (не thenable) с READY-хранилищем.
+  if (!isThenable(input) && (input as TStore).storage?.initStatus?.status === StorageStatus.READY) {
+    return input as TStore
+  }
+
+  return undefined
 }
 
 export interface SynapseAwaiter<TStore extends AwaitableSynapse> {
@@ -65,6 +87,14 @@ export function createSynapseAwaiter<TStore extends AwaitableSynapse>(synapseSto
 
   const readyCallbacks = new Set<(store: TStore) => void>()
   const errorCallbacks = new Set<(error: Error) => void>()
+
+  // SSR sync-fast-path: если стор уже готов синхронно — выставляем состояние ДО возврата,
+  // чтобы getStoreIfReady() отдавал его на первом синхронном рендере (сервер/гидрация).
+  const syncReady = resolveSyncReady(synapseStorePromise)
+  if (syncReady) {
+    store = syncReady
+    status = 'ready'
+  }
 
   // Создаем Promise для инициализации хранилища
   const storeInitPromise = (async () => {

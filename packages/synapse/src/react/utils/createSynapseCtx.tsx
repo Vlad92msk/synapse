@@ -1,42 +1,44 @@
-import { ComponentType, createContext, forwardRef, PropsWithChildren, useContext, useEffect, useState } from 'react'
+import { ComponentType, createContext, forwardRef, PropsWithChildren, useContext, useEffect, useRef, useState } from 'react'
 import { Observable } from 'rxjs'
 
 import { handleCleanupError } from '../../_utils/error-handling.util'
-import { IStorage } from '../../core'
-import { createSynapseAwaiter, type Synapse, type SynapseModule } from '../../utils'
+import { IStorage, StorageStatus } from '../../core'
+import { createSynapseAwaiter, type Synapse, type SynapseAwaiter, type SynapseModule } from '../../utils'
 
 const ERROR_HOOK_MESSAGE = 'Хук необходимо использовать внутри компонента contextSynapse'
 const ERROR_CONTEXT_INIT = 'Ошибка при инициализации контекста:'
 
 interface SimplifiedOptions {
   loadingComponent?: React.ReactNode
+  /**
+   * Включает серверный рендер засеянных sync-сторов (Memory/LocalStorage). При `ssr: true`
+   * и синхронно-готовом сторе Provider рендерит children сразу (без `loadingComponent`),
+   * что даёт контент в серверном HTML и совпадающий первый кадр при гидрации.
+   * Для async-сторов (IndexedDB) поведение прежнее — гейт `loadingComponent`.
+   */
+  ssr?: boolean
 }
 
-/**
- * React-обёртка над class-based `SynapseModule`-handle. Запускает фабрику лениво при
- * первом монтировании Provider'а (синглтон на handle), гейтит детей до готовности и
- * раздаёт `storage`/`selectors`/`actions`/`state$` через хуки. Очистка делегируется
- * самому handle (`destroy()` сбрасывает мемоизацию → пересоздаваемость).
- */
 export function createSynapseCtx<TState extends Record<string, any>, TDispatcher, TSelectors>(
   synapseModule: SynapseModule<TState, TDispatcher, TSelectors>,
   options?: SimplifiedOptions,
 ) {
-  const { loadingComponent = <div>Инициализация контекста...</div> } = options || {}
+  const { loadingComponent = <div>Инициализация контекста...</div>, ssr = false } = options || {}
 
   type ReadySynapse = Synapse<TState, TDispatcher, TSelectors>
 
-  // Lazy-инициализация: awaiter создаётся при первом обращении и сбрасывается при cleanup.
-  // createSynapseAwaiter дожидается handle через Promise.resolve, что лениво дёргает
-  // фабрику (handle.ready()) при создании awaiter, т.е. при первом mount.
-  let awaiter: ReturnType<typeof createSynapseAwaiter<ReadySynapse>> | null = null
-
-  const getAwaiter = () => {
-    if (!awaiter) awaiter = createSynapseAwaiter<ReadySynapse>(synapseModule)
-    return awaiter
-  }
-
   const SynapseContext = createContext<ReadySynapse | null>(null)
+
+  // ── Awaiter ───────────────────────────────────────────────────────────────
+  // Клиент сохраняет прежнюю синглтон-семантику: один awaiter на handle (общий стор,
+  // фабрика стартует один раз при первом mount). На сервере синглтон уровня модуля
+  // запрещён (request bleed), поэтому там awaiter живёт per-render-tree и не шарится.
+  let clientAwaiter: SynapseAwaiter<ReadySynapse> | null = null
+
+  const getClientAwaiter = () => {
+    if (!clientAwaiter) clientAwaiter = createSynapseAwaiter<ReadySynapse>(synapseModule)
+    return clientAwaiter
+  }
 
   const useSynapseStorage = (): IStorage<TState> => {
     const context = useContext(SynapseContext)
@@ -63,20 +65,82 @@ export function createSynapseCtx<TState extends Record<string, any>, TDispatcher
   }
 
   /**
-   * Декоратор для обертывания компонентов в контекст Synapse
+   * Серверный помощник: собирает сериализуемый снапшот стора для передачи на клиент.
+   * Форкает модуль (per-request изоляция — параллельные запросы не делят состояние),
+   * сеет `initialState` через `hydrate`, возвращает `getStateSync()`.
+   *
+   * Дополнительно (при `ssr: true` и sync-сторе) прогревает основной handle тем же
+   * снапшотом, чтобы последующий синхронный `renderToString(<Provider dehydratedState>)`
+   * получил готовый стор на первом рендере (SSR-контент в HTML). `seedHydration` в Provider
+   * всё равно переприменяет переданный снапшот синхронно перед каждым рендером — это и
+   * держит изоляцию: даже общий handle отдаёт в дерево именно его `dehydratedState`.
+   */
+  const dehydrate = async (opts?: { initialState?: Partial<TState> }): Promise<TState> => {
+    const initialState = opts?.initialState
+
+    // Per-request форк: собственный стор, не пересекается с другими запросами.
+    const fork = synapseModule.fork()
+    const forked = await fork.ready()
+    // `hydrate` для sync-стора возвращает void, для async (IndexedDB) — Promise; await
+    // покрывает оба, иначе getStateSync() прочитает снапшот до завершения гидрации.
+    if (initialState) await forked.storage.hydrate(initialState as TState)
+    const snapshot = forked.storage.getStateSync()
+    await fork.destroy()
+
+    // Прогрев основного handle: только при ssr и для синхронно готового стора
+    // (Memory/LocalStorage). Для async-сторов синхронного серверного рендера контента нет.
+    if (ssr) {
+      const main = await synapseModule.ready()
+      if (main.storage.initStatus.status === StorageStatus.READY) {
+        await main.storage.hydrate(snapshot)
+      }
+    }
+
+    return snapshot
+  }
+
+  /**
+   * Декоратор для обёртки компонентов в контекст Synapse.
    */
   function contextSynapse<SelfComponentProps>(Component: ComponentType<SelfComponentProps>) {
-    const WrappedComponent = forwardRef<unknown, SelfComponentProps>(function WrappedComponent(props, ref) {
-      const [synapseStore, setSynapseStore] = useState<ReadySynapse | undefined>(() => getAwaiter().getStoreIfReady())
-      const [error, setError] = useState<Error | null>(() => getAwaiter().getError())
+    const WrappedComponent = forwardRef<unknown, SelfComponentProps & { dehydratedState?: TState }>(function WrappedComponent(props, ref) {
+      const { dehydratedState, ...restProps } = props as SelfComponentProps & { dehydratedState?: TState }
+
+      // Per-tree awaiter при наличии dehydratedState (изоляция server-рендера); иначе —
+      // общий клиентский awaiter (обратная совместимость).
+      const treeAwaiterRef = useRef<SynapseAwaiter<ReadySynapse> | null>(null)
+      const resolveAwaiter = (): SynapseAwaiter<ReadySynapse> => {
+        if (dehydratedState !== undefined) {
+          if (!treeAwaiterRef.current) treeAwaiterRef.current = createSynapseAwaiter<ReadySynapse>(synapseModule)
+          return treeAwaiterRef.current
+        }
+        return getClientAwaiter()
+      }
+
+      // Синхронный засев снапшота ДО первого рендера: одинаковый HTML на сервере и клиенте.
+      const seedHydration = (store: ReadySynapse | undefined) => {
+        if (store && dehydratedState !== undefined && store.storage.initStatus.status === StorageStatus.READY) {
+          store.storage.hydrate(dehydratedState)
+        }
+      }
+
+      const [synapseStore, setSynapseStore] = useState<ReadySynapse | undefined>(() => {
+        const store = resolveAwaiter().getStoreIfReady()
+        seedHydration(store)
+        return store
+      })
+      const [error, setError] = useState<Error | null>(() => resolveAwaiter().getError())
 
       useEffect(() => {
-        // awaiter мог поменять состояние между рендером и эффектом — синхронизируемся
-        const instance = getAwaiter()
-        setSynapseStore(instance.getStoreIfReady())
+        // На сервере эффект не исполняется — подписки/догрузка стартуют только на клиенте.
+        const instance = resolveAwaiter()
+        const current = instance.getStoreIfReady()
+        seedHydration(current)
+        setSynapseStore(current)
         setError(instance.getError())
 
         const unsubscribeReady = instance.onReady((store) => {
+          seedHydration(store)
           setSynapseStore(store)
           setError(null)
         })
@@ -91,20 +155,20 @@ export function createSynapseCtx<TState extends Record<string, any>, TDispatcher
         }
       }, [])
 
-      // Показываем ошибку если что-то пошло не так
       if (error) return <div>{`${ERROR_CONTEXT_INIT} ${error.message}`}</div>
 
-      // Показываем загрузку пока store не готов
+      // SSR-гейт: при ssr и синхронно-готовом сторе (сервер после dehydrate / клиентская
+      // гидрация) synapseStore уже есть → рендерим children. Иначе — прежний гейт загрузки
+      // (async-сторы и обычный клиентский старт).
       if (!synapseStore) return <>{loadingComponent}</>
 
       return (
         <SynapseContext.Provider value={synapseStore}>
-          <Component {...(props as PropsWithChildren<SelfComponentProps>)} ref={ref} />
+          <Component {...(restProps as PropsWithChildren<SelfComponentProps>)} ref={ref} />
         </SynapseContext.Provider>
       )
     })
 
-    // Устанавливаем отображаемое имя для отладки
     const componentName = Component.displayName || Component.name || 'Component'
     WrappedComponent.displayName = `SynapseContext(${componentName})`
 
@@ -116,14 +180,12 @@ export function createSynapseCtx<TState extends Record<string, any>, TDispatcher
       }
     })
 
-    return WrappedComponent as ComponentType<SelfComponentProps>
+    return WrappedComponent as ComponentType<SelfComponentProps & { dehydratedState?: TState }>
   }
 
   const cleanupSynapse = async (): Promise<void> => {
-    // Handle владеет жизненным циклом synapse (LIFO-teardown + сброс мемоизации):
-    // делегируем очистку ему, чтобы следующий mount заново исполнил фабрику.
-    const instance = awaiter
-    awaiter = null
+    const instance = clientAwaiter
+    clientAwaiter = null
     try {
       instance?.destroy()
       await synapseModule.destroy()
@@ -134,6 +196,7 @@ export function createSynapseCtx<TState extends Record<string, any>, TDispatcher
 
   return {
     contextSynapse,
+    dehydrate,
     useSynapseStorage,
     useSynapseSelectors,
     useSynapseActions,

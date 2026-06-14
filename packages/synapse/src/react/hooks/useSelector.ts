@@ -47,7 +47,10 @@ export function useSelector<T>(selector: SelectorAPI<T>, options?: UseSelectorOp
     return value
   }, [selector])
 
-  const value = useSyncExternalStore(subscribe, getSnapshot)
+  // getServerSnapshot === getSnapshot: на сервере `selectSync()` синхронно читает
+  // засеянный (hydrate) стор. Без серверного снапшота useSyncExternalStore на сервере
+  // падает и откатывается на client-only рендер (контент не попадает в SSR-HTML).
+  const value = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 
   // Подписка на статус готовности storage (используется только при withLoading)
   const subscribeToStatus = useCallback(
@@ -63,7 +66,7 @@ export function useSelector<T>(selector: SelectorAPI<T>, options?: UseSelectorOp
     return !selector.isSourceReady()
   }, [selector])
 
-  const isLoading = useSyncExternalStore(subscribeToStatus, getStatusSnapshot)
+  const isLoading = useSyncExternalStore(subscribeToStatus, getStatusSnapshot, getStatusSnapshot)
 
   if (options?.withLoading) {
     return { data: value, isLoading }

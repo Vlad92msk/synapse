@@ -155,3 +155,70 @@ const ctx = createSynapseCtx(dispatcherSynapse)
 // Available: + useSynapseState$
 const ctx = createSynapseCtx(effectsSynapse)
 ```
+
+## SSR — server-rendering seeded sync stores
+
+> Available since **5.0.1**. Classic `renderToString` only (streaming/Suspense is out of scope).
+
+By default `createSynapseCtx` gates children behind `loadingComponent` until the module is ready —
+on the server this yields empty HTML (no SEO, no first paint from server-state). The `ssr: true`
+flag enables a mode where a synchronously-ready store (Memory/LocalStorage) renders content right away.
+
+### Options
+
+```typescript
+const PostsSynapse = createSynapseCtx(postsSynapse, {
+  loadingComponent: <Spinner />,
+  ssr: true, // enable server-rendering of seeded sync stores
+})
+```
+
+`dehydrate` helper and the Provider prop:
+
+```typescript
+// Server helper: collect a serializable store snapshot.
+dehydrate(opts?: { initialState?: Partial<TState> }): Promise<TState>
+
+// Provider (any HOC from contextSynapse) accepts the snapshot as a prop:
+<Wrapped dehydratedState={snapshot} />
+```
+
+### Server: build the snapshot
+
+`dehydrate` creates a **per-request fork** of the module (parallel requests do not share state —
+no request bleed), seeds `initialState` via `hydrate`, and returns a serializable snapshot. With
+`ssr: true` it additionally warms the main handle with the same snapshot, so a synchronous
+`renderToString` gets a ready store on the first render.
+
+```typescript
+const feed = await fetchFeed()
+const dehydrated = await PostsSynapse.dehydrate({ initialState: { posts: feed } })
+
+const html = renderToString(<PostsFeedWithCtx dehydratedState={dehydrated} />)
+// serialize into HTML: window.__SYNAPSE_STATE__ = JSON.stringify(dehydrated)
+```
+
+### Client: hydrate with the same snapshot
+
+The snapshot arrives as a prop and is seeded into the store **synchronously** before the first
+render → the client HTML matches the server → no hydration mismatch. Init/mutations/lazy-load
+continue on the client afterwards.
+
+```typescript
+const dehydrated = JSON.parse(window.__SYNAPSE_STATE__)
+
+hydrateRoot(container, <PostsFeedWithCtx dehydratedState={dehydrated} />)
+```
+
+### Guarantees and limitations
+
+- **Per-request isolation.** `dehydrate` forks the module; `seedHydration` in the Provider re-applies
+  exactly the passed `dehydratedState` synchronously before every render — two parallel server renders
+  with different snapshots never cross.
+- **Effects do not run on the server.** Consumer subscriptions/`mountedEffect` start only on the
+  client (via `useEffect`, which `renderToString` does not call) — analogous to `enableStaticRendering`.
+- **Async stores (IndexedDB).** No synchronous server content (async init): the server keeps the
+  previous `loadingComponent` gate, without crashing and without request bleed; `dehydrate` still
+  collects a correct snapshot (it awaits the async `hydrate`).
+- **Backward compatibility.** Without `ssr` and without `dehydratedState` the behavior is unchanged
+  (lazy start + `loadingComponent`); hook signatures did not change.

@@ -66,6 +66,17 @@ export interface SynapseModule<TState extends Record<string, any>, TDispatcher, 
   ready(): Promise<Synapse<TState, TDispatcher, TSelectors>>
   /** Запущена ли фабрика и успешно ли резолвился synapse. */
   isReady(): boolean
+  /**
+   * Синхронный доступ к уже собранному synapse (или `undefined`, если ещё не готов).
+   * Нужен SSR-биндингу: позволяет отдать стор на первом синхронном рендере без `await`.
+   */
+  getSnapshot(): Synapse<TState, TDispatcher, TSelectors> | undefined
+  /**
+   * Создаёт независимый handle из той же фабрики. Каждый fork — со своим жизненным циклом
+   * и состоянием (общего стора нет). Нужен для per-request изоляции на сервере (SSR):
+   * `dehydrate` форкает модуль, чтобы параллельные запросы не делили состояние.
+   */
+  fork(): SynapseModule<TState, TDispatcher, TSelectors>
   /** Останавливает модуль (LIFO-teardown) и сбрасывает мемоизацию (пересоздаваемость). */
   destroy(): Promise<void>
 }
