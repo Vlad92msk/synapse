@@ -4,8 +4,8 @@ import { catchError, map, take, tap, toArray } from 'rxjs/operators'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { MemoryStorage } from '../../../core/storage/adapters/memory-storage.service'
-import { createDispatcher } from '../../dispatcher/dispatcher.module'
-import { defineAction } from '../../dispatcher/standalone'
+import { Dispatcher } from '../../dispatcher/dispatcher.base'
+import { Effects } from '../effects.base'
 import { ApiError, apiResult, EffectsModule, ofType, ofTypes, selectorObject, validateMap } from '../effects.module'
 import { fromRequest } from '../utils/fromRequest'
 
@@ -15,14 +15,17 @@ interface State extends Record<string, any> {
 
 const tick = () => new Promise<void>((r) => setTimeout(r, 0))
 
+class TestDispatcher extends Dispatcher<State> {
+  readonly increment = this.action((_s, n: number) => n)
+  readonly ping = this.action(() => 'pong')
+}
+
+class ExtDispatcher extends Dispatcher<State> {
+  readonly extPing = this.action(() => 'ext')
+}
+
 function makeDispatcher(storage: MemoryStorage<State>) {
-  return createDispatcher(
-    { storage },
-    {
-      increment: defineAction<State>()({ action: (_s, n: number) => n }),
-      ping: defineAction<State>()({ action: () => 'pong' }),
-    },
-  )
+  return new TestDispatcher(storage)
 }
 
 describe('EffectsModule — lifecycle', () => {
@@ -63,7 +66,7 @@ describe('EffectsModule — lifecycle', () => {
     mod.add((action$, _s$, { dispatcher }) => action$.pipe(ofType(dispatcher.dispatch.increment), tap((a) => seen.push(a.payload))))
     await mod.start()
 
-    await d.dispatch.increment(3)
+    await d.increment(3)
     await tick()
 
     expect(seen).toEqual([3])
@@ -73,14 +76,14 @@ describe('EffectsModule — lifecycle', () => {
   it('экшены внешнего диспетчера мультиплексируются в общий action$', async () => {
     const storageB = new MemoryStorage<State>({ name: `effB_${Math.random()}`, initialState: { count: 0 } })
     await storageB.initialize()
-    const d2 = createDispatcher({ storage: storageB }, { extPing: defineAction<State>()({ action: () => 'ext' }) })
+    const d2 = new ExtDispatcher(storageB)
 
     const seen: string[] = []
     const mod = new EffectsModule(storage, d, { other: d2 as any })
-    mod.add((action$, _s$, { externalDispatchers }) => action$.pipe(ofType(externalDispatchers.other.dispatch.extPing), tap((a) => seen.push(a.payload))))
+    mod.add((action$, _s$, { externalDispatchers }) => action$.pipe(ofType(externalDispatchers.other.dispatch.extPing), tap((a) => seen.push(a.payload as string))))
     await mod.start()
 
-    await d2.dispatch.extPing()
+    await d2.extPing()
     await tick()
 
     expect(seen).toEqual(['ext'])
@@ -133,7 +136,7 @@ describe('EffectsModule — lifecycle', () => {
     mod.add((action$, _s$, { dispatcher }) => action$.pipe(ofType(dispatcher.dispatch.increment), map(() => () => (called = true))))
     await mod.start()
 
-    await d.dispatch.increment(1)
+    await d.increment(1)
     await tick()
 
     expect(called).toBe(true)
@@ -155,12 +158,43 @@ describe('EffectsModule — lifecycle', () => {
     mod.add((action$, _s$, { dispatcher }) => action$.pipe(ofType(dispatcher.dispatch.increment), tap((a) => good.push(a.payload))))
     await mod.start()
 
-    await d.dispatch.ping() // убивает первый эффект
+    await d.ping() // убивает первый эффект
     await tick()
-    await d.dispatch.increment(9) // второй эффект жив
+    await d.increment(9) // второй эффект жив
     await tick()
 
     expect(good).toEqual([9])
+
+    // 5.4 — предупреждение «громкое»: называет эффект и подсказывает resubscribeOnError
+    const msg = consoleError.mock.calls.map((c) => String(c[0])).join('\n')
+    expect(msg).toMatch(/УПАЛ и больше не будет реагировать/)
+    expect(msg).toMatch(/resubscribeOnError/)
+
+    mod.stop()
+    consoleError.mockRestore()
+  })
+
+  it('5.4 — упавший class-эффект логируется по имени поля', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    class Boom extends Effects<State, TestDispatcher> {
+      readonly explode = this.effect((action$, _s$, { dispatcher }) =>
+        action$.pipe(
+          ofType(dispatcher.dispatch.ping),
+          map(() => {
+            throw new Error('boom')
+          }),
+        ),
+      )
+    }
+    const mod = new EffectsModule(storage, d)
+    mod.addEffects(new Boom().getEffects() as any)
+    await mod.start()
+
+    await d.ping()
+    await tick()
+
+    const msg = consoleError.mock.calls.map((c) => String(c[0])).join('\n')
+    expect(msg).toMatch(/эффект "explode" УПАЛ/)
 
     mod.stop()
     consoleError.mockRestore()
@@ -172,17 +206,17 @@ describe('EffectsModule — lifecycle', () => {
     mod.add((action$, _s$, { dispatcher }) => action$.pipe(ofType(dispatcher.dispatch.increment), tap((a) => seen.push(a.payload))))
 
     await mod.start()
-    await d.dispatch.increment(1)
+    await d.increment(1)
     await tick()
     expect(seen).toEqual([1])
 
     mod.stop()
-    await d.dispatch.increment(2) // модуль остановлен — не доходит
+    await d.increment(2) // модуль остановлен — не доходит
     await tick()
     expect(seen).toEqual([1])
 
     await mod.start()
-    await d.dispatch.increment(3) // переподписка
+    await d.increment(3) // переподписка
     await tick()
     expect(seen).toEqual([1, 3])
 
@@ -196,7 +230,7 @@ describe('EffectsModule — lifecycle', () => {
 
     mod.add((action$, _s$, { dispatcher }) => action$.pipe(ofType(dispatcher.dispatch.increment), tap((a) => seen.push(a.payload))))
 
-    await d.dispatch.increment(1)
+    await d.increment(1)
     await tick()
     expect(seen).toEqual([1])
 
@@ -260,6 +294,21 @@ describe('операторы эффектов', () => {
       ),
     )
     expect(result).toBe('skipped')
+  })
+
+  it('validateMap: валидация не пройдена и skipAction не задан → ничего не эмитит (5.3)', async () => {
+    const apiCall = vi.fn(() => of('called'))
+    const result = await lastValueFrom(
+      of(-1).pipe(
+        validateMap({
+          validator: (v) => ({ conditions: [v > 0] }),
+          apiCall,
+        }),
+        toArray(),
+      ),
+    )
+    expect(result).toEqual([])
+    expect(apiCall).not.toHaveBeenCalled()
   })
 
   it('validateMap: ошибка apiCall ловится errorAction', async () => {

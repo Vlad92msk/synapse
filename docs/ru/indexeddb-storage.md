@@ -107,3 +107,10 @@ const unsub = storage.subscribeToAll((event) => {
 3. `getStateSync()` — работает из кэша, общий для всех типов
 
 4. Подписки идентичны для всех типов хранилищ
+
+## Persist-миграции и SSR
+
+IndexedDB персистентен, поэтому поддерживает миграцию схемы через `version` + `migrate`
+(версия хранится reserved-записью в том же сторе и не видна в `getState()`/`keys()`) —
+см. [Persist-миграции](./persist-migration.md). Серверное состояние засевается через
+[`hydrate(state)`](./ssr-hydration.md) (для IndexedDB — `await storage.hydrate(...)`).

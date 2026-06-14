@@ -1,9 +1,8 @@
-// Этап 4 ROADMAP — перегрузка `createSynapse(factory)` + `SynapseModule`-handle.
+// Этап 4 ROADMAP — `createSynapse(factory)` + `SynapseModule`-handle.
 import { EMPTY, Observable } from 'rxjs'
 import { finalize, map, mergeMap } from 'rxjs/operators'
 import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
 
-import { SelectorAPI } from '../../../core'
 import { MemoryStorage } from '../../../core/storage/adapters/memory-storage.service'
 import { Dispatcher } from '../../../reactive/dispatcher/dispatcher.base'
 import type { ApiRequestState } from '../../../reactive/dispatcher/standalone'
@@ -76,20 +75,20 @@ afterEach(async () => {
 })
 
 // ── Перегрузка ────────────────────────────────────────────────────────────────
-describe('перегрузка createSynapse', () => {
-  it('старая форма (объект) и новая (фабрика) сосуществуют', async () => {
-    const oldStorage = newStorage()
-    const oldSynapse = await createSynapse<State, { count: SelectorAPI<number> }>({
-      storage: oldStorage,
-      createSelectorsFn: (sm) => ({ count: sm.createSelector((s) => s.count) }),
+describe('форма createSynapse(factory)', () => {
+  it('синхронная и async-фабрика обе резолвятся в synapse', async () => {
+    const syncHandle = createSynapse(() => {
+      const storage = newStorage()
+      return { storage, selectors: new TestSelectors(storage) }
     })
-    created.push(oldSynapse)
-    expect(oldSynapse.selectors.count.select()).toBe(0)
+    created.push(syncHandle)
+    const syncSynapse = await syncHandle
+    expect(syncSynapse.selectors!.count.select()).toBe(0)
 
-    const handle = createSynapse(async () => ({ storage: newStorage(), selectors: undefined }))
-    created.push(handle)
-    const newSynapse = await handle
-    expect(newSynapse.storage.getStateSync().count).toBe(0)
+    const asyncHandle = createSynapse(async () => ({ storage: newStorage(), selectors: undefined }))
+    created.push(asyncHandle)
+    const asyncSynapse = await asyncHandle
+    expect(asyncSynapse.storage.getStateSync().count).toBe(0)
   })
 
   it('типы: фабричная форма выводит SynapseModule с полным типом dispatcher/selectors', () => {
@@ -207,33 +206,35 @@ describe('частичные конфиги', () => {
 })
 
 // ── Зависимости в обе стороны ───────────────────────────────────────────────
-describe('dependencies между формами', () => {
-  it('новый handle как зависимость старого конфига', async () => {
+describe('dependencies', () => {
+  it('handle как зависимость другого handle', async () => {
     const depHandle = createSynapse(() => ({ storage: newCoreStorage() }))
     created.push(depHandle)
 
-    const synapse = await createSynapse<State>({
+    const handle = createSynapse(() => ({
       storage: newStorage(),
       dependencies: [depHandle],
-    })
-    created.push(synapse)
+    }))
+    created.push(handle)
+    const synapse = await handle
 
     expect(depHandle.isReady()).toBe(true) // await зависимости запустил фабрику
     expect(synapse.storage.getStateSync().count).toBe(0)
   })
 
-  it('старый Promise<Synapse> как зависимость нового конфига', async () => {
-    const oldPromise = createSynapse<CoreState>({ storage: newCoreStorage() })
+  it('raw storage и { storage }-обёртка как зависимости', async () => {
+    const rawDep = newCoreStorage()
+    await rawDep.initialize()
 
     const handle = createSynapse(() => ({
       storage: newStorage(),
-      dependencies: [oldPromise],
+      dependencies: [rawDep, { storage: newCoreStorage() }],
     }))
     created.push(handle)
 
     const s = await handle
     expect(s.storage.getStateSync().count).toBe(0)
-    created.push(await oldPromise)
+    expect(rawDep.initStatus.status).toBe('ready')
   })
 })
 

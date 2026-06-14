@@ -243,16 +243,25 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
   /**
    * Собирает публичный `SelectorAPI` поверх подписки. `$` — Observable-вид с той же
    * семантикой, что у `subscribe`: синхронный снапшот при подписке + emit на изменение.
+   *
+   * `sourceReadiness` переопределяет дефолтную (локальную) готовность источника: для
+   * combined-селекторов туда передаётся агрегированная готовность по всем источникам
+   * зависимостей (см. {@link createCombinedSelector}).
    */
-  private buildSelectorApi<T>(id: string, subscription: SelectorSubscription<T>, getState: () => T): SelectorAPI<T> {
+  private buildSelectorApi<T>(
+    id: string,
+    subscription: SelectorSubscription<T>,
+    getState: () => T,
+    sourceReadiness?: { isSourceReady: () => boolean; onSourceStatusChange: (callback: (isReady: boolean) => void) => VoidFunction },
+  ): SelectorAPI<T> {
     return {
       select: () => getState(),
       selectSync: () => subscription.getValue(),
       subscribe: (subscriber) => subscription.subscribe(subscriber),
       getId: () => id,
       $: new Observable<T>((observer) => subscription.subscribe({ notify: (value) => observer.next(value) })),
-      isSourceReady: this.isSourceReady,
-      onSourceStatusChange: this.onSourceStatusChange,
+      isSourceReady: sourceReadiness?.isSourceReady ?? this.isSourceReady,
+      onSourceStatusChange: sourceReadiness?.onSourceStatusChange ?? this.onSourceStatusChange,
     }
   }
 
@@ -502,8 +511,20 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
       destroyed = true
     })
 
+    // Агрегированная готовность источников: combined-селектор «готов», только когда готов
+    // ЛОКАЛЬНЫЙ источник И все источники зависимостей (важно для cross-store combine, где
+    // зависимости приходят из других сторов с собственным lifecycle).
+    const aggregatedSourceReadiness = {
+      isSourceReady: (): boolean => this.isSourceReady() && selectors.every((dep) => dep.isSourceReady()),
+      onSourceStatusChange: (callback: (isReady: boolean) => void): VoidFunction => {
+        const emit = () => callback(aggregatedSourceReadiness.isSourceReady())
+        const disposers = [this.onSourceStatusChange(emit), ...selectors.map((dep) => dep.onSourceStatusChange(emit))]
+        return () => disposers.forEach((dispose) => dispose())
+      },
+    }
+
     return {
-      api: this.buildSelectorApi(id, subscription, getState),
+      api: this.buildSelectorApi(id, subscription, getState, aggregatedSourceReadiness),
       unsubscribeFunctions,
     }
   }

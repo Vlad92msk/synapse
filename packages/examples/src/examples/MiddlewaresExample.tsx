@@ -70,6 +70,17 @@ const broadcastStorage = new MemoryStorage<{
 })
 broadcastStorage.initialize()
 
+const loggerStorage = new MemoryStorage<{
+  count: number
+}>({
+  name: 'mw-logger',
+  initialState: { count: 0 },
+  middlewares: (getDefault) => [
+    getDefault().logger({ collapsed: true }),
+  ],
+})
+loggerStorage.initialize()
+
 // ─── Demos ─────────────────────────────────────────────────────────────────
 
 function BatchingDemo() {
@@ -178,6 +189,23 @@ function BroadcastDemo() {
       </div>
       <p>message: <strong>{message}</strong></p>
       <p style={{ fontSize: 12, color: '#888' }}>Open 2 tabs to see sync</p>
+    </div>
+  )
+}
+
+function LoggerDemo() {
+  const count = useStorageSubscribe(loggerStorage, (s) => s.count)
+
+  return (
+    <div>
+      <div style={buttonRow}>
+        <button onClick={() => loggerStorage.set('count', (loggerStorage.get<number>('count') || 0) + 1)}>
+          count++ (см. консоль)
+        </button>
+        <button onClick={() => loggerStorage.get('count')}>get (не логируется)</button>
+        <button onClick={() => loggerStorage.reset()}>reset</button>
+      </div>
+      <p>count: <strong>{count}</strong> — открой консоль: пишущие действия логируются, чтения молчат</p>
     </div>
   )
 }
@@ -326,6 +354,24 @@ storage.set('message', 'Hello from tab!')
 // (данные уже синхронны через storage engine)`}</pre>
       <BroadcastDemo />
 
+      {/* ─── Logger ──────────────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>6. Logger Middleware (dev-only)</h3>
+      <pre style={codeBlock}>{`const storage = new MemoryStorage<{ count: number }>({
+  name: 'logged',
+  initialState: { count: 0 },
+  // Подключайте только в dev:
+  middlewares: (getDefault) =>
+    import.meta.env.DEV ? [getDefault().logger({ collapsed: true })] : [],
+})
+await storage.initialize()
+
+storage.set('count', 1)   // → [synapse storage] set "count" (0ms) + prev/next
+storage.get('count')      // чтения НЕ логируются
+
+// Опции: { collapsed?: boolean; showState?: boolean }
+// Standalone: loggerMiddleware (async) / syncLoggerMiddleware (sync)`}</pre>
+      <LoggerDemo />
+
       {/* ─── Типы ────────────────────────────────────────────────────── */}
       <h3 style={sectionTitle}>Типы</h3>
       <pre style={codeBlock}>{`import type {
@@ -348,6 +394,7 @@ type ConfigureSyncMiddlewares = (
 interface SyncDefaultMiddlewares {
   batching(options?: BatchingMiddlewareOptions): SyncMiddleware
   shallowCompare(options?: ShallowCompareMiddlewareOptions): SyncMiddleware
+  logger(options?: LoggerMiddlewareOptions): SyncMiddleware  // dev-only
 }
 
 // Аналогичные AsyncDefaultMiddlewares для IndexedDB`}</pre>

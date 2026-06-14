@@ -8,7 +8,7 @@ const DEFAULT_DEPENDENCY_TIMEOUT = 30_000
  * Извлекает IStorageBase из любого формата зависимости:
  * - IStorageBase напрямую (есть waitForReady)
  * - { storage: IStorageBase } — обёртка
- * - AnySynapseStore — результат createSynapse (тоже имеет .storage)
+ * - готовый synapse — результат createSynapse (тоже имеет .storage)
  */
 function extractStorage(dep: any): IStorageBase<any> {
   if (typeof dep.waitForReady === 'function') return dep

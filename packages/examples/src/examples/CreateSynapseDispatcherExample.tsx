@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { MemoryStorage } from 'synapse-storage/core'
+import { MemoryStorage, Selectors } from 'synapse-storage/core'
 import { createSynapse } from 'synapse-storage/utils'
-import { createDispatcher } from 'synapse-storage/reactive'
+import { Dispatcher } from 'synapse-storage/reactive'
 import { useSelector } from 'synapse-storage/react'
 import { cardStyle, buttonRow, codeBlock, sectionTitle } from './styles'
 
@@ -20,84 +20,73 @@ const initialState: CartState = {
   discount: 0,
 }
 
+// ─── Селекторы (class-based) ─────────────────────────────────────────────────────
+
+class CartSelectors extends Selectors<CartState> {
+  readonly items = this.select((s) => s.items)
+  readonly discount = this.select((s) => s.discount)
+  readonly totalPrice = this.combine([this.items, this.discount], (items, discount) => {
+    const sum = items.reduce((acc, i) => acc + i.price * i.qty, 0)
+    return sum * (1 - discount / 100)
+  })
+}
+
+// ─── Dispatcher (class-based) ────────────────────────────────────────────────────
+// Экшены и watchers — поля класса. Имя экшена = имя поля.
+
+class CartDispatcher extends Dispatcher<CartState> {
+  // this.action((store, params) => result) — payload экшена = возвращённое значение
+  readonly addItem = this.action((store, params: { name: string; price: number }) => {
+    store.update((s) => {
+      s.items.push({ id: Date.now(), ...params, qty: 1 })
+    })
+    return params
+  })
+
+  readonly removeItem = this.action((store, id: number) => {
+    store.update((s) => {
+      s.items = s.items.filter((i) => i.id !== id)
+    })
+    return id
+  })
+
+  readonly changeQty = this.action((store, params: { id: number; delta: number }) => {
+    store.update((s) => {
+      const item = s.items.find((i) => i.id === params.id)
+      if (item) item.qty = Math.max(1, item.qty + params.delta)
+    })
+    return params
+  })
+
+  readonly setDiscount = this.action((store, percent: number) => {
+    store.set('discount', percent)
+    return percent
+  })
+
+  // this.watcher — реактивно следит за изменением значения в state
+  readonly watchItemCount = this.watcher({
+    selector: (state) => state.items.length,
+    notifyAfterSubscribe: true, // вызвать сразу при подписке
+  })
+
+  readonly watchDiscount = this.watcher({
+    selector: (state) => state.discount,
+    shouldTrigger: (prev, current) => prev !== current, // фильтр срабатывания
+  })
+}
+
 // ─── Создание synapse с dispatcher ─────────────────────────────────────────────
 
-const synapsePromise = createSynapse({
-  storage: new MemoryStorage<CartState>({ name: 'cart-dispatcher', initialState }),
-
-  createSelectorsFn: (selectorModule) => {
-    const items = selectorModule.createSelector((s) => s.items)
-    const discount = selectorModule.createSelector((s) => s.discount)
-    const totalPrice = selectorModule.createSelector(
-      [items, discount],
-      (itemsVal, discountVal) => {
-        const sum = itemsVal.reduce((acc, i) => acc + i.price * i.qty, 0)
-        return sum * (1 - discountVal / 100)
-      },
-    )
-    return { items, discount, totalPrice }
-  },
-
-  createDispatcherFn: (storage) =>
-    createDispatcher({ storage }, (_storage, { createAction, createWatcher }) => {
-      // createAction — определяет действие с типизированными параметрами
-      const addItem = createAction({
-        type: 'addItem',
-        action: (params: { name: string; price: number }) => {
-          storage.update((s) => {
-            s.items.push({ id: Date.now(), ...params, qty: 1 })
-          })
-          return params
-        },
-      })
-
-      const removeItem = createAction({
-        type: 'removeItem',
-        action: (id: number) => {
-          storage.update((s) => {
-            s.items = s.items.filter((i) => i.id !== id)
-          })
-          return id
-        },
-      })
-
-      const changeQty = createAction({
-        type: 'changeQty',
-        action: (params: { id: number; delta: number }) => {
-          storage.update((s) => {
-            const item = s.items.find((i) => i.id === params.id)
-            if (item) item.qty = Math.max(1, item.qty + params.delta)
-          })
-          return params
-        },
-      })
-
-      const setDiscount = createAction({
-        type: 'setDiscount',
-        action: (percent: number) => {
-          storage.set('discount', percent)
-          return percent
-        },
-      })
-
-      // createWatcher — реактивно следит за изменением значения в state
-      const watchItemCount = createWatcher({
-        type: 'watchItemCount',
-        selector: (state) => state.items.length,
-        notifyAfterSubscribe: true, // вызвать сразу при подписке
-      })
-
-      const watchDiscount = createWatcher({
-        type: 'watchDiscount',
-        selector: (state) => state.discount,
-        shouldTrigger: (prev, current) => prev !== current, // фильтр срабатывания
-      })
-
-      return { addItem, removeItem, changeQty, setDiscount, watchItemCount, watchDiscount }
-    }),
+const cartSynapse = createSynapse(async () => {
+  const storage = new MemoryStorage<CartState>({ name: 'cart-dispatcher', initialState })
+  return {
+    storage,
+    dispatcher: new CartDispatcher(storage),
+    selectors: new CartSelectors(storage),
+  }
 })
 
-type CartSynapse = Awaited<typeof synapsePromise>
+type CartSynapse = Awaited<typeof cartSynapse>
 
 // ─── Компонент-пример ──────────────────────────────────────────────────────────
 
@@ -106,7 +95,7 @@ export function CreateSynapseDispatcherExample() {
 
   useEffect(() => {
     let cancelled = false
-    synapsePromise.then((s) => { if (!cancelled) setStore(s) })
+    cartSynapse.then((s) => { if (!cancelled) setStore(s) })
     return () => { cancelled = true }
   }, [])
 
@@ -119,58 +108,60 @@ export function CreateSynapseDispatcherExample() {
 
       {/* ─── Создание ─────────────────────────────────────────────────── */}
       <h3 style={sectionTitle}>Создание</h3>
-      <pre style={codeBlock}>{`import { MemoryStorage } from 'synapse-storage/core'
+      <pre style={codeBlock}>{`import { MemoryStorage, Selectors } from 'synapse-storage/core'
 import { createSynapse } from 'synapse-storage/utils'
-import { createDispatcher } from 'synapse-storage/reactive'
+import { Dispatcher } from 'synapse-storage/reactive'
 
-const synapsePromise = createSynapse({
-  storage: new MemoryStorage<CartState>({ name: 'cart', initialState }),
+// Selectors — поля класса
+class CartSelectors extends Selectors<CartState> {
+  readonly items = this.select((s) => s.items)
+  readonly discount = this.select((s) => s.discount)
+  readonly totalPrice = this.combine([this.items, this.discount], (items, discount) => { ... })
+}
 
-  createSelectorsFn: (selectorModule) => ({
-    items: selectorModule.createSelector((s) => s.items),
-    discount: selectorModule.createSelector((s) => s.discount),
-    totalPrice: selectorModule.createSelector(
-      [items, discount],
-      (itemsVal, discountVal) => { ... },
-    ),
-  }),
+// Dispatcher — экшены и watchers как поля класса
+class CartDispatcher extends Dispatcher<CartState> {
+  readonly addItem = this.action((store, params: { name: string; price: number }) => { ... })
+  readonly watchItemCount = this.watcher({ selector: (s) => s.items.length })
+}
 
-  // Dispatcher — определяет actions и watchers
-  createDispatcherFn: (storage) =>
-    createDispatcher({ storage }, (_storage, { createAction, createWatcher }) => {
-      // ... actions и watchers
-      return { addItem, removeItem, setDiscount, watchItemCount }
-    }),
+const cartSynapse = createSynapse(async () => {
+  const storage = new MemoryStorage<CartState>({ name: 'cart', initialState })
+  return {
+    storage,
+    dispatcher: new CartDispatcher(storage),
+    selectors: new CartSelectors(storage),
+  }
 })`}</pre>
 
-      {/* ─── createAction ─────────────────────────────────────────────── */}
-      <h3 style={sectionTitle}>createAction</h3>
-      <pre style={codeBlock}>{`// createAction — определяет действие с типом и логикой
-const addItem = createAction({
-  type: 'addItem',                          // уникальный тип действия
-  action: (params: { name: string }) => {   // логика (sync или async)
-    storage.update((s) => {
+      {/* ─── this.action ──────────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>this.action</h3>
+      <pre style={codeBlock}>{`// this.action((store, params) => result) — handler в «рецептной» сигнатуре
+class CartDispatcher extends Dispatcher<CartState> {
+  readonly addItem = this.action((store, params: { name: string; price: number }) => {
+    store.update((s) => {
       s.items.push({ id: Date.now(), ...params, qty: 1 })
     })
-    return params                            // return = payload в action stream
-  },
-})
+    return params           // return = payload в action stream
+  })
+}
 
-// Вызов через store.actions
+// Вызов через store.actions (имя экшена = имя поля)
 store.actions.addItem({ name: 'Hat', price: 1500 })
 
-// Каждый action имеет мета-поле actionType
+// actionType генерируется из имени поля при финализации
 store.actions.addItem.actionType  // '[cart]addItem'`}</pre>
 
-      {/* ─── createWatcher ────────────────────────────────────────────── */}
-      <h3 style={sectionTitle}>createWatcher</h3>
-      <pre style={codeBlock}>{`// createWatcher — реактивно отслеживает изменения в state
-const watchItemCount = createWatcher({
-  type: 'watchItemCount',
-  selector: (state) => state.items.length,   // что отслеживать
-  notifyAfterSubscribe: true,                // вызвать сразу при подписке
-  shouldTrigger: (prev, curr) => prev !== curr, // фильтр (опционально)
-})
+      {/* ─── this.watcher ─────────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>this.watcher</h3>
+      <pre style={codeBlock}>{`// this.watcher — реактивно отслеживает изменения в state
+class CartDispatcher extends Dispatcher<CartState> {
+  readonly watchItemCount = this.watcher({
+    selector: (state) => state.items.length,        // что отслеживать
+    notifyAfterSubscribe: true,                     // вызвать сразу при подписке
+    shouldTrigger: (prev, curr) => prev !== curr,   // фильтр (опционально)
+  })
+}
 
 // Подписка — возвращает RxJS Observable
 const sub = store.dispatcher.watchers.watchItemCount().subscribe((action) => {
@@ -182,15 +173,14 @@ sub.unsubscribe()`}</pre>
 
       {/* ─── Возвращаемое значение ───────────────────────────────────── */}
       <h3 style={sectionTitle}>Возвращаемое значение</h3>
-      <pre style={codeBlock}>{`const store = await synapsePromise
+      <pre style={codeBlock}>{`const store = await cartSynapse
 
 store.storage     // IStorage<CartState>
-store.selectors   // { items, discount, totalPrice }
+store.selectors   // экземпляр CartSelectors
 store.actions     // { addItem, removeItem, changeQty, setDiscount }
-store.dispatcher  // Dispatcher (dispatch, watchers, actions observable)
-store.destroy()   // () => Promise<void>
+store.dispatcher  // экземпляр CartDispatcher (dispatch, watchers, action$)
 
-// store.actions — это shortcut для store.dispatcher.dispatch
+// store.actions — shortcut для store.dispatcher.dispatch
 // store.actions.addItem === store.dispatcher.dispatch.addItem
 
 // Поток всех actions (RxJS Observable)

@@ -2,39 +2,36 @@
 
 > [Назад к оглавлению](./README.md)
 
-React Context + HOC для доступа к хранилищу Synapse через хуки. Автоматическая загрузка во время инициализации хранилища.
+React Context + HOC для доступа к модулю Synapse через хуки. Передаётся ленивый handle: фабрика стартует
+при первом монтировании Provider'а (не на импорте), с автоматическим `loadingComponent` на время инициализации.
 
 ## Создание контекста
 
 ```typescript
 import { createSynapseCtx, useSelector } from 'synapse-storage/react'
 import { createSynapse } from 'synapse-storage/utils'
-import { createDispatcher } from 'synapse-storage/reactive'
 
-// 1. Создаём хранилище (как обычно)
-const storePromise = createSynapse({
-  storage: new MemoryStorage<SettingsState>({ name: 'settings', initialState }),
-  createSelectorsFn: (sm) => ({
-    theme: sm.createSelector((s) => s.theme),
-    fontSize: sm.createSelector((s) => s.fontSize),
-    isDark: sm.createSelector((s) => s.theme === 'dark'),
-  }),
-  createDispatcherFn: (storage) =>
-    createDispatcher({ storage }, (_s, { createAction }) => ({
-      toggleTheme: createAction({ type: 'toggleTheme', action: () => { ... } }),
-      setFontSize: createAction({ type: 'setFontSize', action: (size: number) => { ... } }),
-    })),
+// 1. Создаём ленивый handle (как обычно)
+const settingsSynapse = createSynapse(async () => {
+  const storage = new MemoryStorage<SettingsState>({ name: 'settings', initialState })
+  return {
+    storage,
+    dispatcher: new SettingsDispatcher(storage),
+    selectors: new SettingsSelectors(storage),
+  }
 })
 
-// 2. Создаём контекст из промиса хранилища
+// 2. Создаём контекст — передаём САМ handle, а не вызов.
+//    Фабрика стартует лениво при первом mount, не на импорте.
 const {
   contextSynapse,       // HOC — оборачивает компонент, предоставляя контекст
   useSynapseStorage,    // () => IStorage<T>
-  useSynapseSelectors,  // () => { theme, fontSize, ... }
-  useSynapseActions,    // () => { toggleTheme, setFontSize, ... }
+  useSynapseSelectors,  // () => SettingsSelectors
+  useSynapseActions,    // () => SettingsDispatcher (actions)
+  useSynapseState$,     // () => Observable<TState> (только с effects)
   cleanupSynapse,       // () => Promise<void>
-} = createSynapseCtx(storePromise, {
-  loadingComponent: <div>Loading...</div>,  // отображается, пока хранилище не готово
+} = createSynapseCtx(settingsSynapse, {
+  loadingComponent: <div>Loading...</div>,  // отображается, пока модуль не готов
 })
 ```
 
@@ -75,9 +72,6 @@ function DirectAccess() {
 ## HOC contextSynapse()
 
 ```typescript
-// contextSynapse() оборачивает корневой компонент
-// Все дочерние компоненты получают доступ к хукам
-
 function SettingsPanel() {
   const actions = useSynapseActions()
   return (
@@ -89,7 +83,7 @@ function SettingsPanel() {
   )
 }
 
-// Оборачиваем — loadingComponent показывается, пока хранилище не готово
+// Оборачиваем — loadingComponent показывается, пока модуль не готов
 const SettingsPanelWithContext = contextSynapse(SettingsPanel)
 
 // Использование в JSX:
@@ -99,20 +93,40 @@ const SettingsPanelWithContext = contextSynapse(SettingsPanel)
 ## useSynapseState$ (только с эффектами)
 
 ```typescript
-// Доступно только если хранилище создано с createEffectConfig + effects
-// Возвращает Observable<TState> для использования с RxJS
+// Доступно только если в фабрику передан effects.
+// Возвращает Observable<TState> для использования с RxJS.
 
-const { useSynapseState$ } = createSynapseCtx(storeWithEffectsPromise)
+const { useSynapseState$ } = createSynapseCtx(synapseWithEffects)
 
 function MyComponent() {
   const state$ = useSynapseState$()
 
   useEffect(() => {
-    const sub = state$.subscribe((state) => {
-      console.log('state changed:', state)
-    })
+    const sub = state$.subscribe((state) => console.log('state changed:', state))
     return () => sub.unsubscribe()
   }, [state$])
+}
+```
+
+## Реактивные чтения в компоненте
+
+Запись по-прежнему идёт через actions, но читать можно реактивно — прямо из потока селектора:
+
+```typescript
+import { useObservable, useSubscription } from 'synapse-storage/react'
+
+function SearchBox() {
+  const selectors = useSynapseSelectors()
+
+  const debounced = useObservable(
+    () => selectors.searchQuery.$.pipe(debounceTime(300), distinctUntilChanged()),
+    '',
+    [selectors],
+  )
+
+  useSubscription(() => selectors.lastId.$.pipe(skip(1), tap(scrollToEnd)).subscribe(), [selectors])
+
+  return <div>{debounced}</div>
 }
 ```
 
@@ -122,8 +136,8 @@ function MyComponent() {
 // Ручная очистка контекста и ресурсов
 await cleanupSynapse()
 
-// Внутри вызывает store.destroy()
-// Сбрасывает ленивую инициализацию промиса
+// Для class-handle делегирует handle.destroy() (LIFO-teardown + сброс мемоизации) —
+// следующий mount заново исполнит фабрику.
 ```
 
 ## Три варианта createSynapseCtx
@@ -131,13 +145,13 @@ await cleanupSynapse()
 ```typescript
 // 1. Базовый (storage + selectors)
 // Доступно: useSynapseStorage, useSynapseSelectors, cleanupSynapse
-const ctx = createSynapseCtx(basicStorePromise)
+const ctx = createSynapseCtx(basicSynapse)
 
 // 2. С диспетчером (+ actions)
 // Доступно: + useSynapseActions
-const ctx = createSynapseCtx(dispatcherStorePromise)
+const ctx = createSynapseCtx(dispatcherSynapse)
 
 // 3. С эффектами (+ state$)
 // Доступно: + useSynapseState$
-const ctx = createSynapseCtx(effectsStorePromise)
+const ctx = createSynapseCtx(effectsSynapse)
 ```

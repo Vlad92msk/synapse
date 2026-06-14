@@ -22,6 +22,7 @@ await storage.initialize()
 // getDefault() возвращает объект со встроенными middlewares:
 // - batching(options?)       — группировка частых записей
 // - shallowCompare(options?) — фильтрация идентичных значений
+// - logger(options?)         — dev-лог пишущих действий
 
 // Порядок в массиве = порядок обработки
 ```
@@ -142,6 +143,40 @@ storage.set('message', 'Hello from tab!')
 // (данные уже синхронизированы через движок хранилища)
 ```
 
+## 6. Logger Middleware (dev-only)
+
+Логирует только **пишущие** действия (`set` / `update` / `delete` / `clear` / `reset` /
+`init`) — чтения (`get` / `keys`) не шумят. Намеренно минимален (без i18n/цветов).
+Подключайте только в dev.
+
+```typescript
+const storage = new MemoryStorage<{ count: number }>({
+  name: 'logged',
+  initialState: { count: 0 },
+  middlewares: (getDefault) =>
+    import.meta.env.DEV ? [getDefault().logger()] : [],
+})
+await storage.initialize()
+
+storage.set('count', 1)
+// [synapse storage] set "count" (0ms)
+//   action: { type: 'set', key: 'count', value: 1, ... }
+//   prev:   { count: 0 }
+//   next:   { count: 1 }
+
+// Опции:
+//   collapsed?: boolean   — свернуть группу лога (console.groupCollapsed)
+//   showState?: boolean   — печатать prev/next состояние (по умолчанию true)
+getDefault().logger({ collapsed: true, showState: false })
+```
+
+Также доступны как standalone-функции `loggerMiddleware` (async) и
+`syncLoggerMiddleware` (sync) из `synapse-storage/core` — например, чтобы переиспользовать
+один инстанс или обернуть собственной обёрткой.
+
+> Для полноценного dev-лога **диспетчера** (action / prev / next / diff) есть отдельный
+> `loggerDispatcherMiddleware`. Storage-логгер — про низкоуровневые операции хранилища.
+
 ## Типы
 
 ```typescript
@@ -165,7 +200,13 @@ type ConfigureSyncMiddlewares = (
 interface SyncDefaultMiddlewares {
   batching(options?: BatchingMiddlewareOptions): SyncMiddleware
   shallowCompare(options?: ShallowCompareMiddlewareOptions): SyncMiddleware
+  logger(options?: LoggerMiddlewareOptions): SyncMiddleware
 }
 
 // Аналогичный AsyncDefaultMiddlewares для IndexedDB
+
+// Standalone-фабрики:
+//   loggerMiddleware(options?): AsyncMiddleware
+//   syncLoggerMiddleware(options?): SyncMiddleware
+// LoggerMiddlewareOptions = { collapsed?: boolean; showState?: boolean }
 ```

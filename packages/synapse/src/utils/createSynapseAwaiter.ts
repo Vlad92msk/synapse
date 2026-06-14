@@ -1,12 +1,16 @@
 import { handleCallbackError } from '../_utils/error-handling.util'
-import { IStorage } from '../core'
-import { AnySynapseStore } from '../utils'
+import type { IStorageBase } from '../core'
 
-export interface SynapseAwaiter<TStore extends Record<string, any>, TStorage extends IStorage<TStore>, TSelectors, TActions> {
+/** Минимальная форма готового synapse, нужная awaiter'у: доступ к storage. */
+export interface AwaitableSynapse {
+  storage: IStorageBase<any>
+}
+
+export interface SynapseAwaiter<TStore extends AwaitableSynapse> {
   /**
    * Возвращает Promise, который резолвится когда Synapse готов
    */
-  waitForReady(): Promise<AnySynapseStore<TStore, TStorage, TSelectors, TActions>>
+  waitForReady(): Promise<TStore>
 
   /**
    * Проверяет, готов ли Synapse прямо сейчас (синхронно)
@@ -16,14 +20,14 @@ export interface SynapseAwaiter<TStore extends Record<string, any>, TStorage ext
   /**
    * Получает store если он готов, иначе undefined
    */
-  getStoreIfReady(): AnySynapseStore<TStore, TStorage, TSelectors, TActions> | undefined
+  getStoreIfReady(): TStore | undefined
 
   /**
    * Подписывается на событие готовности
    * @param callback Функция, вызываемая когда store становится готов
    * @returns Функция отписки
    */
-  onReady(callback: (store: AnySynapseStore<TStore, TStorage, TSelectors, TActions>) => void): VoidFunction
+  onReady(callback: (store: TStore) => void): VoidFunction
 
   /**
    * Подписывается на ошибки инициализации
@@ -49,24 +53,23 @@ export interface SynapseAwaiter<TStore extends Record<string, any>, TStorage ext
 }
 
 /**
- * Создает фреймворк-независимую утилиту для ожидания готовности Synapse
- * Работает в любом JS окружении: Node.js, браузер, React Native, и т.д.
+ * Создает фреймворк-независимую утилиту для ожидания готовности Synapse.
+ * Принимает `SynapseModule`-handle (PromiseLike), Promise готового synapse либо сам
+ * готовый synapse. Работает в любом JS окружении: Node.js, браузер, React Native.
  */
-export function createSynapseAwaiter<TStore extends Record<string, any>, TStorage extends IStorage<TStore>, TSelectors, TActions>(
-  synapseStorePromise: Promise<AnySynapseStore<TStore, TStorage, TSelectors, TActions>> | AnySynapseStore<TStore, TStorage, TSelectors, TActions>,
-): SynapseAwaiter<TStore, TStorage, TSelectors, TActions> {
+export function createSynapseAwaiter<TStore extends AwaitableSynapse>(synapseStorePromise: PromiseLike<TStore> | TStore): SynapseAwaiter<TStore> {
   let status: 'pending' | 'ready' | 'error' = 'pending'
-  let store: AnySynapseStore<TStore, TStorage, TSelectors, TActions> | undefined
+  let store: TStore | undefined
   let error: Error | null = null
   let destroyed = false
 
-  const readyCallbacks = new Set<(store: AnySynapseStore<TStore, TStorage, TSelectors, TActions>) => void>()
+  const readyCallbacks = new Set<(store: TStore) => void>()
   const errorCallbacks = new Set<(error: Error) => void>()
 
   // Создаем Promise для инициализации хранилища
   const storeInitPromise = (async () => {
     try {
-      const resolvedStore = await (synapseStorePromise instanceof Promise ? synapseStorePromise : Promise.resolve(synapseStorePromise))
+      const resolvedStore = await Promise.resolve(synapseStorePromise)
 
       // Дополнительно ждем готовности хранилища
       await resolvedStore.storage.waitForReady()

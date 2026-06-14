@@ -1,6 +1,6 @@
 import { handleCallbackError } from '../_utils/error-handling.util'
-import { IStorage, ISyncStorage, MemoryStorage } from '../core'
-import { createDispatcher } from '../reactive'
+import { ISyncStorage, MemoryStorage } from '../core'
+import { Dispatcher } from '../reactive'
 import { createSynapse } from './createSynapse'
 
 export interface EventBusEvent {
@@ -48,197 +48,188 @@ function cleanupOldEvents(storage: ISyncStorage<EventBusState>, maxEvents: numbe
 }
 
 /**
- * Создает EventBus для связи между модулями
+ * Class-диспетчер EventBus. Экшены объявляются как поля (имя экшена = имя поля),
+ * сервисы (storage-каст, реестр активных подписок, config) захватываются в замыкания
+ * через конструктор.
+ */
+class EventBusDispatcher extends Dispatcher<EventBusState> {
+  /** MemoryStorage синхронный — безопасно кастуем для синхронного API. */
+  readonly #sync: ISyncStorage<EventBusState>
+  /** Активные подписки для очистки при destroy. */
+  readonly #activeSubscriptions = new Map<string, VoidFunction>()
+  readonly #config: EventBusConfig
+
+  constructor(storage: MemoryStorage<EventBusState>, config: EventBusConfig) {
+    super(storage)
+    this.#sync = storage as ISyncStorage<EventBusState>
+    this.#config = config
+  }
+
+  /** Публикация события в EventBus. */
+  readonly publish = this.action(
+    (_storage, { event, data, metadata = {} }: { event: string; data: any; metadata?: Record<string, any> }) => {
+      const storage = this.#sync
+      const eventId = `${event}_${Date.now()}_${Math.random()}`
+
+      storage.set(`events.${eventId}`, {
+        id: eventId,
+        event,
+        data,
+        metadata: {
+          ttl: metadata.ttl || null,
+          priority: metadata.priority || 'normal',
+          ...metadata,
+        },
+        timestamp: Date.now(),
+      })
+
+      if (this.#config.autoCleanup) {
+        cleanupOldEvents(storage, this.#config.maxEvents || 1000)
+      }
+
+      return { eventId, event, data }
+    },
+    { type: 'PUBLISH_EVENT', meta: { description: 'Публикация события в EventBus' } },
+  )
+
+  /** Подписка на события в EventBus. */
+  readonly subscribe = this.action(
+    (
+      _storage,
+      {
+        eventPattern,
+        handler,
+        options = {},
+      }: {
+        eventPattern: string
+        handler: (data: any, event: EventBusEvent) => void | Promise<void>
+        options?: Record<string, any>
+      },
+    ) => {
+      const storage = this.#sync
+      const subscriptionId = `sub_${Date.now()}_${Math.random()}`
+
+      const unsubscribe = storage.subscribe(
+        (state) => state.events,
+        (events) => {
+          Object.values(events || {}).forEach((event) => {
+            if (matchEventPattern(event.event, eventPattern)) {
+              if (options.priority && event.metadata.priority !== options.priority) {
+                return
+              }
+              try {
+                handler(event.data, event)
+              } catch (error) {
+                handleCallbackError(`EventBus: error in handler for "${event.event}"`, error)
+              }
+            }
+          })
+        },
+      )
+
+      storage.set(`subscriptions.${subscriptionId}`, {
+        id: subscriptionId,
+        pattern: eventPattern,
+        options,
+        createdAt: Date.now(),
+      })
+
+      this.#activeSubscriptions.set(subscriptionId, unsubscribe)
+
+      const wrappedUnsubscribe = () => {
+        this.#activeSubscriptions.delete(subscriptionId)
+        unsubscribe()
+      }
+
+      return { subscriptionId, unsubscribe: wrappedUnsubscribe }
+    },
+    { type: 'SUBSCRIBE_TO_EVENT', meta: { description: 'Подписка на события в EventBus' } },
+  )
+
+  /** Получение истории событий. */
+  readonly getEventHistory = this.action(
+    (_storage, { eventType, limit = 100 }: { eventType: string; limit?: number }) => {
+      const state = this.#sync.getState()
+      return Object.values(state.events || {})
+        .filter((e) => e.event === eventType)
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, limit)
+    },
+    { type: 'GET_EVENT_HISTORY', meta: { description: 'Получение истории событий' } },
+  )
+
+  /** Очистка событий. */
+  readonly clearEvents = this.action(
+    (_storage, { olderThan }: { olderThan?: number } = {}) => {
+      const storage = this.#sync
+      if (olderThan) {
+        const cutoff = Date.now() - olderThan
+        storage.update((state) => {
+          Object.keys(state.events || {}).forEach((key) => {
+            if (state.events[key].timestamp < cutoff) {
+              delete state.events[key]
+            }
+          })
+        })
+      } else {
+        storage.set('events', {})
+      }
+    },
+    { type: 'CLEAR_EVENTS', meta: { description: 'Очистка событий' } },
+  )
+
+  /** Получение активных подписок. */
+  readonly getActiveSubscriptions = this.action(
+    () => {
+      const state = this.#sync.getState()
+      return Object.values(state.subscriptions || {})
+    },
+    { type: 'GET_SUBSCRIPTIONS', meta: { description: 'Получение активных подписок' } },
+  )
+
+  override destroy(): void {
+    this.#activeSubscriptions.forEach((unsub) => unsub())
+    this.#activeSubscriptions.clear()
+    super.destroy()
+  }
+}
+
+/**
+ * Создает EventBus для связи между модулями.
+ *
+ * Возвращает `SynapseModule`-handle (ленивый, PromiseLike): фабрика исполняется при
+ * первом `await`/`ready()`. `eventBus.dispatcher` — инстанс class-диспетчера, его поля
+ * (`publish`/`subscribe`/...) и есть dispatch-функции.
  *
  * @example
  * ```typescript
- * // Создание EventBus
- * const eventBus = await createEventBus({
- *   name: 'app-events',
- *   autoCleanup: true,
- *   maxEvents: 500
- * })
+ * const eventBus = createEventBus({ name: 'app-events', autoCleanup: true, maxEvents: 500 })
+ * const bus = await eventBus
  *
- * // Использование в Synapse
- * const mySynapse = await createSynapse({
- *   dependencies: [eventBus],
- *   createEffectConfig: () => ({
- *     externalDispatchers: {
- *       eventBus: eventBus.dispatcher
- *     }
- *   }),
- *   effects: [
- *     createEffect((action$, _, { dispatcher, externalDispatchers: { eventBus } }) => {
- *       // Публикация события
- *       eventBus.dispatch.publish({
- *         event: 'USER_UPDATED',
- *         data: { userId: 123 }
- *       })
+ * bus.dispatcher.publish({ event: 'USER_UPDATED', data: { userId: 123 } })
+ * bus.dispatcher.subscribe({ eventPattern: 'CORE_*', handler: (data, event) => {} })
  *
- *       // Подписка на события
- *       eventBus.dispatch.subscribe({
- *         eventPattern: 'CORE_*',
- *         handler: (data, event) => console.log('Received:', event.event, data)
- *       })
- *     })
- *   ]
- * })
+ * // Использование как зависимости / внешнего диспетчера другого synapse:
+ * const mySynapse = createSynapse(() => ({
+ *   storage,
+ *   dispatcher: new MyDispatcher(storage),
+ *   effects: new MyEffects(),
+ *   externalDispatchers: { eventBus: bus.dispatcher },
+ * }))
  * ```
  */
 export const createEventBus = (config: EventBusConfig = {}) =>
-  createSynapse({
-    createStorageFn: async () => {
-      return new MemoryStorage<EventBusState>({
-        name: config.name || 'eventBus',
-        initialState: {
-          events: {},
-          subscriptions: {},
-        },
-      }).initialize()
-    },
+  createSynapse(() => {
+    const storage = new MemoryStorage<EventBusState>({
+      name: config.name || 'eventBus',
+      initialState: {
+        events: {},
+        subscriptions: {},
+      },
+    })
 
-    createDispatcherFn: (_storage: IStorage<EventBusState>) => {
-      // MemoryStorage — синхронное хранилище, безопасно кастуем
-      const storage = _storage as ISyncStorage<EventBusState>
-      // Хранилище активных подписок для очистки при destroy
-      const activeSubscriptions = new Map<string, VoidFunction>()
-
-      const dispatcher = createDispatcher({ storage }, (_s, { createAction }) => ({
-        // Публикация события
-        publish: createAction({
-          type: 'PUBLISH_EVENT',
-          meta: { description: 'Публикация события в EventBus' },
-          action: ({ event, data, metadata = {} }: { event: string; data: any; metadata?: Record<string, any> }) => {
-            const eventId = `${event}_${Date.now()}_${Math.random()}`
-
-            storage.set(`events.${eventId}`, {
-              id: eventId,
-              event,
-              data,
-              metadata: {
-                ttl: metadata.ttl || null,
-                priority: metadata.priority || 'normal',
-                ...metadata,
-              },
-              timestamp: Date.now(),
-            })
-
-            // Очистка старых событий
-            if (config.autoCleanup) {
-              cleanupOldEvents(storage, config.maxEvents || 1000)
-            }
-
-            return { eventId, event, data }
-          },
-        }),
-
-        // Подписка на события
-        subscribe: createAction({
-          type: 'SUBSCRIBE_TO_EVENT',
-          meta: { description: 'Подписка на события в EventBus' },
-          action: ({
-            eventPattern,
-            handler,
-            options = {},
-          }: {
-            eventPattern: string
-            handler: (data: any, event: EventBusEvent) => void | Promise<void>
-            options?: Record<string, any>
-          }) => {
-            const subscriptionId = `sub_${Date.now()}_${Math.random()}`
-
-            const unsubscribe = storage.subscribe(
-              (state) => state.events,
-              (events) => {
-                Object.values(events || {}).forEach((event) => {
-                  // Поддержка паттернов
-                  if (matchEventPattern(event.event, eventPattern)) {
-                    // Фильтрация по приоритету
-                    if (options.priority && event.metadata.priority !== options.priority) {
-                      return
-                    }
-
-                    try {
-                      handler(event.data, event)
-                    } catch (error) {
-                      handleCallbackError(`EventBus: error in handler for "${event.event}"`, error)
-                    }
-                  }
-                })
-              },
-            )
-
-            // Сохраняем подписку для управления
-            storage.set(`subscriptions.${subscriptionId}`, {
-              id: subscriptionId,
-              pattern: eventPattern,
-              options,
-              createdAt: Date.now(),
-            })
-
-            activeSubscriptions.set(subscriptionId, unsubscribe)
-
-            const wrappedUnsubscribe = () => {
-              activeSubscriptions.delete(subscriptionId)
-              unsubscribe()
-            }
-
-            return { subscriptionId, unsubscribe: wrappedUnsubscribe }
-          },
-        }),
-
-        // Получение истории событий
-        getEventHistory: createAction({
-          type: 'GET_EVENT_HISTORY',
-          meta: { description: 'Получение истории событий' },
-          action: ({ eventType, limit = 100 }: { eventType: string; limit?: number }) => {
-            const state = storage.getState()
-            return Object.values(state.events || {})
-              .filter((e) => e.event === eventType)
-              .sort((a, b) => b.timestamp - a.timestamp)
-              .slice(0, limit)
-          },
-        }),
-
-        // Очистка событий
-        clearEvents: createAction({
-          type: 'CLEAR_EVENTS',
-          meta: { description: 'Очистка событий' },
-          action: ({ olderThan }: { olderThan?: number } = {}) => {
-            if (olderThan) {
-              const cutoff = Date.now() - olderThan
-              storage.update((state) => {
-                Object.keys(state.events || {}).forEach((key) => {
-                  if (state.events[key].timestamp < cutoff) {
-                    delete state.events[key]
-                  }
-                })
-              })
-            } else {
-              storage.set('events', {})
-            }
-          },
-        }),
-
-        // Получение активных подписок
-        getActiveSubscriptions: createAction({
-          type: 'GET_SUBSCRIPTIONS',
-          meta: { description: 'Получение активных подписок' },
-          action: () => {
-            const state = storage.getState()
-            return Object.values(state.subscriptions || {})
-          },
-        }),
-      }))
-
-      // Оборачиваем destroy для очистки всех активных подписок
-      const originalDestroy = dispatcher.destroy.bind(dispatcher)
-      dispatcher.destroy = () => {
-        activeSubscriptions.forEach((unsub) => unsub())
-        activeSubscriptions.clear()
-        originalDestroy()
-      }
-
-      return dispatcher
-    },
+    return {
+      storage,
+      dispatcher: new EventBusDispatcher(storage, config),
+    }
   })

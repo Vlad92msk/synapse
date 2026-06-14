@@ -10,20 +10,19 @@ React-утилита для ожидания готовности хранили
 import { awaitSynapse } from 'synapse-storage/react'
 import { createSynapse } from 'synapse-storage/utils'
 
-// Инициализация хранилища может занять время (IndexedDB, загрузка с сервера и т.д.)
-const storePromise = createSynapse({
-  createStorageFn: async () => {
-    const data = await fetch('/api/config').then((r) => r.json())
-    const storage = new MemoryStorage({ name: 'config', initialState: data })
-    await storage.initialize()
-    return storage
-  },
-  createSelectorsFn: (sm) => ({ ... }),
-  createDispatcherFn: (storage) => createDispatcher({ storage }, ...),
+// Инициализация может занять время (IndexedDB, загрузка с сервера и т.д.)
+const configSynapse = createSynapse(async () => {
+  const data = await fetch('/api/config').then((r) => r.json())
+  const storage = new MemoryStorage({ name: 'config', initialState: data })
+  return {
+    storage,
+    dispatcher: new ConfigDispatcher(storage),
+    selectors: new ConfigSelectors(storage),
+  }
 })
 
-// Создаём awaiter
-const awaiter = awaitSynapse(storePromise, {
+// Создаём awaiter — принимает handle (thenable)
+const awaiter = awaitSynapse(configSynapse, {
   loadingComponent: <div>Loading...</div>,
   errorComponent: (error) => <div>Error: {error.message}</div>,
 })
@@ -109,6 +108,6 @@ awaiter.destroy()
 
 // Для vanilla JS / Node.js / без React — используйте createSynapseAwaiter напрямую:
 import { createSynapseAwaiter } from 'synapse-storage/utils'
-const awaiter = createSynapseAwaiter(storePromise)
+const awaiter = createSynapseAwaiter(configSynapse)
 // Тот же программный API, но без React-хуков
 ```

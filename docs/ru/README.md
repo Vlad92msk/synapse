@@ -19,20 +19,31 @@ npm install synapse-storage
 ```
 
 ```typescript
-import { MemoryStorage } from 'synapse-storage/core'
+import { MemoryStorage, Selectors } from 'synapse-storage/core'
+import { Dispatcher } from 'synapse-storage/reactive'
 import { createSynapse } from 'synapse-storage/utils'
-import { useSelector } from 'synapse-storage/react'
 
-const synapse = createSynapse({
-  storage: new MemoryStorage({
-    name: 'counter',
-    initialState: { count: 0 },
-  }),
-  createSelectorsFn: (s) => ({
-    count: s.createSelector((state) => state.count),
-  }),
+class CounterDispatcher extends Dispatcher<{ count: number }> {
+  inc = this.action((store) => store.update((s) => { s.count++ }))
+}
+
+class CounterSelectors extends Selectors<{ count: number }> {
+  count = this.select((s) => s.count)
+}
+
+export const counter = createSynapse(async () => {
+  const storage = new MemoryStorage({ name: 'counter', initialState: { count: 0 } })
+  return {
+    storage,
+    dispatcher: new CounterDispatcher(storage),
+    selectors: new CounterSelectors(storage),
+  }
 })
 ```
+
+> **Synapse — это два слоя:** реактивные **хранилища** (State Manager) и **слой
+> бизнес-логики** поверх них (Dispatcher / Effects / createSynapse). Начните с
+> [**Архитектуры: два слоя**](./architecture.md) — это ключ к ментальной модели.
 
 ## Ключевые возможности
 
@@ -40,13 +51,21 @@ const synapse = createSynapse({
 - **Селекторы** — мемоизированные вычисляемые значения с отслеживанием зависимостей
 - **Immer-like обновления** — мутация state напрямую внутри `update()`
 - **API-клиент** — HTTP-клиент с кэшированием и инвалидацией на основе тегов
+- **Persist-миграции** — `version` + `migrate(oldState, oldVersion)` для localStorage/IndexedDB
+- **SSR-гидрация** — `storage.hydrate(state)` для серверного состояния
 - **React интеграция** — хуки на `useSyncExternalStore` (Concurrent Mode safe)
 - **RxJS эффекты** — диспетчеры, эффекты и watchers (стиль Redux-Observable)
-- **Middleware и плагины** — расширяемые sync/async пайплайны
+- **Middleware** — расширяемые sync/async пайплайны (batching, shallowCompare, logger, broadcast)
 - **EventBus** — декаплинг межмодульного общения с wildcard-паттернами
 - **Cross-tab синхронизация** — BroadcastChannel middleware для multi-tab state
 
 ## Документация
+
+### Концепция
+
+| Тема                                          | Описание                                            |
+|-----------------------------------------------|-----------------------------------------------------|
+| [Архитектура: два слоя](./architecture.md)    | State Manager vs Business Logic Layer — с этого начать |
 
 ### Хранилища
 
@@ -57,6 +76,8 @@ const synapse = createSynapse({
 | [IndexedDB Storage](./indexeddb-storage.md)             | Async хранилище для больших данных      |
 | [StorageFactory](./storage-factory.md)                  | Динамическое создание хранилищ          |
 | [Статический .create()](./static-create.md)             | Альтернативный паттерн создания         |
+| [Persist-миграции](./persist-migration.md)              | `version` + `migrate` для смены схемы    |
+| [SSR-гидрация](./ssr-hydration.md)                      | `hydrate(state)` для серверного состояния |
 
 ### React хуки
 
@@ -78,23 +99,22 @@ const synapse = createSynapse({
 | [Подписки](./subscriptions.md)                                          | Подписка на изменения state    |
 | [Селекторы](./selector-system.md)                                       | Мемоизированный derived state  |
 
-### Synapse (createSynapse)
+### Business Logic Layer (class-based)
 
-| Тема                                                            | Описание                     |
-|-----------------------------------------------------------------|------------------------------|
-| [Базовый](./create-synapse-basic.md)                            | Storage + селекторы          |
-| [Dispatcher](./create-synapse-dispatcher.md)                    | Экшены и редюсеры            |
-| [Effects](./create-synapse-effects.md)                          | RxJS side effects            |
-| [Dispatcher (standalone)](./dispatcher-detailed.md)             | Dispatcher API подробно      |
-| [Зависимости](./dependencies.md)                                | Межмодульные зависимости     |
-| [Pokemon пример](./pokemon-advanced.md)                         | Полный рабочий пример        |
+| Тема                                                            | Описание                                  |
+|-----------------------------------------------------------------|-------------------------------------------|
+| [Базовая сборка](./create-synapse-basic.md)                     | `createSynapse(factory)` + storage + селекторы |
+| [Dispatcher](./create-synapse-dispatcher.md)                    | `class extends Dispatcher` — намерения и апдейты |
+| [Effects](./create-synapse-effects.md)                          | `class extends Effects` — RxJS side effects |
+| [Dispatcher (подробно)](./dispatcher-detailed.md)               | action / signal / apiActions / watcher    |
+| [Зависимости и cross-store](./dependencies.md)                  | межмодульные связи, 4 способа общения      |
+| [Pokemon пример](./pokemon-advanced.md)                         | полный рабочий модуль                      |
 
 ### Паттерны и утилиты
 
 | Тема                                                     | Описание                                   |
 |----------------------------------------------------------|--------------------------------------------|
 | [Middlewares](./middlewares.md)                           | Перехват операций чтения/записи            |
-| [Плагины](./plugins.md)                                  | Расширение жизненного цикла хранилища      |
 | [Singleton](./singleton.md)                              | Общие экземпляры с merge-стратегиями       |
 | [ApiClient](./api-client.md)                             | HTTP-клиент с кэшем на основе тегов        |
 | [createSynapseAwaiter](./synapse-awaiter.md)             | Ожидание нескольких synapse                |

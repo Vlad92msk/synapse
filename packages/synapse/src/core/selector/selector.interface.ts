@@ -86,37 +86,3 @@ export interface ISelectorModule<TStore extends Record<string, any>> {
    */
   destroy(): void
 }
-
-/**
- * Интерфейс для фабрики селекторов
- * Позволяет создавать набор связанных селекторов
- */
-export interface ISelectorCreator<TStore extends Record<string, any>, TSelectors, TExternalSelectors = Record<string, any>> {
-  /**
-   * Создает набор селекторов
-   *
-   * @param selectorModule Модуль селекторов
-   * @param externalSelectors Внешние селекторы (опционально)
-   * @returns Объект с селекторами
-   *
-   * @example
-   * const createUserSelectors: ISelectorCreator<UserStore, UserSelectors> =
-   *   (selectorModule, externalSelectors) => {
-   *     const isActive = selectorModule.createSelector(
-   *       (state) => state.user.isActive
-   *     );
-   *
-   *     return { isActive };
-   *   };
-   */
-  (selectorModule: ISelectorModule<TStore>, externalSelectors?: TExternalSelectors): TSelectors
-}
-
-/**
- * Тип для функции, создающей селекторы
- * Более простая версия ISelectorCreator, если не нужен полный интерфейс
- */
-export type SelectorCreatorFunction<TStore extends Record<string, any> = Record<string, any>, TSelectors = any, TExternalSelectors = Record<string, any>> = (
-  selectorModule: ISelectorModule<TStore>,
-  externalSelectors?: TExternalSelectors,
-) => TSelectors

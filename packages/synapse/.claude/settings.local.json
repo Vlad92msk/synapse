@@ -32,7 +32,15 @@
       "Bash(echo \"build exit: $?\")",
       "Bash(echo \"exit: $?\")",
       "Bash(node *)",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "Bash(git checkout *)",
+      "Bash(echo \"---exit $?---\")",
+      "Bash(echo \"---lint exit $?---\")",
+      "Bash(grep -rn \"pluginExecutor\\\\|executeBeforeSet\\\\|executeAfterSet\\\\|executeBeforeGet\\\\|onBeforeGet\" packages/synapse/src)",
+      "Bash(grep -rn \"STORAGE_SELECT\" packages/synapse/src)",
+      "Bash(grep -rn \"keyVersions\" packages/synapse/src)",
+      "Bash(echo \"=== EXIT tsc: $? ===\")",
+      "Bash(npm run *)"
     ]
   }
 }

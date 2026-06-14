@@ -1,8 +1,7 @@
 /**
  * Общие утилиты вычисления/записи пути по accessor'у.
  *
- * Используются как standalone-фабриками (`createApiActions`/`createKeyedApiActions`),
- * так и базовым классом `Dispatcher` (`this.apiActions`/`this.keyedApiActions`).
+ * Используются базовым классом `Dispatcher` (`this.apiActions`/`this.keyedApiActions`).
  */
 
 /**

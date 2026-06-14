@@ -1,12 +1,11 @@
-// Страховочные тесты createSynapse (этап 0 ROADMAP).
+// Страховочные тесты createSynapse(factory) — жизненный цикл и waitForDependencies.
 import { firstValueFrom } from 'rxjs'
 import { map } from 'rxjs/operators'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { SelectorAPI } from '../../../core'
 import { MemoryStorage } from '../../../core/storage/adapters/memory-storage.service'
-import { createDispatcher } from '../../../reactive/dispatcher/dispatcher.module'
-import { defineAction } from '../../../reactive/dispatcher/standalone'
+import { Selectors } from '../../../core/selector/selectors.base'
+import { Dispatcher } from '../../../reactive/dispatcher/dispatcher.base'
 import { ofType } from '../../../reactive/effects/effects.module'
 import { createSynapse } from '../createSynapse'
 
@@ -17,20 +16,18 @@ interface State extends Record<string, any> {
 let uid = 0
 const newStorage = (initialState: State = { count: 0 }) => new MemoryStorage<State>({ name: `cs_${uid++}`, initialState })
 
-const makeDispatcher = (storage: any) =>
-  createDispatcher(
-    { storage },
-    {
-      increment: defineAction<State>()({
-        action: (s, n: number) => {
-          s.update((st) => {
-            st.count += n
-          })
-          return n
-        },
-      }),
-    },
-  )
+class CountDispatcher extends Dispatcher<State> {
+  readonly increment = this.action((store, n: number) => {
+    store.update((st) => {
+      st.count += n
+    })
+    return n
+  })
+}
+
+class CountSelectors extends Selectors<State> {
+  readonly count = this.select((s) => s.count)
+}
 
 const created: Array<{ destroy: () => Promise<void> }> = []
 afterEach(async () => {
@@ -48,32 +45,33 @@ describe('createSynapse — полный жизненный цикл', () => {
     const storage = newStorage()
     let effectRan = false
 
-    const synapse = await createSynapse<State, { count: SelectorAPI<number> }, ReturnType<typeof makeDispatcher>>({
+    const handle = createSynapse(() => ({
       storage,
-      createSelectorsFn: (sm) => ({ count: sm.createSelector((s) => s.count) }),
-      createDispatcherFn: makeDispatcher,
-      createEffectConfig: () => ({ services: {}, externalStates: {} }),
+      dispatcher: new CountDispatcher(storage),
+      selectors: new CountSelectors(storage),
       effects: [
         (action$, _s$, { dispatcher }) =>
           action$.pipe(
-            ofType(dispatcher.dispatch.increment),
+            ofType((dispatcher as CountDispatcher).increment),
             map(() => () => {
               effectRan = true
             }),
           ),
       ],
-    })
-    created.push(synapse)
+    }))
+    created.push(handle)
+
+    const synapse = await handle
 
     expect(synapse.storage).toBe(storage)
     expect(storage.initStatus.status).toBe('ready')
 
-    expect(synapse.selectors.count.select()).toBe(0)
+    expect(synapse.selectors!.count.select()).toBe(0)
     expect(synapse.dispatcher).toBeDefined()
-    expect(synapse.actions.increment).toBe(synapse.dispatcher.dispatch.increment)
+    expect(synapse.actions).toBe(synapse.dispatcher)
     expect(synapse.state$).toBeDefined()
 
-    await synapse.actions.increment(5)
+    await synapse.actions!.increment(5)
     expect(storage.getStateSync().count).toBe(5)
     expect(effectRan).toBe(true)
 
@@ -81,36 +79,36 @@ describe('createSynapse — полный жизненный цикл', () => {
     expect(stateValue.count).toBe(5)
   })
 
-  it('частичный конфиг storage-only: есть storage и destroy, нет actions/state$', async () => {
+  it('storage-only: есть storage / state$ / destroy, нет dispatcher/selectors', async () => {
     const storage = newStorage()
-    const synapse = await createSynapse<State, Record<string, never>>({ storage })
-    created.push(synapse)
+    const handle = createSynapse(() => ({ storage }))
+    created.push(handle)
+    const synapse = await handle
 
     expect(synapse.storage).toBe(storage)
     expect(typeof synapse.destroy).toBe('function')
-    expect('actions' in synapse).toBe(false)
-    expect('state$' in synapse).toBe(false)
+    expect(synapse.dispatcher).toBeUndefined()
+    expect(synapse.selectors).toBeUndefined()
   })
 
-  it('storage+selectors без dispatcher: state$ отсутствует (создаётся только с эффектами)', async () => {
+  it('storage+selectors без dispatcher', async () => {
     const storage = newStorage()
-    const synapse = await createSynapse<State, { count: SelectorAPI<number> }>({
-      storage,
-      createSelectorsFn: (sm) => ({ count: sm.createSelector((s) => s.count) }),
-    })
-    created.push(synapse)
+    const handle = createSynapse(() => ({ storage, selectors: new CountSelectors(storage) }))
+    created.push(handle)
+    const synapse = await handle
 
-    expect(synapse.selectors.count.select()).toBe(0)
-    expect('state$' in synapse).toBe(false)
+    expect(synapse.selectors!.count.select()).toBe(0)
+    expect(synapse.dispatcher).toBeUndefined()
   })
 })
 
 describe('createSynapse — destroy', () => {
   it('destroy() уничтожает storage', async () => {
     const storage = newStorage()
-    const synapse = await createSynapse<State, Record<string, never>>({ storage, createDispatcherFn: makeDispatcher })
+    const handle = createSynapse(() => ({ storage, dispatcher: new CountDispatcher(storage) }))
+    await handle.ready()
 
-    await synapse.destroy()
+    await handle.destroy()
 
     expect(storage.initStatus.status).toBe('idle')
     // доступ после destroy недоступен
@@ -123,19 +121,21 @@ describe('createSynapse — waitForDependencies', () => {
     // raw storage
     const depStorage = newStorage({ count: 1 })
 
-    // Promise<Synapse>
-    const depSynapsePromise = createSynapse<State, Record<string, never>>({ storage: newStorage({ count: 2 }) })
+    // другой synapse-handle
+    const depHandle = createSynapse(() => ({ storage: newStorage({ count: 2 }) }))
 
-    const main = await createSynapse<State, Record<string, never>>({
+    const main = createSynapse(() => ({
       storage: newStorage(),
-      dependencies: [depStorage, { storage: newStorage({ count: 3 }) }, depSynapsePromise],
-    })
+      dependencies: [depStorage, { storage: newStorage({ count: 3 }) }, depHandle],
+    }))
     created.push(main)
-    created.push(await depSynapsePromise)
+    created.push(depHandle)
 
-    // зависимости инициализированы createSynapse
+    const synapse = await main
+
+    // зависимости инициализированы
     expect(depStorage.initStatus.status).toBe('ready')
-    expect(main.storage.initStatus.status).toBe('ready')
+    expect(synapse.storage.initStatus.status).toBe('ready')
   })
 
   it('таймаут зависимости даёт понятную ошибку', async () => {
@@ -145,12 +145,12 @@ describe('createSynapse — waitForDependencies', () => {
       waitForReady: () => new Promise(() => {}), // никогда не резолвится
     }
 
-    await expect(
-      createSynapse<State, Record<string, never>>({
-        storage: newStorage(),
-        dependencies: [slow],
-        dependencyTimeout: 50,
-      }),
-    ).rejects.toThrow(/timed out/i)
+    const handle = createSynapse(() => ({
+      storage: newStorage(),
+      dependencies: [slow],
+      dependencyTimeout: 50,
+    }))
+
+    await expect(handle.ready()).rejects.toThrow(/timed out/i)
   })
 })

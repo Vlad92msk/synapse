@@ -319,14 +319,13 @@ describe('наследование', () => {
   })
 })
 
-describe('совместимость со СТАРЫМ createSynapse(config)', () => {
-  it('инстанс класса работает как createDispatcherFn-результат; эффект реагирует через d.actions', async () => {
+describe('интеграция с createSynapse(factory)', () => {
+  it('инстанс класса как dispatcher; эффект-функция реагирует через action$', async () => {
     const seen: number[] = []
 
-    const synapse = await createSynapse<State>({
+    const handle = createSynapse(() => ({
       storage,
-      createDispatcherFn: (s) => new TestDispatcher(s as MemoryStorage<State>),
-      createEffectConfig: () => ({ services: {}, externalStates: {} }),
+      dispatcher: new TestDispatcher(storage),
       effects: [
         (action$: any, _state$: any, { dispatcher }: any) =>
           action$.pipe(
@@ -334,9 +333,9 @@ describe('совместимость со СТАРЫМ createSynapse(config)', (
             tap((a: any) => seen.push(a.payload)),
           ),
       ],
-    })
+    }))
 
-    // 'dispatch' in d и d.actions использует createSynapse внутри
+    const synapse = await handle
     const d = synapse.dispatcher as TestDispatcher
     expect('dispatch' in d).toBe(true)
 
@@ -346,7 +345,7 @@ describe('совместимость со СТАРЫМ createSynapse(config)', (
     expect(seen).toContain(42)
     expect(storage.getStateSync().count).toBe(42)
 
-    await synapse.destroy()
+    await handle.destroy()
   })
 })
 

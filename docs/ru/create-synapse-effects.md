@@ -7,62 +7,81 @@
 ## Создание
 
 ```typescript
+import { MemoryStorage, Selectors } from 'synapse-storage/core'
 import { createSynapse } from 'synapse-storage/utils'
-import { createDispatcher, ofType, createEffect } from 'synapse-storage/reactive'
-import { debounceTime, switchMap, tap } from 'rxjs/operators'
-import { of } from 'rxjs'
+import { Dispatcher, Effects, ofType } from 'synapse-storage/reactive'
+import { debounceTime, switchMap } from 'rxjs/operators'
+import { from } from 'rxjs'
 
-const synapsePromise = createSynapse({
-  storage: new MemoryStorage<SearchState>({ name: 'search', initialState }),
+class SearchSelectors extends Selectors<SearchState> {
+  readonly query = this.select((s) => s.query)
+  readonly results = this.select((s) => s.results)
+}
 
-  createSelectorsFn: (sm) => ({ ... }),
+class SearchDispatcher extends Dispatcher<SearchState> {
+  readonly setQuery = this.action((store, query: string) => { store.set('query', query); return query })
+  readonly searchSuccess = this.action((store, results: string[]) => { store.set('results', results); return results })
+}
 
-  createDispatcherFn: (storage) =>
-    createDispatcher({ storage }, (_storage, { createAction }) => {
-      const setQuery = createAction({ type: 'setQuery', action: (q: string) => { ... } })
-      const searchSuccess = createAction({ type: 'searchSuccess', action: ... })
-      return { setQuery, searchSuccess }
-    }),
+// Эффекты — класс над Effects<State, Dispatcher>; сервисы через конструктор
+class SearchEffects extends Effects<SearchState, SearchDispatcher> {
+  constructor(private readonly api: SearchApi) { super() }
 
-  // Диспетчер передаётся автоматически
-  createEffectConfig: () => ({
-    // services?: {},            // сервисы (API-клиенты и т.д.)
-    // config?: {},              // конфигурация для эффектов
-    // externalDispatchers?: {}, // диспетчеры из других synapse
-  }),
+  readonly search$ = this.effect((action$, state$, { dispatcher: d }) =>
+    action$.pipe(
+      ofType(d.setQuery),
+      debounceTime(400),
+      switchMap((action) => from(this.api(action.payload)).pipe(
+        switchMap(async (results) => d.searchSuccess(results)),
+      )),
+    ),
+  )
+}
 
-  // Массив эффектов
-  effects: [ ... ],
+const searchSynapse = createSynapse(async () => {
+  const storage = new MemoryStorage<SearchState>({ name: 'search', initialState })
+  return {
+    storage,
+    dispatcher: new SearchDispatcher(storage),
+    selectors: new SearchSelectors(storage),
+    effects: new SearchEffects(searchApi),   // сервисы — через конструктор
+  }
 })
 ```
 
-## createEffect
+## this.effect
 
 ```typescript
-import { createEffect, ofType } from 'synapse-storage/reactive'
+// this.effect — поле класса; функция получает потоки и контекст, возвращает Observable.
+// Сервисы/внешние сторы приходят через конструктор и захватываются в замыкание рецепта.
+class SearchEffects extends Effects<SearchState, SearchDispatcher> {
+  constructor(private readonly api: SearchApi) { super() }
 
-// Эффект — функция, получающая потоки и контекст, возвращающая Observable
-createEffect((action$, state$, { dispatcher, services, config }) =>
-  action$.pipe(
-    ofType(dispatcher.dispatch.setQuery),  // фильтрация по действию
-    debounceTime(400),
-    switchMap((action) => {
-      const query = action.payload as string
-      return of(query).pipe(
-        switchMap(async (q) => {
-          const results = await fetchResults(q)
-          dispatcher.dispatch.searchSuccess(results)
-        }),
-      )
-    }),
-  ),
-)
+  readonly search$ = this.effect((action$, state$, ctx) => {
+    const d = ctx.dispatcher                 // типизированный диспетчер модуля
+    return action$.pipe(
+      ofType(d.setQuery),                    // фильтрация по действию
+      debounceTime(400),
+      switchMap((action) => from(this.api(action.payload)).pipe(
+        switchMap(async (results) => d.searchSuccess(results)),
+      )),
+    )
+  })
 
-// Аргументы:
-// action$  — Observable всех отправленных действий
-// state$   — Observable текущего состояния
-// context  — { dispatcher, externalDispatchers, services, config }
+  // Опциональный teardown — закрыть сокеты и т.п.
+  override onDestroy() { /* ... */ }
+}
 ```
+
+`ctx` рецепта — это `{ dispatcher, external }`:
+
+- `dispatcher` — инстанс class-диспетчера этого модуля (`ofType(d.x)` + `d.apply(...)`);
+- `external` — внешние диспетчеры (их экшены уже влиты в общий `action$`), доступны если объявлен
+  третий генерик: `class Effects<State, Dispatcher, ExternalDispatchers>`.
+
+> **Правило**: сервис из конструктора (`this.api`) можно *захватывать в замыкание* рецепта, но нельзя
+> дереференсить прямо в инициализаторе поля — parameter properties присваиваются ПОСЛЕ инициализаторов
+> полей подкласса.
 
 ## ofType / ofTypes
 
@@ -71,29 +90,25 @@ import { ofType, ofTypes } from 'synapse-storage/reactive'
 
 // ofType — фильтрация потока по одному типу действия
 action$.pipe(
-  ofType(dispatcher.dispatch.setQuery),
+  ofType(d.setQuery),
 )
 
 // ofTypes — фильтрация по нескольким типам
 action$.pipe(
-  ofTypes([
-    dispatcher.dispatch.setQuery,
-    dispatcher.dispatch.searchError,
-  ]),
+  ofTypes([d.setQuery, d.searchError]),
 )
 ```
 
 ## Возвращаемое значение
 
 ```typescript
-const store = await synapsePromise
+const store = await searchSynapse
 
 store.storage     // IStorage<SearchState>
-store.selectors   // { query, results, isLoading, error }
-store.actions     // { setQuery, searchSuccess, searchError }
-store.dispatcher  // Dispatcher
+store.selectors   // экземпляр SearchSelectors
+store.actions     // { setQuery, searchSuccess, ... }
+store.dispatcher  // экземпляр SearchDispatcher
 store.state$      // Observable<SearchState> — поток состояния (только с эффектами!)
-store.destroy()   // () => Promise<void>
 
-// Эффекты запускаются автоматически при инициализации
+// Эффекты запускаются автоматически при инициализации модуля
 ```

@@ -3,7 +3,7 @@ import { Observable, share, Subject } from 'rxjs'
 import { handleCallbackError } from '../../_utils/error-handling.util'
 import type { IStorage } from '../../core'
 import { TypedAction } from '../effects'
-import type { ActionExecutionOptions, ActionRecipe, WatcherRecipe } from './standalone'
+import type { ActionExecutionOptions } from './standalone'
 
 /**
  * Расширенное API для middleware
@@ -52,7 +52,7 @@ export interface Action<T = unknown> {
  * Параметры для создания действия
  */
 export interface ActionDefinition<TParams, TResult> {
-  /** Тип действия для идентификации в потоке и эффектах. Если не указан — будет выведен из имени ключа в createDispatcher */
+  /** Тип действия для идентификации в потоке и эффектах. Если не указан — будет выведен из имени поля при финализации `Dispatcher`. */
   type?: string
   /** Функция, выполняющая действие и возвращающая результат (payload) */
   action: (params: TParams) => Promise<TResult> | TResult
@@ -64,7 +64,7 @@ export interface ActionDefinition<TParams, TResult> {
  * Определение типа для watcher'а
  */
 interface WatcherDefinition<T, R> {
-  /** Тип watcher'а для идентификации в потоке. Если не указан — будет выведен из имени ключа в createDispatcher */
+  /** Тип watcher'а для идентификации в потоке. Если не указан — будет выведен из имени поля при финализации `Dispatcher`. */
   type?: string
   selector: (state: T) => R
   meta?: Record<string, any>
@@ -83,17 +83,6 @@ export interface WatcherFunction<R> {
   meta?: Record<string, any>
   unsubscribe: VoidFunction
 }
-
-/**
- * Расширенный тип для функции настройки действий с поддержкой дополнительных утилит
- */
-export type ActionsSetupWithUtils<T extends Record<string, any>> = (
-  storage: IStorage<T>,
-  utils: {
-    createAction: ActionCreatorFactory
-    createWatcher: <R>(config: WatcherDefinition<T, R>) => WatcherFunction<R>
-  },
-) => Record<string, DispatchFunction<any, any> | WatcherFunction<any> | ActionRecipe<T, any, any> | WatcherRecipe<T, any>>
 
 /**
  * Расширенная функция диспетчеризации
@@ -128,24 +117,6 @@ export type ExtractResultType<T> = T extends DispatchFunction<any, infer R> ? R 
 export type ActionsResult<F> = F extends (create: ActionCreatorFactory, storage: any, ...args: any[]) => infer R ? R : Record<string, DispatchFunction<any, any>>
 
 /**
- * Типизированный объект действий
- */
-type ResolveDispatch<T> = T extends DispatchFunction<any, any> ? T : T extends ActionRecipe<any, infer P, infer R> ? DispatchFunction<P, R> : never
-
-export type DispatchActions<T> = {
-  [K in keyof T]: ResolveDispatch<T[K]>
-}
-
-/**
- * Типизированный объект watchers
- */
-type ResolveWatcher<T> = T extends WatcherFunction<any> ? T : T extends WatcherRecipe<any, infer R> ? WatcherFunction<R> : never
-
-export type WatcherActions<T> = {
-  [K in keyof T]: ResolveWatcher<T[K]>
-}
-
-/**
  * Параметры для Dispatcher
  */
 interface DispatcherOptions<T extends Record<string, any>> {
@@ -160,10 +131,12 @@ interface DispatcherOptions<T extends Record<string, any>> {
  *
  * Прежнее имя — `Dispatcher`. Переименован в `DispatcherCore`, поскольку публичным
  * `Dispatcher` теперь является abstract class-based слой (`dispatcher.base.ts`),
- * который строится поверх этого движка. `createDispatcher` продолжает работать
- * поверх `DispatcherCore` без изменений.
+ * который строится поверх этого движка.
+ *
+ * `TActionsFn` — фантомный слот для вывода форм экшенов (`ActionsResult`); сам движок
+ * его не использует в рантайме.
  */
-export class DispatcherCore<T extends Record<string, any>, TActionsFn extends ActionsSetupWithUtils<T> = ActionsSetupWithUtils<T>> {
+export class DispatcherCore<T extends Record<string, any>, TActionsFn extends (...args: any[]) => any = (...args: any[]) => Record<string, DispatchFunction<any, any>>> {
   // Поток действий
   private actions$ = new Subject<Action>()
 
@@ -293,20 +266,6 @@ export class DispatcherCore<T extends Record<string, any>, TActionsFn extends Ac
   }
 
   /**
-   * Получает типизированные действия диспетчера
-   */
-  public getTypedDispatch<A extends Record<string, any>>(): DispatchActions<A> {
-    return this.dispatch as DispatchActions<A>
-  }
-
-  /**
-   * Получает типизированные watcher'ы
-   */
-  public getTypedWatchers<A extends Record<string, any>>(): WatcherActions<A> {
-    return this.watchers as WatcherActions<A>
-  }
-
-  /**
    * Находит действие по типу
    */
   public findActionByType(actionType: string): DispatchFunction<any, any> | undefined {
@@ -360,7 +319,7 @@ export class DispatcherCore<T extends Record<string, any>, TActionsFn extends Ac
     // Создаем функцию диспетчеризации
     const dispatchFn = async (params: TParams): Promise<TResult> => {
       if (!actionType) {
-        throw new Error('Action type not assigned. Provide "type" in config or use within createDispatcher.')
+        throw new Error('Action type not assigned. Provide "type" in config or declare the action as a field of a Dispatcher subclass.')
       }
 
       // Проверяем мемоизацию
@@ -408,7 +367,7 @@ export class DispatcherCore<T extends Record<string, any>, TActionsFn extends Ac
       })
     }
 
-    // Deferred type assignment — используется в createDispatcher для авто-генерации типа из имени ключа
+    // Deferred type assignment — используется при финализации Dispatcher для авто-генерации типа из имени поля
     if (!hasExplicitType) {
       ;(dispatchFn as any)._assignType = (name: string) => {
         actionType = `[${this.storage.name}]${name}`
@@ -532,7 +491,7 @@ export class DispatcherCore<T extends Record<string, any>, TActionsFn extends Ac
       enumerable: true,
     })
 
-    // Deferred type assignment — используется в createDispatcher для авто-генерации типа из имени ключа
+    // Deferred type assignment — используется при финализации Dispatcher для авто-генерации типа из имени поля
     if (!hasExplicitType) {
       ;(watcherFn as any)._assignType = (name: string) => {
         actionType = `[${this.storage.name}]${name}`
@@ -550,108 +509,3 @@ export class DispatcherCore<T extends Record<string, any>, TActionsFn extends Ac
     return watcherFn as WatcherFunction<R>
   }
 }
-
-/**
- * Функция для создания типизированного диспетчера.
- *
- * Поддерживает два варианта:
- * 1. Объект standalone-рецептов (ActionRecipe / WatcherRecipe)
- * 2. Setup-функция с доступом к createAction / createWatcher (inline-определение)
- *
- * @example
- * ```ts
- * // Вариант 1: объект рецептов (рекомендуемый)
- * createDispatcher({ storage }, {
- *   loadList,
- *   loadListLoading: listRequest.loading,
- *   watchCount,
- * })
- *
- * // Вариант 2: setup-функция (для смешанного использования)
- * createDispatcher({ storage }, (storage, { createAction }) => ({
- *   loadList,
- *   custom: createAction({ action: () => { ... } }),
- * }))
- * ```
- */
-
-// Overload: объект standalone-рецептов
-export function createDispatcher<TState extends Record<string, any>, TRecord extends Record<string, ActionRecipe<TState, any, any> | WatcherRecipe<TState, any>>>(
-  options: DispatcherOptions<TState>,
-  actions: TRecord,
-): DispatcherCore<TState> & {
-  dispatch: DispatchActions<TRecord>
-  watchers: WatcherActions<TRecord>
-}
-
-// Overload: setup-функция
-export function createDispatcher<TState extends Record<string, any>, TActions extends ActionsSetupWithUtils<TState>>(
-  options: DispatcherOptions<TState>,
-  actionsSetup: TActions,
-): DispatcherCore<TState, TActions> & {
-  dispatch: DispatchActions<ReturnType<TActions>>
-  watchers: WatcherActions<ReturnType<TActions>>
-}
-
-// Implementation
-export function createDispatcher<TState extends Record<string, any>>(options: DispatcherOptions<TState>, actionsOrSetup: Record<string, any> | ((...args: any[]) => any)) {
-  // Создаем экземпляр диспетчера
-  const dispatcher = new DispatcherCore<TState>(options)
-
-  // Получаем объект действий: из функции или напрямую
-  const actions =
-    typeof actionsOrSetup === 'function'
-      ? actionsOrSetup(options.storage, {
-          createAction: (actionConfig: any, executionOptions: any) => dispatcher.createAction(actionConfig, executionOptions),
-          createWatcher: (config: any) => dispatcher.createWatcher(config),
-        })
-      : actionsOrSetup
-
-  // Регистрируем все созданные объекты в соответствующих коллекциях
-  for (const [key, fn] of Object.entries(actions)) {
-    // Standalone action recipe — привязываем к storage и создаём реальный action
-    if (typeof fn === 'object' && fn !== null && (fn as any)._type === 'action-recipe') {
-      const recipe = fn as ActionRecipe<TState, any, any>
-      const boundConfig = {
-        meta: recipe._config.meta,
-        action: (params: any) => recipe._config.action(options.storage, params),
-      }
-      const dispatchFn = dispatcher.createAction(boundConfig, recipe._executionOptions)
-      if (typeof (dispatchFn as any)._assignType === 'function') {
-        ;(dispatchFn as any)._assignType(key)
-        delete (dispatchFn as any)._assignType
-      }
-      dispatcher.dispatch[key] = dispatchFn
-      continue
-    }
-
-    // Standalone watcher recipe — привязываем к storage и создаём реальный watcher
-    if (typeof fn === 'object' && fn !== null && (fn as any)._type === 'watcher-recipe') {
-      const recipe = fn as WatcherRecipe<TState, any>
-      const watcherFn = dispatcher.createWatcher(recipe._config)
-      if (typeof (watcherFn as any)._assignType === 'function') {
-        ;(watcherFn as any)._assignType(key)
-        delete (watcherFn as any)._assignType
-      }
-      dispatcher.watchers[key] = watcherFn
-      continue
-    }
-
-    // Inline action/watcher (существующая логика)
-    if (typeof fn === 'function') {
-      const type = (fn as any)._type
-      if (type === 'dispatch' || type === 'watchers') {
-        // Авто-назначение типа из имени ключа, если type не был указан явно
-        if (typeof (fn as any)._assignType === 'function') {
-          ;(fn as any)._assignType(key)
-          delete (fn as any)._assignType
-        }
-        // @ts-ignore
-        dispatcher[type][key] = fn
-      }
-    }
-  }
-
-  return dispatcher
-}
-export type CreateDispatcherType = ReturnType<typeof createDispatcher>

@@ -16,6 +16,7 @@ import { createSynapse } from '../../utils'
 import { useSelector } from '../hooks/useSelector'
 import { useObservable } from '../hooks/useObservable'
 import { useSubscription } from '../hooks/useSubscription'
+import { awaitSynapse } from '../utils/awaitSynapse'
 import { createSynapseCtx } from '../utils/createSynapseCtx'
 
 // ── Доменные class-слои ─────────────────────────────────────────────────────
@@ -237,6 +238,30 @@ describe('createSynapseCtx(handle)', () => {
     )
     await waitFor(() => expect(screen.getByTestId('v')).toBeInTheDocument())
     expect(factory).toHaveBeenCalledTimes(1)
+  })
+})
+
+// ── awaitSynapse(handle) — приём handle напрямую (5.2) ───────────────────────
+describe('awaitSynapse(handle) (5.2)', () => {
+  it('принимает SynapseModule-handle без обёртки () => handle.ready(); гейтит до готовности', async () => {
+    const factory = vi.fn(() => {
+      const storage = newStorage()
+      return { storage, selectors: new TestSelectors(storage) }
+    })
+    const handle = createSynapse(factory)
+
+    // handle передаётся напрямую — никакого `() => handle.ready()` бойлерплейта
+    const gate = awaitSynapse(handle, { loadingComponent: <div data-testid="loading">loading</div> })
+    const Inner = gate.withSynapseReady(function Inner() {
+      return <span data-testid="ready">ready</span>
+    })
+
+    render(<Inner />)
+    await waitFor(() => expect(screen.getByTestId('ready')).toBeInTheDocument())
+    expect(factory).toHaveBeenCalledTimes(1)
+
+    gate.destroy()
+    await handle.destroy()
   })
 })
 

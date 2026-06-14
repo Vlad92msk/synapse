@@ -1,6 +1,6 @@
 // storage.interface.ts
 import { IndexedDBConfig } from './adapters/indexed-DB.service'
-import { BatchingMiddlewareOptions, ShallowCompareMiddlewareOptions } from './middlewares'
+import { BatchingMiddlewareOptions, LoggerMiddlewareOptions, ShallowCompareMiddlewareOptions } from './middlewares'
 import { SingletonOptions } from './modules/singleton/models'
 import {
   AsyncMiddleware,
@@ -34,8 +34,6 @@ export interface StorageInitStatus {
 
 export enum StorageEvents {
   STORAGE_UPDATE = 'storage:update',
-  STORAGE_DELETE = 'storage:delete',
-  STORAGE_PATCH = 'storage:patch',
   STORAGE_SELECT = 'storage:select',
   STORAGE_CLEAR = 'storage:clear',
   STORAGE_DESTROY = 'storage:destroy',
@@ -125,6 +123,12 @@ export interface ISyncStorage<T extends Record<string, any> = any> extends IStor
   clear(): void
   /** Сброс состояния к initialState (или к {} если initialState не задан) */
   reset(): void
+  /**
+   * Гидрация: заменяет состояние переданным снапшотом (SSR/server-state). Вызванная ДО
+   * `initialize()`, она засевает хранилище так, что инициализация не перезатрёт его
+   * `initialState`. Вызванная после — заменяет состояние и уведомляет подписчиков.
+   */
+  hydrate(state: T): void
   keys(): string[]
   getState(): T
 }
@@ -143,6 +147,12 @@ export interface IAsyncStorage<T extends Record<string, any> = any> extends ISto
   clear(): Promise<void>
   /** Сброс состояния к initialState (или к {} если initialState не задан) */
   reset(): Promise<void>
+  /**
+   * Гидрация: заменяет состояние переданным снапшотом (SSR/server-state). Вызванная ДО
+   * `initialize()`, она засевает хранилище так, что инициализация не перезатрёт его
+   * `initialState`. Вызванная после — заменяет состояние и уведомляет подписчиков.
+   */
+  hydrate(state: T): Promise<void>
   keys(): Promise<string[]>
   getState(): Promise<T>
 }
@@ -162,11 +172,15 @@ export type StorageType = 'memory' | 'localStorage' | 'indexedDB'
 export interface SyncDefaultMiddlewares {
   batching: (options?: BatchingMiddlewareOptions) => SyncMiddleware
   shallowCompare: (options?: ShallowCompareMiddlewareOptions) => SyncMiddleware
+  /** Dev-only логгер пишущих действий (тип/ключ/длительность, опц. prev/next состояние). */
+  logger: (options?: LoggerMiddlewareOptions) => SyncMiddleware
 }
 
 export interface AsyncDefaultMiddlewares {
   batching: (options?: BatchingMiddlewareOptions) => AsyncMiddleware
   shallowCompare: (options?: ShallowCompareMiddlewareOptions) => AsyncMiddleware
+  /** Dev-only логгер пишущих действий (тип/ключ/длительность, опц. prev/next состояние). */
+  logger: (options?: LoggerMiddlewareOptions) => AsyncMiddleware
 }
 
 /** @deprecated Use SyncDefaultMiddlewares or AsyncDefaultMiddlewares */
@@ -186,16 +200,59 @@ export type ConfigureMiddlewares = ConfigureAsyncMiddlewares
 
 // --- Storage configs ---
 
+/**
+ * Функция миграции персистентного состояния между версиями схемы.
+ * Вызывается при `initialize()`, если в хранилище лежат данные с версией ниже текущей
+ * (`config.version`). Получает сырое сохранённое состояние и его версию, должна вернуть
+ * состояние, соответствующее текущей схеме.
+ */
+export type MigrateFn<T extends Record<string, any> = Record<string, any>> = (persistedState: any, persistedVersion: number) => T
+
 /** Базовая конфигурация хранилища (общие поля) */
 export interface BaseStorageConfig<T extends Record<string, any> = Record<string, any>> {
   name: string
   initialState?: T
   singleton?: SingletonOptions
+  /**
+   * Версия схемы персистентного состояния. Задайте, когда форма `initialState` меняется
+   * между релизами и в localStorage/IndexedDB могут лежать данные старой схемы.
+   *
+   * Версия сохраняется рядом с данными; при следующей инициализации сравнивается с этой.
+   * Если сохранённая версия ниже — запускается {@link BaseStorageConfig.migrate}.
+   *
+   * Без `version` поведение не меняется (миграция выключена). Для `memory` игнорируется
+   * (нечего персистить).
+   */
+  version?: number
+  /**
+   * Преобразует сохранённое состояние старой версии к текущей схеме. Вызывается, только
+   * если задана {@link BaseStorageConfig.version} и сохранённая версия меньше текущей.
+   *
+   * @example
+   * ```ts
+   * new LocalStorage({
+   *   name: 'settings',
+   *   version: 2,
+   *   initialState: { theme: 'light', locale: 'en' },
+   *   migrate: (old, fromVersion) =>
+   *     fromVersion < 1 ? { theme: old.dark ? 'dark' : 'light', locale: 'en' } : { ...old, locale: old.locale ?? 'en' },
+   * })
+   * ```
+   */
+  migrate?: MigrateFn<T>
 }
 
 /** Конфигурация для sync-хранилищ (Memory, LocalStorage) */
 export interface SyncStorageConfig<T extends Record<string, any> = Record<string, any>> extends BaseStorageConfig<T> {
   middlewares?: ConfigureSyncMiddlewares
+  /**
+   * Очищать данные хранилища при `destroy()`.
+   * - `memory` → по умолчанию `true` (эфемерное хранилище).
+   * - `localStorage` → по умолчанию `false` (персистентное: данные переживают `destroy`, как у IndexedDB).
+   *
+   * Задайте явно, чтобы переопределить дефолт адаптера.
+   */
+  clearOnDestroy?: boolean
 }
 
 /** Конфигурация для async-хранилищ (IndexedDB) */

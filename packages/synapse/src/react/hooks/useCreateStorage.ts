@@ -1,19 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { handleCleanupError } from '../../_utils/error-handling.util'
-import {
-  IAsyncPluginExecutor,
-  IAsyncStorage,
-  IEventEmitter,
-  ILogger,
-  IStorage,
-  ISyncPluginExecutor,
-  ISyncStorage,
-  StorageFactory,
-  StorageInitStatus,
-  StorageStatus,
-  UniversalStorageConfig,
-} from '../../core'
+import { IAsyncStorage, IEventEmitter, ILogger, IStorage, ISyncStorage, StorageFactory, StorageInitStatus, StorageStatus, UniversalStorageConfig } from '../../core'
 
 export interface UseSynapseStorageOptions {
   /**
@@ -51,7 +39,6 @@ export type UseSynapseStorageReturn<S> =
 export function useCreateStorage<T extends Record<string, any>>(
   config: UniversalStorageConfig<T> & { type: 'memory' },
   options?: UseSynapseStorageOptions,
-  pluginExecutor?: ISyncPluginExecutor,
   eventEmitter?: IEventEmitter,
   logger?: ILogger,
 ): UseSynapseStorageReturn<ISyncStorage<T>>
@@ -59,7 +46,6 @@ export function useCreateStorage<T extends Record<string, any>>(
 export function useCreateStorage<T extends Record<string, any>>(
   config: UniversalStorageConfig<T> & { type: 'localStorage' },
   options?: UseSynapseStorageOptions,
-  pluginExecutor?: ISyncPluginExecutor,
   eventEmitter?: IEventEmitter,
   logger?: ILogger,
 ): UseSynapseStorageReturn<ISyncStorage<T>>
@@ -67,7 +53,6 @@ export function useCreateStorage<T extends Record<string, any>>(
 export function useCreateStorage<T extends Record<string, any>>(
   config: UniversalStorageConfig<T> & { type: 'indexedDB' },
   options?: UseSynapseStorageOptions,
-  pluginExecutor?: IAsyncPluginExecutor,
   eventEmitter?: IEventEmitter,
   logger?: ILogger,
 ): UseSynapseStorageReturn<IAsyncStorage<T>>
@@ -75,7 +60,6 @@ export function useCreateStorage<T extends Record<string, any>>(
 export function useCreateStorage<T extends Record<string, any>>(
   config: UniversalStorageConfig<T>,
   options?: UseSynapseStorageOptions,
-  pluginExecutor?: ISyncPluginExecutor | IAsyncPluginExecutor,
   eventEmitter?: IEventEmitter,
   logger?: ILogger,
 ): UseSynapseStorageReturn<IStorage<T>>
@@ -85,7 +69,6 @@ export function useCreateStorage<T extends Record<string, any>>(
 export function useCreateStorage<T extends Record<string, any>>(
   config: UniversalStorageConfig<T>,
   options: UseSynapseStorageOptions = {},
-  pluginExecutor?: ISyncPluginExecutor | IAsyncPluginExecutor,
   eventEmitter?: IEventEmitter,
   logger?: ILogger,
 ): UseSynapseStorageReturn<IStorage<T>> {
@@ -98,7 +81,7 @@ export function useCreateStorage<T extends Record<string, any>>(
 
   const [storage] = useState<IStorage<T> | null>(() => {
     try {
-      return StorageFactory.create<T>(config, pluginExecutor, eventEmitter, logger)
+      return StorageFactory.create<T>(config, eventEmitter, logger)
     } catch (error) {
       setStatus({
         status: StorageStatus.ERROR,

@@ -7,6 +7,8 @@ import { HookExample } from './examples/HookExample'
 import { HookLocalStorageExample } from './examples/HookLocalStorageExample'
 import { HookIndexedDBExample } from './examples/HookIndexedDBExample'
 import { StaticCreateExample } from './examples/StaticCreateExample'
+import { PersistMigrationExample } from './examples/PersistMigrationExample'
+import { HydrateExample } from './examples/HydrateExample'
 import { SubscriptionPatternsExample } from './examples/SubscriptionPatternsExample'
 import { ReadingDataExample } from './examples/ReadingDataExample'
 import { WritingDataExample } from './examples/WritingDataExample'
@@ -15,13 +17,13 @@ import { CreateSynapseBasicExample } from './examples/CreateSynapseBasicExample'
 import { CreateSynapseDispatcherExample } from './examples/CreateSynapseDispatcherExample'
 import { CreateSynapseEffectsExample } from './examples/CreateSynapseEffectsExample'
 import { SelectorSystemExample } from './examples/SelectorSystemExample'
+import { ReactiveSelectorExample } from './examples/ReactiveSelectorExample'
 import { DispatcherDetailedExample } from './examples/DispatcherDetailedExample'
 import { SynapseCtxExample } from './examples/SynapseCtxExample'
 import { AwaitSynapseExample } from './examples/AwaitSynapseExample'
 import { SynapseAwaiterExample } from './examples/SynapseAwaiterExample'
 import { EventBusExample } from './examples/EventBusExample'
 import { MiddlewaresExample } from './examples/MiddlewaresExample'
-import { PluginsExample } from './examples/PluginsExample'
 import { SingletonExample } from './examples/SingletonExample'
 import { ApiClientExample } from './examples/ApiClientExample'
 import { DependenciesExample } from './examples/DependenciesExample'
@@ -46,12 +48,15 @@ const examples = [
   { id: 'hook-local', label: 'useCreateStorage (localStorage)', component: HookLocalStorageExample, group: 'create' },
   { id: 'hook-idb', label: 'useCreateStorage (indexedDB)', component: HookIndexedDBExample, group: 'create' },
   { id: 'static', label: 'Static .create()', component: StaticCreateExample, group: 'create' },
+  { id: 'persist-migration', label: 'Persist-миграции (version/migrate)', component: PersistMigrationExample, group: 'create' },
+  { id: 'hydrate', label: 'SSR-гидрация (hydrate)', component: HydrateExample, group: 'create' },
   // Работа с данными
   { id: 'reading-data', label: 'Чтение данных (get/getState)', component: ReadingDataExample, group: 'data' },
   { id: 'writing-data', label: 'Запись данных (set/update)', component: WritingDataExample, group: 'data' },
   { id: 'operations', label: 'remove / has / keys / clear / reset', component: DeleteHasKeysExample, group: 'data' },
   { id: 'subscriptions', label: 'Подписки (subscribe)', component: SubscriptionPatternsExample, group: 'data' },
-  { id: 'selector-system', label: 'Селекторы (createSelector)', component: SelectorSystemExample, group: 'data' },
+  { id: 'selector-system', label: 'Селекторы (Selectors)', component: SelectorSystemExample, group: 'data' },
+  { id: 'reactive-selector', label: 'Реактивный селектор (selector.$)', component: ReactiveSelectorExample, group: 'data' },
   // createSynapse
   { id: 'synapse-basic', label: 'createSynapse (basic)', component: CreateSynapseBasicExample, group: 'synapse' },
   { id: 'synapse-dispatcher', label: 'createSynapse (dispatcher)', component: CreateSynapseDispatcherExample, group: 'synapse' },
@@ -64,7 +69,6 @@ const examples = [
   { id: 'await-synapse', label: 'awaitSynapse', component: AwaitSynapseExample, group: 'react' },
   // Паттерны
   { id: 'middlewares', label: 'Middlewares', component: MiddlewaresExample, group: 'patterns' },
-  { id: 'plugins', label: 'Plugins (IStoragePlugin)', component: PluginsExample, group: 'patterns' },
   { id: 'singleton', label: 'Singleton pattern', component: SingletonExample, group: 'patterns' },
   // Утилиты
   { id: 'api-client', label: 'ApiClient', component: ApiClientExample, group: 'utils' },

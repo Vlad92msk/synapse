@@ -1,3 +1,4 @@
+import { SynapseError } from '../../_utils/error-handling.util'
 import type { IStorage } from '../storage'
 import type { ISelectorModule, SelectorAPI, SelectorOptions } from './selector.interface'
 import { deepEquals, SelectorModule } from './selector.module'
@@ -70,7 +71,29 @@ export abstract class Selectors<TState extends Record<string, any>> {
 
   /** Combined-селектор; зависимости — любые `SelectorAPI`, в т.ч. из других сторов. */
   protected combine<Deps extends unknown[], R>(deps: { [K in keyof Deps]: SelectorAPI<Deps[K]> }, fn: (...args: Deps) => R, options?: SelectorOptions<R>): SelectorAPI<R> {
+    if (process.env.NODE_ENV !== 'production') this.#assertDepsDefined(deps)
     return this.#track(this.#module.createSelector(deps, fn, options))
+  }
+
+  /**
+   * Dev-проверка зависимостей `combine`. Ловит частую ловушку: cross-store eager-селектор
+   * (`this.combine([this.core.x], …)`, где `core` — parameter property конструктора) при
+   * `useDefineForClassFields: true` (дефолт target ES2022) видит `this.core === undefined`
+   * на момент инициализатора поля — зависимость молча оказывается `undefined`, селектор не
+   * пересчитывается и тихо отдаёт мусор. Бросаем понятную ошибку вместо тихого сбоя.
+   */
+  #assertDepsDefined(deps: ReadonlyArray<SelectorAPI<any>>): void {
+    const badIndex = deps.findIndex((dep) => dep == null || typeof dep.subscribe !== 'function')
+    if (badIndex !== -1) {
+      throw new SynapseError(
+        `combine(): зависимость #${badIndex} === ${String(deps[badIndex])} (не SelectorAPI). ` +
+          'Похоже, cross-store селектор инициализируется ДО присваивания parameter property ' +
+          '(`this.<dep>` ещё undefined в момент инициализатора поля). Включите ' +
+          '`"useDefineForClassFields": false` в tsconfig, либо создавайте такие селекторы ' +
+          'в теле конструктора после `super()`.',
+        'Selectors.combine',
+      )
+    }
   }
 
   /**

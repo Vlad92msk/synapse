@@ -1,9 +1,9 @@
 import { handleCleanupError, handleOperationError } from '../../_utils/error-handling.util'
 import { IStorage, StorageKeyType } from '../../core'
-import { CacheEntry, CacheUtils } from '../../core/storage/utils/cache.util'
 import { CacheConfig, CreateApiClientOptions, StorageOption } from '../types/api.interface'
 import { EndpointConfig } from '../types/endpoint.interface'
 import { QueryOptions } from '../types/query.interface'
+import { CacheEntry, CacheUtils } from '../utils/cache.util'
 
 /**
  * Менеджер хранилища для API

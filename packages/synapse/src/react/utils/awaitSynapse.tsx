@@ -1,7 +1,6 @@
 import { ComponentType, PropsWithChildren, ReactNode, useEffect, useState } from 'react'
 
-import { IStorage } from '../../core'
-import { AnySynapseStore, createSynapseAwaiter } from '../../utils'
+import { type AwaitableSynapse, createSynapseAwaiter } from '../../utils'
 
 interface ReactAwaitSynapseOptions {
   loadingComponent?: ReactNode
@@ -9,23 +8,21 @@ interface ReactAwaitSynapseOptions {
 }
 
 /**
- * React-обертка для фреймворк-независимой утилиты ожидания Synapse
- * Добавляет React-специфичные методы поверх createSynapseAwaiter
+ * React-обертка для фреймворк-независимой утилиты ожидания Synapse.
+ * Добавляет React-специфичные методы поверх createSynapseAwaiter. Принимает
+ * `SynapseModule`-handle (PromiseLike), Promise готового synapse или сам synapse.
  */
-export function awaitSynapse<TStore extends Record<string, any>, TStorage extends IStorage<TStore>, TSelectors = any, TActions = any>(
-  synapseStorePromise: Promise<AnySynapseStore<TStore, TStorage, TSelectors, TActions>> | AnySynapseStore<TStore, TStorage, TSelectors, TActions>,
-  options?: ReactAwaitSynapseOptions,
-) {
+export function awaitSynapse<TStore extends AwaitableSynapse>(synapseStorePromise: PromiseLike<TStore> | TStore, options?: ReactAwaitSynapseOptions) {
   const { loadingComponent = <div>Инициализация...</div>, errorComponent = (error: Error) => <div>Ошибка инициализации: {error.message}</div> } = options || {}
 
-  const awaiter = createSynapseAwaiter(synapseStorePromise)
+  const awaiter = createSynapseAwaiter<TStore>(synapseStorePromise)
 
   /**
    * Хук для получения текущего состояния готовности
    */
   function useSynapseReady() {
     const [status, setStatus] = useState<'pending' | 'ready' | 'error'>(() => awaiter.getStatus())
-    const [store, setStore] = useState<AnySynapseStore<TStore, TStorage, TSelectors, TActions> | undefined>(() => awaiter.getStoreIfReady())
+    const [store, setStore] = useState<TStore | undefined>(() => awaiter.getStoreIfReady())
     const [error, setError] = useState<Error | null>(() => awaiter.getError())
 
     useEffect(() => {

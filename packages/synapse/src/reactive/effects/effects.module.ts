@@ -78,6 +78,14 @@ export interface EffectOptions {
 export const EFFECT_OPTIONS = Symbol('synapse.effect.options')
 
 /**
+ * Symbol-маркер с именем эффекта (имя поля class-слоя `Effects`). Проставляется
+ * `Effects.getEffects()` для диагностики — EffectsModule использует его, чтобы в
+ * предупреждении об упавшем эффекте назвать конкретный эффект.
+ * @internal
+ */
+export const EFFECT_NAME = Symbol('synapse.effect.name')
+
+/**
  * Тип для получения типов действий диспетчера
  */
 export type DispatcherActions<T> = T extends DispatcherCore<any, infer A> ? ActionsResult<A> : Record<string, DispatchFunction<any, any>>
@@ -87,7 +95,12 @@ export type DispatcherActions<T> = T extends DispatcherCore<any, infer A> ? Acti
  */
 export interface ValidateConfig {
   conditions: boolean[]
-  skipAction: (() => any) | any | ((() => any) | any)[]
+  /**
+   * Что сделать, если валидация не прошла. Необязательно: если не задано — эффект просто
+   * ничего не делает (поток завершается без эмита). Это убирает повторяющийся бойлерплейт
+   * `skipAction: () => d.loadX.reset()` там, где сбрасывать нечего.
+   */
+  skipAction?: (() => any) | any | ((() => any) | any)[]
 }
 
 /**
@@ -277,12 +290,13 @@ export function validateMap<T, TResult = any>({
       const conditionMet = conditions.every(Boolean)
 
       /**
-       * Если валидация не пройдена - вызываем экшн сброса
+       * Если валидация не пройдена - вызываем экшн сброса.
+       * skipAction не задан → ничего не делаем (no-op по умолчанию).
        */
       if (!conditionMet) {
+        if (skipAction === undefined) return EMPTY
         if (Array.isArray(skipAction)) {
-          // eslint-disable-next-line no-unsafe-optional-chaining
-          return of(...skipAction?.filter(Boolean).map((action) => (typeof action === 'function' ? action() : action)))
+          return of(...skipAction.filter(Boolean).map((action) => (typeof action === 'function' ? action() : action)))
         }
         return of(typeof skipAction === 'function' ? skipAction() : skipAction)
       }
@@ -451,7 +465,7 @@ export class EffectsModule<
     this.effects.push(effect)
 
     if (this.running) {
-      this.subscribeToEffect(effect)
+      this.subscribeToEffect(effect, this.effects.length - 1)
     }
 
     return this
@@ -481,7 +495,7 @@ export class EffectsModule<
     // Переподписываемся на dispatchers (подписки были очищены в stop())
     this.subscribeToDispatchers()
 
-    this.effects.forEach((effect) => this.subscribeToEffect(effect))
+    this.effects.forEach((effect, index) => this.subscribeToEffect(effect, index))
     this.running = true
 
     return this
@@ -505,7 +519,7 @@ export class EffectsModule<
    * Подписывается на конкретный эффект
    * @param effect Эффект для подписки
    */
-  private subscribeToEffect(effect: Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates>): void {
+  private subscribeToEffect(effect: Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates>, index = 0): void {
     try {
       const context: EffectContext<TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates> = {
         dispatcher: this.dispatcher,
@@ -521,14 +535,24 @@ export class EffectsModule<
       // Лимит ретраев исчерпан → ошибка уходит в терминальный catchError ниже
       // (эффект умирает, остальные продолжают работать).
       const options = (effect as { [EFFECT_OPTIONS]?: EffectOptions })[EFFECT_OPTIONS]
-      if (options?.resubscribeOnError) {
-        const config = options.resubscribeOnError === true ? {} : options.resubscribeOnError
+      const resubscribeOnError = options?.resubscribeOnError
+      const resubscribes = !!resubscribeOnError
+      if (resubscribeOnError) {
+        const config = resubscribeOnError === true ? {} : resubscribeOnError
         stream$ = stream$.pipe(retry({ count: config.count ?? Infinity, delay: config.delay, resetOnSuccess: true }))
       }
 
+      // Имя эффекта (поле class-слоя Effects) — для понятного предупреждения; иначе индекс.
+      const effectLabel = (effect as { [EFFECT_NAME]?: string })[EFFECT_NAME] ?? `#${index}`
+
       const output$ = stream$.pipe(
         catchError((err) => {
-          handleCallbackError('EffectsModule: error in effect', err)
+          // Поток эффекта дошёл до терминальной ошибки → этот эффект БОЛЬШЕ не реагирует
+          // на экшены (остальные живы). Громкое сообщение, чтобы это не прошло незаметно.
+          const tail = resubscribes
+            ? 'resubscribeOnError исчерпал лимит ретраев.'
+            : 'Чтобы эффект переподписывался после ошибки, добавьте { resubscribeOnError: true } в this.effect(fn, …).'
+          handleCallbackError(`EffectsModule: эффект "${effectLabel}" УПАЛ и больше не будет реагировать на экшены (поток завершён). ${tail}`, err)
           return of(null)
         }),
       )

@@ -15,20 +15,32 @@ npm install synapse-storage
 ```
 
 ```typescript
-import { MemoryStorage } from 'synapse-storage/core'
+import { MemoryStorage, Selectors } from 'synapse-storage/core'
+import { Dispatcher } from 'synapse-storage/reactive'
 import { createSynapse } from 'synapse-storage/utils'
-import { useSelector } from 'synapse-storage/react'
 
-const synapse = createSynapse({
-  storage: new MemoryStorage({
-    name: 'counter',
-    initialState: { count: 0 },
-  }),
-  createSelectorsFn: (s) => ({
-    count: s.createSelector((state) => state.count),
-  }),
+class CounterDispatcher extends Dispatcher<{ count: number }> {
+  inc = this.action((store) => store.update((s) => { s.count++ }))
+}
+
+class CounterSelectors extends Selectors<{ count: number }> {
+  count = this.select((s) => s.count)
+}
+
+export const counter = createSynapse(async () => {
+  const storage = new MemoryStorage({ name: 'counter', initialState: { count: 0 } })
+  return {
+    storage,
+    dispatcher: new CounterDispatcher(storage),
+    selectors: new CounterSelectors(storage),
+  }
 })
 ```
+
+> **Two independent layers.** `synapse-storage/core` is the *State Manager* — reactive
+> storages (`MemoryStorage`/`LocalStorage`/`IndexedDB`) and selectors, usable on their own.
+> On top sits the *Business Logic Layer* — `Dispatcher` / `Effects` / `createSynapse`.
+> `rxjs` and `react` are optional peers: take only what you use.
 
 ## Key Features
 
@@ -36,18 +48,24 @@ const synapse = createSynapse({
 - **Selectors** — memoized computed values with dependency tracking
 - **Immer-like Updates** — mutate state directly inside `update()` callbacks
 - **API Client** — HTTP client with tag-based caching and invalidation
+- **Persist Migrations** — `version` + `migrate(oldState, oldVersion)` for localStorage/IndexedDB
+- **SSR Hydration** — `storage.hydrate(state)` to seed server-rendered state
 - **React Integration** — hooks on `useSyncExternalStore` (Concurrent Mode safe)
 - **RxJS Effects** — dispatchers, effects, and watchers (Redux-Observable style)
-- **Middleware & Plugins** — extensible sync/async pipelines
+- **Middleware** — extensible sync/async pipelines (batching, shallowCompare, logger, broadcast)
 - **EventBus** — decoupled inter-module communication with wildcards
 - **Cross-tab Sync** — BroadcastChannel middleware for multi-tab state
 
-## Class-based BL layer (v4.2+)
+## Class-based modules
 
-Since `4.2.0` modules can be described with four thin classes over the same engines.
-Action / selector names come from **field names**, API lifecycles are **callable groups**,
-and assembly is a **lazy singleton handle**. The old `createSynapse(config)` form keeps
-working unchanged — both forms are interoperable in each other's `dependencies`.
+A module is four thin classes over the same engines. Action / selector names come from
+**field names**, API lifecycles are **callable groups**, and assembly is a **lazy singleton
+handle**.
+
+> **v5 note.** The functional API (`createSynapse(config)`, `defineAction`,
+> `createDispatcher`, `createApiActions`, `createSelectorsFn`) was removed in **v5.0.0**.
+> Class-based modules are the only form. On v4.x both forms coexist — see the migration
+> table below.
 
 ```typescript
 import { Dispatcher, Effects, ofType, validateMap, fromRequest, apiResult } from 'synapse-storage/reactive'
@@ -136,11 +154,12 @@ const debounced = useObservable(() => selectors.searchQuery.$.pipe(debounceTime(
 useSubscription(() => selectors.lastId.$.pipe(skip(1), tap(scrollToEnd)), [selectors])
 ```
 
-### Migration: `createSynapse(config)` → `createSynapse(factory)`
+### Migration from v4 (functional → class-based)
 
-The migration is mechanical and per-file — convert one module, leave the rest on the old
-form (cross-dependencies stay compatible). See the full `pokemon-class` example in
-`packages/examples` (next to the functional `pokemon-advanced`).
+On v4.x the migration is mechanical and per-file — convert one module, leave the rest on
+the old form (cross-dependencies stay compatible). In v5.0.0 the functional form is gone.
+See the full `pokemon-class` example in `packages/examples` (next to the functional
+`pokemon-advanced`).
 
 | Old (functional)                                            | New (class-based)                                         |
 |-------------------------------------------------------------|-----------------------------------------------------------|

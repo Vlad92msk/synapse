@@ -297,6 +297,24 @@ describe('совместимость со старым createSynapse(config)', (
   })
 })
 
+// ── 5.1 — dev-guard: combine с undefined-зависимостью ───────────────────────────
+describe('combine: dev-проверка зависимостей (5.1)', () => {
+  it('бросает понятную ошибку, если зависимость undefined (ловушка useDefineForClassFields)', () => {
+    // Имитируем cross-store селектор, чья зависимость (`this.core.x`) ещё не присвоена —
+    // при useDefineForClassFields:true она оказалась бы undefined в инициализаторе поля.
+    class Broken extends Selectors<PostsState> {
+      readonly oops = this.combine([undefined as unknown as SelectorAPI<number>], (x) => x)
+    }
+
+    expect(() => new Broken(postsStorage)).toThrow(/combine\(\): зависимость #0/)
+    expect(() => new Broken(postsStorage)).toThrow(/useDefineForClassFields/)
+  })
+
+  it('валидные зависимости (включая cross-store) не триггерят guard', () => {
+    expect(() => new PostsSelectors(postsStorage, core)).not.toThrow()
+  })
+})
+
 describe('строгая типизация (компилируемые type-тесты)', () => {
   it('select/combine/keyed возвращают SelectorAPI; combine типизирует зависимости', () => {
     class Typed extends Selectors<PostsState> {

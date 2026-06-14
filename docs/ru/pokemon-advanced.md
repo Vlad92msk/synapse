@@ -7,15 +7,17 @@
 ## Структура проекта
 
 ```
-pokemon-advanced/
-  pokemon.types.ts       — TypeScript-интерфейсы
-  pokemon.store.ts       — начальное состояние
-  pokemon.settings.ts    — внешнее хранилище настроек (зависимость)
-  pokemon.api.ts         — настройка ApiClient + маппинг ответов
-  pokemon.selectors.ts   — селекторы с внешними зависимостями
-  pokemon.dispatcher.ts  — диспетчер с defineAction/defineWatcher + createApiActions
-  pokemon.effects.ts     — RxJS-эффекты (validateMap, apiResult, combineEffects)
-  pokemon.synapse.ts     — createSynapse, связывающий всё воедино
+pokemon-class/                — class-based модуль
+  pokemon.dispatcher.ts        — class Dispatcher (action / signal / apiActions / watcher)
+  pokemon.selectors.ts         — class Selectors (select / combine)
+  pokemon.effects.ts           — class Effects (this.effect, validateMap/apiResult)
+  pokemon.synapse.ts           — createSynapse(factory), связывающий всё воедино
+
+pokemon-advanced/             — переиспользуемые файлы (не зависят от формы API)
+  pokemon.types.ts             — TypeScript-интерфейсы
+  pokemon.store.ts             — начальное состояние
+  pokemon.settings.ts          — внешнее хранилище настроек (зависимость)
+  pokemon.api.ts               — настройка ApiClient + маппинг ответов
 ```
 
 ## 1. Типы
@@ -92,164 +94,133 @@ export const pokemonApiClient = new ApiClient({
 })
 ```
 
-## 4. Селекторы с внешними зависимостями
+## 4. Селекторы (class Selectors)
 
 ```typescript
-import type { ISelectorModule, IStorageBase } from 'synapse-storage/core'
+import { Selectors } from 'synapse-storage/core'
 
-type ExternalSelectors = { settings: IStorageBase<PokemonSettings> }
+export class PokemonSelectors extends Selectors<PokemonState> {
+  private readonly api = this.select((s) => s.api)        // private = промежуточный слайс
 
-export function createPokemonSelectors(sm: ISelectorModule<PokemonState>, ext: ExternalSelectors) {
-  const pokemonList = sm.createSelector((s) => s.pokemonList)
-  const searchQuery = sm.createSelector((s) => s.searchQuery)
-  const favorites = sm.createSelector((s) => s.favorites)
+  readonly pokemonList = this.select((s) => s.pokemonList)
+  readonly searchQuery = this.select((s) => s.searchQuery)
+  readonly favorites = this.select((s) => s.favorites)
+  readonly selectedPokemon = this.select((s) => s.selectedPokemon)
+  readonly hasMore = this.select((s) => s.hasMore)
 
-  // Комбинированный селектор — композиция pokemonList + searchQuery
-  const filteredList = sm.createSelector(
-    [pokemonList, searchQuery],
-    (list, query) => {
-      if (!query) return list
-      return list.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()))
-    },
+  readonly listStatus = this.combine([this.api], (a) => a.listRequest.status)
+  readonly isListLoading = this.combine([this.listStatus], (s) => s === 'loading')
+
+  // Композиция pokemonList + searchQuery → filteredList
+  readonly filteredList = this.combine([this.pokemonList, this.searchQuery], (list, query) =>
+    query ? list.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())) : list,
   )
 
-  // Производные данные
-  const favoriteCount = sm.createSelector([favorites], (favs) => favs.length)
-  const favoritePokemon = sm.createSelector(
-    [pokemonList, favorites],
-    (list, favs) => list.filter((p) => favs.includes(p.id)),
+  readonly favoriteCount = this.combine([this.favorites], (favs) => favs.length)
+  readonly favoritePokemon = this.combine([this.pokemonList, this.favorites], (list, favs) =>
+    list.filter((p) => favs.includes(p.id)),
   )
-
-  return { pokemonList, searchQuery, favorites, filteredList, favoriteCount, favoritePokemon, ... }
 }
 ```
 
-## 5. Диспетчер с defineAction / defineWatcher / createApiActions
+## 5. Диспетчер (class Dispatcher: action / signal / apiActions / watcher)
 
 ```typescript
-import { createDispatcher } from 'synapse-storage/reactive'
-import { createApiActions, defineAction, defineWatcher } from 'synapse-storage'
+import { Dispatcher } from 'synapse-storage/reactive'
 
-export const createPokemonDispatcher = (storage: IStorage<PokemonState>) => {
-  const action = defineAction<PokemonState>()
-  const watcher = defineWatcher<PokemonState>()
+export class PokemonDispatcher extends Dispatcher<PokemonState> {
+  // apiActions — вызываемая группа: loadList() = init, .loading/.success/.failure/.reset
+  readonly loadList = this.apiActions<void>((s) => s.api.listRequest)
+  readonly loadDetails = this.apiActions<void>((s) => s.api.detailsRequest)
 
-  // createApiActions — генерирует действия init/loading/success/failure/reset для поля API-состояния
-  const listRequest = createApiActions<PokemonState>((draft) => draft.api.listRequest)
-  const detailsRequest = createApiActions<PokemonState>((draft) => draft.api.detailsRequest)
+  // signal — чистое намерение (статус подгрузки пишется через loadList.*)
+  readonly loadMore = this.signal<void>('Подгрузить следующую страницу')
 
-  const loadList = action({
-    meta: { description: 'Намерение загрузить список покемонов' },
-    action: (storage) => {
-      storage.update((s) => { s.api.listRequest = { status: 'idle', error: null } })
-    },
+  readonly selectPokemon = this.action((store, id: number | null) => {
+    store.update((s) => {
+      s.selectedPokemonId = id
+      if (id === null) s.selectedPokemon = null
+    })
+    return id
   })
 
-  const selectPokemon = action({
-    action: (storage, id: number | null) => {
-      storage.update((s) => {
-        s.selectedPokemonId = id
-        if (id === null) s.selectedPokemon = null
-      })
-      return id
-    },
-  })
-
-  const watchFavoriteCount = watcher({
-    selector: (s) => s.favorites.length,
-    notifyAfterSubscribe: true,
-  })
-
-  return createDispatcher({ storage }, {
-    loadList, selectPokemon,
-    loadListInit: listRequest.init,
-    loadListLoading: listRequest.loading,
-    loadListSuccess: listRequest.success,
-    loadListFailure: listRequest.failure,
-    // ... другие действия
-    watchFavoriteCount,
-  })
-}
-```
-
-## 6. Эффекты (validateMap + apiResult + combineEffects)
-
-```typescript
-import { ofType, combineEffects, selectorObject, selectorMap, validateMap, apiResult, fromRequest } from 'synapse-storage/reactive'
-
-// Три уровня абстракции для API-вызовов в эффектах:
-
-// Уровень 1: Нативный RxJS — полный контроль
-// action$.pipe(ofType(...), switchMap(() => from(api.request(...)).pipe(tap(...), catchError(...))))
-
-// Уровень 2: waitWithCallbacks — жизненный цикл управляется запросом
-// endpoint.request(params).waitWithCallbacks({ loading, success, error })
-
-// Уровень 3: validateMap + apiResult — полный протокол с валидацией
-const loadListEffect: PokemonEffect = (action$, state$, { dispatcher, services, externalStates }) =>
-  action$.pipe(
-    ofType(dispatcher.dispatch.loadList),
-    withLatestFrom(
-      selectorObject(state$, {
-        listStatus: (s) => s.api.listRequest.status,
-      }),
-      settings,
-    ),
-    validateMap({
-      validator: ([_action, { listStatus }]) => ({
-        conditions: [listStatus !== 'loading'],
-        skipAction: () => dispatcher.dispatch.loadListReset(),
-      }),
-      loadingAction: () => dispatcher.dispatch.loadListLoading(),
-      errorAction: (err) => dispatcher.dispatch.loadListFailure(String(err)),
-      apiCall: ([_action, _state, { pageSize }]) =>
-        fromRequest(getList.request({ limit: pageSize, offset: 0 })).pipe(
-          apiResult((data) => {
-            dispatcher.dispatch.applyPokemonList({ ...mapListResponse(data), append: false })
-            dispatcher.dispatch.loadListSuccess()
-          }),
-        ),
+  readonly applyPokemonList = this.action((store, data: { list: PokemonBrief[]; hasMore: boolean; append: boolean }) =>
+    store.update((s) => {
+      s.pokemonList = data.append ? [...s.pokemonList, ...data.list] : data.list
+      s.offset = s.pokemonList.length
+      s.hasMore = data.hasMore
     }),
   )
 
-// Объединение нескольких эффектов в один
-export const pokemonEffects = combineEffects(loadListEffect, loadMoreEffect, loadDetailsEffect)
+  readonly watchFavoriteCount = this.watcher({
+    selector: (s) => s.favorites.length,
+    notifyAfterSubscribe: true,
+  })
+}
+```
+
+> `ofType(d.loadList)` ловит ТОЛЬКО init. Чтобы среагировать на результат — `ofType(d.loadList.success)`.
+
+## 6. Эффекты (class Effects: validateMap + apiResult)
+
+```typescript
+import { Effects, ofType, selectorObject, validateMap, apiResult, fromRequest } from 'synapse-storage/reactive'
+
+// Сервисы (endpoints) и внешние сторы (settings$) — через конструктор, захват в замыкание рецепта.
+export class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {
+  constructor(
+    private readonly api: PokemonApiEndpoints,
+    private readonly settings$: Observable<PokemonSettings>,
+  ) { super() }
+
+  readonly loadList = this.effect((action$, state$, { dispatcher: d }) =>
+    action$.pipe(
+      ofType(d.loadList),                                  // только init
+      withLatestFrom(selectorObject(state$, { listStatus: (s) => s.api.listRequest.status }), this.settings$),
+      validateMap({
+        validator: ([, { listStatus }]) => ({
+          conditions: [listStatus !== 'loading'],
+          skipAction: () => d.loadList.reset(),
+        }),
+        loadingAction: () => d.loadList.loading(),
+        errorAction: (err) => d.loadList.failure(String(err)),
+        apiCall: ([, , { pageSize }]) =>
+          fromRequest(this.api.getList.request({ limit: pageSize, offset: 0 })).pipe(
+            apiResult((data) => {
+              d.applyPokemonList({ ...mapListResponse(data), append: false })
+              d.loadList.success()
+            }),
+          ),
+      }),
+    ),
+  )
+}
 ```
 
 ## 7. createSynapse — связываем всё воедино
 
 ```typescript
+import { MemoryStorage } from 'synapse-storage/core'
+import { toObservable } from 'synapse-storage/reactive'
 import { createSynapse } from 'synapse-storage/utils'
 
-export const synapsePromise = createSynapse({
-  // Setup — вызывается перед инициализацией хранилища, после зависимостей
-  setup: async () => {
-    await initPokemonApi()
-  },
+export const pokemonSynapse = createSynapse(async () => {
+  await initPokemonApi()  // async-пролог (бывший setup)
 
-  // Хранилище
-  storage: new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-class', initialState })
 
-  // Зависимости — должны быть готовы перед инициализацией
-  dependencies: [settingsStorage],
-  dependencyTimeout: 10000,
-
-  // Селекторы с внешними зависимостями
-  createSelectorsFn: createPokemonSelectors,
-  externalSelectors: { settings: settingsStorage },
-
-  // Диспетчер
-  createDispatcherFn: createPokemonDispatcher,
-
-  // Эффекты с сервисами и внешними состояниями
-  createEffectConfig: () => ({
-    services: { pokemonApi: pokemonApiClient.getEndpoints() },
-    externalStates: {
-      settings: settingsStorage,  // IStorageBase -> автоматически конвертируется в Observable
-    },
-  }),
-  effects: [pokemonEffects],
+  return {
+    storage,
+    dependencies: [settingsStorage],   // зависимость от другого стора
+    dependencyTimeout: 10000,
+    dispatcher: new PokemonDispatcher(storage),
+    selectors: new PokemonSelectors(storage),
+    // сервисы (endpoints) и внешний стор (settings$) — через конструктор эффектов
+    effects: new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage)),
+  }
 })
+
+export type PokemonSynapse = Awaited<typeof pokemonSynapse>
 ```
 
 ## Протокол запроса с 5 состояниями
@@ -268,12 +239,12 @@ UI dispatch (loadList)  ->  status = 'idle'    (без изменений в UI)
 
 | Утилита | Назначение |
 |---|---|
-| `defineAction<T>()` | Типобезопасная фабрика действий (краткий синтаксис) |
-| `defineWatcher<T>()` | Типобезопасная фабрика наблюдателей (краткий синтаксис) |
-| `createApiActions<T>(accessor)` | Генерирует init/loading/success/failure/reset для поля API-состояния |
+| `this.action((store, p) => r)` | экшен; payload = возвращённое значение |
+| `this.signal<P>(desc)` | чистый сигнал-намерение |
+| `this.apiActions<P>(accessor)` | вызываемая группа init/loading/success/failure/reset |
+| `this.watcher(config)` | реактивный наблюдатель за частью состояния |
 | `validateMap({...})` | RxJS-оператор: валидация -> loading -> apiCall -> success/error |
 | `apiResult(cb)` | Маппинг успешного ответа API на dispatch |
 | `fromRequest(req)` | Конвертирует endpoint.request() в Observable |
 | `selectorObject(state$, {...})` | Именованный объект из state$ для withLatestFrom |
 | `selectorMap(state$, ...fns)` | Позиционный кортеж из state$ для withLatestFrom |
-| `combineEffects(...effects)` | Объединяет несколько эффектов в один |

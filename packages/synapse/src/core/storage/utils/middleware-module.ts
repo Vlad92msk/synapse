@@ -86,8 +86,6 @@ export class AsyncMiddlewareModule {
 
   private initialized = false
 
-  private depth = 0
-
   private dispatchFn!: (action: StorageAction) => Promise<any>
 
   constructor(storage: any) {
@@ -202,13 +200,10 @@ export class AsyncMiddlewareModule {
       this.initializeMiddlewares()
     }
 
-    this.depth++
     try {
       return await this.dispatchFn(action)
     } catch (error) {
       handleOperationError('AsyncMiddlewareModule: error in middleware chain', error)
-    } finally {
-      this.depth--
     }
   }
 }
@@ -224,8 +219,6 @@ export class SyncMiddlewareModule {
   private api: SyncMiddlewareAPI
 
   private initialized = false
-
-  private depth = 0
 
   private dispatchFn!: (action: StorageAction) => any
 
@@ -341,13 +334,10 @@ export class SyncMiddlewareModule {
       this.initializeMiddlewares()
     }
 
-    this.depth++
     try {
       return this.dispatchFn(action)
     } catch (error) {
       handleOperationError('SyncMiddlewareModule: error in middleware chain', error)
-    } finally {
-      this.depth--
     }
   }
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { MemoryStorage } from 'synapse-storage/core'
+import { MemoryStorage, Selectors } from 'synapse-storage/core'
 import { createSynapse } from 'synapse-storage/utils'
 import { useSelector } from 'synapse-storage/react'
 import { cardStyle, buttonRow, codeBlock, sectionTitle } from './styles'
@@ -19,36 +19,37 @@ const initialState: TodoState = {
   filter: 'all',
 }
 
+// ─── Селекторы (class-based) ─────────────────────────────────────────────────────
+// Поля — настоящие SelectorAPI сразу (eager). Имя селектора = имя поля.
+
+class TodoSelectors extends Selectors<TodoState> {
+  // Простой селектор — выбирает одно поле
+  readonly todos = this.select((state) => state.todos)
+  readonly filter = this.select((state) => state.filter)
+
+  // Комбинированный селектор — зависит от других селекторов
+  readonly filteredTodos = this.combine([this.todos, this.filter], (todos, filter) => {
+    if (filter === 'active') return todos.filter((t) => !t.done)
+    if (filter === 'done') return todos.filter((t) => t.done)
+    return todos
+  })
+
+  readonly doneCount = this.combine([this.todos], (todos) => todos.filter((t) => t.done).length)
+}
+
 // ─── Создание synapse (basic) ──────────────────────────────────────────────────
+// Перегрузка createSynapse(factory) → ленивый handle: фабрика исполняется один раз
+// при первом await / ready(), а не на импорте.
 
-const synapsePromise = createSynapse({
-  storage: new MemoryStorage<TodoState>({ name: 'todo-basic', initialState }),
-
-  createSelectorsFn: (selectorModule) => {
-    // Простой селектор — выбирает одно поле
-    const todos = selectorModule.createSelector((state) => state.todos)
-    const filter = selectorModule.createSelector((state) => state.filter)
-
-    // Комбинированный селектор — зависит от других селекторов
-    const filteredTodos = selectorModule.createSelector(
-      [todos, filter],
-      (todosVal, filterVal) => {
-        if (filterVal === 'active') return todosVal.filter((t) => !t.done)
-        if (filterVal === 'done') return todosVal.filter((t) => t.done)
-        return todosVal
-      },
-    )
-
-    const doneCount = selectorModule.createSelector(
-      [todos],
-      (todosVal) => todosVal.filter((t) => t.done).length,
-    )
-
-    return { todos, filter, filteredTodos, doneCount }
-  },
+const todoSynapse = createSynapse(async () => {
+  const storage = new MemoryStorage<TodoState>({ name: 'todo-basic', initialState })
+  return {
+    storage,
+    selectors: new TodoSelectors(storage),
+  }
 })
 
-type TodoSynapse = Awaited<typeof synapsePromise>
+type TodoSynapse = Awaited<typeof todoSynapse>
 
 // ─── Компонент-пример ──────────────────────────────────────────────────────────
 
@@ -57,7 +58,7 @@ export function CreateSynapseBasicExample() {
 
   useEffect(() => {
     let cancelled = false
-    synapsePromise.then((s) => { if (!cancelled) setStore(s) })
+    todoSynapse.then((s) => { if (!cancelled) setStore(s) })
     return () => { cancelled = true }
   }, [])
 
@@ -70,7 +71,7 @@ export function CreateSynapseBasicExample() {
 
       {/* ─── Создание ─────────────────────────────────────────────────── */}
       <h3 style={sectionTitle}>Создание</h3>
-      <pre style={codeBlock}>{`import { MemoryStorage } from 'synapse-storage/core'
+      <pre style={codeBlock}>{`import { MemoryStorage, Selectors } from 'synapse-storage/core'
 import { createSynapse } from 'synapse-storage/utils'
 import { useSelector } from 'synapse-storage/react'
 
@@ -79,41 +80,41 @@ interface TodoState {
   filter: 'all' | 'active' | 'done'
 }
 
-const synapsePromise = createSynapse({
-  // Передаём готовый storage (или createStorageFn для async создания)
-  storage: new MemoryStorage<TodoState>({
+// Селекторы — поля класса, настоящие SelectorAPI сразу (eager)
+class TodoSelectors extends Selectors<TodoState> {
+  readonly todos = this.select((state) => state.todos)
+  readonly filter = this.select((state) => state.filter)
+
+  // Комбинированный: зависит от todos и filter
+  readonly filteredTodos = this.combine([this.todos, this.filter], (todos, filter) => {
+    if (filter === 'active') return todos.filter((t) => !t.done)
+    if (filter === 'done') return todos.filter((t) => t.done)
+    return todos
+  })
+}
+
+// createSynapse(factory) → ленивый handle (фабрика исполняется один раз)
+const todoSynapse = createSynapse(async () => {
+  const storage = new MemoryStorage<TodoState>({
     name: 'todo-basic',
     initialState: { todos: [], filter: 'all' },
-  }),
-
-  // Селекторы — производные значения от state
-  createSelectorsFn: (selectorModule) => {
-    const todos = selectorModule.createSelector((state) => state.todos)
-    const filter = selectorModule.createSelector((state) => state.filter)
-
-    // Комбинированный: зависит от todos и filter
-    const filteredTodos = selectorModule.createSelector(
-      [todos, filter],
-      (todosVal, filterVal) => {
-        if (filterVal === 'active') return todosVal.filter((t) => !t.done)
-        if (filterVal === 'done') return todosVal.filter((t) => t.done)
-        return todosVal
-      },
-    )
-
-    return { todos, filter, filteredTodos }
-  },
+  })
+  return { storage, selectors: new TodoSelectors(storage) }
 })`}</pre>
 
       {/* ─── Возвращаемое значение ───────────────────────────────────── */}
       <h3 style={sectionTitle}>Возвращаемое значение</h3>
-      <pre style={codeBlock}>{`// createSynapse возвращает Promise
-const store = await synapsePromise
+      <pre style={codeBlock}>{`// Handle — thenable: await дёргает фабрику и возвращает собранный модуль
+const store = await todoSynapse
 
 // Результат (basic — без dispatcher):
 store.storage    // IStorage<TodoState> — хранилище
-store.selectors  // { todos, filter, filteredTodos } — SelectorAPI объекты
-store.destroy()  // () => Promise<void> — очистка`}</pre>
+store.selectors  // экземпляр TodoSelectors — поля = SelectorAPI
+
+// Сам handle:
+todoSynapse.ready()    // Promise<store> — то же, что await
+todoSynapse.isReady()  // boolean
+todoSynapse.destroy()  // () => Promise<void> — очистка + сброс мемоизации`}</pre>
 
       {/* ─── Использование в React ───────────────────────────────────── */}
       <h3 style={sectionTitle}>Использование в React</h3>
@@ -133,21 +134,16 @@ store.storage.update((s) => {
       <h3 style={sectionTitle}>Demo</h3>
       <TodoDemo store={store} />
 
-      {/* ─── createStorageFn (async) ─────────────────────────────────── */}
-      <h3 style={sectionTitle}>Альтернатива: createStorageFn</h3>
-      <pre style={codeBlock}>{`// Вместо storage можно передать createStorageFn
-// для асинхронного создания (например, загрузка данных)
-const synapsePromise = createSynapse({
-  createStorageFn: async () => {
-    const data = await fetch('/api/todos').then((r) => r.json())
-    const storage = new MemoryStorage<TodoState>({
-      name: 'todo-async',
-      initialState: { todos: data, filter: 'all' },
-    })
-    storage.initialize()
-    return storage
-  },
-  createSelectorsFn: (sm) => ({ ... }),
+      {/* ─── Async-пролог в фабрике ──────────────────────────────────── */}
+      <h3 style={sectionTitle}>Альтернатива: async-инициализация в фабрике</h3>
+      <pre style={codeBlock}>{`// Фабрика — обычная async-функция: можно сделать запрос/init до сборки модуля
+const todoSynapse = createSynapse(async () => {
+  const data = await fetch('/api/todos').then((r) => r.json())
+  const storage = new MemoryStorage<TodoState>({
+    name: 'todo-async',
+    initialState: { todos: data, filter: 'all' },
+  })
+  return { storage, selectors: new TodoSelectors(storage) }
 })`}</pre>
     </div>
   )

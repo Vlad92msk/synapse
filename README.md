@@ -17,20 +17,32 @@ npm install synapse-storage
 ```
 
 ```typescript
-import { MemoryStorage } from 'synapse-storage/core'
+import { MemoryStorage, Selectors } from 'synapse-storage/core'
+import { Dispatcher } from 'synapse-storage/reactive'
 import { createSynapse } from 'synapse-storage/utils'
-import { useSelector } from 'synapse-storage/react'
 
-const synapse = createSynapse({
-  storage: new MemoryStorage({
-    name: 'counter',
-    initialState: { count: 0 },
-  }),
-  createSelectorsFn: (s) => ({
-    count: s.createSelector((state) => state.count),
-  }),
+class CounterDispatcher extends Dispatcher<{ count: number }> {
+  inc = this.action((store) => store.update((s) => { s.count++ }))
+}
+
+class CounterSelectors extends Selectors<{ count: number }> {
+  count = this.select((s) => s.count)
+}
+
+export const counter = createSynapse(async () => {
+  const storage = new MemoryStorage({ name: 'counter', initialState: { count: 0 } })
+  return {
+    storage,
+    dispatcher: new CounterDispatcher(storage),
+    selectors: new CounterSelectors(storage),
+  }
 })
 ```
+
+> **Synapse is two layers:** reactive **storages** (State Manager) and a **business-logic
+> layer** on top (Dispatcher / Effects / createSynapse). The two are independent — take
+> only `synapse-storage/core` for storage, add the BL layer when you need actions, effects
+> and assembly.
 
 ## Key Features
 

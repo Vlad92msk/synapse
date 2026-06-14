@@ -3,7 +3,7 @@ import type { Observable } from 'rxjs'
 import { logError } from '../../_utils/error-handling.util'
 import type { Action } from '../dispatcher'
 import type { Dispatcher } from '../dispatcher/dispatcher.base'
-import { type Effect, EFFECT_OPTIONS, type EffectOptions } from './effects.module'
+import { type Effect, EFFECT_NAME, EFFECT_OPTIONS, type EffectOptions } from './effects.module'
 
 /**
  * Маркер «продукта `this.effect`» на функции-рецепте. По его отсутствию dev-проверка
@@ -96,18 +96,28 @@ export abstract class Effects<TState extends Record<string, any>, TDispatcher, T
    * @internal
    */
   getEffects(): Effect[] {
-    if (process.env.NODE_ENV !== 'production') {
-      for (const [name, value] of Object.entries(this)) {
-        if (typeof value === 'function' && !(value as { [EFFECT_MARKER]?: true })[EFFECT_MARKER] && !RESERVED_NAMES.has(name)) {
-          logError(
-            `Effects: поле "${name}" — функция, но не обёрнута в this.effect(...). Эффекты регистрируются только через this.effect, иначе они молча не запустятся.`,
-            value,
-            null,
-            'warn',
-          )
-        }
+    // Имена полей-рецептов идут в порядке объявления — ровно как и #effects (каждый
+    // this.effect() пушит в #effects и помечает свой fn). Зипуем их, чтобы EffectsModule
+    // мог назвать упавший эффект по имени поля, а не по индексу.
+    const recipeNames: string[] = []
+    for (const [name, value] of Object.entries(this)) {
+      if (typeof value === 'function' && (value as { [EFFECT_MARKER]?: true })[EFFECT_MARKER]) {
+        recipeNames.push(name)
+      } else if (process.env.NODE_ENV !== 'production' && typeof value === 'function' && !RESERVED_NAMES.has(name)) {
+        logError(
+          `Effects: поле "${name}" — функция, но не обёрнута в this.effect(...). Эффекты регистрируются только через this.effect, иначе они молча не запустятся.`,
+          value,
+          null,
+          'warn',
+        )
       }
     }
+
+    this.#effects.forEach((moduleEffect, i) => {
+      const name = recipeNames[i]
+      if (name) (moduleEffect as { [EFFECT_NAME]?: string })[EFFECT_NAME] = name
+    })
+
     return this.#effects
   }
 

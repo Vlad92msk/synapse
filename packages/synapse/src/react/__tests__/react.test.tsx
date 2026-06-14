@@ -6,8 +6,8 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import { SelectorAPI, SelectorModule } from '../../core'
 import { MemoryStorage } from '../../core/storage/adapters/memory-storage.service'
-import { createDispatcher } from '../../reactive/dispatcher/dispatcher.module'
-import { defineAction } from '../../reactive/dispatcher/standalone'
+import { Selectors } from '../../core/selector/selectors.base'
+import { Dispatcher } from '../../reactive/dispatcher/dispatcher.base'
 import { createSynapse } from '../../utils'
 import { useSelector } from '../hooks/useSelector'
 import { createSynapseCtx } from '../utils/createSynapseCtx'
@@ -99,28 +99,24 @@ describe('createSynapseCtx', () => {
   })
 
   it('Provider гейтит детей до готовности, хуки отдают selectors/actions', async () => {
-    const storage = new MemoryStorage<State>({ name: `ctx_${uid++}`, initialState: { count: 0, other: 'a' } })
+    class CtxDispatcher extends Dispatcher<State> {
+      readonly increment = this.action((store, n: number) => {
+        store.update((draft) => {
+          draft.count += n
+        })
+        return n
+      })
+    }
+    class CtxSelectors extends Selectors<State> {
+      readonly count = this.select((s) => s.count)
+    }
 
-    const synapsePromise = createSynapse<State, { count: SelectorAPI<number> }, any>({
-      storage,
-      createSelectorsFn: (sm) => ({ count: sm.createSelector((s) => s.count) }),
-      createDispatcherFn: (st) =>
-        createDispatcher(
-          { storage: st },
-          {
-            increment: defineAction<State>()({
-              action: (s, n: number) => {
-                s.update((draft) => {
-                  draft.count += n
-                })
-                return n
-              },
-            }),
-          },
-        ),
+    const handle = createSynapse(() => {
+      const storage = new MemoryStorage<State>({ name: `ctx_${uid++}`, initialState: { count: 0, other: 'a' } })
+      return { storage, dispatcher: new CtxDispatcher(storage), selectors: new CtxSelectors(storage) }
     })
 
-    const ctx = createSynapseCtx(synapsePromise as any, { loadingComponent: <div data-testid="loading">loading</div> })
+    const ctx = createSynapseCtx(handle, { loadingComponent: <div data-testid="loading">loading</div> })
     cleanup = ctx.cleanupSynapse
 
     const Inner = ctx.contextSynapse(function Inner() {

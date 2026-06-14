@@ -30,6 +30,28 @@ export function isEqual(a: any, b: any): boolean {
 }
 
 /**
+ * Shallow (one-level) equality check. Two values are equal when they are the
+ * same reference, equal primitives, or objects with the same keys whose values
+ * are strictly equal (`===`) — nested objects are NOT compared deeply.
+ *
+ * Shared default comparator for the shallow-compare middlewares (sync + async).
+ */
+export function shallowEqual(prev: any, next: any): boolean {
+  if (prev === next) return true
+
+  if (typeof prev !== 'object' || typeof next !== 'object' || prev === null || next === null) {
+    return prev === next
+  }
+
+  const keysA = Object.keys(prev)
+  const keysB = Object.keys(next)
+
+  if (keysA.length !== keysB.length) return false
+
+  return keysA.every((key) => Object.prototype.hasOwnProperty.call(next, key) && prev[key] === next[key])
+}
+
+/**
  * Finds all changed paths between two objects.
  */
 export function findChangedPaths(oldObj: any, newObj: any, prefix = '', changedPaths: Set<string> = new Set<string>(), visited = new WeakMap<any, WeakSet<any>>()): Set<string> {

@@ -72,7 +72,6 @@ const { pokemonStorageIdb } = await IndexedDBStorage.createStorages<{
     // Тоже самое что при
     // initialState: ,
     // middlewares: ,
-    // pluginExecutor: ,
     // eventEmitter: ,
   },
 })
@@ -84,7 +83,6 @@ const pokemonStorageMemory = await new MemoryStorage(
     // middlewares: ,
     // initialState: {},
   },
-  // pluginExecutor: ,  // IPluginExecutor
   // eventEmitter: , // IEventEmitter
   // logger: , // ILogger
 ).initialize()

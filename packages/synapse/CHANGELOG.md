@@ -1,5 +1,154 @@
 # Changelog
 
+## [5.0.0] - 2026-06-13
+
+### BREAKING: удаление legacy-API (один способ делать каждую вещь)
+
+Major-релиз. Удалён весь legacy-слой, помеченный к выпилу в 4.2.0. Единственным
+способом сборки модуля становится class-based API (`Dispatcher`/`Selectors`/`Effects` +
+`createSynapse(factory)`). Известный потребитель (sn_client) полностью мигрирован.
+
+Удалено (с заменой):
+
+- **`createSynapse(config)`** — все перегрузки с объектом-конфигом и старый async-пайплайн
+  (`createStorageFn`/`createSelectorsFn`/`createDispatcherFn`/`createEffectConfig`/`effects[]`).
+  `createSynapse` теперь принимает **только фабрику** → `SynapseModule`-handle.
+  Замена: `createSynapse(() => ({ storage, dispatcher, selectors, effects }))`.
+- **Типы старого конфига**: `CreateSynapseConfigBasic` / `CreateSynapseConfigWithDispatcher` /
+  `CreateSynapseConfigWithEffects`, `SynapseStoreBasic` / `SynapseStoreWithDispatcher` /
+  `SynapseStoreWithEffects`, `AnySynapseStore`, `ExtractDispatchType`, `BaseSynapseConfig`.
+  Замена: `SynapseConfig` / `Synapse` / `SynapseModule`.
+- **`validateSynapseConfig`** (`utils/createSynapse/validate.ts`) — удалён целиком.
+  Замена: instanceof-проверки в фабричном пайплайне (`factory.ts`).
+- **`createDispatcher`** (фабрика с объектом-реестром И setup-функцией) + цикл
+  материализации рецептов + типы `ActionsSetupWithUtils`, `DispatchActions`,
+  `WatcherActions`, методы `getTypedDispatch`/`getTypedWatchers`, `CreateDispatcherType`.
+  Замена: базовый класс `Dispatcher` (`this.action`/`this.watcher`). Движок
+  `DispatcherCore` остаётся внутренним и неизменным.
+- **`defineAction` / `defineWatcher`** + типы `ActionRecipe` / `WatcherRecipe`.
+  Замена: `this.action` / `this.watcher`.
+- **`createApiActions` / `createKeyedApiActions`**.
+  Замена: `this.apiActions` / `this.keyedApiActions`.
+  **Сохранены** `ApiStatus` и `ApiRequestState` — публичные типы стейта.
+- **Старая жадная сигнатура `createSynapseCtx(promise)`** + перегрузки под
+  `SynapseStore*`. Замена: единственная сигнатура `createSynapseCtx(handle)` поверх
+  `SynapseModule` (ленивый запуск при первом mount, гейтинг, пересоздаваемость).
+- **Типы `ISelectorCreator` / `SelectorCreatorFunction`** (`selector.interface.ts`).
+  Замена: конструкторы class-селекторов (`Selectors`).
+- **Plugin-система storage целиком** (`core/storage/modules/plugin/`): `IPluginExecutor`
+  / `ISyncPluginExecutor` / `IAsyncPluginExecutor`, `PluginExecutor` и хуки
+  `onBeforeSet`/`onAfterSet`/`onBeforeGet`/`onAfterGet`/`onBeforeDelete`/`onAfterDelete`/`onClear`.
+  Middlewares строго мощнее (контроль цепочки, short-circuit, доступ к состоянию,
+  работают на `set`/`update`/`delete`) и остаются единственной точкой расширения.
+  Замена: middleware (`config.middlewares(getDefault => [...])`); для эргономики «простых
+  хуков» — тонкий хелпер поверх middleware.
+  **Сдвиг позиционных аргументов:** `pluginExecutor` был 2-м позиционным параметром
+  в `StorageFactory.create()` / конструкторах адаптеров / `useCreateStorage` — теперь
+  `eventEmitter` и `logger` сдвинулись на одну позицию влево. Позиционно его никто не
+  передавал, но API публичное.
+
+Изменено:
+
+- **`createEventBus`** теперь возвращает `SynapseModule`-handle (PromiseLike), а не
+  жадный `Promise<SynapseStoreWithDispatcher>`. `eventBus.dispatcher` — инстанс
+  class-диспетчера; экшены (`publish`/`subscribe`/...) — его поля. Внутренне переписан
+  на `createSynapse(factory)` + класс `Dispatcher`.
+- **`createSynapseAwaiter` / `awaitSynapse`** обобщены: принимают любой PromiseLike
+  готового synapse (handle/Promise/инстанс) с полем `storage`, без привязки к удалённому
+  `AnySynapseStore`. Добавлен публичный тип `AwaitableSynapse`.
+- **`DependencyInput`** принимает `PromiseLike<{ storage }>` (а не только `Promise`),
+  чтобы `SynapseModule`-handle работал как зависимость напрямую.
+
+Не тронуто (ядро): `MemoryStorage`/`LocalStorage`/`IndexedDB` + `IStorage`, `ApiClient`,
+`SelectorModule`, `EffectsModule`, `DispatcherCore`, операторы (`ofType`, `ofTypes`,
+`validateMap`, `apiResult`, `fromRequest`, `selectorObject`, `combineEffects`),
+`useSelector`/`useObservable`/`useSubscription`, `toObservable`, `waitForDependencies`,
+middleware-механизм.
+
+Отложено (не выполнено в этом релизе): сужение generic'ов `TServices`/`TConfig` у
+`Effect`/`EffectsModule`/`EffectContext` (кандидат №10). Удаление каскадно ломает
+сигнатуры публичных `createEffect`/`combineEffects`/`EffectContext` без выигрыша для
+class-API (сервисы и так приходят через конструктор `Effects`). Оставлено как есть.
+
+### Корректность storage (этап 1)
+
+- **BREAKING (поведение): `LocalStorage.destroy()` больше НЕ стирает данные по умолчанию.**
+  Раньше `destroy()` чистил `localStorage` (асимметрия с персистентным IndexedDB, который
+  специально не чистит). Теперь оба персистентных хранилища ведут себя одинаково — данные
+  переживают `destroy`. Управляется новым флагом конфига `clearOnDestroy?: boolean`
+  (`SyncStorageConfig`): дефолт `false` для `localStorage`, `true` для `memory`
+  (эфемерное). Кому нужно старое поведение — `{ clearOnDestroy: true }`.
+- **`keyVersions` больше не растёт без ограничений и не нагружает sync-путь.** Версии
+  ключей (защита от race condition в async `subscribeByKey`) теперь инкрементируются
+  только в async-хранилищах и чистятся на `remove`/`clear`/`reset`. В sync-хранилищах
+  трекинг версий полностью убран (там нет async-гонки) — устранён лишний оверхед и утечка
+  Map на динамических ключах (например, кэш-ключах API).
+- **`get()` больше не эмитит событие `STORAGE_SELECT` на каждом чтении.** Чтения — горячий
+  путь; в async это был лишний `await emitEvent`. Событие нигде не потреблялось.
+
+### Тесты storage (этап 4)
+
+- Расширен контрактный набор `__tests__/storage.test.ts` (52 → 72 теста): прямой CRUD,
+  удаление вложенного пути, сырые (`isUnparseable`) ключи, отписка селектора, `update`
+  без изменений, middlewares (`shallowCompare`/`batching`/кастомный), а также Singleton
+  (`FIRST_WINS`/`STRICT`/реестр и `destroy`).
+- **Fix: `IndexedDBStorage.remove()` по вложенному пути и по индексу массива не работал.**
+  `doDelete` отсчитывал путь к родителю от корня state (`parts.slice(0, -1)`), тогда как в
+  IndexedDB каждый top-level ключ — отдельная запись стора, и `rootValue` уже соответствует
+  `parts[0]`. Из-за этого родитель не находился и удаление молча возвращало `false`
+  (`remove('user.name')`, `remove('tags.1')` — no-op). Теперь путь отсчитывается ВНУТРИ
+  `rootValue` (`parts.slice(1, -1)`), симметрично `doGet`. Дефект вскрыт новыми тестами.
+
+### DX class-based слоёв (этап 5)
+
+- **`Selectors.combine` ловит cross-store dep === undefined.** В dev-режиме
+  (`NODE_ENV !== 'production'`) бросает понятный `SynapseError`, если зависимость не
+  `SelectorAPI`. Типичная причина — `useDefineForClassFields: true` (дефолт target ES2022):
+  parameter-property (`this.core`) ещё не присвоена в момент инициализатора поля, и
+  `this.combine([this.core.x], …)` тихо получает `undefined`. Сообщение указывает на фикс
+  (`"useDefineForClassFields": false` или инициализация в теле конструктора).
+- **`ValidateConfig.skipAction` теперь опционален.** Если валидация в `validateMap` не
+  прошла и `skipAction` не задан — эффект ничего не делает (`EMPTY`). Убирает бойлерплейт
+  `skipAction: () => d.loadX.reset()` там, где сбрасывать нечего.
+- **Громкое предупреждение об упавшем эффекте.** При непойманной ошибке эффект завершается
+  и больше не реагирует на экшены (остальные живы). Теперь лог `EffectsModule` называет
+  эффект по имени поля class-слоя (`Effects`), явно сообщает, что эффект остановлен, и
+  подсказывает `{ resubscribeOnError: true }`.
+- **Хуки-утилиты принимают `SynapseModule`-handle напрямую** (`createSynapseCtx`,
+  `awaitSynapse`, `createSynapseAwaiter`) — обёртка `() => synapse.ready()` не нужна
+  (handle — `PromiseLike`). Зафиксировано тестами.
+
+### Новые фичи библиотеки (этап 7)
+
+Вошли в дефолт 5.0.0. Все — аддитивные (без ломающих изменений): старый код работает
+как раньше, фичи включаются явно через конфиг/новые методы.
+
+- **persist-migration для localStorage/IndexedDB.** Новые опциональные поля конфига
+  `version?: number` и `migrate?: (persistedState, persistedVersion) => T`. Когда форма
+  `initialState` меняется между релизами, при `initialize()` сохранённая версия схемы
+  сравнивается с текущей: если ниже — запускается `migrate(oldState, oldVersion)`, результат
+  записывается и версия фиксируется. Версия хранится рядом с данными (localStorage — sidecar-
+  ключ `${name}::__synapse_version__`; IndexedDB — reserved-запись `__synapse_version__`,
+  исключённая из `getState()`/`keys()` и переживающая `clear()`/`set('')`). Без `version`
+  поведение не меняется (миграция выключена, никаких записей версии). `memory` версию
+  игнорирует (нечего персистить). Dev-предупреждения при опасных рассогласованиях (версия
+  поднята без `migrate`; сохранённая версия новее текущей).
+- **SSR-гидрация: `storage.hydrate(state)`** (`ISyncStorage` → `void`, `IAsyncStorage` →
+  `Promise<void>`). Заменяет состояние серверным снапшотом. Вызванная ДО `initialize()`,
+  засевает хранилище так, что инициализация не перезатирает его `initialState`-ом; после —
+  заменяет состояние и уведомляет подписчиков. С `version` фиксирует текущую версию (снапшот
+  уже в актуальной схеме — миграция на нём не запускается).
+- **Агрегированный `isSourceReady` для cross-store combined-селекторов.** Раньше
+  `SelectorAPI.isSourceReady`/`onSourceStatusChange` отражали только локальный источник.
+  Теперь combined-селектор «готов», только когда готов локальный источник И все источники
+  зависимостей (важно для `this.combine([this.core.x], …)` поверх чужого стора с собственным
+  lifecycle). Простые селекторы по-прежнему привязаны к своему единственному источнику.
+- **Dev logger-middleware для storage** — `loggerMiddleware` (async) / `syncLoggerMiddleware`
+  (sync), а также `getDefault().logger()` в `config.middlewares`. Логирует только пишущие
+  действия (тип/ключ/длительность, опц. prev/next состояние); чтения (`get`/`keys`) не шумят.
+  Намеренно минимален — без i18n/цветов (для полноценного dev-лога диспетчера есть
+  `loggerDispatcherMiddleware`). Подключать только в dev.
+
 ## [4.2.0] - 2026-06-12
 
 ### Новое: class-based BL-слой

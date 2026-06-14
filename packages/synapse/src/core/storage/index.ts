@@ -1,12 +1,10 @@
 // Экспортируем публичные интерфейсы
-export * from './modules/plugin/plugin.interface'
-export * from './modules/plugin/plugin.service'
 export { ConfigMergeStrategy } from './modules/singleton/models'
 export * from './storage.interface'
 
 // Экспортируем публичные middleware
-export type { BatchingMiddlewareOptions, ShallowCompareMiddlewareOptions } from './middlewares'
-export { broadcastMiddleware, syncBroadcastMiddleware } from './middlewares'
+export type { BatchingMiddlewareOptions, LoggerMiddlewareOptions, ShallowCompareMiddlewareOptions } from './middlewares'
+export { broadcastMiddleware, loggerMiddleware, syncBroadcastMiddleware, syncLoggerMiddleware } from './middlewares'
 
 // Экспортируем публичные адаптеры
 export { AsyncBaseStorage } from './adapters/async-base-storage.service'

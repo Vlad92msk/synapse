@@ -1,4 +1,5 @@
 import { Middleware, MiddlewareAPI, NextFunction, StorageAction, VALUE_NOT_CHANGED } from '../utils/middleware-module'
+import { shallowEqual } from '../utils/state-diff.util'
 import { StorageKeyType } from '../utils/storage-key'
 
 export interface ShallowCompareMiddlewareOptions {
@@ -7,23 +8,7 @@ export interface ShallowCompareMiddlewareOptions {
 }
 
 export const shallowCompareMiddleware = (options: ShallowCompareMiddlewareOptions = {}): Middleware => {
-  const {
-    comparator = (prev: any, next: any) => {
-      if (prev === next) return true
-
-      if (typeof prev !== 'object' || typeof next !== 'object' || prev === null || next === null) {
-        return prev === next
-      }
-
-      const keysA = Object.keys(prev)
-      const keysB = Object.keys(next)
-
-      if (keysA.length !== keysB.length) return false
-
-      return keysA.every((key) => Object.prototype.hasOwnProperty.call(next, key) && prev[key] === next[key])
-    },
-    segments = [],
-  } = options
+  const { comparator = shallowEqual, segments = [] } = options
 
   // Кэш последних значений
   const valueCache = new Map<StorageKeyType, any>()

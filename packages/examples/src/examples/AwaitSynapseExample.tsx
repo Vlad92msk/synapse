@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { MemoryStorage } from 'synapse-storage/core'
+import { MemoryStorage, Selectors } from 'synapse-storage/core'
 import { createSynapse } from 'synapse-storage/utils'
-import { createDispatcher } from 'synapse-storage/reactive'
+import { Dispatcher } from 'synapse-storage/reactive'
 import { awaitSynapse, useSelector } from 'synapse-storage/react'
 import { cardStyle, buttonRow, codeBlock, sectionTitle } from './styles'
 
@@ -23,57 +23,47 @@ const initialState: TimerState = {
   laps: [],
 }
 
+// ─── Selectors / Dispatcher (class-based) ───────────────────────────────────
+
+class TimerSelectors extends Selectors<TimerState> {
+  readonly seconds = this.select((s) => s.seconds)
+  readonly isRunning = this.select((s) => s.isRunning)
+  readonly laps = this.select((s) => s.laps)
+  readonly formattedTime = this.combine([this.seconds], (seconds) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+  })
+}
+
+class TimerDispatcher extends Dispatcher<TimerState> {
+  readonly tick = this.action((store) => { store.update((s) => { s.seconds++ }) })
+  readonly toggleRunning = this.action((store) => { store.update((s) => { s.isRunning = !s.isRunning }) })
+  readonly addLap = this.action((store) => {
+    const state = store.getStateSync()
+    store.update((s) => { s.laps.push(state.seconds) })
+  })
+  readonly reset = this.action((store) => {
+    store.update((s) => { s.seconds = 0; s.isRunning = false; s.laps = [] })
+  })
+}
+
 // ─── Создание store с эмуляцией долгой инициализации ────────────────────────
 
-const timerStorePromise = createSynapse({
-  createStorageFn: async () => {
-    await new Promise((r) => setTimeout(r, 1500))
-    const storage = new MemoryStorage<TimerState>({ name: 'timer-await', initialState })
-    await storage.initialize()
-    return storage
-  },
-
-  createSelectorsFn: (sm) => ({
-    seconds: sm.createSelector((s) => s.seconds),
-    isRunning: sm.createSelector((s) => s.isRunning),
-    laps: sm.createSelector((s) => s.laps),
-    formattedTime: sm.createSelector((s) => {
-      const mins = Math.floor(s.seconds / 60)
-      const secs = s.seconds % 60
-      return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
-    }),
-  }),
-
-  createDispatcherFn: (storage) =>
-    createDispatcher({ storage }, (_storage, { createAction }) => {
-      const tick = createAction({
-        type: 'tick',
-        action: () => { storage.update((s) => { s.seconds++ }) },
-      })
-      const toggleRunning = createAction({
-        type: 'toggleRunning',
-        action: () => { storage.update((s) => { s.isRunning = !s.isRunning }) },
-      })
-      const addLap = createAction({
-        type: 'addLap',
-        action: () => {
-          const state = storage.getStateSync()
-          storage.update((s) => { s.laps.push(state.seconds) })
-        },
-      })
-      const reset = createAction({
-        type: 'reset',
-        action: () => {
-          storage.update((s) => { s.seconds = 0; s.isRunning = false; s.laps = [] })
-        },
-      })
-      return { tick, toggleRunning, addLap, reset }
-    }),
+const timerSynapse = createSynapse(async () => {
+  // долгий async-пролог фабрики (бывший createStorageFn)
+  await new Promise((r) => setTimeout(r, 1500))
+  const storage = new MemoryStorage<TimerState>({ name: 'timer-await', initialState })
+  return {
+    storage,
+    dispatcher: new TimerDispatcher(storage),
+    selectors: new TimerSelectors(storage),
+  }
 })
 
-// ─── awaitSynapse — создаём утилиту ожидания ────────────────────────────────
+// ─── awaitSynapse — создаём утилиту ожидания (принимает handle) ──────────────
 
-const timerAwaiter = awaitSynapse(timerStorePromise, {
+const timerAwaiter = awaitSynapse(timerSynapse, {
   loadingComponent: <div style={{ padding: 20, textAlign: 'center', color: '#888' }}>Инициализация таймера (1.5 сек)...</div>,
   errorComponent: (error) => <div style={{ color: 'red', padding: 20 }}>Ошибка: {error.message}</div>,
 })
@@ -176,19 +166,18 @@ export function AwaitSynapseExample() {
 import { createSynapse } from 'synapse-storage/utils'
 
 // Store может инициализироваться долго (IndexedDB, загрузка с сервера и т.п.)
-const storePromise = createSynapse({
-  createStorageFn: async () => {
-    const data = await fetch('/api/config').then((r) => r.json())
-    const storage = new MemoryStorage({ name: 'config', initialState: data })
-    await storage.initialize()
-    return storage
-  },
-  createSelectorsFn: (sm) => ({ ... }),
-  createDispatcherFn: (storage) => createDispatcher({ storage }, ...),
+const configSynapse = createSynapse(async () => {
+  const data = await fetch('/api/config').then((r) => r.json())
+  const storage = new MemoryStorage({ name: 'config', initialState: data })
+  return {
+    storage,
+    dispatcher: new ConfigDispatcher(storage),
+    selectors: new ConfigSelectors(storage),
+  }
 })
 
-// Создаём awaiter
-const awaiter = awaitSynapse(storePromise, {
+// Создаём awaiter — принимает handle (thenable)
+const awaiter = awaitSynapse(configSynapse, {
   loadingComponent: <div>Загрузка...</div>,
   errorComponent: (error) => <div>Ошибка: {error.message}</div>,
 })`}</pre>

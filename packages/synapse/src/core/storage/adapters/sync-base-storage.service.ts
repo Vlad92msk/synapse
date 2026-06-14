@@ -1,8 +1,9 @@
 import { syncBatchingMiddleware } from '../middlewares/sync-storage-batching.middleware'
+import { syncLoggerMiddleware } from '../middlewares/sync-storage-logger.middleware'
 import { syncShallowCompareMiddleware } from '../middlewares/sync-storage-shallow-compare.middleware'
-import { ISyncPluginExecutor } from '../modules/plugin/plugin.interface'
 import { IEventEmitter, ILogger, ISyncStorage, StorageEvents, StorageType, SyncDefaultMiddlewares, SyncStorageConfig } from '../storage.interface'
 import { SyncMiddleware, SyncMiddlewareModule, VALUE_NOT_CHANGED } from '../utils/middleware-module'
+import { decideMigration } from '../utils/migration.util'
 import { createDummyState, extractPath } from '../utils/path-selector.util'
 import { createLazyClone, findChangedPaths, isEqual } from '../utils/state-diff.util'
 import { StorageKeyType } from '../utils/storage-key'
@@ -25,7 +26,6 @@ export abstract class SyncBaseStorage<T extends Record<string, any>> extends Sto
 
   constructor(
     protected readonly config: SyncStorageConfig<T>,
-    protected readonly pluginExecutor?: ISyncPluginExecutor,
     eventEmitter?: IEventEmitter,
     logger?: ILogger,
   ) {
@@ -64,10 +64,20 @@ export abstract class SyncBaseStorage<T extends Record<string, any>> extends Sto
     this._stateCache = this.getRawState()
   }
 
+  /**
+   * Дефолт для `config.clearOnDestroy`, если он не задан.
+   * Memory: `true` (эфемерное). LocalStorage переопределяет на `false` (персистентное).
+   */
+  protected get clearOnDestroyDefault(): boolean {
+    return true
+  }
+
   protected async performCleanup(): Promise<void> {
     // Обходим публичный clear() (избегая ensureReady после _isDestroyed = true)
-    this.pluginExecutor?.executeOnClear()
-    this.doClear()
+    if (this.config.clearOnDestroy ?? this.clearOnDestroyDefault) {
+      this.doClear()
+      this.clearPersistedVersion()
+    }
 
     await this.doDestroy()
 
@@ -90,6 +100,7 @@ export abstract class SyncBaseStorage<T extends Record<string, any>> extends Sto
     return {
       batching: (options = {}) => syncBatchingMiddleware(options),
       shallowCompare: (options = {}) => syncShallowCompareMiddleware(options),
+      logger: (options = {}) => syncLoggerMiddleware(options),
     }
   }
 
@@ -98,17 +109,60 @@ export abstract class SyncBaseStorage<T extends Record<string, any>> extends Sto
       const state = this.getRawState()
       const hasExistingState = Object.keys(state).length > 0
 
-      if (!hasExistingState && this.config.initialState) {
-        this.middlewareModule.dispatch({
-          type: 'init',
-          value: this.config.initialState,
-        })
+      // Миграция выключена (version не задан) — прежнее поведение: засеять initialState на пустом.
+      if (this.config.version === undefined) {
+        if (!hasExistingState && this.config.initialState) {
+          this.middlewareModule.dispatch({ type: 'init', value: this.config.initialState })
+        }
+        return
+      }
+
+      const decision = decideMigration({
+        hasExisting: hasExistingState,
+        existingState: state,
+        persistedVersion: this.readPersistedVersion(),
+        targetVersion: this.config.version,
+        migrate: this.config.migrate,
+      })
+
+      switch (decision.kind) {
+        case 'seed': {
+          if (this.config.initialState) {
+            this.middlewareModule.dispatch({ type: 'init', value: this.config.initialState })
+          }
+          this.writePersistedVersion(this.config.version)
+          break
+        }
+        case 'migrate': {
+          this.middlewareModule.dispatch({ type: 'reset', value: decision.state })
+          this.writePersistedVersion(this.config.version)
+          break
+        }
+        case 'bump': {
+          this.writePersistedVersion(this.config.version)
+          break
+        }
+        case 'none':
+          break
       }
     } catch (error) {
       this.logger?.error('Ошибка инициализации хранилища', { error })
       throw error
     }
   }
+
+  // ─── Persisted schema version (persist-migration) ───────────────────────────
+
+  /** Читает сохранённую версию схемы. По умолчанию `undefined` (эфемерные хранилища). */
+  protected readPersistedVersion(): number | undefined {
+    return undefined
+  }
+
+  /** Сохраняет версию схемы рядом с данными. По умолчанию no-op (эфемерные хранилища). */
+  protected writePersistedVersion(_version: number): void {}
+
+  /** Удаляет сохранённую версию схемы (вызывается при destroy с `clearOnDestroy`). */
+  protected clearPersistedVersion(): void {}
 
   // ─── Internal state access ──────────────────────────────────────────────────
 
@@ -130,19 +184,13 @@ export abstract class SyncBaseStorage<T extends Record<string, any>> extends Sto
     try {
       const metadata = { operation: 'get', timestamp: Date.now(), key }
 
-      const middlewareResult = this.middlewareModule.dispatch({
+      const finalResult = this.middlewareModule.dispatch({
         type: 'get',
         key,
         metadata,
       })
 
-      const finalResult = this.pluginExecutor?.executeAfterGet(key, middlewareResult, metadata) ?? middlewareResult
-
-      this.emitEvent({
-        type: StorageEvents.STORAGE_SELECT,
-        payload: { key, value: finalResult },
-      })
-
+      // Чтения не эмитят событий — это горячий путь, а STORAGE_SELECT нигде не потребляется.
       return finalResult
     } catch (error) {
       this.logger?.error('Error getting value', { key, error })
@@ -156,18 +204,14 @@ export abstract class SyncBaseStorage<T extends Record<string, any>> extends Sto
     try {
       const metadata = { operation: 'set', timestamp: Date.now(), key }
 
-      const processedValue = this.pluginExecutor?.executeBeforeSet(value, metadata) ?? value
-
-      const middlewareResult = this.middlewareModule.dispatch({
+      const finalResult = this.middlewareModule.dispatch({
         type: 'set',
         key,
-        value: processedValue,
+        value,
         metadata,
       })
 
-      if (middlewareResult === VALUE_NOT_CHANGED) return
-
-      const finalResult = this.pluginExecutor?.executeAfterSet(key, middlewareResult, metadata) ?? middlewareResult
+      if (finalResult === VALUE_NOT_CHANGED) return
 
       this._stateCache = this.getRawState()
 
@@ -218,9 +262,7 @@ export abstract class SyncBaseStorage<T extends Record<string, any>> extends Sto
       }
 
       const updates = Array.from(changedTopLevelKeys).map((key) => {
-        const keyMetadata = { ...metadata, key }
-        const processedValue = this.pluginExecutor?.executeBeforeSet(newState[key], keyMetadata) ?? newState[key]
-        return { key, value: processedValue }
+        return { key, value: newState[key] }
       })
 
       const result = this.middlewareModule.dispatch({
@@ -307,9 +349,6 @@ export abstract class SyncBaseStorage<T extends Record<string, any>> extends Sto
     try {
       const metadata = { operation: 'delete', timestamp: Date.now(), key }
 
-      const preventDeletion = this.pluginExecutor?.executeBeforeDelete(key, metadata)
-      if (preventDeletion === false) return
-
       const middlewareResult = this.middlewareModule.dispatch({
         type: 'delete',
         key,
@@ -317,8 +356,6 @@ export abstract class SyncBaseStorage<T extends Record<string, any>> extends Sto
       })
 
       if (middlewareResult === false) return
-
-      this.pluginExecutor?.executeAfterDelete(key, metadata)
 
       this._stateCache = this.getRawState()
 
@@ -348,8 +385,6 @@ export abstract class SyncBaseStorage<T extends Record<string, any>> extends Sto
     this.ensureReady()
 
     try {
-      this.pluginExecutor?.executeOnClear()
-
       this.middlewareModule.dispatch({ type: 'clear' })
 
       this._stateCache = {} as T
@@ -387,6 +422,45 @@ export abstract class SyncBaseStorage<T extends Record<string, any>> extends Sto
       this.logger?.error('Error resetting storage', { error })
       throw error
     }
+  }
+
+  /**
+   * SSR-гидрация: заменяет всё состояние переданным снапшотом. Намеренно НЕ требует
+   * `ready()` — типичный сценарий вызвать её до `initialize()`, чтобы инициализация
+   * не перезатёрла серверное состояние `initialState`-ом (см. `initializeWithMiddlewares`).
+   */
+  public hydrate(state: T): void {
+    try {
+      this.doSet('', state)
+      this._stateCache = this.getRawState()
+
+      // Если включён persist-migration — фиксируем текущую версию: серверный снапшот
+      // уже в актуальной схеме, миграцию на нём запускать не нужно.
+      if (this.config.version !== undefined) {
+        this.writePersistedVersion(this.config.version)
+      }
+
+      this.notifyHydration(this._stateCache)
+    } catch (error) {
+      this.logger?.error('Error hydrating storage', { error })
+      throw error
+    }
+  }
+
+  /** Уведомляет подписчиков о замене состояния гидрацией (no-op до initialize/без подписок). */
+  private notifyHydration(state: T): void {
+    const changedPaths = Object.keys(state)
+
+    for (const key of changedPaths) {
+      this.notifySubscribers(key, (state as Record<string, any>)[key])
+    }
+
+    this.notifySubscribers(GLOBAL_SUBSCRIPTION_KEY, {
+      type: StorageEvents.STORAGE_UPDATE,
+      key: changedPaths,
+      value: state,
+      changedPaths,
+    })
   }
 
   public keys(): string[] {

@@ -13,25 +13,19 @@ import { createSynapse, createSynapseAwaiter } from 'synapse-storage/utils'
 ## Создание
 
 ```typescript
-// createSynapseAwaiter принимает Promise<SynapseStore> или готовый SynapseStore
+// createSynapseAwaiter принимает handle (thenable), Promise<SynapseStore> или готовый store
 
-// Вариант 1: Promise (типичный случай — асинхронная инициализация)
-const storePromise = createSynapse({
-  createStorageFn: async () => {
-    const config = await fetch('/api/config').then(r => r.json())
-    const storage = new MemoryStorage<ConfigState>({
-      name: 'app-config',
-      initialState: config,
-    })
-    storage.initialize()
-    return storage
-  },
+// Вариант 1: ленивый handle (типичный случай — async-инициализация в фабрике)
+const configSynapse = createSynapse(async () => {
+  const config = await fetch('/api/config').then((r) => r.json())
+  const storage = new MemoryStorage<ConfigState>({ name: 'app-config', initialState: config })
+  return { storage, selectors: new ConfigSelectors(storage) }
 })
 
-const awaiter = createSynapseAwaiter(storePromise)
+const awaiter = createSynapseAwaiter(configSynapse)
 
-// Вариант 2: уже готовый store (оборачивается в Promise.resolve)
-const readyStore = await createSynapse({ storage: myStorage })
+// Вариант 2: уже готовый store
+const readyStore = await configSynapse
 const awaiter2 = createSynapseAwaiter(readyStore)
 ```
 

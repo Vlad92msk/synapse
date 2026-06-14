@@ -1,8 +1,9 @@
 import { batchingMiddleware } from '../middlewares/storage-batching.middleware'
+import { loggerMiddleware } from '../middlewares/storage-logger.middleware'
 import { shallowCompareMiddleware } from '../middlewares/storage-shallow-compare.middleware'
-import { IAsyncPluginExecutor } from '../modules/plugin/plugin.interface'
 import { AsyncDefaultMiddlewares, AsyncStorageConfig, IAsyncStorage, IEventEmitter, ILogger, StorageEvents, StorageType } from '../storage.interface'
 import { AsyncMiddlewareModule, Middleware, VALUE_NOT_CHANGED } from '../utils/middleware-module'
+import { decideMigration } from '../utils/migration.util'
 import { createDummyState, extractPath } from '../utils/path-selector.util'
 import { createLazyClone, findChangedPaths, isEqual } from '../utils/state-diff.util'
 import { StorageKeyType } from '../utils/storage-key'
@@ -22,9 +23,16 @@ export abstract class AsyncBaseStorage<T extends Record<string, any>> extends St
   private initializedMiddlewares: Middleware[] | null = null
   private selectorPathCache = new WeakMap<PathSelector<any, any>, string>()
 
+  /** Версии ключей для защиты от race condition в subscribeByKey (async get). */
+  private keyVersions = new Map<string, number>()
+
+  /** Инкремент версии ключа при каждом изменении — читается в subscribeByKey. */
+  protected trackKeyVersion(keyStr: string): void {
+    this.keyVersions.set(keyStr, (this.keyVersions.get(keyStr) ?? 0) + 1)
+  }
+
   constructor(
     protected readonly config: AsyncStorageConfig<T>,
-    protected readonly pluginExecutor?: IAsyncPluginExecutor,
     eventEmitter?: IEventEmitter,
     logger?: ILogger,
   ) {
@@ -62,7 +70,6 @@ export abstract class AsyncBaseStorage<T extends Record<string, any>> extends St
 
   protected async performCleanup(): Promise<void> {
     // Обходим публичный clear() (избегая ensureReady после _isDestroyed = true)
-    await this.pluginExecutor?.executeOnClear()
     await this.doClear()
 
     await this.doDestroy()
@@ -92,6 +99,7 @@ export abstract class AsyncBaseStorage<T extends Record<string, any>> extends St
     return {
       batching: (options = {}) => batchingMiddleware(options),
       shallowCompare: (options = {}) => shallowCompareMiddleware(options),
+      logger: (options = {}) => loggerMiddleware(options),
     }
   }
 
@@ -100,17 +108,57 @@ export abstract class AsyncBaseStorage<T extends Record<string, any>> extends St
       const state = await this.getRawState()
       const hasExistingState = Object.keys(state).length > 0
 
-      if (!hasExistingState && this.config.initialState) {
-        await this.middlewareModule.dispatch({
-          type: 'init',
-          value: this.config.initialState,
-        })
+      // Миграция выключена (version не задан) — прежнее поведение: засеять initialState на пустом.
+      if (this.config.version === undefined) {
+        if (!hasExistingState && this.config.initialState) {
+          await this.middlewareModule.dispatch({ type: 'init', value: this.config.initialState })
+        }
+        return
+      }
+
+      const decision = decideMigration({
+        hasExisting: hasExistingState,
+        existingState: state,
+        persistedVersion: await this.readPersistedVersion(),
+        targetVersion: this.config.version,
+        migrate: this.config.migrate,
+      })
+
+      switch (decision.kind) {
+        case 'seed': {
+          if (this.config.initialState) {
+            await this.middlewareModule.dispatch({ type: 'init', value: this.config.initialState })
+          }
+          await this.writePersistedVersion(this.config.version)
+          break
+        }
+        case 'migrate': {
+          await this.middlewareModule.dispatch({ type: 'reset', value: decision.state })
+          await this.writePersistedVersion(this.config.version)
+          break
+        }
+        case 'bump': {
+          await this.writePersistedVersion(this.config.version)
+          break
+        }
+        case 'none':
+          break
       }
     } catch (error) {
       this.logger?.error('Ошибка инициализации хранилища', { error })
       throw error
     }
   }
+
+  // ─── Persisted schema version (persist-migration) ───────────────────────────
+
+  /** Читает сохранённую версию схемы. По умолчанию `undefined` (нет персистентности). */
+  protected async readPersistedVersion(): Promise<number | undefined> {
+    return undefined
+  }
+
+  /** Сохраняет версию схемы рядом с данными. По умолчанию no-op. */
+  protected async writePersistedVersion(_version: number): Promise<void> {}
 
   // ─── Internal state access ──────────────────────────────────────────────────
 
@@ -132,19 +180,13 @@ export abstract class AsyncBaseStorage<T extends Record<string, any>> extends St
     try {
       const metadata = { operation: 'get', timestamp: Date.now(), key }
 
-      const middlewareResult = await this.middlewareModule.dispatch({
+      const finalResult = await this.middlewareModule.dispatch({
         type: 'get',
         key,
         metadata,
       })
 
-      const finalResult = (await this.pluginExecutor?.executeAfterGet(key, middlewareResult, metadata)) ?? middlewareResult
-
-      await this.emitEvent({
-        type: StorageEvents.STORAGE_SELECT,
-        payload: { key, value: finalResult },
-      })
-
+      // Чтения не эмитят событий — это горячий путь, а STORAGE_SELECT нигде не потребляется.
       return finalResult
     } catch (error) {
       this.logger?.error('Error getting value', { key, error })
@@ -158,18 +200,14 @@ export abstract class AsyncBaseStorage<T extends Record<string, any>> extends St
     try {
       const metadata = { operation: 'set', timestamp: Date.now(), key }
 
-      const processedValue = (await this.pluginExecutor?.executeBeforeSet(value, metadata)) ?? value
-
-      const middlewareResult = await this.middlewareModule.dispatch({
+      const finalResult = await this.middlewareModule.dispatch({
         type: 'set',
         key,
-        value: processedValue,
+        value,
         metadata,
       })
 
-      if (middlewareResult === VALUE_NOT_CHANGED) return
-
-      const finalResult = (await this.pluginExecutor?.executeAfterSet(key, middlewareResult, metadata)) ?? middlewareResult
+      if (finalResult === VALUE_NOT_CHANGED) return
 
       this._stateCache = await this.getRawState()
 
@@ -223,13 +261,9 @@ export abstract class AsyncBaseStorage<T extends Record<string, any>> extends St
         changedTopLevelKeys.add(path.split('.')[0])
       }
 
-      const updates = await Promise.all(
-        Array.from(changedTopLevelKeys).map(async (key: string) => {
-          const keyMetadata = { ...metadata, key }
-          const processedValue = (await this.pluginExecutor?.executeBeforeSet(newState[key], keyMetadata)) ?? newState[key]
-          return { key, value: processedValue }
-        }),
-      )
+      const updates = Array.from(changedTopLevelKeys).map((key: string) => {
+        return { key, value: newState[key] }
+      })
 
       const result = await this.middlewareModule.dispatch({
         type: 'update',
@@ -319,9 +353,6 @@ export abstract class AsyncBaseStorage<T extends Record<string, any>> extends St
     try {
       const metadata = { operation: 'delete', timestamp: Date.now(), key }
 
-      const preventDeletion = await this.pluginExecutor?.executeBeforeDelete(key, metadata)
-      if (preventDeletion === false) return
-
       const middlewareResult = await this.middlewareModule.dispatch({
         type: 'delete',
         key,
@@ -329,8 +360,6 @@ export abstract class AsyncBaseStorage<T extends Record<string, any>> extends St
       })
 
       if (middlewareResult === false) return
-
-      await this.pluginExecutor?.executeAfterDelete(key, metadata)
 
       this._stateCache = await this.getRawState()
 
@@ -346,6 +375,9 @@ export abstract class AsyncBaseStorage<T extends Record<string, any>> extends St
         changedPaths,
       })
 
+      // Ключ удалён — освобождаем слот версии, чтобы Map не рос на динамических ключах.
+      this.keyVersions.delete(keyStr)
+
       await this.emitEvent({
         type: StorageEvents.STORAGE_UPDATE,
         payload: { key, value: undefined, result: middlewareResult, changedPaths },
@@ -360,11 +392,10 @@ export abstract class AsyncBaseStorage<T extends Record<string, any>> extends St
     this.ensureReady()
 
     try {
-      await this.pluginExecutor?.executeOnClear()
-
       await this.middlewareModule.dispatch({ type: 'clear' })
 
       this._stateCache = {} as T
+      this.keyVersions.clear()
     } catch (error) {
       this.logger?.error('Error clearing storage', { error })
       throw error
@@ -383,6 +414,7 @@ export abstract class AsyncBaseStorage<T extends Record<string, any>> extends St
       })
 
       this._stateCache = initialState ? ({ ...initialState } as T) : ({} as T)
+      this.keyVersions.clear()
 
       const changedPaths = Object.keys(this._stateCache)
 
@@ -397,6 +429,38 @@ export abstract class AsyncBaseStorage<T extends Record<string, any>> extends St
       })
     } catch (error) {
       this.logger?.error('Error resetting storage', { error })
+      throw error
+    }
+  }
+
+  /**
+   * SSR-гидрация: заменяет всё состояние переданным снапшотом. Намеренно НЕ требует
+   * `ready()` — типичный сценарий вызвать её до `initialize()`, чтобы инициализация
+   * не перезатёрла серверное состояние `initialState`-ом (см. `initializeWithMiddlewares`).
+   */
+  public async hydrate(state: T): Promise<void> {
+    try {
+      await this.doSet('', state)
+      this._stateCache = await this.getRawState()
+
+      // Если включён persist-migration — фиксируем текущую версию: серверный снапшот
+      // уже в актуальной схеме, миграцию на нём запускать не нужно.
+      if (this.config.version !== undefined) {
+        await this.writePersistedVersion(this.config.version)
+      }
+
+      const changedPaths = Object.keys(this._stateCache)
+      for (const key of changedPaths) {
+        this.notifySubscribers(key, (this._stateCache as Record<string, any>)[key])
+      }
+      this.notifySubscribers(GLOBAL_SUBSCRIPTION_KEY, {
+        type: StorageEvents.STORAGE_UPDATE,
+        key: changedPaths,
+        value: this._stateCache,
+        changedPaths,
+      })
+    } catch (error) {
+      this.logger?.error('Error hydrating storage', { error })
       throw error
     }
   }

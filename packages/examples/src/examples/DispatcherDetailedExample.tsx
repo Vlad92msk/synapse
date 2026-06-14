@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { MemoryStorage } from 'synapse-storage/core'
-import { createDispatcher } from 'synapse-storage/reactive'
+import { Dispatcher } from 'synapse-storage/reactive'
 import { cardStyle, buttonRow, codeBlock, sectionTitle } from './styles'
 
 // ─── Типы ──────────────────────────────────────────────────────────────────────
@@ -18,99 +18,80 @@ const initialState: CounterState = {
 }
 
 // ─── Standalone Dispatcher (без createSynapse) ─────────────────────────────────
+// Класс Dispatcher работает и автономно: первый вызов экшена или обращение к
+// dispatch/watchers лениво финализирует инстанс (назначает имена из имён полей).
 
 const storage = new MemoryStorage<CounterState>({ name: 'counter-dispatcher', initialState })
 
-const createCounterDispatcher = () =>
-  createDispatcher(
-    { storage },
-    (_storage, { createAction, createWatcher }) => {
-      // Простой action без параметров
-      const increment = createAction({
-        type: 'increment',
-        action: () => {
-          storage.update((s) => {
-            s.value += s.step
-            s.history.push(s.value)
-          })
-        },
+class CounterDispatcher extends Dispatcher<CounterState> {
+  // Простой экшен без параметров
+  readonly increment = this.action((store) => {
+    store.update((s) => {
+      s.value += s.step
+      s.history.push(s.value)
+    })
+  })
+
+  readonly decrement = this.action((store) => {
+    store.update((s) => {
+      s.value -= s.step
+      s.history.push(s.value)
+    })
+  })
+
+  // Экшен с параметром
+  readonly setStep = this.action((store, newStep: number) => {
+    store.set('step', newStep)
+    return newStep
+  })
+
+  // Экшен с meta
+  readonly reset = this.action(
+    (store) => {
+      store.update((s) => {
+        s.value = 0
+        s.step = 1
+        s.history = []
       })
-
-      const decrement = createAction({
-        type: 'decrement',
-        action: () => {
-          storage.update((s) => {
-            s.value -= s.step
-            s.history.push(s.value)
-          })
-        },
-      })
-
-      // Action с параметром
-      const setStep = createAction({
-        type: 'setStep',
-        action: (newStep: number) => {
-          storage.set('step', newStep)
-          return newStep
-        },
-      })
-
-      // Action с meta
-      const reset = createAction({
-        type: 'reset',
-        action: () => {
-          storage.update((s) => {
-            s.value = 0
-            s.step = 1
-            s.history = []
-          })
-        },
-        meta: { description: 'Reset to defaults', dangerous: true },
-      })
-
-      // Action с мемоизацией — повторный вызов с тем же аргументом не выполняется
-      const setStepMemoized = createAction(
-        {
-          type: 'setStepMemoized',
-          action: (step: number) => {
-            storage.set('step', step)
-            return step
-          },
-        },
-        {
-          memoize: (current, previous) => current === previous,
-        },
-      )
-
-      // Watcher — отслеживает изменение значения
-      const watchValue = createWatcher({
-        type: 'watchValue',
-        selector: (state) => state.value,
-      })
-
-      // Watcher с shouldTrigger — только при больших изменениях
-      const watchBigChanges = createWatcher({
-        type: 'watchBigChanges',
-        selector: (state) => state.value,
-        shouldTrigger: (prev, current) => Math.abs((prev ?? 0) - current) >= 5,
-      })
-
-      // Watcher с notifyAfterSubscribe — вызвать callback сразу
-      const watchStep = createWatcher({
-        type: 'watchStep',
-        selector: (state) => state.step,
-        notifyAfterSubscribe: true,
-      })
-
-      return { increment, decrement, setStep, reset, setStepMemoized, watchValue, watchBigChanges, watchStep }
     },
+    { meta: { description: 'Reset to defaults', dangerous: true } },
   )
 
-let dispatcher: ReturnType<typeof createCounterDispatcher>
+  // Экшен с мемоизацией — повторный вызов с тем же аргументом не выполняется
+  readonly setStepMemoized = this.action(
+    (store, step: number) => {
+      store.set('step', step)
+      return step
+    },
+    { memoize: (current, previous) => current === previous },
+  )
+
+  // Чистый сигнал (намерение без записи в стор) — payload пробрасывается дальше
+  readonly pinged = this.signal<number>('Ручной пинг')
+
+  // Watcher — отслеживает изменение значения
+  readonly watchValue = this.watcher({
+    selector: (state) => state.value,
+  })
+
+  // Watcher с shouldTrigger — только при больших изменениях
+  readonly watchBigChanges = this.watcher({
+    selector: (state) => state.value,
+    shouldTrigger: (prev, current) => Math.abs((prev ?? 0) - current) >= 5,
+  })
+
+  // Watcher с notifyAfterSubscribe — вызвать callback сразу
+  readonly watchStep = this.watcher({
+    selector: (state) => state.step,
+    notifyAfterSubscribe: true,
+  })
+}
+
+let dispatcher: CounterDispatcher
 
 const initPromise = (async () => {
   await storage.initialize()
-  dispatcher = createCounterDispatcher()
+  dispatcher = new CounterDispatcher(storage)
 })()
 
 // ─── Компонент-пример ──────────────────────────────────────────────────────────
@@ -127,12 +108,12 @@ export function DispatcherDetailedExample() {
   return (
     <div style={cardStyle}>
       <h2>Dispatcher (standalone)</h2>
-      <p>createDispatcher можно использовать отдельно от createSynapse. Определяет actions и watchers.</p>
+      <p>Класс Dispatcher можно использовать отдельно от createSynapse. Определяет actions и watchers; имя экшена = имя поля.</p>
 
       {/* ─── Создание ─────────────────────────────────────────────────── */}
       <h3 style={sectionTitle}>Создание</h3>
       <pre style={codeBlock}>{`import { MemoryStorage } from 'synapse-storage/core'
-import { createDispatcher } from 'synapse-storage/reactive'
+import { Dispatcher } from 'synapse-storage/reactive'
 
 const storage = new MemoryStorage<CounterState>({
   name: 'counter',
@@ -140,67 +121,76 @@ const storage = new MemoryStorage<CounterState>({
 })
 await storage.initialize()
 
-const dispatcher = createDispatcher(
-  { storage },
-  (_storage, { createAction, createWatcher }) => {
-    // ... actions и watchers
-    return { increment, decrement, setStep, watchValue }
-  },
-)`}</pre>
+// Экшены и watchers — поля класса. Standalone: первый вызов финализирует инстанс.
+class CounterDispatcher extends Dispatcher<CounterState> {
+  readonly increment = this.action((store) => store.update((s) => { s.value += s.step }))
+  readonly watchValue = this.watcher({ selector: (s) => s.value })
+}
+const dispatcher = new CounterDispatcher(storage)`}</pre>
 
-      {/* ─── createAction ─────────────────────────────────────────────── */}
-      <h3 style={sectionTitle}>createAction</h3>
-      <pre style={codeBlock}>{`// Простой action
-const increment = createAction({
-  type: 'increment',
-  action: () => {
-    storage.update((s) => { s.value += s.step })
-  },
-})
+      {/* ─── this.action ──────────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>this.action</h3>
+      <pre style={codeBlock}>{`class CounterDispatcher extends Dispatcher<CounterState> {
+  // Простой экшен
+  readonly increment = this.action((store) => {
+    store.update((s) => { s.value += s.step })
+  })
 
-// Action с параметром
-const setStep = createAction({
-  type: 'setStep',
-  action: (newStep: number) => {
-    storage.set('step', newStep)
-    return newStep  // return = payload в action stream
-  },
-})
+  // Экшен с параметром (return = payload в action stream)
+  readonly setStep = this.action((store, newStep: number) => {
+    store.set('step', newStep)
+    return newStep
+  })
 
-// Action с meta — произвольные метаданные
-const reset = createAction({
-  type: 'reset',
-  action: () => { storage.reset() },
-  meta: { description: 'Reset to defaults', dangerous: true },
-})
+  // Экшен с meta — произвольные метаданные (2-й аргумент this.action)
+  readonly reset = this.action(
+    (store) => { store.reset() },
+    { meta: { description: 'Reset to defaults', dangerous: true } },
+  )
 
-// Action с мемоизацией — повторный вызов с тем же аргументом пропускается
-const setStepMemo = createAction(
-  { type: 'setStepMemo', action: (step: number) => { ... } },
-  { memoize: (current, previous) => current === previous },
-)`}</pre>
+  // Экшен с мемоизацией — повторный вызов с тем же аргументом пропускается
+  readonly setStepMemo = this.action(
+    (store, step: number) => { store.set('step', step) },
+    { memoize: (current, previous) => current === previous },
+  )
+}`}</pre>
 
-      {/* ─── createWatcher ────────────────────────────────────────────── */}
-      <h3 style={sectionTitle}>createWatcher</h3>
-      <pre style={codeBlock}>{`// Базовый watcher — следит за значением
-const watchValue = createWatcher({
-  type: 'watchValue',
-  selector: (state) => state.value,  // что отслеживать
-})
+      {/* ─── this.signal / this.apiActions ────────────────────────────── */}
+      <h3 style={sectionTitle}>this.signal / this.apiActions</h3>
+      <pre style={codeBlock}>{`class CounterDispatcher extends Dispatcher<CounterState> {
+  // signal — чистое намерение: (_store, payload) => payload, ничего не пишет
+  readonly pinged = this.signal<number>('Ручной пинг')
 
-// С shouldTrigger — фильтрует ложные срабатывания
-const watchBigChanges = createWatcher({
-  type: 'watchBigChanges',
-  selector: (state) => state.value,
-  shouldTrigger: (prev, current) => Math.abs((prev ?? 0) - current) >= 5,
-})
+  // apiActions — вызываемая группа жизненного цикла API-запроса
+  // d.load(params)        = init (намерение, статус → idle)
+  // d.load.loading()      статус → loading
+  // d.load.success()      статус → success
+  // d.load.failure(msg)   статус → error
+  // d.load.reset()        статус → reset
+  readonly load = this.apiActions<{ page: number }>((s) => s.api.listRequest)
+}
 
-// С notifyAfterSubscribe — вызвать callback сразу при подписке
-const watchStep = createWatcher({
-  type: 'watchStep',
-  selector: (state) => state.step,
-  notifyAfterSubscribe: true,
-})`}</pre>
+// ВАЖНО: ofType(d.load) ловит ТОЛЬКО init.
+// Чтобы среагировать на результат — ofType(d.load.success).`}</pre>
+
+      {/* ─── this.watcher ─────────────────────────────────────────────── */}
+      <h3 style={sectionTitle}>this.watcher</h3>
+      <pre style={codeBlock}>{`class CounterDispatcher extends Dispatcher<CounterState> {
+  // Базовый watcher — следит за значением
+  readonly watchValue = this.watcher({ selector: (state) => state.value })
+
+  // С shouldTrigger — фильтрует ложные срабатывания
+  readonly watchBigChanges = this.watcher({
+    selector: (state) => state.value,
+    shouldTrigger: (prev, current) => Math.abs((prev ?? 0) - current) >= 5,
+  })
+
+  // С notifyAfterSubscribe — вызвать callback сразу при подписке
+  readonly watchStep = this.watcher({
+    selector: (state) => state.step,
+    notifyAfterSubscribe: true,
+  })
+}`}</pre>
 
       {/* ─── Использование ────────────────────────────────────────────── */}
       <h3 style={sectionTitle}>Использование</h3>
@@ -223,9 +213,6 @@ sub.unsubscribe()
 dispatcher.actions.subscribe((action) => {
   console.log(action.type, action.payload)
 })
-
-// Поиск action по типу
-dispatcher.findActionByType('increment')  // dispatch function или undefined
 
 // Очистка
 dispatcher.destroy()`}</pre>
@@ -274,14 +261,14 @@ function CounterDemo() {
       </div>
 
       <div style={buttonRow}>
-        <button onClick={() => dispatcher.dispatch.increment()}>increment()</button>
-        <button onClick={() => dispatcher.dispatch.decrement()}>decrement()</button>
-        <button onClick={() => dispatcher.dispatch.setStep(state.step + 1)}>step +1</button>
-        <button onClick={() => dispatcher.dispatch.reset()}>reset()</button>
+        <button onClick={() => dispatcher.increment()}>increment()</button>
+        <button onClick={() => dispatcher.decrement()}>decrement()</button>
+        <button onClick={() => dispatcher.setStep(state.step + 1)}>step +1</button>
+        <button onClick={() => dispatcher.reset()}>reset()</button>
       </div>
 
       <div style={buttonRow}>
-        <button onClick={() => dispatcher.dispatch.setStepMemoized(5)}>
+        <button onClick={() => dispatcher.setStepMemoized(5)}>
           setStepMemoized(5) — repeat won't fire
         </button>
       </div>

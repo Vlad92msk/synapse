@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { MemoryStorage } from 'synapse-storage/core'
+import { MemoryStorage, Selectors } from 'synapse-storage/core'
 import { createSynapse } from 'synapse-storage/utils'
-import { createDispatcher } from 'synapse-storage/reactive'
+import { Dispatcher } from 'synapse-storage/reactive'
 import { createSynapseCtx, useSelector } from 'synapse-storage/react'
 import { cardStyle, buttonRow, codeBlock, sectionTitle } from './styles'
 
 /**
- * Пример: createSynapseCtx() — React Context + HOC паттерн
+ * Пример: createSynapseCtx() — React Context + HOC паттерн (ленивый handle)
  */
 
 // ─── Интерфейс состояния ────────────────────────────────────────────────────
@@ -25,58 +25,50 @@ const initialState: SettingsState = {
   notifications: true,
 }
 
-// ─── 1. Создаём synapse store ───────────────────────────────────────────────
+// ─── Selectors / Dispatcher (class-based) ────────────────────────────────────
 
-const settingsStorePromise = createSynapse({
-  storage: new MemoryStorage<SettingsState>({ name: 'settings-ctx', initialState }),
+class SettingsSelectors extends Selectors<SettingsState> {
+  readonly theme = this.select((s) => s.theme)
+  readonly fontSize = this.select((s) => s.fontSize)
+  readonly language = this.select((s) => s.language)
+  readonly notifications = this.select((s) => s.notifications)
+  readonly isDark = this.combine([this.theme], (theme) => theme === 'dark')
+}
 
-  createSelectorsFn: (sm) => ({
-    theme: sm.createSelector((s) => s.theme),
-    fontSize: sm.createSelector((s) => s.fontSize),
-    language: sm.createSelector((s) => s.language),
-    notifications: sm.createSelector((s) => s.notifications),
-    isDark: sm.createSelector((s) => s.theme === 'dark'),
-  }),
+class SettingsDispatcher extends Dispatcher<SettingsState> {
+  readonly toggleTheme = this.action((store) => {
+    const state = store.getStateSync()
+    store.set('theme', state.theme === 'light' ? 'dark' : 'light')
+  })
 
-  createDispatcherFn: (storage) =>
-    createDispatcher({ storage }, (_storage, { createAction }) => {
-      const toggleTheme = createAction({
-        type: 'toggleTheme',
-        action: (_: void) => {
-          const state = storage.getStateSync()
-          storage.set('theme', state.theme === 'light' ? 'dark' : 'light')
-        },
-      })
+  readonly setFontSize = this.action((store, size: number) => {
+    store.set('fontSize', size)
+    return size
+  })
 
-      const setFontSize = createAction({
-        type: 'setFontSize',
-        action: (size: number) => {
-          storage.set('fontSize', size)
-          return size
-        },
-      })
+  readonly toggleLanguage = this.action((store) => {
+    const state = store.getStateSync()
+    store.set('language', state.language === 'ru' ? 'en' : 'ru')
+  })
 
-      const toggleLanguage = createAction({
-        type: 'toggleLanguage',
-        action: (_: void) => {
-          const state = storage.getStateSync()
-          storage.set('language', state.language === 'ru' ? 'en' : 'ru')
-        },
-      })
+  readonly toggleNotifications = this.action((store) => {
+    const state = store.getStateSync()
+    store.set('notifications', !state.notifications)
+  })
+}
 
-      const toggleNotifications = createAction({
-        type: 'toggleNotifications',
-        action: (_: void) => {
-          const state = storage.getStateSync()
-          storage.set('notifications', !state.notifications)
-        },
-      })
+// ─── 1. Создаём synapse-handle (ленивый) ─────────────────────────────────────
 
-      return { toggleTheme, setFontSize, toggleLanguage, toggleNotifications }
-    }),
+const settingsSynapse = createSynapse(async () => {
+  const storage = new MemoryStorage<SettingsState>({ name: 'settings-ctx', initialState })
+  return {
+    storage,
+    dispatcher: new SettingsDispatcher(storage),
+    selectors: new SettingsSelectors(storage),
+  }
 })
 
-// ─── 2. Создаём контекст ────────────────────────────────────────────────────
+// ─── 2. Создаём контекст — передаём handle (не вызов!), фабрика стартует лениво ─
 
 const {
   contextSynapse,
@@ -84,7 +76,7 @@ const {
   useSynapseSelectors,
   useSynapseActions,
   cleanupSynapse,
-} = createSynapseCtx(settingsStorePromise, {
+} = createSynapseCtx(settingsSynapse, {
   loadingComponent: <div style={{ padding: 20 }}>Загрузка настроек...</div>,
 })
 
@@ -186,35 +178,32 @@ export function SynapseCtxExample() {
   return (
     <div style={cardStyle}>
       <h2>createSynapseCtx</h2>
-      <p>React Context + HOC для доступа к Synapse store через хуки. Автоматический loading пока store инициализируется.</p>
+      <p>React Context + HOC для доступа к Synapse store через хуки. Передаётся ленивый handle: фабрика стартует при первом монтировании Provider'а.</p>
 
       {/* ─── Создание контекста ─────────────────────────────────────── */}
       <h3 style={sectionTitle}>Создание контекста</h3>
       <pre style={codeBlock}>{`import { createSynapseCtx, useSelector } from 'synapse-storage/react'
 import { createSynapse } from 'synapse-storage/utils'
 
-// 1. Создаём store (как обычно)
-const storePromise = createSynapse({
-  storage: new MemoryStorage<SettingsState>({ name: 'settings', initialState }),
-  createSelectorsFn: (sm) => ({
-    theme: sm.createSelector((s) => s.theme),
-    fontSize: sm.createSelector((s) => s.fontSize),
-  }),
-  createDispatcherFn: (storage) =>
-    createDispatcher({ storage }, (_s, { createAction }) => ({
-      toggleTheme: createAction({ type: 'toggleTheme', action: () => { ... } }),
-      setFontSize: createAction({ type: 'setFontSize', action: (size: number) => { ... } }),
-    })),
+// 1. Создаём ленивый handle (как обычно)
+const settingsSynapse = createSynapse(async () => {
+  const storage = new MemoryStorage<SettingsState>({ name: 'settings', initialState })
+  return {
+    storage,
+    dispatcher: new SettingsDispatcher(storage),
+    selectors: new SettingsSelectors(storage),
+  }
 })
 
-// 2. Создаём контекст из store promise
+// 2. Создаём контекст — передаём САМ handle, а не вызов.
+//    Фабрика стартует лениво при первом mount, не на импорте.
 const {
   contextSynapse,       // HOC — оборачивает компонент, предоставляя контекст
   useSynapseStorage,    // () => IStorage<T>
-  useSynapseSelectors,  // () => { theme, fontSize, ... }
-  useSynapseActions,    // () => { toggleTheme, setFontSize, ... }
+  useSynapseSelectors,  // () => SettingsSelectors
+  useSynapseActions,    // () => SettingsDispatcher (actions)
   cleanupSynapse,       // () => Promise<void>
-} = createSynapseCtx(storePromise, {
+} = createSynapseCtx(settingsSynapse, {
   loadingComponent: <div>Загрузка...</div>,  // показывается пока store не ready
 })`}</pre>
 
@@ -242,20 +231,11 @@ function FontSizeControl() {
       <button onClick={() => actions.setFontSize(fontSize + 2)}>A+</button>
     </div>
   )
-}
-
-function DirectAccess() {
-  const storage = useSynapseStorage()
-  // Прямой доступ к storage — например для getStateSync(), update(), set()
-  const state = storage.getStateSync()
 }`}</pre>
 
       {/* ─── HOC обёртка ──────────────────────────────────────────── */}
       <h3 style={sectionTitle}>HOC contextSynapse()</h3>
-      <pre style={codeBlock}>{`// contextSynapse() оборачивает корневой компонент
-// Все дочерние компоненты получают доступ к хукам
-
-function SettingsPanel() {
+      <pre style={codeBlock}>{`function SettingsPanel() {
   const actions = useSynapseActions()
   return (
     <div>
@@ -274,18 +254,16 @@ const SettingsPanelWithContext = contextSynapse(SettingsPanel)
 
       {/* ─── useSynapseState$ (только с effects) ──────────────────── */}
       <h3 style={sectionTitle}>useSynapseState$ (только с effects)</h3>
-      <pre style={codeBlock}>{`// Доступен только если store создан с createEffectConfig + effects
+      <pre style={codeBlock}>{`// Доступен только если в фабрику передан effects
 // Возвращает Observable<TState> для работы с RxJS
 
-const { useSynapseState$ } = createSynapseCtx(storeWithEffectsPromise)
+const { useSynapseState$ } = createSynapseCtx(synapseWithEffects)
 
 function MyComponent() {
   const state$ = useSynapseState$()
 
   useEffect(() => {
-    const sub = state$.subscribe((state) => {
-      console.log('state changed:', state)
-    })
+    const sub = state$.subscribe((state) => console.log('state changed:', state))
     return () => sub.unsubscribe()
   }, [state$])
 }`}</pre>
@@ -295,22 +273,22 @@ function MyComponent() {
       <pre style={codeBlock}>{`// Ручная очистка контекста и ресурсов
 await cleanupSynapse()
 
-// Вызывает store.destroy() внутри
-// Сбрасывает lazy-promise инициализации`}</pre>
+// Для class-handle делегирует handle.destroy() (LIFO-teardown +
+// сброс мемоизации) — следующий mount заново исполнит фабрику.`}</pre>
 
       {/* ─── Перегрузки ───────────────────────────────────────────── */}
       <h3 style={sectionTitle}>Три варианта createSynapseCtx</h3>
       <pre style={codeBlock}>{`// 1. Basic (storage + selectors)
 // Доступны: useSynapseStorage, useSynapseSelectors, cleanupSynapse
-const ctx = createSynapseCtx(basicStorePromise)
+const ctx = createSynapseCtx(basicSynapse)
 
 // 2. С dispatcher (+ actions)
 // Доступны: + useSynapseActions
-const ctx = createSynapseCtx(dispatcherStorePromise)
+const ctx = createSynapseCtx(dispatcherSynapse)
 
 // 3. С effects (+ state$)
 // Доступны: + useSynapseState$
-const ctx = createSynapseCtx(effectsStorePromise)`}</pre>
+const ctx = createSynapseCtx(effectsSynapse)`}</pre>
 
       {/* ─── Живой пример ─────────────────────────────────────────── */}
       <h3 style={sectionTitle}>Живой пример</h3>

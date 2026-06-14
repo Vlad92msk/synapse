@@ -1,4 +1,3 @@
-import { IAsyncPluginExecutor } from '../modules/plugin/plugin.interface'
 import { SingletonMixin } from '../modules/singleton/mixin.util'
 import { ConfigureAsyncMiddlewares, IEventEmitter, ILogger, IndexedDBStorageConfig, StorageType } from '../storage.interface'
 import { StorageKey, StorageKeyType } from '../utils/storage-key'
@@ -8,6 +7,13 @@ import { getValueByPath, parsePath, setValueByPath } from './path.utils'
 export interface IndexedDBConfig {
   dbName?: string
 }
+
+/**
+ * Reserved-ключ записи с версией схемы (persist-migration). Хранится в том же сторе, что и
+ * данные, но исключается из `getState()`/`keys()` и переживает `clear()`/`set('')`, когда
+ * задана `config.version` (иначе — обычный быстрый `store.clear()`).
+ */
+const VERSION_META_KEY = '__synapse_version__'
 
 // Управляет соединением с базой данных
 export class IndexedDBManager {
@@ -231,8 +237,8 @@ export class IndexedDBStorage<T extends Record<string, any>> extends AsyncBaseSt
   private readonly STORE_NAME: string
   private dbManager: IndexedDBManager
 
-  constructor(config: IndexedDBStorageConfig<T>, pluginExecutor?: IAsyncPluginExecutor, eventEmitter?: IEventEmitter, logger?: ILogger) {
-    super(config, pluginExecutor, eventEmitter, logger)
+  constructor(config: IndexedDBStorageConfig<T>, eventEmitter?: IEventEmitter, logger?: ILogger) {
+    super(config, eventEmitter, logger)
 
     this.DB_NAME = config.options?.dbName || 'app_storage'
     this.STORE_NAME = config.name
@@ -241,16 +247,11 @@ export class IndexedDBStorage<T extends Record<string, any>> extends AsyncBaseSt
     this.dbManager = IndexedDBManager.getInstance(this.DB_NAME, 1, logger)
   }
 
-  static create<T extends Record<string, any>>(
-    config: IndexedDBStorageConfig,
-    pluginExecutor?: IAsyncPluginExecutor,
-    eventEmitter?: IEventEmitter,
-    logger?: ILogger,
-  ): IndexedDBStorage<T> {
+  static create<T extends Record<string, any>>(config: IndexedDBStorageConfig, eventEmitter?: IEventEmitter, logger?: ILogger): IndexedDBStorage<T> {
     return SingletonMixin.handleSingletonCreation(
       config,
       this.STORAGE_TYPE,
-      (finalConfig) => new IndexedDBStorage<T>(finalConfig as IndexedDBStorageConfig<T>, pluginExecutor, eventEmitter, logger),
+      (finalConfig) => new IndexedDBStorage<T>(finalConfig as IndexedDBStorageConfig<T>, eventEmitter, logger),
       logger,
     )
   }
@@ -289,7 +290,6 @@ export class IndexedDBStorage<T extends Record<string, any>> extends AsyncBaseSt
         name: string
         initialState?: S[K]
         middlewares?: ConfigureAsyncMiddlewares
-        pluginExecutor?: IAsyncPluginExecutor
         eventEmitter?: IEventEmitter
       }
     },
@@ -313,7 +313,6 @@ export class IndexedDBStorage<T extends Record<string, any>> extends AsyncBaseSt
           ...config,
           options: { dbName },
         },
-        config.pluginExecutor,
         config.eventEmitter,
         logger,
       )
@@ -433,7 +432,7 @@ export class IndexedDBStorage<T extends Record<string, any>> extends AsyncBaseSt
           allKeys.onsuccess = () => {
             const state = allKeys.result.reduce(
               (acc, k, index) => {
-                if (k !== 'root') {
+                if (k !== 'root' && k !== VERSION_META_KEY) {
                   acc[k as string] = allValues[index]
                 }
                 return acc
@@ -487,6 +486,7 @@ export class IndexedDBStorage<T extends Record<string, any>> extends AsyncBaseSt
     // Для пустого ключа устанавливаем все состояние
     if (key === '') {
       const store = await this.getObjectStore('readwrite')
+      const preserveVersion = this.config.version !== undefined
       return new Promise((resolve, reject) => {
         const tx = store.transaction
 
@@ -498,18 +498,30 @@ export class IndexedDBStorage<T extends Record<string, any>> extends AsyncBaseSt
           reject(tx.error)
         }
 
-        const clearRequest = store.clear()
-
-        clearRequest.onsuccess = () => {
+        const writeEntries = () => {
           const entries = Object.entries(value)
           for (const [entryKey, entryValue] of entries) {
+            if (entryKey === VERSION_META_KEY) continue
             store.put(entryValue, entryKey)
           }
         }
 
-        clearRequest.onerror = () => {
-          reject(clearRequest.error)
+        // С persist-migration сохраняем reserved version-запись при перезаписи всего состояния.
+        if (preserveVersion) {
+          const keysReq = store.getAllKeys()
+          keysReq.onerror = () => reject(keysReq.error)
+          keysReq.onsuccess = () => {
+            for (const k of keysReq.result) {
+              if (k !== VERSION_META_KEY) store.delete(k)
+            }
+            writeEntries()
+          }
+          return
         }
+
+        const clearRequest = store.clear()
+        clearRequest.onsuccess = () => writeEntries()
+        clearRequest.onerror = () => reject(clearRequest.error)
       })
     }
 
@@ -658,7 +670,10 @@ export class IndexedDBStorage<T extends Record<string, any>> extends AsyncBaseSt
           return
         }
 
-        const parent = getValueByPath(rootValue, parts.slice(0, -1).join('.'))
+        // rootValue уже соответствует parts[0] (каждый top-level ключ — отдельная запись стора),
+        // поэтому путь к родителю отсчитывается ВНУТРИ rootValue: parts.slice(1, -1) (ср. doGet).
+        const innerParentPath = parts.slice(1, -1).join('.')
+        const parent = innerParentPath ? getValueByPath(rootValue, innerParentPath) : rootValue
         const lastKey = parts[parts.length - 1]
 
         if (!parent || !(lastKey in parent)) {
@@ -687,6 +702,23 @@ export class IndexedDBStorage<T extends Record<string, any>> extends AsyncBaseSt
 
   protected async doClear(): Promise<void> {
     const store = await this.getObjectStore('readwrite')
+
+    // С persist-migration сохраняем reserved version-запись (она описывает схему, не данные).
+    if (this.config.version !== undefined) {
+      return new Promise((resolve, reject) => {
+        const tx = store.transaction
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => reject(tx.error)
+        const keysReq = store.getAllKeys()
+        keysReq.onerror = () => reject(keysReq.error)
+        keysReq.onsuccess = () => {
+          for (const k of keysReq.result) {
+            if (k !== VERSION_META_KEY) store.delete(k)
+          }
+        }
+      })
+    }
+
     return new Promise((resolve, reject) => {
       const request = store.clear()
       request.onsuccess = () => resolve()
@@ -699,8 +731,28 @@ export class IndexedDBStorage<T extends Record<string, any>> extends AsyncBaseSt
     const request = store.getAllKeys()
     return new Promise((resolve, reject) => {
       request.onsuccess = () => {
-        resolve(request.result as string[])
+        resolve((request.result as string[]).filter((k) => k !== VERSION_META_KEY))
       }
+      request.onerror = () => reject(request.error)
+    })
+  }
+
+  // ─── Persisted schema version (persist-migration) ───────────────────────────
+
+  protected async readPersistedVersion(): Promise<number | undefined> {
+    const store = await this.getObjectStore()
+    return new Promise((resolve) => {
+      const request = store.get(VERSION_META_KEY)
+      request.onsuccess = () => resolve(typeof request.result === 'number' ? request.result : undefined)
+      request.onerror = () => resolve(undefined)
+    })
+  }
+
+  protected async writePersistedVersion(version: number): Promise<void> {
+    const store = await this.getObjectStore('readwrite')
+    return new Promise((resolve, reject) => {
+      const request = store.put(version, VERSION_META_KEY)
+      request.onsuccess = () => resolve()
       request.onerror = () => reject(request.error)
     })
   }
@@ -715,7 +767,6 @@ export class IndexedDBStorage<T extends Record<string, any>> extends AsyncBaseSt
    * Only clean up middleware and runtime resources, not persisted data.
    */
   protected async performCleanup(): Promise<void> {
-    await this.pluginExecutor?.executeOnClear()
     await this.doDestroy()
   }
 

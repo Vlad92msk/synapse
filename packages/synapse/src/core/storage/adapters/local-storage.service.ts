@@ -1,4 +1,3 @@
-import { ISyncPluginExecutor } from '../modules/plugin/plugin.interface'
 import { SingletonMixin } from '../modules/singleton/mixin.util'
 import { IEventEmitter, ILogger, LocalStorageConfig, StorageType } from '../storage.interface'
 import { StorageKey, StorageKeyType } from '../utils/storage-key'
@@ -9,15 +8,15 @@ export class LocalStorage<T extends Record<string, any>> extends SyncBaseStorage
   protected static readonly STORAGE_TYPE: StorageType = 'localStorage'
   readonly type: StorageType = 'localStorage'
 
-  constructor(config: LocalStorageConfig<T>, pluginExecutor?: ISyncPluginExecutor, eventEmitter?: IEventEmitter, logger?: ILogger) {
-    super(config, pluginExecutor, eventEmitter, logger)
+  constructor(config: LocalStorageConfig<T>, eventEmitter?: IEventEmitter, logger?: ILogger) {
+    super(config, eventEmitter, logger)
   }
 
-  static create<T extends Record<string, any>>(config: LocalStorageConfig, pluginExecutor?: ISyncPluginExecutor, eventEmitter?: IEventEmitter, logger?: ILogger): LocalStorage<T> {
+  static create<T extends Record<string, any>>(config: LocalStorageConfig, eventEmitter?: IEventEmitter, logger?: ILogger): LocalStorage<T> {
     return SingletonMixin.handleSingletonCreation(
       config,
       this.STORAGE_TYPE,
-      (finalConfig) => new LocalStorage<T>(finalConfig as LocalStorageConfig<T>, pluginExecutor, eventEmitter, logger),
+      (finalConfig) => new LocalStorage<T>(finalConfig as LocalStorageConfig<T>, eventEmitter, logger),
       logger,
     )
   }
@@ -123,7 +122,35 @@ export class LocalStorage<T extends Record<string, any>> extends SyncBaseStorage
     return value !== undefined
   }
 
+  /** Персистентное хранилище: по умолчанию НЕ чистим данные на destroy (симметрично IndexedDB). */
+  protected get clearOnDestroyDefault(): boolean {
+    return false
+  }
+
+  // ─── Persisted schema version (persist-migration) ───────────────────────────
+
+  /** Версия схемы хранится отдельным sidecar-ключом, не засоряя сам state. */
+  private get versionStorageKey(): string {
+    return `${this.name}::__synapse_version__`
+  }
+
+  protected readPersistedVersion(): number | undefined {
+    const raw = localStorage.getItem(this.versionStorageKey)
+    if (raw == null) return undefined
+    const parsed = Number(raw)
+    return Number.isFinite(parsed) ? parsed : undefined
+  }
+
+  protected writePersistedVersion(version: number): void {
+    localStorage.setItem(this.versionStorageKey, String(version))
+  }
+
+  protected clearPersistedVersion(): void {
+    localStorage.removeItem(this.versionStorageKey)
+  }
+
   protected async doDestroy(): Promise<void> {
-    this.doClear()
+    // Персистентное хранилище: данные не стираются на destroy.
+    // Очистка управляется флагом config.clearOnDestroy в performCleanup.
   }
 }

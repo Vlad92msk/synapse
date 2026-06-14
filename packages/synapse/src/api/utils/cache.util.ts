@@ -1,13 +1,10 @@
-import { StorageKey, StorageKeyType } from './storage-key'
+import { StorageKey, StorageKeyType } from '../../core/storage/utils/storage-key'
 
 export interface CacheMetadata {
   createdAt: number
   updatedAt: number
   expiresAt: number
   tags?: string[]
-  createdAtDateTime: string
-  updatedAtDateTime: string
-  expiresAtDateTime: string
 }
 
 export interface CacheOptions {
@@ -35,14 +32,12 @@ export class CacheUtils {
       updatedAt: now,
       expiresAt,
       tags,
-      createdAtDateTime: this.formatDateTime(now),
-      updatedAtDateTime: this.formatDateTime(now),
-      expiresAtDateTime: expiresAt === Infinity ? 'never' : this.formatDateTime(expiresAt),
     }
   }
 
-  private static formatDateTime(timestamp: number): string {
-    return new Date(timestamp).toISOString()
+  /** ISO timestamps are derived lazily (for logging/debugging) instead of being stored in the cache payload. */
+  static formatDateTime(timestamp: number): string {
+    return timestamp === Infinity ? 'never' : new Date(timestamp).toISOString()
   }
 
   static isExpired(metadata: CacheMetadata): boolean {

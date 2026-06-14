@@ -1,4 +1,3 @@
-import { ISyncPluginExecutor } from '../modules/plugin/plugin.interface'
 import { SingletonMixin } from '../modules/singleton/mixin.util'
 import { IEventEmitter, ILogger, MemoryStorageConfig, StorageType } from '../storage.interface'
 import { StorageKey, StorageKeyType } from '../utils/storage-key'
@@ -11,20 +10,15 @@ export class MemoryStorage<T extends Record<string, any>> extends SyncBaseStorag
 
   private storage = new Map<string, any>()
 
-  constructor(config: MemoryStorageConfig<T>, pluginExecutor?: ISyncPluginExecutor, eventEmitter?: IEventEmitter, logger?: ILogger) {
-    super(config, pluginExecutor, eventEmitter, logger)
+  constructor(config: MemoryStorageConfig<T>, eventEmitter?: IEventEmitter, logger?: ILogger) {
+    super(config, eventEmitter, logger)
   }
 
-  static create<T extends Record<string, any>>(
-    config: MemoryStorageConfig<T>,
-    pluginExecutor?: ISyncPluginExecutor,
-    eventEmitter?: IEventEmitter,
-    logger?: ILogger,
-  ): MemoryStorage<T> {
+  static create<T extends Record<string, any>>(config: MemoryStorageConfig<T>, eventEmitter?: IEventEmitter, logger?: ILogger): MemoryStorage<T> {
     return SingletonMixin.handleSingletonCreation(
       config,
       this.STORAGE_TYPE,
-      (finalConfig) => new MemoryStorage<T>(finalConfig as MemoryStorageConfig<T>, pluginExecutor, eventEmitter, logger),
+      (finalConfig) => new MemoryStorage<T>(finalConfig as MemoryStorageConfig<T>, eventEmitter, logger),
       logger,
     )
   }
@@ -123,6 +117,6 @@ export class MemoryStorage<T extends Record<string, any>> extends SyncBaseStorag
   }
 
   protected async doDestroy(): Promise<void> {
-    this.storage.delete(this.name)
+    // Очистка управляется флагом config.clearOnDestroy в performCleanup (memory → по умолчанию true).
   }
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { MemoryStorage } from 'synapse-storage/core'
+import { MemoryStorage, Selectors } from 'synapse-storage/core'
 import { createSynapse, createSynapseAwaiter } from 'synapse-storage/utils'
 import { cardStyle, buttonRow, codeBlock, sectionTitle } from './styles'
 
@@ -11,27 +11,35 @@ interface ConfigState {
   featureFlags: Record<string, boolean>
 }
 
+// ─── Selectors (class-based) ─────────────────────────────────────────────────
+
+class ConfigSelectors extends Selectors<ConfigState> {
+  readonly locale = this.select((s) => s.locale)
+  readonly apiUrl = this.select((s) => s.apiUrl)
+  readonly featureFlags = this.select((s) => s.featureFlags)
+}
+
 // ─── Создание store с задержкой (эмуляция загрузки конфига) ─────────────────
 
-const configStorePromise = createSynapse({
-  createStorageFn: async () => {
-    await new Promise((r) => setTimeout(r, 2000)) // эмуляция сетевого запроса
-    const storage = new MemoryStorage<ConfigState>({
-      name: 'app-config-awaiter',
-      initialState: {
-        locale: 'ru',
-        apiUrl: 'https://api.example.com',
-        featureFlags: { darkMode: true, betaFeatures: false },
-      },
-    })
-    storage.initialize()
-    return storage
-  },
+const configSynapse = createSynapse(async () => {
+  await new Promise((r) => setTimeout(r, 2000)) // эмуляция сетевого запроса
+  const storage = new MemoryStorage<ConfigState>({
+    name: 'app-config-awaiter',
+    initialState: {
+      locale: 'ru',
+      apiUrl: 'https://api.example.com',
+      featureFlags: { darkMode: true, betaFeatures: false },
+    },
+  })
+  return {
+    storage,
+    selectors: new ConfigSelectors(storage),
+  }
 })
 
-// ─── Создание awaiter ───────────────────────────────────────────────────────
+// ─── Создание awaiter (принимает handle или Promise) ─────────────────────────
 
-const configAwaiter = createSynapseAwaiter(configStorePromise)
+const configAwaiter = createSynapseAwaiter(configSynapse)
 
 // ─── Компонент-пример ───────────────────────────────────────────────────────
 
@@ -50,25 +58,19 @@ export function SynapseAwaiterExample() {
 
       {/* ─── Создание ─────────────────────────────────────────────────── */}
       <h3 style={sectionTitle}>Создание</h3>
-      <pre style={codeBlock}>{`// createSynapseAwaiter принимает Promise<SynapseStore> или готовый SynapseStore
+      <pre style={codeBlock}>{`// createSynapseAwaiter принимает handle (thenable), Promise<SynapseStore> или готовый store
 
-// Вариант 1: Promise (типичный кейс — async инициализация)
-const storePromise = createSynapse({
-  createStorageFn: async () => {
-    const config = await fetch('/api/config').then(r => r.json())
-    const storage = new MemoryStorage<ConfigState>({
-      name: 'app-config',
-      initialState: config,
-    })
-    storage.initialize()
-    return storage
-  },
+// Вариант 1: ленивый handle (типичный кейс — async инициализация в фабрике)
+const configSynapse = createSynapse(async () => {
+  const config = await fetch('/api/config').then((r) => r.json())
+  const storage = new MemoryStorage<ConfigState>({ name: 'app-config', initialState: config })
+  return { storage, selectors: new ConfigSelectors(storage) }
 })
 
-const awaiter = createSynapseAwaiter(storePromise)
+const awaiter = createSynapseAwaiter(configSynapse)
 
-// Вариант 2: уже готовый store (оборачивается в Promise.resolve)
-const readyStore = await createSynapse({ storage: myStorage })
+// Вариант 2: уже готовый store
+const readyStore = await configSynapse
 const awaiter2 = createSynapseAwaiter(readyStore)`}</pre>
 
       {/* ─── isReady / getStatus / getError ────────────────────────────── */}

@@ -28,7 +28,6 @@ export abstract class StorageCore<T extends Record<string, any>> implements ISto
 
   protected subscribers = new Map<StorageKeyType, Set<(value: any) => void>>()
   protected _stateCache: T = {} as T
-  protected keyVersions = new Map<string, number>()
 
   constructor(
     protected readonly coreConfig: BaseStorageConfig<T>,
@@ -138,11 +137,17 @@ export abstract class StorageCore<T extends Record<string, any>> implements ISto
   protected abstract subscribeByKey(key: string, callback: (value: any) => void): VoidFunction
   protected abstract subscribeBySelector<R>(pathSelector: PathSelector<T, R>, callback: (value: R) => void): VoidFunction
 
+  /**
+   * Хук изменения ключа. По умолчанию no-op.
+   * Async-хранилища переопределяют для защиты от race condition в subscribeByKey
+   * (см. AsyncBaseStorage). Sync версии не нужен — get() синхронный.
+   */
+  protected trackKeyVersion(_keyStr: string): void {}
+
   protected notifySubscribers(key: StorageKeyType, value: any): void {
     const keyStr = key.toString()
 
-    // Инкрементируем версию ключа — используется для защиты от race condition в subscribeByKey (async)
-    this.keyVersions.set(keyStr, (this.keyVersions.get(keyStr) ?? 0) + 1)
+    this.trackKeyVersion(keyStr)
 
     const exactSubscribers = this.subscribers.get(keyStr)
     if (exactSubscribers?.size) {

@@ -46,7 +46,18 @@
       "Bash(yarn docs:generate)",
       "Bash(npx tsx:*)",
       "Bash(echo \"tsc exit: $?\")",
-      "Bash(yarn workspace *)"
+      "Bash(yarn workspace *)",
+      "Bash(cd /Users/vlad/web_dev/sn_client)",
+      "Bash(ls -la src/modules/posts/synapse/)",
+      "Bash(ls src/modules/comments/synapse/)",
+      "Bash(ls src/modules/user/synapse/)",
+      "Bash(ls src/modules/)",
+      "Bash(grep -v ':0$')",
+      "Read(//tmp/**)",
+      "Bash(yarn test *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(echo \"=== examples typecheck exit: $? ===\")",
+      "Bash(yarn typecheck *)"
     ]
   }
 }

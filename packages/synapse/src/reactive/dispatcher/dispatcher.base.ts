@@ -50,7 +50,7 @@ export interface ApiActions<TInitPayload = void> extends DispatchFunction<TInitP
 
 /**
  * Keyed-вариант: статус хранится по ключу. `init`/`loading`/`success`/`reset` принимают
- * `key`, `failure` — `{ key, error }` (по образцу `createKeyedApiActions`).
+ * `key`, `failure` — `{ key, error }`.
  */
 export interface KeyedApiActions<TInitPayload extends { key: string } = { key: string }> extends DispatchFunction<TInitPayload, TInitPayload> {
   loading: DispatchFunction<string, string>
