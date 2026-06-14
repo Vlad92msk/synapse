@@ -43,7 +43,9 @@
       "Bash(npm run *)",
       "Read(//Users/vlad/web_dev/synapse/**)",
       "Bash(find . -type d -name docs -not -path '*/node_modules/*')",
-      "Bash(find . -type d \\\\\\( -name en -o -name ru \\\\\\) -not -path '*/node_modules/*')"
+      "Bash(find . -type d \\\\\\( -name en -o -name ru \\\\\\) -not -path '*/node_modules/*')",
+      "Bash(npm pack *)",
+      "Bash(grep *)"
     ]
   }
 }

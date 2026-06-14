@@ -12,7 +12,7 @@
 
     // =================== ТИПЫ ===================
     "declaration": true,                   // Генерируем .d.ts (tsup тоже включен)
-    "declarationMap": true,                // Source maps для типов
+    "declarationMap": false,               // .d.ts.map не публикуем — ведут на src, которого нет в пакете
     "sourceMap": false,                    // Соответствует tsup sourcemap: false
 
     // =================== ВЫВОД ===================
@@ -44,6 +44,7 @@
     "node_modules",                        // Зависимости
     "dist",                                // Собранные файлы
     "**/*.test.*",                         // Тесты
-    "**/*.spec.*"                          // Спеки
+    "**/*.spec.*",                         // Спеки
+    "src/api/example.ts"                   // Демо — не часть публичного API/типов
   ]
 }
