@@ -2,9 +2,9 @@
 
 > [Back to Main](../../README.md)
 
-Factory for creating storages. An alternative to direct `new MemoryStorage()`.
+A factory for creating storages. An alternative to calling `new MemoryStorage()` directly.
 
-## Typed Methods
+## Typed methods
 
 ```typescript
 import { StorageFactory } from 'synapse-storage/core'
@@ -14,26 +14,26 @@ interface UserState {
   age: number
 }
 
-// createMemory -> MemoryStorage<T> (sync)
+// createMemory -> MemoryStorage<T> (synchronous)
 const memStorage = StorageFactory.createMemory<UserState>({
   name: 'factory-memory',
   initialState: { name: 'Alice', age: 25 },
 })
 
-// createLocal -> LocalStorage<T> (sync)
+// createLocal -> LocalStorage<T> (synchronous)
 const localStore = StorageFactory.createLocal<UserState>({
   name: 'factory-local',
   initialState: { name: 'Bob', age: 30 },
 })
 
-// createIndexedDB -> IndexedDBStorage<T> (async)
+// createIndexedDB -> IndexedDBStorage<T> (asynchronous)
 const idbStore = StorageFactory.createIndexedDB<UserState>({
   name: 'factory-idb',
   initialState: { name: 'Charlie', age: 35 },
   options: {},
 })
 
-// Initialize each
+// Initialize each one
 await memStorage.initialize()
 await localStore.initialize()
 await idbStore.initialize()
@@ -41,7 +41,7 @@ await idbStore.initialize()
 
 ## Universal create()
 
-Choose the type via the `type` field. Return type depends on the chosen type:
+The type is chosen via the `type` field. The return type depends on the chosen type:
 
 ```typescript
 const sync = StorageFactory.create<UserState>({

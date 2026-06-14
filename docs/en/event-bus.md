@@ -2,7 +2,7 @@
 
 > [Back to Main](../../README.md)
 
-Pub/sub bus for communication between modules. Built on createSynapse + MemoryStorage + Dispatcher. Supports wildcard patterns, priorities, TTL, event history.
+A pub/sub bus for communication between modules. Built on createSynapse + MemoryStorage + Dispatcher. Supports wildcard patterns, priorities, TTL, and event history.
 
 ## Imports
 
@@ -13,20 +13,21 @@ import { createEventBus } from 'synapse-storage/utils'
 ## Creating
 
 ```typescript
-const eventBusPromise = createEventBus({
-  name: 'app-events',        // name (for singleton/debug)
+const eventBusHandle = createEventBus({
+  name: 'app-events',        // name (for singleton/debugging)
   autoCleanup: true,          // auto-cleanup of old events
   maxEvents: 1000,            // max stored events (default 1000)
 })
 
-// createEventBus returns Promise<SynapseStoreWithDispatcher>
-const eventBus = await eventBusPromise
+// createEventBus returns a SynapseModule handle (lazy, PromiseLike) —
+// the factory runs on the first await/ready()
+const eventBus = await eventBusHandle
 
-// Result:
+// The result:
 // {
-//   storage: ISyncStorage<EventBusState>   — state storage
+//   storage: ISyncStorage<EventBusState>   — the state storage
 //   actions: EventBusActions               — typed actions
-//   dispatcher: Dispatcher                 — raw dispatcher
+//   dispatcher: Dispatcher                 — the raw dispatcher
 //   selectors: {}
 //   destroy: () => Promise<void>           — cleanup
 // }
@@ -38,26 +39,26 @@ const eventBus = await eventBusPromise
 // }
 ```
 
-## actions.publish() — Publishing an Event
+## actions.publish() — Publishing an event
 
 ```typescript
 const eventBus = await createEventBus({ name: 'my-bus' })
 
-// Publish an event
+// Publishing an event
 const result = await eventBus.actions.publish({
   event: 'USER_UPDATED',           // event type (string)
   data: { userId: 123, name: 'John' },  // arbitrary data
   metadata: {                       // optional metadata
     priority: 'high',               // 'low' | 'normal' | 'high'
-    ttl: 60000,                     // event TTL (ms)
+    ttl: 60000,                     // event time-to-live (ms)
   },
 })
 
-// Result:
+// The result:
 // {
-//   eventId: string    — unique event ID
-//   event: string      — event type
-//   data: any          — data
+//   eventId: string    — the unique event ID
+//   event: string      — the event type
+//   data: any          — the data
 // }
 
 // EventBusEvent (stored in storage):
@@ -70,15 +71,15 @@ const result = await eventBus.actions.publish({
 // }
 ```
 
-## actions.subscribe() — Subscribing to Events
+## actions.subscribe() — Subscribing to events
 
 ```typescript
-// Subscribe to a specific event
+// Subscribing to a specific event
 const { subscriptionId, unsubscribe } = await eventBus.actions.subscribe({
   eventPattern: 'USER_UPDATED',    // exact match
   handler: (data, event) => {
-    // data — event.data (payload)
-    // event — full EventBusEvent object
+    // data — event.data (the payload)
+    // event — the full EventBusEvent object
     console.log(data)               // { userId: 123, name: 'John' }
     console.log(event.event)        // 'USER_UPDATED'
     console.log(event.timestamp)    // 1716633600000
@@ -111,13 +112,13 @@ await eventBus.actions.subscribe({
 unsubscribe()
 ```
 
-## actions.getEventHistory() — Event History
+## actions.getEventHistory() — Event history
 
 ```typescript
-// Get history by event type
+// Get the history for an event type
 const history = await eventBus.actions.getEventHistory({
-  eventType: 'USER_UPDATED',      // event type
-  limit: 10,                       // max entries (default 100)
+  eventType: 'USER_UPDATED',      // the event type
+  limit: 10,                       // max records (default 100)
 })
 
 // Returns EventBusEvent[] — sorted by timestamp (newest first)
@@ -127,23 +128,23 @@ const history = await eventBus.actions.getEventHistory({
 // ]
 ```
 
-## actions.getActiveSubscriptions() — Active Subscriptions
+## actions.getActiveSubscriptions() — Active subscriptions
 
 ```typescript
 const subscriptions = await eventBus.actions.getActiveSubscriptions()
 
-// Returns array:
+// Returns an array:
 // [
 //   {
-//     id: string,          — subscription ID
-//     pattern: string,     — pattern ('USER_*', '*', etc.)
-//     options: {...},       — options (priority, etc.)
-//     createdAt: number,   — creation timestamp
+//     id: string,          — the subscription ID
+//     pattern: string,     — the pattern ('USER_*', '*', etc.)
+//     options: {...},       — options (priority etc.)
+//     createdAt: number,   — creation time
 //   }
 // ]
 ```
 
-## actions.clearEvents() — Clearing Events
+## actions.clearEvents() — Clearing events
 
 ```typescript
 // Clear old events
@@ -162,11 +163,11 @@ await eventBus.actions.clearEvents({})
 await eventBus.destroy()
 ```
 
-## Example: Communication Between Modules
+## Example: Communication between modules
 
 ```typescript
 // module-a.ts — publishes events
-const bus = await eventBusPromise
+const bus = await eventBusHandle
 
 export async function saveUser(user: User) {
   await api.saveUser(user)
@@ -178,12 +179,12 @@ export async function saveUser(user: User) {
 }
 
 // module-b.ts — listens for events
-const bus = await eventBusPromise
+const bus = await eventBusHandle
 
 bus.actions.subscribe({
   eventPattern: 'USER_SAVED',
   handler: (data) => {
-    // Update cache, send notification, etc.
+    // Update the cache, send a notification, etc.
     console.log('User saved:', data.userId)
   },
 })

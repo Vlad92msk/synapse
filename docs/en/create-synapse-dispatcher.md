@@ -2,96 +2,120 @@
 
 > [Back to Main](../../README.md)
 
-Storage + selectors + dispatcher. Actions for changing state, watchers for reactive tracking.
+Storage + selectors + dispatcher. Actions for changing the state, watchers for reactive tracking.
 
 ## Creating
 
 ```typescript
-import { MemoryStorage } from 'synapse-storage/core'
+import { MemoryStorage, Selectors } from 'synapse-storage/core'
 import { createSynapse } from 'synapse-storage/utils'
-import { createDispatcher } from 'synapse-storage/reactive'
+import { Dispatcher } from 'synapse-storage/reactive'
 
-const synapsePromise = createSynapse({
-  storage: new MemoryStorage<CartState>({ name: 'cart', initialState }),
+// Selectors — class fields
+class CartSelectors extends Selectors<CartState> {
+  readonly items = this.select((s) => s.items)
+  readonly discount = this.select((s) => s.discount)
+  readonly totalPrice = this.combine([this.items, this.discount], (items, discount) => {
+    const sum = items.reduce((acc, i) => acc + i.price * i.qty, 0)
+    return sum * (1 - discount / 100)
+  })
+}
 
-  createSelectorsFn: (selectorModule) => ({
-    items: selectorModule.createSelector((s) => s.items),
-    discount: selectorModule.createSelector((s) => s.discount),
-    totalPrice: selectorModule.createSelector(
-      [items, discount],
-      (itemsVal, discountVal) => {
-        const sum = itemsVal.reduce((acc, i) => acc + i.price * i.qty, 0)
-        return sum * (1 - discountVal / 100)
-      },
-    ),
-  }),
+// Dispatcher — actions and watchers as class fields. Action name = field name.
+class CartDispatcher extends Dispatcher<CartState> {
+  readonly addItem = this.action((store, params: { name: string; price: number }) => {
+    store.update((s) => { s.items.push({ id: Date.now(), ...params, qty: 1 }) })
+    return params
+  })
+  readonly setDiscount = this.action((store, percent: number) => {
+    store.set('discount', percent)
+    return percent
+  })
+  readonly watchItemCount = this.watcher({ selector: (s) => s.items.length })
+}
 
-  // Dispatcher — defines actions and watchers
-  createDispatcherFn: (storage) =>
-    createDispatcher({ storage }, (_storage, { createAction, createWatcher }) => {
-      // ... actions and watchers
-      return { addItem, removeItem, setDiscount, watchItemCount }
-    }),
+const cartSynapse = createSynapse(async () => {
+  const storage = new MemoryStorage<CartState>({ name: 'cart', initialState })
+  return {
+    storage,
+    dispatcher: new CartDispatcher(storage),
+    selectors: new CartSelectors(storage),
+  }
 })
 ```
 
-## createAction
+## this.action
 
 ```typescript
-// createAction — defines an action with type and logic
-const addItem = createAction({
-  type: 'addItem',                          // unique action type
-  action: (params: { name: string }) => {   // logic (sync or async)
-    storage.update((s) => {
+// this.action((store, params) => result) — a handler in the "recipe" signature.
+// The action's payload = the value returned by the handler.
+class CartDispatcher extends Dispatcher<CartState> {
+  readonly addItem = this.action((store, params: { name: string; price: number }) => {
+    store.update((s) => {
       s.items.push({ id: Date.now(), ...params, qty: 1 })
     })
-    return params                            // return = payload in action stream
-  },
-})
+    return params                            // return = payload in the action stream
+  })
+}
 
-// Call via store.actions
+// Calling via store.actions (action name = field name)
 store.actions.addItem({ name: 'Hat', price: 1500 })
 
-// Each action has a meta-field actionType
+// actionType is generated from the field name at finalization
 store.actions.addItem.actionType  // '[cart]addItem'
 ```
 
-## createWatcher
+## this.watcher
 
 ```typescript
-// createWatcher — reactively tracks changes in state
-const watchItemCount = createWatcher({
-  type: 'watchItemCount',
-  selector: (state) => state.items.length,   // what to track
-  notifyAfterSubscribe: true,                // call immediately on subscribe
-  shouldTrigger: (prev, curr) => prev !== curr, // filter (optional)
-})
+// this.watcher — reactively tracks state changes
+class CartDispatcher extends Dispatcher<CartState> {
+  readonly watchItemCount = this.watcher({
+    selector: (state) => state.items.length,        // what to track
+    notifyAfterSubscribe: true,                     // call immediately on subscribe
+    shouldTrigger: (prev, curr) => prev !== curr,   // filter (optional)
+  })
+}
 
-// Subscribe — returns RxJS Observable
+// Subscribing — returns an RxJS Observable
 const sub = store.dispatcher.watchers.watchItemCount().subscribe((action) => {
-  console.log('items count:', action.payload)
+  console.log('item count:', action.payload)
 })
 
 // Unsubscribe
 sub.unsubscribe()
 ```
 
-## Return Value
+The full dispatcher surface (`signal`, `apiActions`, and the `ofType` rule) — see
+[Dispatcher (in detail)](./dispatcher-detailed.md).
+
+## Return value
 
 ```typescript
-const store = await synapsePromise
+const store = await cartSynapse
 
 store.storage     // IStorage<CartState>
-store.selectors   // { items, discount, totalPrice }
+store.selectors   // a CartSelectors instance
 store.actions     // { addItem, removeItem, changeQty, setDiscount }
-store.dispatcher  // Dispatcher (dispatch, watchers, actions observable)
-store.destroy()   // () => Promise<void>
+store.dispatcher  // a CartDispatcher instance (dispatch, watchers, action$)
 
-// store.actions is a shortcut for store.dispatcher.dispatch
+// store.actions — shorthand for store.dispatcher.dispatch
 // store.actions.addItem === store.dispatcher.dispatch.addItem
 
-// Stream of all actions (RxJS Observable)
+// The stream of all actions (RxJS Observable)
 store.dispatcher.actions.subscribe((action) => {
   console.log(action.type, action.payload)
 })
 ```
+
+## React (createSynapseCtx)
+
+```typescript
+import { createSynapseCtx } from 'synapse-storage/react'
+
+// Pass the handle ITSELF (not a call) — the factory starts lazily on the first Provider mount
+export const { contextSynapse, useSynapseSelectors, useSynapseActions } =
+  createSynapseCtx(cartSynapse, { loadingComponent: <div>Loading...</div> })
+```
+
+More details — [createSynapseCtx](./synapse-ctx.md).

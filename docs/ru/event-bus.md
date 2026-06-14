@@ -13,14 +13,15 @@ import { createEventBus } from 'synapse-storage/utils'
 ## Создание
 
 ```typescript
-const eventBusPromise = createEventBus({
+const eventBusHandle = createEventBus({
   name: 'app-events',        // имя (для singleton/отладки)
   autoCleanup: true,          // автоочистка старых событий
   maxEvents: 1000,            // макс. хранимых событий (по умолчанию 1000)
 })
 
-// createEventBus возвращает Promise<SynapseStoreWithDispatcher>
-const eventBus = await eventBusPromise
+// createEventBus возвращает SynapseModule-handle (ленивый, PromiseLike) —
+// фабрика исполняется при первом await/ready()
+const eventBus = await eventBusHandle
 
 // Результат:
 // {
@@ -166,7 +167,7 @@ await eventBus.destroy()
 
 ```typescript
 // module-a.ts — публикует события
-const bus = await eventBusPromise
+const bus = await eventBusHandle
 
 export async function saveUser(user: User) {
   await api.saveUser(user)
@@ -178,7 +179,7 @@ export async function saveUser(user: User) {
 }
 
 // module-b.ts — слушает события
-const bus = await eventBusPromise
+const bus = await eventBusHandle
 
 bus.actions.subscribe({
   eventPattern: 'USER_SAVED',

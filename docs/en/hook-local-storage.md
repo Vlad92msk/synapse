@@ -2,7 +2,7 @@
 
 > [Back to Main](../../README.md)
 
-Same hook, but with `type: 'localStorage'`. Data survives page reloads.
+The same hook, but with `type: 'localStorage'`. Data persists across page reloads.
 
 ## Usage
 
@@ -17,7 +17,7 @@ interface SettingsState {
 
 function SettingsPage() {
   const { storage, isReady } = useCreateStorage<SettingsState>({
-    type: 'localStorage',         // <- only difference from memory
+    type: 'localStorage',         // <- the only difference from memory
     name: 'hook-settings',
     initialState: { lang: 'ru', notifications: true, volume: 50 },
   })
@@ -28,13 +28,13 @@ function SettingsPage() {
   const lang = useStorageSubscribe(storage, (s) => s.lang)
   const volume = useStorageSubscribe(storage, (s) => s.volume)
 
-  // set/update/clear/reset — everything like with memory
+  // set/update/clear/reset — all the same as with memory
   storage.set('lang', 'en')
   storage.set('volume', 75)
 }
 ```
 
-## Full Example
+## Full example
 
 ```tsx
 function SettingsPage() {

@@ -2,12 +2,12 @@
 
 > [Back to Main](../../README.md)
 
-Minimal configuration: storage + selectors, without dispatcher. Changes via storage directly.
+Minimal configuration: storage + selectors, without a dispatcher. Changes go through the storage directly.
 
 ## Creating
 
 ```typescript
-import { MemoryStorage } from 'synapse-storage/core'
+import { MemoryStorage, Selectors } from 'synapse-storage/core'
 import { createSynapse } from 'synapse-storage/utils'
 import { useSelector } from 'synapse-storage/react'
 
@@ -16,54 +16,62 @@ interface TodoState {
   filter: 'all' | 'active' | 'done'
 }
 
-const synapsePromise = createSynapse({
-  // Pass a ready storage (or createStorageFn for async creation)
-  storage: new MemoryStorage<TodoState>({
+// Selectors — class fields, real SelectorAPI right away (eager). Name = field name.
+class TodoSelectors extends Selectors<TodoState> {
+  readonly todos = this.select((state) => state.todos)
+  readonly filter = this.select((state) => state.filter)
+
+  // Combined: depends on todos and filter
+  readonly filteredTodos = this.combine([this.todos, this.filter], (todos, filter) => {
+    if (filter === 'active') return todos.filter((t) => !t.done)
+    if (filter === 'done') return todos.filter((t) => t.done)
+    return todos
+  })
+
+  readonly doneCount = this.combine([this.todos], (todos) => todos.filter((t) => t.done).length)
+}
+
+// createSynapse(factory) → a lazy handle. The factory runs once
+// on the first await / ready(), not on import.
+const todoSynapse = createSynapse(async () => {
+  const storage = new MemoryStorage<TodoState>({
     name: 'todo-basic',
     initialState: { todos: [], filter: 'all' },
-  }),
-
-  // Selectors — derived values from state
-  createSelectorsFn: (selectorModule) => {
-    const todos = selectorModule.createSelector((state) => state.todos)
-    const filter = selectorModule.createSelector((state) => state.filter)
-
-    // Combined: depends on todos and filter
-    const filteredTodos = selectorModule.createSelector(
-      [todos, filter],
-      (todosVal, filterVal) => {
-        if (filterVal === 'active') return todosVal.filter((t) => !t.done)
-        if (filterVal === 'done') return todosVal.filter((t) => t.done)
-        return todosVal
-      },
-    )
-
-    return { todos, filter, filteredTodos }
-  },
+  })
+  return {
+    storage,
+    selectors: new TodoSelectors(storage),
+  }
 })
+
+export type TodoSynapse = Awaited<typeof todoSynapse>
 ```
 
-## Return Value
+## Return value
 
 ```typescript
-// createSynapse returns a Promise
-const store = await synapsePromise
+// The handle is a thenable: await triggers the factory and returns the assembled module
+const store = await todoSynapse
 
-// Result (basic — without dispatcher):
-store.storage    // IStorage<TodoState> — storage
-store.selectors  // { todos, filter, filteredTodos } — SelectorAPI objects
-store.destroy()  // () => Promise<void> — cleanup
+// The result (basic — without a dispatcher):
+store.storage    // IStorage<TodoState> — the storage
+store.selectors  // a TodoSelectors instance — fields = SelectorAPI
+
+// The handle itself:
+todoSynapse.ready()    // Promise<store> — the same as await
+todoSynapse.isReady()  // boolean
+todoSynapse.destroy()  // () => Promise<void> — cleanup + memoization reset (the handle is re-creatable)
 ```
 
 ## Usage in React
 
 ```typescript
-// useSelector — subscribe to a selector (auto-updates component)
+// useSelector — subscribes to a selector (automatically updates the component)
 const todos = useSelector(store.selectors.todos)
 const filteredTodos = useSelector(store.selectors.filteredTodos)
 const doneCount = useSelector(store.selectors.doneCount)
 
-// Change state — via storage directly
+// Changing the state — through the storage directly
 store.storage.set('filter', 'active')
 
 store.storage.update((s) => {
@@ -71,21 +79,21 @@ store.storage.update((s) => {
 })
 ```
 
-## Alternative: createStorageFn
+## Async initialization in the factory
 
-Instead of `storage`, you can pass `createStorageFn` for async creation (e.g., loading data):
+The factory is an ordinary `async` function, so any prologue (a request, API-client init) is done right in it,
+before the module is assembled:
 
 ```typescript
-const synapsePromise = createSynapse({
-  createStorageFn: async () => {
-    const data = await fetch('/api/todos').then((r) => r.json())
-    const storage = new MemoryStorage<TodoState>({
-      name: 'todo-async',
-      initialState: { todos: data, filter: 'all' },
-    })
-    storage.initialize()
-    return storage
-  },
-  createSelectorsFn: (sm) => ({ ... }),
+const todoSynapse = createSynapse(async () => {
+  const data = await fetch('/api/todos').then((r) => r.json())
+  const storage = new MemoryStorage<TodoState>({
+    name: 'todo-async',
+    initialState: { todos: data, filter: 'all' },
+  })
+  return {
+    storage,
+    selectors: new TodoSelectors(storage),
+  }
 })
 ```

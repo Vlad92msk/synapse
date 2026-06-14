@@ -1,21 +1,23 @@
-# Pokemon Advanced — Full Architecture Example
+# Pokemon Advanced — A Full Architecture Example
 
 > [Back to Main](../../README.md)
 
-Complete example combining all Synapse features: storage, selectors, dispatcher, effects, ApiClient, dependencies, and external state.
+A complete example combining all of Synapse's capabilities: storage, selectors, dispatcher, effects, ApiClient, dependencies, and external state.
 
-## Project Structure
+## Project structure
 
 ```
-pokemon-advanced/
-  pokemon.types.ts       — TypeScript interfaces
-  pokemon.store.ts       — initial state
-  pokemon.settings.ts    — external settings storage (dependency)
-  pokemon.api.ts         — ApiClient setup + response mappers
-  pokemon.selectors.ts   — selectors with external dependencies
-  pokemon.dispatcher.ts  — dispatcher with defineAction/defineWatcher + createApiActions
-  pokemon.effects.ts     — RxJS effects (validateMap, apiResult, combineEffects)
-  pokemon.synapse.ts     — createSynapse wiring everything together
+pokemon-class/                — the class-based module
+  pokemon.dispatcher.ts        — class Dispatcher (action / signal / apiActions / watcher)
+  pokemon.selectors.ts         — class Selectors (select / combine)
+  pokemon.effects.ts           — class Effects (this.effect, validateMap/apiResult)
+  pokemon.synapse.ts           — createSynapse(factory), wiring it all together
+
+pokemon-advanced/             — reusable files (independent of the API form)
+  pokemon.types.ts             — TypeScript interfaces
+  pokemon.store.ts             — the initial state
+  pokemon.settings.ts          — an external settings storage (a dependency)
+  pokemon.api.ts               — ApiClient setup + response mapping
 ```
 
 ## 1. Types
@@ -50,7 +52,7 @@ export interface PokemonState {
 }
 ```
 
-## 2. External Settings (Dependency)
+## 2. External settings (a dependency)
 
 ```typescript
 import { MemoryStorage } from 'synapse-storage/core'
@@ -92,188 +94,158 @@ export const pokemonApiClient = new ApiClient({
 })
 ```
 
-## 4. Selectors with External Dependencies
+## 4. Selectors (class Selectors)
 
 ```typescript
-import type { ISelectorModule, IStorageBase } from 'synapse-storage/core'
+import { Selectors } from 'synapse-storage/core'
 
-type ExternalSelectors = { settings: IStorageBase<PokemonSettings> }
+export class PokemonSelectors extends Selectors<PokemonState> {
+  private readonly api = this.select((s) => s.api)        // private = an intermediate slice
 
-export function createPokemonSelectors(sm: ISelectorModule<PokemonState>, ext: ExternalSelectors) {
-  const pokemonList = sm.createSelector((s) => s.pokemonList)
-  const searchQuery = sm.createSelector((s) => s.searchQuery)
-  const favorites = sm.createSelector((s) => s.favorites)
+  readonly pokemonList = this.select((s) => s.pokemonList)
+  readonly searchQuery = this.select((s) => s.searchQuery)
+  readonly favorites = this.select((s) => s.favorites)
+  readonly selectedPokemon = this.select((s) => s.selectedPokemon)
+  readonly hasMore = this.select((s) => s.hasMore)
 
-  // Combined selector — composition of pokemonList + searchQuery
-  const filteredList = sm.createSelector(
-    [pokemonList, searchQuery],
-    (list, query) => {
-      if (!query) return list
-      return list.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()))
-    },
+  readonly listStatus = this.combine([this.api], (a) => a.listRequest.status)
+  readonly isListLoading = this.combine([this.listStatus], (s) => s === 'loading')
+
+  // Composition pokemonList + searchQuery → filteredList
+  readonly filteredList = this.combine([this.pokemonList, this.searchQuery], (list, query) =>
+    query ? list.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())) : list,
   )
 
-  // Derived data
-  const favoriteCount = sm.createSelector([favorites], (favs) => favs.length)
-  const favoritePokemon = sm.createSelector(
-    [pokemonList, favorites],
-    (list, favs) => list.filter((p) => favs.includes(p.id)),
+  readonly favoriteCount = this.combine([this.favorites], (favs) => favs.length)
+  readonly favoritePokemon = this.combine([this.pokemonList, this.favorites], (list, favs) =>
+    list.filter((p) => favs.includes(p.id)),
   )
-
-  return { pokemonList, searchQuery, favorites, filteredList, favoriteCount, favoritePokemon, ... }
 }
 ```
 
-## 5. Dispatcher with defineAction / defineWatcher / createApiActions
+## 5. Dispatcher (class Dispatcher: action / signal / apiActions / watcher)
 
 ```typescript
-import { createDispatcher } from 'synapse-storage/reactive'
-import { createApiActions, defineAction, defineWatcher } from 'synapse-storage'
+import { Dispatcher } from 'synapse-storage/reactive'
 
-export const createPokemonDispatcher = (storage: IStorage<PokemonState>) => {
-  const action = defineAction<PokemonState>()
-  const watcher = defineWatcher<PokemonState>()
+export class PokemonDispatcher extends Dispatcher<PokemonState> {
+  // apiActions — a callable group: loadList() = init, .loading/.success/.failure/.reset
+  readonly loadList = this.apiActions<void>((s) => s.api.listRequest)
+  readonly loadDetails = this.apiActions<void>((s) => s.api.detailsRequest)
 
-  // createApiActions — generates init/loading/success/failure/reset actions for an API field
-  const listRequest = createApiActions<PokemonState>((draft) => draft.api.listRequest)
-  const detailsRequest = createApiActions<PokemonState>((draft) => draft.api.detailsRequest)
+  // signal — a pure intent (the loading status is written via loadList.*)
+  readonly loadMore = this.signal<void>('Load the next page')
 
-  const loadList = action({
-    meta: { description: 'Intent to load pokemon list' },
-    action: (storage) => {
-      storage.update((s) => { s.api.listRequest = { status: 'idle', error: null } })
-    },
+  readonly selectPokemon = this.action((store, id: number | null) => {
+    store.update((s) => {
+      s.selectedPokemonId = id
+      if (id === null) s.selectedPokemon = null
+    })
+    return id
   })
 
-  const selectPokemon = action({
-    action: (storage, id: number | null) => {
-      storage.update((s) => {
-        s.selectedPokemonId = id
-        if (id === null) s.selectedPokemon = null
-      })
-      return id
-    },
-  })
-
-  const watchFavoriteCount = watcher({
-    selector: (s) => s.favorites.length,
-    notifyAfterSubscribe: true,
-  })
-
-  return createDispatcher({ storage }, {
-    loadList, selectPokemon,
-    loadListInit: listRequest.init,
-    loadListLoading: listRequest.loading,
-    loadListSuccess: listRequest.success,
-    loadListFailure: listRequest.failure,
-    // ... other actions
-    watchFavoriteCount,
-  })
-}
-```
-
-## 6. Effects (validateMap + apiResult + combineEffects)
-
-```typescript
-import { ofType, combineEffects, selectorObject, selectorMap, validateMap, apiResult, fromRequest } from 'synapse-storage/reactive'
-
-// Three levels of abstraction for API calls in effects:
-
-// Level 1: Native RxJS — full control
-// action$.pipe(ofType(...), switchMap(() => from(api.request(...)).pipe(tap(...), catchError(...))))
-
-// Level 2: waitWithCallbacks — lifecycle managed by request
-// endpoint.request(params).waitWithCallbacks({ loading, success, error })
-
-// Level 3: validateMap + apiResult — full protocol with validation
-const loadListEffect: PokemonEffect = (action$, state$, { dispatcher, services, externalStates }) =>
-  action$.pipe(
-    ofType(dispatcher.dispatch.loadList),
-    withLatestFrom(
-      selectorObject(state$, {
-        listStatus: (s) => s.api.listRequest.status,
-      }),
-      settings,
-    ),
-    validateMap({
-      validator: ([_action, { listStatus }]) => ({
-        conditions: [listStatus !== 'loading'],
-        skipAction: () => dispatcher.dispatch.loadListReset(),
-      }),
-      loadingAction: () => dispatcher.dispatch.loadListLoading(),
-      errorAction: (err) => dispatcher.dispatch.loadListFailure(String(err)),
-      apiCall: ([_action, _state, { pageSize }]) =>
-        fromRequest(getList.request({ limit: pageSize, offset: 0 })).pipe(
-          apiResult((data) => {
-            dispatcher.dispatch.applyPokemonList({ ...mapListResponse(data), append: false })
-            dispatcher.dispatch.loadListSuccess()
-          }),
-        ),
+  readonly applyPokemonList = this.action((store, data: { list: PokemonBrief[]; hasMore: boolean; append: boolean }) =>
+    store.update((s) => {
+      s.pokemonList = data.append ? [...s.pokemonList, ...data.list] : data.list
+      s.offset = s.pokemonList.length
+      s.hasMore = data.hasMore
     }),
   )
 
-// Combine multiple effects into one
-export const pokemonEffects = combineEffects(loadListEffect, loadMoreEffect, loadDetailsEffect)
+  readonly watchFavoriteCount = this.watcher({
+    selector: (s) => s.favorites.length,
+    notifyAfterSubscribe: true,
+  })
+}
 ```
 
-## 7. createSynapse — Wiring Everything Together
+> `ofType(d.loadList)` catches ONLY init. To react to a result — `ofType(d.loadList.success)`.
+
+## 6. Effects (class Effects: validateMap + apiResult)
 
 ```typescript
+import { Effects, ofType, selectorObject, validateMap, apiResult, fromRequest } from 'synapse-storage/reactive'
+
+// Services (endpoints) and external stores (settings$) — through the constructor, captured in the recipe's closure.
+export class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {
+  constructor(
+    private readonly api: PokemonApiEndpoints,
+    private readonly settings$: Observable<PokemonSettings>,
+  ) { super() }
+
+  readonly loadList = this.effect((action$, state$, { dispatcher: d }) =>
+    action$.pipe(
+      ofType(d.loadList),                                  // only init
+      withLatestFrom(selectorObject(state$, { listStatus: (s) => s.api.listRequest.status }), this.settings$),
+      validateMap({
+        validator: ([, { listStatus }]) => ({
+          conditions: [listStatus !== 'loading'],
+          skipAction: () => d.loadList.reset(),
+        }),
+        loadingAction: () => d.loadList.loading(),
+        errorAction: (err) => d.loadList.failure(String(err)),
+        apiCall: ([, , { pageSize }]) =>
+          fromRequest(this.api.getList.request({ limit: pageSize, offset: 0 })).pipe(
+            apiResult((data) => {
+              d.applyPokemonList({ ...mapListResponse(data), append: false })
+              d.loadList.success()
+            }),
+          ),
+      }),
+    ),
+  )
+}
+```
+
+## 7. createSynapse — wiring it all together
+
+```typescript
+import { MemoryStorage } from 'synapse-storage/core'
+import { toObservable } from 'synapse-storage/reactive'
 import { createSynapse } from 'synapse-storage/utils'
 
-export const synapsePromise = createSynapse({
-  // Setup — called before storage init, after dependencies
-  setup: async () => {
-    await initPokemonApi()
-  },
+export const pokemonSynapse = createSynapse(async () => {
+  await initPokemonApi()  // the async prologue (the former setup)
 
-  // Storage
-  storage: new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-class', initialState })
 
-  // Dependencies — must be ready before init
-  dependencies: [settingsStorage],
-  dependencyTimeout: 10000,
-
-  // Selectors with external dependencies
-  createSelectorsFn: createPokemonSelectors,
-  externalSelectors: { settings: settingsStorage },
-
-  // Dispatcher
-  createDispatcherFn: createPokemonDispatcher,
-
-  // Effects with services and external states
-  createEffectConfig: () => ({
-    services: { pokemonApi: pokemonApiClient.getEndpoints() },
-    externalStates: {
-      settings: settingsStorage,  // IStorageBase → auto-converted to Observable
-    },
-  }),
-  effects: [pokemonEffects],
+  return {
+    storage,
+    dependencies: [settingsStorage],   // a dependency on another store
+    dependencyTimeout: 10000,
+    dispatcher: new PokemonDispatcher(storage),
+    selectors: new PokemonSelectors(storage),
+    // services (endpoints) and the external store (settings$) — through the effects constructor
+    effects: new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage)),
+  }
 })
+
+export type PokemonSynapse = Awaited<typeof pokemonSynapse>
 ```
 
-## 5-State Request Protocol
+## The 5-state request protocol
 
 ```
-UI dispatch (loadList)  →  status = 'idle'    (no UI change)
-      │
+UI dispatch (loadList)  ->  status = 'idle'    (no UI changes)
+      |
   effect: validateMap
-      ├─ validation OK   →  loadingAction     →  status = 'loading' (spinner)
-      │       ├─ API OK  →  apiResult(success) → status = 'success' (data)
-      │       └─ API ERR →  errorAction        → status = 'error'   (error)
-      └─ validation FAIL →  skipAction         → status = 'reset'   (no UI flicker)
+      |-- validation OK  ->  loadingAction     ->  status = 'loading' (spinner)
+      |       |-- API OK  ->  apiResult(success) -> status = 'success' (data)
+      |       \-- API ERR ->  errorAction        -> status = 'error'   (error)
+      \-- validation FAIL ->  skipAction         -> status = 'reset'   (no UI flicker)
 ```
 
-## Key Utilities
+## Key utilities
 
 | Utility | Purpose |
 |---|---|
-| `defineAction<T>()` | Type-safe action factory (short syntax) |
-| `defineWatcher<T>()` | Type-safe watcher factory (short syntax) |
-| `createApiActions<T>(accessor)` | Generates init/loading/success/failure/reset for API state field |
-| `validateMap({...})` | RxJS operator: validate → loading → apiCall → success/error |
-| `apiResult(cb)` | Maps successful API response data to dispatch |
-| `fromRequest(req)` | Converts endpoint.request() to Observable |
-| `selectorObject(state$, {...})` | Named object from state$ for withLatestFrom |
-| `selectorMap(state$, ...fns)` | Positional tuple from state$ for withLatestFrom |
-| `combineEffects(...effects)` | Merges multiple effects into one |
+| `this.action((store, p) => r)` | an action; payload = the returned value |
+| `this.signal<P>(desc)` | a pure intent signal |
+| `this.apiActions<P>(accessor)` | a callable group init/loading/success/failure/reset |
+| `this.watcher(config)` | a reactive watcher over part of the state |
+| `validateMap({...})` | an RxJS operator: validation -> loading -> apiCall -> success/error |
+| `apiResult(cb)` | Maps a successful API response to a dispatch |
+| `fromRequest(req)` | Converts endpoint.request() into an Observable |
+| `selectorObject(state$, {...})` | A named object from state$ for withLatestFrom |
+| `selectorMap(state$, ...fns)` | A positional tuple from state$ for withLatestFrom |
+```

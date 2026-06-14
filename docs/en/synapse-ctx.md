@@ -2,43 +2,40 @@
 
 > [Back to Main](../../README.md)
 
-React Context + HOC for accessing Synapse store through hooks. Automatic loading while the store initializes.
+React Context + HOC for accessing a Synapse module through hooks. A lazy handle is passed in: the factory starts
+on the first mount of the Provider (not on import), with an automatic `loadingComponent` during initialization.
 
-## Creating the Context
+## Creating the context
 
 ```typescript
 import { createSynapseCtx, useSelector } from 'synapse-storage/react'
 import { createSynapse } from 'synapse-storage/utils'
-import { createDispatcher } from 'synapse-storage/reactive'
 
-// 1. Create the store (as usual)
-const storePromise = createSynapse({
-  storage: new MemoryStorage<SettingsState>({ name: 'settings', initialState }),
-  createSelectorsFn: (sm) => ({
-    theme: sm.createSelector((s) => s.theme),
-    fontSize: sm.createSelector((s) => s.fontSize),
-    isDark: sm.createSelector((s) => s.theme === 'dark'),
-  }),
-  createDispatcherFn: (storage) =>
-    createDispatcher({ storage }, (_s, { createAction }) => ({
-      toggleTheme: createAction({ type: 'toggleTheme', action: () => { ... } }),
-      setFontSize: createAction({ type: 'setFontSize', action: (size: number) => { ... } }),
-    })),
+// 1. Create a lazy handle (as usual)
+const settingsSynapse = createSynapse(async () => {
+  const storage = new MemoryStorage<SettingsState>({ name: 'settings', initialState })
+  return {
+    storage,
+    dispatcher: new SettingsDispatcher(storage),
+    selectors: new SettingsSelectors(storage),
+  }
 })
 
-// 2. Create context from store promise
+// 2. Create the context — pass the handle ITSELF, not a call.
+//    The factory starts lazily on the first mount, not on import.
 const {
-  contextSynapse,       // HOC — wraps component, providing context
+  contextSynapse,       // HOC — wraps a component, providing the context
   useSynapseStorage,    // () => IStorage<T>
-  useSynapseSelectors,  // () => { theme, fontSize, ... }
-  useSynapseActions,    // () => { toggleTheme, setFontSize, ... }
+  useSynapseSelectors,  // () => SettingsSelectors
+  useSynapseActions,    // () => SettingsDispatcher (actions)
+  useSynapseState$,     // () => Observable<TState> (only with effects)
   cleanupSynapse,       // () => Promise<void>
-} = createSynapseCtx(storePromise, {
-  loadingComponent: <div>Loading...</div>,  // shown while store is not ready
+} = createSynapseCtx(settingsSynapse, {
+  loadingComponent: <div>Loading...</div>,  // shown while the module isn't ready
 })
 ```
 
-## Using Hooks in Child Components
+## Using the hooks in child components
 
 ```typescript
 // Child components are called ONLY inside the contextSynapse HOC
@@ -67,7 +64,7 @@ function FontSizeControl() {
 
 function DirectAccess() {
   const storage = useSynapseStorage()
-  // Direct access to storage — e.g. for getStateSync(), update(), set()
+  // Direct access to the storage — e.g. for getStateSync(), update(), set()
   const state = storage.getStateSync()
 }
 ```
@@ -75,9 +72,6 @@ function DirectAccess() {
 ## HOC contextSynapse()
 
 ```typescript
-// contextSynapse() wraps the root component
-// All child components get access to hooks
-
 function SettingsPanel() {
   const actions = useSynapseActions()
   return (
@@ -89,7 +83,7 @@ function SettingsPanel() {
   )
 }
 
-// Wrap — loadingComponent is shown while store is not ready
+// Wrap it — loadingComponent is shown while the module isn't ready
 const SettingsPanelWithContext = contextSynapse(SettingsPanel)
 
 // Usage in JSX:
@@ -99,45 +93,65 @@ const SettingsPanelWithContext = contextSynapse(SettingsPanel)
 ## useSynapseState$ (only with effects)
 
 ```typescript
-// Available only if the store was created with createEffectConfig + effects
-// Returns Observable<TState> for use with RxJS
+// Available only if effects were passed to the factory.
+// Returns Observable<TState> for use with RxJS.
 
-const { useSynapseState$ } = createSynapseCtx(storeWithEffectsPromise)
+const { useSynapseState$ } = createSynapseCtx(synapseWithEffects)
 
 function MyComponent() {
   const state$ = useSynapseState$()
 
   useEffect(() => {
-    const sub = state$.subscribe((state) => {
-      console.log('state changed:', state)
-    })
+    const sub = state$.subscribe((state) => console.log('state changed:', state))
     return () => sub.unsubscribe()
   }, [state$])
+}
+```
+
+## Reactive reads in a component
+
+Writes still go through actions, but reading can be reactive — straight from the selector's stream:
+
+```typescript
+import { useObservable, useSubscription } from 'synapse-storage/react'
+
+function SearchBox() {
+  const selectors = useSynapseSelectors()
+
+  const debounced = useObservable(
+    () => selectors.searchQuery.$.pipe(debounceTime(300), distinctUntilChanged()),
+    '',
+    [selectors],
+  )
+
+  useSubscription(() => selectors.lastId.$.pipe(skip(1), tap(scrollToEnd)).subscribe(), [selectors])
+
+  return <div>{debounced}</div>
 }
 ```
 
 ## Cleanup
 
 ```typescript
-// Manual cleanup of context and resources
+// Manual cleanup of the context and resources
 await cleanupSynapse()
 
-// Calls store.destroy() internally
-// Resets lazy-promise initialization
+// For a class-handle it delegates to handle.destroy() (LIFO teardown + memoization reset) —
+// the next mount will run the factory again.
 ```
 
-## Three Variants of createSynapseCtx
+## Three variants of createSynapseCtx
 
 ```typescript
 // 1. Basic (storage + selectors)
 // Available: useSynapseStorage, useSynapseSelectors, cleanupSynapse
-const ctx = createSynapseCtx(basicStorePromise)
+const ctx = createSynapseCtx(basicSynapse)
 
-// 2. With dispatcher (+ actions)
+// 2. With a dispatcher (+ actions)
 // Available: + useSynapseActions
-const ctx = createSynapseCtx(dispatcherStorePromise)
+const ctx = createSynapseCtx(dispatcherSynapse)
 
 // 3. With effects (+ state$)
 // Available: + useSynapseState$
-const ctx = createSynapseCtx(effectsStorePromise)
+const ctx = createSynapseCtx(effectsSynapse)
 ```

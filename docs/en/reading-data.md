@@ -1,61 +1,61 @@
-# Reading Data (get/getState)
+# Reading data (get/getState)
 
 > [Back to Main](../../README.md)
 
-All ways to read data from storage. Sync storages (Memory, LocalStorage) and async (IndexedDB).
+All the ways to read data from a storage. Synchronous storages (Memory, LocalStorage) and asynchronous ones (IndexedDB).
 
-## get(key) — Read One Field
+## get(key) — Reading a single field
 
 ```typescript
-// ── Sync Storage (MemoryStorage / LocalStorage) ──
+// ── Synchronous storage (MemoryStorage / LocalStorage) ──
 
 const name = storage.get<string>('name')     // 'Alice'
 const age = storage.get<number>('age')       // 28
 const missing = storage.get<string>('xxx')   // undefined
 
-// ── Async Storage (IndexedDBStorage) ──
+// ── Asynchronous storage (IndexedDBStorage) ──
 
 const name = await storage.get<string>('name')   // 'Bob'
 const age = await storage.get<number>('age')     // 35
 ```
 
-## getState() — Entire State
+## getState() — The entire state
 
 ```typescript
-// ── Sync Storage ──
+// ── Synchronous storage ──
 
 const state = storage.getState()
 // { name: 'Alice', age: 28, role: 'admin' }
 
-// ── Async Storage ──
+// ── Asynchronous storage ──
 
 const state = await storage.getState()
 // { name: 'Bob', age: 35, role: 'user' }
 ```
 
-## getStateSync() — Sync Read from Cache
+## getStateSync() — Synchronous read from cache
 
-Available on **ALL** storage types — sync and async. Reads from the internal cache, does not access IndexedDB. Works only after `initialize()`.
+Available on **ALL** storage types — synchronous and asynchronous. Reads from the internal cache, does not touch IndexedDB. Works only after `initialize()`.
 
 ```typescript
-// Sync Storage — same as getState()
+// Synchronous storage — the same as getState()
 const state = storage.getStateSync()
 
-// Async Storage — sync access to cache!
+// Asynchronous storage — synchronous access to the cache!
 const state = asyncStorage.getStateSync()
-// Useful when you don't want await, e.g. in render
+// Useful when you don't want to await, e.g. in render
 ```
 
-## has(key) / keys() — Check and Enumerate
+## has(key) / keys() — Checking and listing
 
 ```typescript
-// ── Sync Storage ──
+// ── Synchronous storage ──
 
 storage.has('name')     // true
 storage.has('unknown')  // false
 storage.keys()          // ['name', 'age', 'role']
 
-// ── Async Storage ──
+// ── Asynchronous storage ──
 
 await storage.has('name')     // true
 await storage.has('unknown')  // false

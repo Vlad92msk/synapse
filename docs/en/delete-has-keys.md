@@ -2,77 +2,77 @@
 
 > [Back to Main](../../README.md)
 
-Operations for checking existence, deleting keys, and resetting storage. Work identically for all storage types.
+Operations for checking existence, removing keys, and resetting the storage. They work the same way for all storage types.
 
-## has(key) — Check if a Key Exists
+## has(key) — Check whether a key exists
 
 ```typescript
-// ── Sync Storage (MemoryStorage / LocalStorage) ──
+// ── Synchronous storage (MemoryStorage / LocalStorage) ──
 
 storage.has('name')      // true
 storage.has('age')       // true
 storage.has('unknown')   // false
 
-// ── Async Storage (IndexedDBStorage) ──
+// ── Asynchronous storage (IndexedDBStorage) ──
 
 await storage.has('name')      // true
 await storage.has('unknown')   // false
 ```
 
-## keys() — Get All Keys
+## keys() — Get all keys
 
 ```typescript
-// ── Sync ──
+// ── Synchronously ──
 const allKeys = storage.keys()
 // ['name', 'age', 'role', 'active']
 
-// ── Async ──
+// ── Asynchronously ──
 const allKeys = await storage.keys()
 ```
 
-## remove(key) — Delete a Specific Key
+## remove(key) — Remove a specific key
 
 ```typescript
 // Removes a key from the storage.
-// After removal, has(key) returns false, keys() won't contain this key.
+// After removal has(key) returns false, and keys() does not contain that key.
 
-// ── Sync ──
+// ── Synchronously ──
 storage.remove('role')
 storage.has('role')   // false
 storage.keys()        // ['name', 'age', 'active']
 
-// ── Async ──
+// ── Asynchronously ──
 await storage.remove('role')
 ```
 
-## clear() — Clear the Storage
+## clear() — Clear the storage
 
 ```typescript
-// Removes ALL keys. State becomes an empty object {}.
+// Removes ALL keys. The state becomes an empty object {}.
 
-// ── Sync ──
+// ── Synchronously ──
 storage.clear()
 storage.getState()   // {}
 storage.keys()       // []
 
-// ── Async ──
+// ── Asynchronously ──
 await storage.clear()
 ```
 
 ## reset() — Reset to initialState
 
 ```typescript
-// Returns state to its initial value (initialState from config).
+// Returns the state to its initial value (initialState from the config).
 
-// ── Sync ──
+// ── Synchronously ──
 storage.reset()
 storage.getState()   // { name: 'Alice', age: 28, role: 'admin', active: true }
 
-// ── Async ──
+// ── Asynchronously ──
 await storage.reset()
 ```
 
-## clear() vs reset() — The Difference
+## clear() vs reset() — What's the difference
 
 ```typescript
 const storage = new MemoryStorage({
@@ -83,12 +83,12 @@ const storage = new MemoryStorage({
 storage.set('count', 99)
 storage.set('label', 'world')
 
-// clear() — full cleanup
+// clear() — a full wipe
 storage.clear()
 storage.getState()   // {}
 storage.keys()       // []
 
-// reset() — return to initialState
+// reset() — back to initialState
 storage.reset()
 storage.getState()   // { count: 0, label: 'hello' }
 storage.keys()       // ['count', 'label']

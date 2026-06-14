@@ -2,7 +2,7 @@
 
 > [Back to Main](../../README.md)
 
-React utility for awaiting Synapse store readiness. HOC + hook + programmatic API.
+A React utility for waiting until a Synapse storage is ready. HOC + hook + programmatic API.
 
 ## Creating
 
@@ -10,20 +10,19 @@ React utility for awaiting Synapse store readiness. HOC + hook + programmatic AP
 import { awaitSynapse } from 'synapse-storage/react'
 import { createSynapse } from 'synapse-storage/utils'
 
-// Store may take time to initialize (IndexedDB, server loading, etc.)
-const storePromise = createSynapse({
-  createStorageFn: async () => {
-    const data = await fetch('/api/config').then((r) => r.json())
-    const storage = new MemoryStorage({ name: 'config', initialState: data })
-    await storage.initialize()
-    return storage
-  },
-  createSelectorsFn: (sm) => ({ ... }),
-  createDispatcherFn: (storage) => createDispatcher({ storage }, ...),
+// Initialization may take time (IndexedDB, loading from the server, etc.)
+const configSynapse = createSynapse(async () => {
+  const data = await fetch('/api/config').then((r) => r.json())
+  const storage = new MemoryStorage({ name: 'config', initialState: data })
+  return {
+    storage,
+    dispatcher: new ConfigDispatcher(storage),
+    selectors: new ConfigSelectors(storage),
+  }
 })
 
-// Create awaiter
-const awaiter = awaitSynapse(storePromise, {
+// Create an awaiter — it accepts a handle (thenable)
+const awaiter = awaitSynapse(configSynapse, {
   loadingComponent: <div>Loading...</div>,
   errorComponent: (error) => <div>Error: {error.message}</div>,
 })
@@ -32,11 +31,11 @@ const awaiter = awaitSynapse(storePromise, {
 ## withSynapseReady (HOC)
 
 ```typescript
-// HOC: shows loadingComponent while store is not ready
-// Component renders ONLY when store is fully initialized
+// HOC: shows loadingComponent while the storage isn't ready
+// The component renders ONLY when the storage is fully initialized
 
 function MyComponent() {
-  // Store is guaranteed ready — safe to use
+  // The storage is guaranteed to be ready — it can be used safely
   const store = awaiter.getStoreIfReady()!
   const value = useSelector(store.selectors.someValue)
 
@@ -46,14 +45,14 @@ function MyComponent() {
 // Wrap it
 const MyComponentWithReady = awaiter.withSynapseReady(MyComponent)
 
-// In JSX — will show loading, then the component:
+// In JSX — it first shows loading, then the component:
 <MyComponentWithReady />
 ```
 
 ## useSynapseReady (hook)
 
 ```typescript
-// Hook for manual readiness control
+// A hook for manual control over readiness
 
 function StatusPanel() {
   const { isReady, isPending, isError, store, error } = awaiter.useSynapseReady()
@@ -63,8 +62,8 @@ function StatusPanel() {
   if (isReady)   return <div>Store ready! State: {JSON.stringify(store.storage.getStateSync())}</div>
 }
 
-// Returned object fields:
-// isReady:   boolean — store is initialized
+// Fields of the returned object:
+// isReady:   boolean — the storage is initialized
 // isPending: boolean — waiting for initialization
 // isError:   boolean — initialization error
 // store:     SynapseStore | undefined
@@ -82,10 +81,10 @@ awaiter.getStatus()       // 'pending' | 'ready' | 'error'
 awaiter.getError()        // Error | null
 awaiter.getStoreIfReady() // store | undefined
 
-// Async wait
+// Asynchronous waiting
 const store = await awaiter.waitForReady()
 
-// Callbacks (return unsubscribe)
+// Callbacks (return an unsubscribe function)
 const unsub = awaiter.onReady((store) => {
   console.log('Store ready!', store.storage.getStateSync())
 })
@@ -94,7 +93,7 @@ const unsub2 = awaiter.onError((error) => {
   console.error('Init failed:', error.message)
 })
 
-// If store is already ready — onReady fires immediately
+// If the storage is already ready — onReady fires immediately
 
 // Cleanup
 awaiter.destroy()
@@ -103,12 +102,12 @@ awaiter.destroy()
 ## Relation to createSynapseAwaiter
 
 ```typescript
-// awaitSynapse — React wrapper over createSynapseAwaiter
+// awaitSynapse — a React wrapper around createSynapseAwaiter
 // Adds: withSynapseReady (HOC) and useSynapseReady (hook)
 // Proxies: waitForReady, isReady, getStoreIfReady, onReady, onError, getStatus, getError, destroy
 
 // For vanilla JS / Node.js / without React — use createSynapseAwaiter directly:
 import { createSynapseAwaiter } from 'synapse-storage/utils'
-const awaiter = createSynapseAwaiter(storePromise)
-// Same programmatic API, but without React hooks
+const awaiter = createSynapseAwaiter(configSynapse)
+// The same programmatic API, but without React hooks
 ```

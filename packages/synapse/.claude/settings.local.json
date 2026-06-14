@@ -40,7 +40,10 @@
       "Bash(grep -rn \"STORAGE_SELECT\" packages/synapse/src)",
       "Bash(grep -rn \"keyVersions\" packages/synapse/src)",
       "Bash(echo \"=== EXIT tsc: $? ===\")",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Read(//Users/vlad/web_dev/synapse/**)",
+      "Bash(find . -type d -name docs -not -path '*/node_modules/*')",
+      "Bash(find . -type d \\\\\\( -name en -o -name ru \\\\\\) -not -path '*/node_modules/*')"
     ]
   }
 }

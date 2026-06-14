@@ -32,7 +32,7 @@ const idbStore = IndexedDBStorage.create<AppState>({
   options: {},                    // required for IndexedDB
 })
 
-// Initialize
+// Initialization
 await Promise.all([
   memStorage.initialize(),
   localStore.initialize(),

@@ -2,7 +2,7 @@
 
 > [Back to Main](../../README.md)
 
-Reuse storage instances by name. Useful for shared state and when storage is created in multiple places (React components, modules).
+Reusing storage instances by name. Useful for shared state and when a storage is created in several places (React components, modules).
 
 ## Enabling Singleton
 
@@ -26,14 +26,14 @@ const storage2 = new MemoryStorage<{ count: number }>({
 })
 await storage2.initialize()
 
-storage2.get('count')     // 42 (same instance!)
+storage2.get('count')     // 42 (the same instance!)
 storage1 === storage2     // true
 
 // Works with MemoryStorage, LocalStorage, IndexedDB
 // Default singleton key: `${storageType}_${name}` (memory_my-store)
 ```
 
-## Merge Strategies (mergeStrategy)
+## Merge strategies (mergeStrategy)
 
 ```typescript
 import { MemoryStorage, ConfigMergeStrategy } from 'synapse-storage/core'
@@ -50,29 +50,29 @@ const storage = new MemoryStorage({
 // All strategies:
 
 // FIRST_WINS (default)
-// First initialState wins, subsequent ones are ignored
+// The first initialState wins, subsequent ones are ignored
 
 // DEEP_MERGE
-// Recursively merges initialState:
+// Recursive merge of initialState:
 // s1: { theme: 'dark', lang: 'en' }
 // s2: { theme: 'light', extra: true }
 // → { theme: 'dark', lang: 'en', extra: true }
 
 // OVERRIDE
-// Last configuration overwrites (except name)
+// The last configuration overrides (except name)
 
 // WARN_AND_USE_FIRST
-// Like FIRST_WINS, but with console.warn on conflicts
+// Like FIRST_WINS, but with a console.warn on conflicts
 
 // STRICT
-// Throws Error if initialState differs
+// Throws an Error if initialState differs
 ```
 
-## Custom Key (singleton.key)
+## Custom key (singleton.key)
 
 ```typescript
 // Default key: `${storageType}_${name}`
-// Two storages with the same name but different key — different instances
+// Two storages with the same name but a different key — different instances
 
 const cache = new MemoryStorage<{ data: string }>({
   name: 'user-data',
@@ -81,8 +81,8 @@ const cache = new MemoryStorage<{ data: string }>({
 })
 
 const settings = new MemoryStorage<{ data: string }>({
-  name: 'user-data',  // same name!
-  singleton: { enabled: true, key: 'user-settings' },  // different key
+  name: 'user-data',  // the same name!
+  singleton: { enabled: true, key: 'user-settings' },  // a different key
   initialState: { data: 'settings' },
 })
 
@@ -94,7 +94,7 @@ cache === settings  // false (different keys → different instances)
 ```typescript
 import { useStorageSubscribe } from 'synapse-storage/react'
 
-// Two components create storage with the same name — one instance
+// Two components create a storage with the same name — a single instance
 
 const sharedStorage = new MemoryStorage<{ message: string; likes: number }>({
   name: 'shared-store',
@@ -116,12 +116,12 @@ function ComponentB() {
     initialState: { message: 'different', likes: 0 },
   })
   const message = useStorageSubscribe(sameStorage, (s) => s.message)
-  // message here = same as in ComponentA
+  // message here = the same as in ComponentA
   return <div>{message}</div>
 }
 ```
 
-## Full SingletonOptions Configuration
+## Full SingletonOptions configuration
 
 ```typescript
 interface SingletonOptions {
@@ -131,7 +131,7 @@ interface SingletonOptions {
   key?: string                    // custom key (default: `${type}_${name}`)
 }
 
-// ConfigMergeStrategy enum:
+// The ConfigMergeStrategy enum:
 enum ConfigMergeStrategy {
   STRICT = 'strict',
   FIRST_WINS = 'first_wins',

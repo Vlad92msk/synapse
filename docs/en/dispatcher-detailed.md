@@ -1,14 +1,18 @@
-# Dispatcher (standalone)
+# Dispatcher (in detail)
 
 > [Back to Main](../../README.md)
 
-`createDispatcher` can be used standalone, without `createSynapse`. Defines actions and watchers for a storage.
+The `Dispatcher` class can also be used standalone, without `createSynapse`. It defines actions and watchers
+for a storage. **Action/watcher name = class field name.**
+
+In standalone mode the instance is finalized lazily: names are assigned on the first call of any action
+or on the first access to the `dispatch`/`watchers` registries.
 
 ## Creating
 
 ```typescript
 import { MemoryStorage } from 'synapse-storage/core'
-import { createDispatcher } from 'synapse-storage/reactive'
+import { Dispatcher } from 'synapse-storage/reactive'
 
 interface CounterState {
   value: number
@@ -22,106 +26,145 @@ const storage = new MemoryStorage<CounterState>({
 })
 await storage.initialize()
 
-const dispatcher = createDispatcher(
-  { storage },
-  (_storage, { createAction, createWatcher }) => {
-    // ... define actions and watchers
-    return { increment, decrement, setStep, reset, watchValue, watchBigChanges }
-  },
-)
+class CounterDispatcher extends Dispatcher<CounterState> {
+  readonly increment = this.action((store) => store.update((s) => { s.value += s.step }))
+  readonly watchValue = this.watcher({ selector: (s) => s.value })
+}
+
+const dispatcher = new CounterDispatcher(storage)
 ```
 
-## createAction
+## Dispatcher surface
+
+| Factory field         | What it creates                                                              |
+|-----------------------|------------------------------------------------------------------------------|
+| `this.action(fn)`     | an action with a handler `(store, params) => result`; payload = the returned value |
+| `this.signal<P>(desc)`| a pure intent signal: `(_store, p) => p`, writes nothing to the store        |
+| `this.apiActions<P>(accessor)` | a callable group for an API request lifecycle                       |
+| `this.keyedApiActions<P>(accessor)` | the same, but status is stored per key (`Record<string, ApiRequestState>`) |
+| `this.watcher(config)`| a reactive watcher over part of the state                                    |
+
+## this.action
 
 ```typescript
-// Simple action (no params)
-const increment = createAction({
-  type: 'increment',
-  action: () => {
-    storage.update((s) => { s.value += s.step })
-  },
-})
+class CounterDispatcher extends Dispatcher<CounterState> {
+  // Simple action (no parameters)
+  readonly increment = this.action((store) => {
+    store.update((s) => { s.value += s.step })
+  })
 
-// Action with parameter
-const setStep = createAction({
-  type: 'setStep',
-  action: (newStep: number) => {
-    storage.set('step', newStep)
-    return newStep  // return = payload in action stream
-  },
-})
+  // Action with a parameter (return = payload in the action stream)
+  readonly setStep = this.action((store, newStep: number) => {
+    store.set('step', newStep)
+    return newStep
+  })
 
-// Action with meta — arbitrary metadata
-const reset = createAction({
-  type: 'reset',
-  action: () => { storage.reset() },
-  meta: { description: 'Reset to defaults', dangerous: true },
-})
+  // Action with meta — arbitrary metadata (2nd argument of this.action)
+  readonly reset = this.action(
+    (store) => { store.reset() },
+    { meta: { description: 'Reset to default values', dangerous: true } },
+  )
 
-// Action with memoization — repeated call with the same argument is skipped
-const setStepMemo = createAction(
-  {
-    type: 'setStepMemo',
-    action: (step: number) => {
-      storage.set('step', step)
-      return step
-    },
-  },
-  {
-    memoize: (current, previous) => current === previous,
-  },
-)
+  // Action with memoization — a repeated call with the same argument is skipped
+  readonly setStepMemo = this.action(
+    (store, step: number) => { store.set('step', step); return step },
+    { memoize: (current, previous) => current === previous },
+  )
+}
 ```
 
-## createWatcher
+## this.signal
 
 ```typescript
-// Basic watcher — tracks a value
-const watchValue = createWatcher({
-  type: 'watchValue',
-  selector: (state) => state.value,  // what to track
-})
-
-// With shouldTrigger — filter false positives
-const watchBigChanges = createWatcher({
-  type: 'watchBigChanges',
-  selector: (state) => state.value,
-  shouldTrigger: (prev, current) => Math.abs((prev ?? 0) - current) >= 5,
-})
-
-// With notifyAfterSubscribe — fire callback immediately on subscribe
-const watchStep = createWatcher({
-  type: 'watchStep',
-  selector: (state) => state.step,
-  notifyAfterSubscribe: true,
-})
+class CounterDispatcher extends Dispatcher<CounterState> {
+  // A pure intent: writes nothing to the store, the payload is passed further to effects.
+  // description goes into meta.
+  readonly pinged = this.signal<number>('Manual ping')
+}
 ```
+
+## this.apiActions (callable group + lifecycle)
+
+`apiActions` returns a **callable group**. Calling the group itself is `init` (an intent): it resets the status
+to `idle` and passes the payload to effects. The lifecycle — through field-methods.
+
+```typescript
+class PostsDispatcher extends Dispatcher<PostsState> {
+  // the accessor points to the ApiRequestState cell in the state
+  readonly loadPosts = this.apiActions<{ page: number }>((s) => s.api.postsRequest)
+}
+
+// Usage:
+d.loadPosts({ page: 1 })      // init: status → idle, the intent goes to effects
+d.loadPosts.loading()         // status → loading
+d.loadPosts.success()         // status → success
+d.loadPosts.failure('msg')    // status → error, error = 'msg'
+d.loadPosts.reset()           // status → reset
+```
+
+### Rule: `ofType(d.loadPosts)` catches ONLY init
+
+```typescript
+// In an effect: we react to the INTENT to load (init), not to statuses
+action$.pipe(ofType(d.loadPosts), /* ... start the request ... */)
+
+// To react to a RESULT — listen for the specific phase explicitly:
+action$.pipe(ofType(d.loadPosts.success), /* ... */)
+action$.pipe(ofType(d.loadPosts.failure), /* ... */)
+```
+
+`keyedApiActions` works the same way, but `init`/`loading`/`success`/`reset` accept a `key`, and `failure` accepts
+`{ key, error }`.
+
+## this.watcher
+
+```typescript
+class CounterDispatcher extends Dispatcher<CounterState> {
+  // Basic watcher — tracks a value
+  readonly watchValue = this.watcher({ selector: (state) => state.value })
+
+  // With shouldTrigger — filtering out false triggers
+  readonly watchBigChanges = this.watcher({
+    selector: (state) => state.value,
+    shouldTrigger: (prev, current) => Math.abs((prev ?? 0) - current) >= 5,
+  })
+
+  // With notifyAfterSubscribe — call the callback immediately on subscribe
+  readonly watchStep = this.watcher({
+    selector: (state) => state.step,
+    notifyAfterSubscribe: true,
+  })
+}
+```
+
+## Reserved field names
+
+The names `storage`, `action$`, `actions`, `dispatch`, `watchers`, `use`, `destroy` are members of the base class,
+they **cannot** be used as action/watcher names. A field-alias (one action under two names) is rejected
+at finalization with a clear error.
 
 ## Usage
 
 ```typescript
-// Call actions
-dispatcher.dispatch.increment()
-dispatcher.dispatch.setStep(5)
-dispatcher.dispatch.reset()
+// Calling actions — through the instance's typed fields
+dispatcher.increment()
+dispatcher.setStep(5)
+dispatcher.reset()
 
-// Action function properties
+// Or through the dispatch registry
 dispatcher.dispatch.reset.actionType  // '[counter]reset'
 dispatcher.dispatch.reset.meta        // { description: '...', dangerous: true }
 
-// Subscribe to watchers (RxJS Observable)
+// Subscribing to watchers (RxJS Observable)
 const sub = dispatcher.watchers.watchValue().subscribe((action) => {
   console.log('value:', action.payload)
 })
 sub.unsubscribe()
 
-// Subscribe to ALL actions
+// Subscribing to ALL actions
 dispatcher.actions.subscribe((action) => {
   console.log(action.type, action.payload)
 })
-
-// Find action by type
-dispatcher.findActionByType('increment')  // dispatch function or undefined
 
 // Cleanup
 dispatcher.destroy()

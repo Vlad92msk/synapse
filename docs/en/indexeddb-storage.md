@@ -2,7 +2,7 @@
 
 > [Back to Main](../../README.md)
 
-Data is stored in IndexedDB. Survives page reloads. **Asynchronous API** — all methods return Promises.
+Data is stored in IndexedDB. It persists across page reloads. **Asynchronous API** — all methods return a Promise.
 
 ## Creating
 
@@ -21,14 +21,14 @@ const storage = new IndexedDBStorage<TodoState>({
   options: {},                     // can be an empty object
 })
 
-// With custom dbName
+// With a custom dbName
 const storage = new IndexedDBStorage<TodoState>({
   name: 'todo-store',
   initialState: { items: [], filter: 'all' },
-  options: { dbName: 'my_app_db' }, // default is 'app_storage'
+  options: { dbName: 'my_app_db' }, // defaults to 'app_storage'
 })
 
-// Or via static .create()
+// Or via the static .create()
 const storage = IndexedDBStorage.create<TodoState>({
   name: 'todo-store',
   initialState: { items: [], filter: 'all' },
@@ -39,49 +39,49 @@ const storage = IndexedDBStorage.create<TodoState>({
 await storage.initialize()
 ```
 
-## Writing Data (async!)
+## Writing data (asynchronous!)
 
 ```typescript
-// set() — returns Promise
+// set() — returns a Promise
 await storage.set('filter', 'active')
 await storage.set('items', ['Buy milk', 'Walk dog'])
 
-// update() — returns Promise
+// update() — returns a Promise
 await storage.update((s) => {
   s.items.push('New item')
   s.filter = 'all'
 })
 ```
 
-## Reading Data (async!)
+## Reading data (asynchronous!)
 
 ```typescript
-// get() — returns Promise
+// get() — returns a Promise
 const items = await storage.get<string[]>('items')   // ['Buy milk']
 const filter = await storage.get<string>('filter')   // 'all'
 
-// getState() — returns Promise
+// getState() — returns a Promise
 const state = await storage.getState()               // { items: [...], filter: 'all' }
 
-// getStateSync() — sync read from cache (always available!)
+// getStateSync() — synchronous read from the cache (always available!)
 const state = storage.getStateSync()                 // { items: [...], filter: 'all' }
 ```
 
-## Check, Delete, Reset (async!)
+## Checking, removing, resetting (asynchronous!)
 
 ```typescript
-// All methods return Promises:
+// All methods return a Promise:
 await storage.has('items')      // true
 await storage.keys()            // ['items', 'filter']
-await storage.remove('filter')  // delete a key
+await storage.remove('filter')  // remove a key
 await storage.clear()           // clear everything (state = {})
 await storage.reset()           // return to initialState
 ```
 
-## Subscriptions (same for all types!)
+## Subscriptions (the same for all types!)
 
 ```typescript
-// Subscriptions work identically for sync and async storages:
+// Subscriptions work identically for synchronous and asynchronous storages:
 const unsub = storage.subscribe('items', (newValue) => {
   console.log('items changed:', newValue)
 })
@@ -98,12 +98,19 @@ const unsub = storage.subscribeToAll((event) => {
 
 ## Differences from MemoryStorage/LocalStorage
 
-1. Config requires the `options` field (even an empty object):
+1. The configuration requires the `options` field (even an empty object):
    `{ name, initialState, options: {} }` vs `{ name, initialState }`
 
-2. All read/write operations return Promises:
+2. All read/write operations return a Promise:
    `await storage.set(...)` vs `storage.set(...)`
 
-3. `getStateSync()` — works from cache, common to all types
+3. `getStateSync()` — works from the cache, shared across all types
 
 4. Subscriptions are identical for all storage types
+
+## Persist migrations and SSR
+
+IndexedDB is persistent, so it supports schema migration via `version` + `migrate`
+(the version is stored as a reserved record in the same store and isn't visible in
+`getState()`/`keys()`) — see [Persist migrations](./persist-migration.md). Server state is
+seeded via [`hydrate(state)`](./ssr-hydration.md) (for IndexedDB — `await storage.hydrate(...)`).

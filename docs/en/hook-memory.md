@@ -2,7 +2,7 @@
 
 > [Back to Main](../../README.md)
 
-React hook for creating a MemoryStorage. Automatically initializes and destroys on unmount.
+A React hook for creating a MemoryStorage. It automatically initializes and destroys it on unmount.
 
 ## useCreateStorage
 
@@ -35,7 +35,7 @@ function MyComponent() {
   // isReady = false -> storage = null
   if (!isReady) return <div>Loading...</div>
 
-  // After isReady, storage is guaranteed non-null
+  // After isReady the storage is guaranteed to be non-null
   storage.set('username', 'John')
 }
 ```
@@ -46,19 +46,19 @@ function MyComponent() {
 import { useStorageSubscribe } from 'synapse-storage/react'
 
 function FormFields({ storage }: { storage: ISyncStorage<FormState> }) {
-  // Subscribe to a specific field via selector
+  // Subscribing to a specific field via a selector
   const username = useStorageSubscribe(storage, (s) => s.username)
   const email = useStorageSubscribe(storage, (s) => s.email)
   const agreed = useStorageSubscribe(storage, (s) => s.agreed)
 
-  // Subscribe to the entire state
+  // Subscribing to the entire state
   const fullState = useStorageSubscribe(storage, (s) => s)
 
   return <div>{username} — {email} — {String(agreed)}</div>
 }
 ```
 
-## Full Example
+## Full example
 
 ```tsx
 import type { ISyncStorage } from 'synapse-storage/core'

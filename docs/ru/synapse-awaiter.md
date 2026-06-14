@@ -49,10 +49,10 @@ awaiter.getError()    // Error | null
 const store = awaiter.getStoreIfReady()
 
 if (store) {
-  // SynapseStore — тип зависит от конфигурации createSynapse:
-  // - SynapseStoreBasic           (без dispatcher)
-  // - SynapseStoreWithDispatcher
-  // - SynapseStoreWithEffects
+  // Synapse — собранный модуль; его форма зависит от конфигурации createSynapse:
+  // - базовый              (storage + selectors)
+  // - с dispatcher
+  // - с effects
   //
   // Всегда имеет:
   //   store.storage   — ISyncStorage | IAsyncStorage

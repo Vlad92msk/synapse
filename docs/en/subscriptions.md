@@ -2,11 +2,11 @@
 
 > [Back to Main](../../README.md)
 
-All ways to subscribe to data changes in storage. Work identically for Memory, LocalStorage, and IndexedDB.
+All the ways to subscribe to data changes in a storage. They work the same way for Memory, LocalStorage and IndexedDB.
 
 ## 1. subscribe(key, callback)
 
-Subscribe to a specific top-level key. Callback is called on each change to that key.
+Subscribing to a specific top-level key. The callback is called on every change of that key.
 
 ```typescript
 const unsub = storage.subscribe('counter', (newValue) => {
@@ -23,7 +23,7 @@ unsub()
 
 ## 2. subscribe(selector, callback)
 
-Subscribe via a selector function. Callback is called when the selector's result changes.
+Subscribing via a selector function. The callback is called when the selector's result changes.
 
 ```typescript
 const unsub = storage.subscribe(
@@ -31,13 +31,13 @@ const unsub = storage.subscribe(
   (newTheme) => console.log('theme:', newTheme)  // 'light' | 'dark'
 )
 
-// Subscribe to nested fields
+// Subscribing to nested fields
 const unsub = storage.subscribe(
   (state) => state.user.name,
   (name) => console.log('name:', name)
 )
 
-// Compute values
+// Computed values
 const unsub = storage.subscribe(
   (state) => `${state.user.name} (${state.settings.lang})`,
   (computed) => console.log('computed:', computed)
@@ -48,13 +48,13 @@ unsub()
 
 ## 3. subscribeToAll(callback)
 
-Subscribe to ALL storage changes. Callback receives an event with change information.
+Subscribing to ALL storage changes. The callback receives an event with information about the change.
 
 ```typescript
 const unsub = storage.subscribeToAll((event) => {
   console.log(event.type)          // 'set' | 'update' | 'remove' | 'clear' | 'reset'
-  console.log(event.key)           // key or array of keys
-  console.log(event.changedPaths)  // paths to changed fields
+  console.log(event.key)           // a key or an array of keys
+  console.log(event.changedPaths)  // paths to the changed fields
 })
 
 unsub()
@@ -66,16 +66,16 @@ unsub()
 import { useStorageSubscribe } from 'synapse-storage/react'
 
 function MyComponent({ storage }: { storage: ISyncStorage<AppState> }) {
-  // Subscribe to one field
+  // Subscribing to a single field
   const counter = useStorageSubscribe(storage, (s) => s.counter)
 
-  // Subscribe to nested field
+  // Subscribing to a nested field
   const theme = useStorageSubscribe(storage, (s) => s.settings.theme)
 
-  // Subscribe to entire state
+  // Subscribing to the entire state
   const fullState = useStorageSubscribe(storage, (s) => s)
 
-  // Computed value — re-render only when result changes
+  // Computed value — re-render only when the result changes
   const summary = useStorageSubscribe(
     storage,
     (s) => `${s.user.name}, counter: ${s.counter}`
