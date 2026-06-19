@@ -45,7 +45,12 @@
       "Bash(find . -type d -name docs -not -path '*/node_modules/*')",
       "Bash(find . -type d \\\\\\( -name en -o -name ru \\\\\\) -not -path '*/node_modules/*')",
       "Bash(npm pack *)",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "Bash(rm -f \"/Users/vlad/web_dev/synapse/packages/synapse/.claude/projects/-Users-vlad-web-dev-synapse/memory/ssr-posts-client-request-bug.md\" \"/Users/vlad/web_dev/synapse/packages/synapse/.claude/projects/-Users-vlad-web-dev-synapse/memory/ssr-hydration-doc.md\")",
+      "Bash(rmdir -p \"/Users/vlad/web_dev/synapse/packages/synapse/.claude/projects/-Users-vlad-web-dev-synapse/memory\")",
+      "Read(//Users/vlad/web_dev/sn_client/**)",
+      "Bash(ls yarn.lock package-lock.json pnpm-lock.yaml)",
+      "Bash(node -e \"console.log\\(require\\('synapse-storage/package.json'\\).version\\)\")"
     ]
   }
 }

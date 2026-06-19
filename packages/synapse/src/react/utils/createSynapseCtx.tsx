@@ -3,7 +3,7 @@ import { Observable } from 'rxjs'
 
 import { handleCleanupError } from '../../_utils/error-handling.util'
 import { IStorage, StorageStatus } from '../../core'
-import { createSynapseAwaiter, type Synapse, type SynapseAwaiter, type SynapseModule } from '../../utils'
+import { createSynapseAwaiter, dehydrateModule, type Synapse, type SynapseAwaiter, type SynapseModule } from '../../utils'
 
 const ERROR_HOOK_MESSAGE = 'Хук необходимо использовать внутри компонента contextSynapse'
 const ERROR_CONTEXT_INIT = 'Ошибка при инициализации контекста:'
@@ -64,40 +64,10 @@ export function createSynapseCtx<TState extends Record<string, any>, TDispatcher
     return context.state$
   }
 
-  /**
-   * Серверный помощник: собирает сериализуемый снапшот стора для передачи на клиент.
-   * Форкает модуль (per-request изоляция — параллельные запросы не делят состояние),
-   * сеет `initialState` через `hydrate`, возвращает `getStateSync()`.
-   *
-   * Дополнительно (при `ssr: true` и sync-сторе) прогревает основной handle тем же
-   * снапшотом, чтобы последующий синхронный `renderToString(<Provider dehydratedState>)`
-   * получил готовый стор на первом рендере (SSR-контент в HTML). `seedHydration` в Provider
-   * всё равно переприменяет переданный снапшот синхронно перед каждым рендером — это и
-   * держит изоляцию: даже общий handle отдаёт в дерево именно его `dehydratedState`.
-   */
-  const dehydrate = async (opts?: { initialState?: Partial<TState> }): Promise<TState> => {
-    const initialState = opts?.initialState
-
-    // Per-request форк: собственный стор, не пересекается с другими запросами.
-    const fork = synapseModule.fork()
-    const forked = await fork.ready()
-    // `hydrate` для sync-стора возвращает void, для async (IndexedDB) — Promise; await
-    // покрывает оба, иначе getStateSync() прочитает снапшот до завершения гидрации.
-    if (initialState) await forked.storage.hydrate(initialState as TState)
-    const snapshot = forked.storage.getStateSync()
-    await fork.destroy()
-
-    // Прогрев основного handle: только при ssr и для синхронно готового стора
-    // (Memory/LocalStorage). Для async-сторов синхронного серверного рендера контента нет.
-    if (ssr) {
-      const main = await synapseModule.ready()
-      if (main.storage.initStatus.status === StorageStatus.READY) {
-        await main.storage.hydrate(snapshot)
-      }
-    }
-
-    return snapshot
-  }
+  // Серверный помощник: тонкая обёртка над server-safe dehydrateModule (вся логика там).
+  // initialState — серверные данные под запрос, не статический initialState модуля; ssr — из
+  // опций контекста.
+  const dehydrate = (opts?: { initialState?: Partial<TState> }): Promise<TState> => dehydrateModule(synapseModule, { state: opts?.initialState, ssr })
 
   /**
    * Декоратор для обёртки компонентов в контекст Synapse.

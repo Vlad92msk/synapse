@@ -73,10 +73,17 @@ async function teardown(cleanup: CleanupStep[]): Promise<void> {
  *
  * Любая ошибка любого шага → откат уже созданного (partial teardown) и проброс наверх
  * (никакой тихой частичной инициализации).
+ *
+ * `withEffects: false` (серверный путь дегидрации, см. {@link SynapseModule.ready}) собирает
+ * стор целиком (storage/dispatcher/selectors/state$), но ПРОПУСКАЕТ шаг 8 — эффекты не
+ * стартуют. Нужен только снапшот состояния + READY-storage для SSR-seed; запуск эффектов
+ * на сервере — лишняя работа (форк) либо «висящие» подписки (синглтон main handle).
  */
 async function buildSynapse<TState extends Record<string, any>, TDispatcher, TSelectors>(
   factory: () => SynapseConfig<any, any, any, any> | Promise<SynapseConfig<any, any, any, any>>,
+  options?: { withEffects?: boolean },
 ): Promise<Synapse<TState, TDispatcher, TSelectors>> {
+  const { withEffects = true } = options ?? {}
   const config = await factory()
   validateFactoryConfig(config)
 
@@ -104,7 +111,17 @@ async function buildSynapse<TState extends Record<string, any>, TDispatcher, TSe
     const state$ = toObservable(storage)
 
     const { moduleEffects, instances } = collectEffects(config.effects)
-    if (moduleEffects.length > 0) {
+
+    // onDestroy инстансов нужен на teardown в любом случае (даже без запуска эффектов).
+    const registerInstanceCleanup = () => {
+      for (const instance of instances) {
+        if (instance.onDestroy) {
+          cleanup.push(() => instance.onDestroy!())
+        }
+      }
+    }
+
+    if (withEffects && moduleEffects.length > 0) {
       if (!dispatcher) {
         throw new Error('createSynapse(factory): "effects" требуют "dispatcher".')
       }
@@ -114,23 +131,16 @@ async function buildSynapse<TState extends Record<string, any>, TDispatcher, TSe
 
       // onDestroy инстансов — перед stop в порядке teardown: пушим onDestroy раньше stop,
       // LIFO-обход выполнит stop первым, затем onDestroy.
-      for (const instance of instances) {
-        if (instance.onDestroy) {
-          cleanup.push(() => instance.onDestroy!())
-        }
-      }
+      registerInstanceCleanup()
       cleanup.push(() => {
         effectsModule.stop()
       })
 
       await effectsModule.start()
     } else {
-      // Эффектов нет, но onDestroy инстансов всё равно надо вызвать на teardown.
-      for (const instance of instances) {
-        if (instance.onDestroy) {
-          cleanup.push(() => instance.onDestroy!())
-        }
-      }
+      // withEffects: false (серверная дегидрация) либо эффектов нет — EffectsModule не
+      // конструируется и не стартует; регистрируем только onDestroy инстансов на teardown.
+      registerInstanceCleanup()
     }
 
     let destroyed = false
@@ -164,24 +174,69 @@ export function createSynapseModule<TState extends Record<string, any>, TDispatc
 ): SynapseModule<TState, TDispatcher, TSelectors> {
   let pending: Promise<Synapse<TState, TDispatcher, TSelectors>> | undefined
   let settled: Synapse<TState, TDispatcher, TSelectors> | undefined
+  // Был ли текущий мемоизированный запуск собран С эффектами. Нужен для апгрейда
+  // прогрев(без эффектов) → честный ready() (см. ниже).
+  let startedWithEffects = false
+  // Прогретые (без эффектов) запуски, вытесненные апгрейдом до честного ready(). Не рушим их
+  // сразу: они могли «утечь» наружу через getSnapshot()/awaiter и ещё обслуживать рендер до
+  // переключения на новый стор. Уничтожаем все скопом на destroy() handle.
+  const supersededWarmRuns = new Set<Promise<Synapse<TState, TDispatcher, TSelectors>>>()
+
+  // Единый запуск пайплайна с мемоизацией.
+  //
+  // Семантика withEffects:
+  // - `ready()` / `ready({ withEffects: true })` — обычный путь: фабрика + эффекты, мемо
+  //   (pending/settled), повторные вызовы отдают тот же промис.
+  // - `ready({ withEffects: false })` — серверный прогрев: собирает стор БЕЗ эффектов, тоже
+  //   мемоизируется — повторные серверные прогревы main handle переиспользуют стор, а
+  //   getSnapshot() отдаёт READY-handle для синхронного SSR-seed.
+  // - Апгрейд (святой клиентский инвариант): если мемо-запуск собран БЕЗ эффектов, а затем
+  //   зовут честный `ready()` (с эффектами) — стор пересобирается с эффектами. Прогретый стор
+  //   при этом ПРОДОЛЖАЕТ обслуживать getSnapshot() (settled не зануляется), пока новый запуск
+  //   не зарезолвится; затем settled свапается. Прогретый стор НЕ рушим сразу (он мог утечь в
+  //   awaiter/рендер) — копим в supersededWarmRuns и уничтожаем на destroy() handle. Так
+  //   getSnapshot() не «проваливается» в undefined (иначе SSR-провайдер показал бы
+  //   loadingComponent → hydration mismatch), и при этом гарантируем: после
+  //   `ready({ withEffects: false })` последующий `ready()` всегда вернёт инстанс с запущенными
+  //   эффектами. Обратно НЕ пересобираем: `withEffects: false` поверх уже запущенного стора
+  //   отдаёт существующий (эффекты — безопасный супер-сет).
+  const start = (withEffects: boolean) => {
+    const needsUpgrade = withEffects && pending !== undefined && !startedWithEffects
+
+    if (!pending || needsUpgrade) {
+      // Устаревший прогретый запуск (если это апгрейд) — переедет в supersededWarmRuns по готовности нового.
+      const stale = needsUpgrade ? pending : undefined
+      const run = buildSynapse<TState, TDispatcher, TSelectors>(factory, { withEffects })
+      pending = run
+      startedWithEffects = withEffects
+      run.then(
+        (synapse) => {
+          // Учитываем только если этот запуск всё ещё актуален (не вытеснен destroy/апгрейдом).
+          if (pending === run) {
+            settled = synapse
+            // Свап завершён — помечаем прогретый запуск на уничтожение при destroy() handle.
+            if (stale) supersededWarmRuns.add(stale)
+          }
+        },
+        () => {
+          // Fail-fast: возвращаем прежний мемо-запуск (или undefined вне апгрейда), чтобы
+          // следующий ready() мог повторить попытку; settled (прогретый стор) продолжает
+          // обслуживать getSnapshot(). При апгрейде сбрасываем флаг — повтор снова попробует
+          // запустить эффекты.
+          if (pending === run) {
+            pending = stale
+            if (stale !== undefined) startedWithEffects = false
+          }
+        },
+      )
+    }
+    return pending
+  }
 
   const handle: SynapseModule<TState, TDispatcher, TSelectors> = {
-    ready() {
-      if (!pending) {
-        const run = buildSynapse<TState, TDispatcher, TSelectors>(factory)
-        pending = run
-        run.then(
-          (synapse) => {
-            // Учитываем только если этот запуск всё ещё актуален (не вытеснен destroy).
-            if (pending === run) settled = synapse
-          },
-          () => {
-            // Fail-fast: сбрасываем мемоизацию, чтобы следующий ready() мог повторить попытку.
-            if (pending === run) pending = undefined
-          },
-        )
-      }
-      return pending
+    ready(options) {
+      const { withEffects = true } = options ?? {}
+      return start(withEffects)
     },
 
     isReady() {
@@ -199,8 +254,21 @@ export function createSynapseModule<TState extends Record<string, any>, TDispatc
 
     async destroy() {
       const run = pending
+      const orphans = [...supersededWarmRuns]
       pending = undefined
       settled = undefined
+      startedWithEffects = false
+      supersededWarmRuns.clear()
+
+      // Сначала прибираем вытесненные апгрейдом прогретые сторы (если были).
+      for (const orphan of orphans) {
+        try {
+          await (await orphan).destroy()
+        } catch {
+          // Прогретый запуск упал — разрушать нечего.
+        }
+      }
+
       if (!run) return
       try {
         const synapse = await run

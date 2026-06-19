@@ -62,8 +62,20 @@ export interface Synapse<TState extends Record<string, any>, TDispatcher, TSelec
  * заново исполняет фабрику.
  */
 export interface SynapseModule<TState extends Record<string, any>, TDispatcher, TSelectors> extends PromiseLike<Synapse<TState, TDispatcher, TSelectors>> {
-  /** Первый вызов запускает фабрику и весь пайплайн; повторные — отдают тот же промис. */
-  ready(): Promise<Synapse<TState, TDispatcher, TSelectors>>
+  /**
+   * Первый вызов запускает фабрику и весь пайплайн; повторные — отдают тот же промис.
+   *
+   * `withEffects` (по умолчанию `true`) — запускать ли RxJS-эффекты:
+   * - `true` (клиент) — полноценный запуск со стартом эффектов;
+   * - `false` (серверный прогрев дегидрации, см. {@link import('../dehydrateModule').dehydrateModule})
+   *   собирает стор целиком (storage/dispatcher/selectors/state$) для снапшота и SSR-seed,
+   *   но пропускает `effectsModule.start()`.
+   *
+   * Мемо-семантика: прогрев (`withEffects: false`) тоже мемоизируется, но последующий честный
+   * `ready()` (с эффектами) пересоберёт стор и запустит эффекты — инвариант «клиентский
+   * `ready()` обязан стартовать эффекты» соблюдён.
+   */
+  ready(options?: { withEffects?: boolean }): Promise<Synapse<TState, TDispatcher, TSelectors>>
   /** Запущена ли фабрика и успешно ли резолвился synapse. */
   isReady(): boolean
   /**

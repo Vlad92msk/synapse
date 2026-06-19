@@ -198,6 +198,21 @@ const html = renderToString(<PostsFeedWithCtx dehydratedState={dehydrated} />)
 // serialize into HTML: window.__SYNAPSE_STATE__ = JSON.stringify(dehydrated)
 ```
 
+> **RSC / `'use client'` boundary.** `createSynapseCtx` is usually called from a `'use client'`
+> module, so its `dehydrate` (a closure) cannot be imported on the server (RSC / `'server only'`).
+> For that case there is a **server-safe** `dehydrateModule` from `synapse-storage/utils` — no React
+> dependencies, takes the module explicitly. `dehydrate` wraps it (same logic, no duplication):
+>
+> ```typescript
+> import { dehydrateModule } from 'synapse-storage/utils'
+>
+> // in a server (RSC) file — postsSynapse is imported directly, no 'use client' context
+> const dehydrated = await dehydrateModule(postsSynapse, { ssr: true, state: { posts: feed } })
+> ```
+>
+> `state` is merged on top of the fork's `initialState` (shallow, top-level) — you may pass only the
+> changed fields; nested objects are replaced wholesale.
+
 ### Client: hydrate with the same snapshot
 
 The snapshot arrives as a prop and is seeded into the store **synchronously** before the first

@@ -199,6 +199,21 @@ const html = renderToString(<PostsFeedWithCtx dehydratedState={dehydrated} />)
 // dehydrated сериализуем в HTML: window.__SYNAPSE_STATE__ = JSON.stringify(dehydrated)
 ```
 
+> **RSC / `'use client'`-граница.** `createSynapseCtx` обычно зовётся в `'use client'`-модуле, поэтому
+> его `dehydrate` (замыкание) на сервер (RSC / `'server only'`) не импортнуть. Для этого случая есть
+> **server-safe** `dehydrateModule` из `synapse-storage/utils` — без React-зависимостей, принимает
+> сам модуль явно. Её и оборачивает `dehydrate` (одна и та же логика, без дубля):
+>
+> ```typescript
+> import { dehydrateModule } from 'synapse-storage/utils'
+>
+> // в серверном (RSC) файле — postsSynapse импортируется напрямую, без 'use client'-контекста
+> const dehydrated = await dehydrateModule(postsSynapse, { ssr: true, state: { posts: feed } })
+> ```
+>
+> `state` накладывается поверх `initialState` форка (shallow, top-level) — можно передать только
+> изменённые поля; вложенные объекты заменяются целиком.
+
 ### Клиент: гидрация тем же снапшотом
 
 Снапшот приезжает пропом и **синхронно** засевается в стор ДО первого рендера → HTML клиента

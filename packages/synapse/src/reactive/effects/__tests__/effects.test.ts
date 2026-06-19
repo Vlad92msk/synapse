@@ -1,12 +1,12 @@
 // Страховочные тесты EffectsModule и операторов (этап 0 ROADMAP).
 import { EMPTY, lastValueFrom, Observable, of, Subject, throwError } from 'rxjs'
-import { catchError, map, take, tap, toArray } from 'rxjs/operators'
+import { catchError, concatMap, delay, exhaustMap, map, mergeMap, take, tap, toArray } from 'rxjs/operators'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { MemoryStorage } from '../../../core/storage/adapters/memory-storage.service'
 import { Dispatcher } from '../../dispatcher/dispatcher.base'
 import { Effects } from '../effects.base'
-import { ApiError, apiResult, EffectsModule, ofType, ofTypes, selectorObject, validateMap } from '../effects.module'
+import { ApiError, apiResult, EffectsModule, mutationMap, ofType, ofTypes, selectorObject, validateMap } from '../effects.module'
 import { fromRequest } from '../utils/fromRequest'
 
 interface State extends Record<string, any> {
@@ -324,6 +324,110 @@ describe('операторы эффектов', () => {
     )
     expect(result).toEqual([]) // EMPTY после errorAction
     expect(onError).toHaveBeenCalledTimes(1)
+  })
+
+  it('mutationMap: prepare → body вторым аргументом apiCall; loadingAction перед вызовом', async () => {
+    const loading = vi.fn()
+    const result = await lastValueFrom(
+      of(2).pipe(
+        mutationMap<number, string, string>({
+          flatten: exhaustMap,
+          loadingAction: loading,
+          prepare: (v) => Promise.resolve(`body:${v}`),
+          apiCall: (v, body) => of(`called:${v}:${body}`),
+        }),
+      ),
+    )
+    expect(result).toBe('called:2:body:2')
+    expect(loading).toHaveBeenCalledTimes(1)
+  })
+
+  it('mutationMap: без prepare → body = undefined', async () => {
+    const result = await lastValueFrom(
+      of(7).pipe(
+        mutationMap<number, void, string>({
+          flatten: mergeMap,
+          apiCall: (v, body) => of(`${v}:${String(body)}`),
+        }),
+      ),
+    )
+    expect(result).toBe('7:undefined')
+  })
+
+  it('mutationMap: validator не пройден → skipAction, apiCall не зовётся', async () => {
+    const apiCall = vi.fn(() => of('called'))
+    const result = await lastValueFrom(
+      of(-1).pipe(
+        mutationMap<number, void, string>({
+          flatten: exhaustMap,
+          validator: (v) => ({ conditions: [v > 0], skipAction: 'skipped' }),
+          apiCall,
+        }),
+      ),
+    )
+    expect(result).toBe('skipped')
+    expect(apiCall).not.toHaveBeenCalled()
+  })
+
+  it('mutationMap: ошибка apiCall ловится errorAction, поток не падает', async () => {
+    const onError = vi.fn()
+    const result = await lastValueFrom(
+      of(1).pipe(
+        mutationMap<number, void, string>({
+          flatten: mergeMap,
+          errorAction: (err) => onError(String(err)),
+          apiCall: () => throwError(() => new Error('fail')),
+        }),
+        toArray(),
+      ),
+    )
+    expect(result).toEqual([])
+    expect(onError).toHaveBeenCalledTimes(1)
+  })
+
+  it('mutationMap: exhaustMap игнорирует дабл-сабмит, пока запрос в полёте', async () => {
+    const started = vi.fn()
+    const result = await lastValueFrom(
+      of('a', 'b', 'c').pipe(
+        mutationMap<string, void, string>({
+          flatten: exhaustMap,
+          apiCall: (v) => {
+            started(v)
+            return of(`done:${v}`).pipe(delay(10))
+          },
+        }),
+        toArray(),
+      ),
+    )
+    // a улетает первым; b и c приходят синхронно пока a в полёте → игнор
+    expect(result).toEqual(['done:a'])
+    expect(started).toHaveBeenCalledTimes(1)
+  })
+
+  it('mutationMap: mergeMap пропускает все срабатывания параллельно', async () => {
+    const result = await lastValueFrom(
+      of('a', 'b', 'c').pipe(
+        mutationMap<string, void, string>({
+          flatten: mergeMap,
+          apiCall: (v) => of(`done:${v}`).pipe(delay(10)),
+        }),
+        toArray(),
+      ),
+    )
+    expect(result.sort()).toEqual(['done:a', 'done:b', 'done:c'])
+  })
+
+  it('mutationMap: concatMap сохраняет порядок по очереди', async () => {
+    const result = await lastValueFrom(
+      of('a', 'b').pipe(
+        mutationMap<string, void, string>({
+          flatten: concatMap,
+          apiCall: (v) => of(`done:${v}`).pipe(delay(5)),
+        }),
+        toArray(),
+      ),
+    )
+    expect(result).toEqual(['done:a', 'done:b'])
   })
 
   it('apiResult: ok → onSuccess; !ok → бросает ApiError', async () => {

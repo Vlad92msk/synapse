@@ -99,6 +99,99 @@ action$.pipe(
 )
 ```
 
+## Handling requests: `validateMap` (reads) / `mutationMap` (writes)
+
+For API effects the library ships two sibling operators with one shared vocabulary
+(`validator` / `loadingAction` / `errorAction` / `apiCall`; success is dispatched **inside** `apiCall`
+via `apiResult`). They wrap one pipe: `[validator] → loadingAction → [prepare] → apiCall → success / errorAction`.
+
+`fromRequest` turns an `ApiClient` request into a cancellable Observable (aborts the HTTP request on
+unsubscribe); `apiResult` unwraps a successful `QueryResult` (or throws `ApiError`, caught by `errorAction`).
+
+### `validateMap` — reads (resources)
+
+Built on `switchMap` (**last wins**: a new trigger aborts the stale in-flight request). Perfect for loading
+a resource where only the latest matters.
+
+```typescript
+import { ofType, validateMap, fromRequest, apiResult } from 'synapse-storage/reactive'
+
+loadPosts$ = this.effect((action$, state$, { dispatcher: d }) =>
+  action$.pipe(
+    ofType(d.loadPosts),
+    withLatestFrom(selectorObject(state$, { status: (s) => s.api.postsRequest.status })),
+    validateMap({
+      // gate: don't refetch while a request is already in flight
+      validator: ([, { status }]) => ({ conditions: [status !== ApiStatus.Loading], skipAction: () => d.loadPosts.reset() }),
+      loadingAction: () => d.loadPosts.loading(),
+      errorAction: (err) => d.loadPosts.failure(getErrorMessage(err)),
+      apiCall: ([action], { chunkRequest, chunkRequestConsistent }) =>
+        fromRequest(this.api.getPosts.request(action.payload)).pipe(
+          apiResult((page) => { d.applyPosts(page); d.loadPosts.success() }),
+        ),
+    }),
+  ),
+)
+```
+
+### `mutationMap` — writes (mutations)
+
+Same vocabulary, plus two write-specific concepts:
+
+- **`flatten`** — the concurrency strategy (an rxjs operator). Writes have no single right answer, so the
+  caller picks it by meaning:
+  - `exhaustMap` — a single operation (create/update form): a double-submit is **ignored**, the in-flight
+    request is **not** aborted;
+  - `mergeMap` — operations over different entities (delete/toggle/repost): real parallelism;
+  - `concatMap` — strictly one after another.
+- **`prepare`** — async request-body assembly (FormData, blobs, tags) before `apiCall`; its result arrives as
+  the second argument of `apiCall`. No `prepare` → `body` is `undefined`.
+
+> **Why not `validateMap` for writes?** `validateMap` is locked to `switchMap`, which aborts the in-flight
+> request on a new trigger. On a write that's a hazard: a double-submit would cancel the first POST (which may
+> have already committed server-side → lost response), and parallel ops over different entities would abort each
+> other. So a mutation lets the caller choose the strategy.
+
+```typescript
+import { ofType, mutationMap, fromRequest, apiResult } from 'synapse-storage/reactive'
+import { exhaustMap, mergeMap } from 'rxjs/operators'
+
+// create — single submit: exhaustMap (ignore double-submit), async body via prepare
+createPost$ = this.effect((action$, _state$, { dispatcher: d }) =>
+  action$.pipe(
+    ofType(d.createPost),
+    mutationMap({
+      flatten: exhaustMap,
+      loadingAction: () => d.createPost.loading(),
+      errorAction: (err) => d.createPost.failure(getErrorMessage(err)),
+      prepare: (payload) => buildCreateBody(this.api, payload),
+      apiCall: (_payload, body) =>
+        fromRequest(this.api.createPost.request({ body })).pipe(
+          apiResult((post) => { d.createPost.success(); d.prependPost(post) }),
+        ),
+    }),
+  ),
+)
+
+// delete — acts on different posts: mergeMap (parallel), no body
+removePost$ = this.effect((action$, _state$, { dispatcher: d }) =>
+  action$.pipe(
+    ofType(d.removePost),
+    mutationMap({
+      flatten: mergeMap,
+      errorAction: (err, id) => d.removePost.failure(getErrorMessage(err)),
+      apiCall: (id) =>
+        fromRequest(this.api.removePost.request({ id })).pipe(
+          apiResult(() => d.dropPost(id)),
+        ),
+    }),
+  ),
+)
+```
+
+`validateMap` is internally just `mutationMap` with `flatten: switchMap` and no `prepare` — same machine,
+the strategy is the only conceptual difference.
+
 ## Return value
 
 ```typescript

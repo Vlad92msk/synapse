@@ -1,5 +1,55 @@
 # Changelog
 
+## [5.0.3] - 2026-06-18
+
+### `mutationMap` — оператор обработки мутаций (запись)
+
+- **`mutationMap({ flatten, validator?, prepare?, loadingAction?, errorAction?, apiCall })`** (экспорт из
+  `synapse-storage/reactive`) — оператор для записывающих эффектов (create/update/delete/toggle/repost).
+  Тот же словарь, что у `validateMap` (`validator` / `loadingAction` / `errorAction` / `apiCall`, успех —
+  внутри `apiCall` через `apiResult`), плюс два понятия, специфичных для записи:
+  - **`flatten`** — стратегия конкуренции (rxjs-оператор). У записи нет одного верного варианта, его задаёт
+    вызывающий под смысл операции: `exhaustMap` — одиночная операция (форма create/update): дабл-сабмит
+    игнорируется, in-flight НЕ отменяется; `mergeMap` — операции над разными сущностями (delete/toggle/repost):
+    параллельность; `concatMap` — строго по очереди.
+  - **`prepare`** — асинхронная сборка тела запроса (FormData, blob'ы, теги) перед `apiCall`; результат приходит
+    вторым аргументом в `apiCall`. Нет `prepare` → `body === undefined`.
+- **Почему не `validateMap` для записи.** `validateMap` намертво построен на `switchMap` («последний выигрывает»):
+  новый триггер отписывается от текущего inner-Observable, а `fromRequest` на отписке зовёт `req.abort()`. Для
+  чтения это идеально, для записи — баг: дабл-сабмит формы отменил бы первый POST (а он мог уже закоммититься на
+  сервере → потеря ответа), а параллельные операции над разными сущностями обрывали бы друг друга. Поэтому у
+  мутации стратегию выбирает вызывающий.
+- **Общее ядро.** `validateMap` и `mutationMap` — тонкие обёртки над одним внутренним `requestMap`
+  (валидация → loading → prepare → apiCall → success/error). `validateMap` === ядро со стратегией `switchMap`
+  и без `prepare`. Единообразие гарантировано конструкцией: разъехаться вызовы не могут.
+- **`validateMap` без изменений** — публичная сигнатура и поведение сохранены (обратная совместимость).
+
+## [5.0.2] - 2026-06-18
+
+### Server-safe `dehydrateModule`
+
+- **`dehydrateModule(module, { state?, ssr? }): Promise<TState>`** (экспорт из `synapse-storage/utils`) —
+  серверная дегидрация без React-зависимостей: её можно импортнуть в серверный (RSC / 'server only')
+  модуль, в отличие от замыкания `dehydrate` из `createSynapseCtx`, доступного лишь через клиентский HOC.
+  Делает то же: per-request `fork()` → `ready({ withEffects: false })` → `hydrate({ ...initialState, ...state })`
+  (частичный `state` накладывается поверх дефолта, непереданные поля сохраняются) → `getStateSync()` →
+  `destroy()`; при `ssr: true` и синхронно-готовом (READY) сторе дополнительно прогревает основной handle
+  снапшотом (`renderToString` получает готовый стор на первом рендере → контент в серверном HTML).
+- **`SynapseModule.ready(options?: { withEffects?: boolean })`** — у `ready()` появился аддитивный опциональный
+  флаг `withEffects` (по умолчанию `true` — поведение не изменилось). При `withEffects: false` (серверный
+  прогрев дегидрации) handle собирает стор целиком (storage/dispatcher/selectors/state$) для снапшота и
+  SSR-seed, но пропускает `effectsModule.start()`. Мемо-семантика: прогрев тоже мемоизируется, но последующий
+  честный `ready()` (с эффектами) пересобирает стор и запускает эффекты — клиентский инвариант «`ready()` обязан
+  стартовать эффекты» соблюдён (после `ready({ withEffects: false })` честный `ready()` НЕ вернёт инстанс без
+  эффектов).
+- **`dehydrateModule` не стартует эффекты на сервере** — ни на форке, ни при `ssr`-прогреве main handle
+  (оба через `ready({ withEffects: false })`). Серверу нужны только снапшот состояния + READY-storage для
+  SSR-seed; запуск эффектов на сервере был лишней работой (форк) либо «висящими» подписками (синглтон main
+  handle не destroy-ится между запросами). Поведение SSR-seed не изменилось.
+- **`createSynapseCtx().dehydrate`** теперь тонкая обёртка над `dehydrateModule` (без дублирования
+  серверной логики). Публичная сигнатура и поведение сохранены: `dehydrate({ initialState })` = `state`,
+  `ssr` берётся из опций контекста.
+
 ## [5.0.1] - 2026-06-14
 
 ### SSR-режим React-биндинга (server-render засеянных sync-сторов)
