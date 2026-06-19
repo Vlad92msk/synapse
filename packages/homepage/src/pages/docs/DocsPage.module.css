@@ -1,0 +1,129 @@
+.docs {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  position: relative;
+}
+
+/* Кнопка открытия сайдбара */
+.sidebarToggle {
+  position: fixed;
+  top: 100px;
+  left: 20px;
+  z-index: 1001;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.1),
+    0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.sidebarToggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.sidebarToggle.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-100px);
+}
+
+/* Hamburger иконка */
+.hamburger {
+  display: flex;
+  flex-direction: column;
+  width: 20px;
+  height: 16px;
+  justify-content: space-between;
+}
+
+.hamburger span {
+  display: block;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+  transition: all 0.2s ease;
+}
+
+.sidebarToggle:hover .hamburger span {
+  background: #00d4ff;
+}
+
+/* Overlay для мобильных */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 999;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Адаптивность */
+@media (max-width: 1024px) {
+  .docs {
+    min-height: calc(100vh - 70px);
+  }
+
+  .sidebarToggle {
+    top: 90px;
+    left: 16px;
+    padding: 10px;
+  }
+
+  .hamburger {
+    width: 18px;
+    height: 14px;
+  }
+}
+
+@media (max-width: 768px) {
+  .docs {
+    min-height: calc(100vh - 60px);
+  }
+
+  .sidebarToggle {
+    top: 60px;
+    left: 12px;
+    padding: 8px;
+    border-radius: 8px;
+  }
+
+  .hamburger {
+    width: 16px;
+    height: 12px;
+  }
+
+  .hamburger span {
+    height: 1.5px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebarToggle {
+    top: 75px;
+    left: 8px;
+    padding: 6px;
+  }
+}

@@ -1,0 +1,250 @@
+{
+  "api-client": {
+    "0": "apiclient-http-client-with-caching",
+    "1": "imports",
+    "2": "creating-an-apiclient",
+    "3": "request-performing-a-request",
+    "4": "queryoptions-request-options",
+    "5": "requestdefinition-an-endpoints-request-description",
+    "6": "caching-and-tags",
+    "7": "getendpoints-direct-access-to-endpoints",
+    "8": "waitwithcallbacks-callbacks-by-status",
+    "9": "abort-aborting-a-request",
+    "10": "subscribe-subscribing-to-an-endpoints-state",
+    "11": "lifecycle"
+  },
+  "architecture": {
+    "0": "two-layers-state-manager-and-business-logic-layer",
+    "1": "layer-1-state-manager-where-the-state-lives",
+    "2": "layer-2-business-logic-layer-how-logic-manages-the-state",
+    "3": "why-this-separation-matters",
+    "4": "where-to-go-next"
+  },
+  "await-synapse": {
+    "0": "awaitsynapse",
+    "1": "creating",
+    "2": "withsynapseready-hoc",
+    "3": "usesynapseready-hook",
+    "4": "programmatic-api",
+    "5": "relation-to-createsynapseawaiter"
+  },
+  "create-synapse-basic": {
+    "0": "createsynapse-basic",
+    "1": "creating",
+    "2": "return-value",
+    "3": "usage-in-react",
+    "4": "async-initialization-in-the-factory"
+  },
+  "create-synapse-dispatcher": {
+    "0": "createsynapse-dispatcher",
+    "1": "creating",
+    "2": "thisaction",
+    "3": "thiswatcher",
+    "4": "return-value",
+    "5": "react-createsynapsectx"
+  },
+  "create-synapse-effects": {
+    "0": "createsynapse-effects",
+    "1": "creating",
+    "2": "thiseffect",
+    "3": "oftype-oftypes",
+    "4": "handling-requests-validatemap-reads-mutationmap-writes",
+    "5": "return-value"
+  },
+  "delete-has-keys": {
+    "0": "remove-has-keys-clear-reset",
+    "1": "haskey-check-whether-a-key-exists",
+    "2": "keys-get-all-keys",
+    "3": "removekey-remove-a-specific-key",
+    "4": "clear-clear-the-storage",
+    "5": "reset-reset-to-initialstate",
+    "6": "clear-vs-reset-whats-the-difference"
+  },
+  "dependencies": {
+    "0": "cross-module-dependencies",
+    "1": "dependency-auth-module",
+    "2": "dependent-storage-settings-cross-store-selector",
+    "3": "four-patterns-of-cross-module-communication",
+    "4": "initialization-order"
+  },
+  "dispatcher-detailed": {
+    "0": "dispatcher-in-detail",
+    "1": "creating",
+    "2": "dispatcher-surface",
+    "3": "thisaction",
+    "4": "thissignal",
+    "5": "thisapiactions-callable-group-lifecycle",
+    "6": "thiswatcher",
+    "7": "reserved-field-names",
+    "8": "usage"
+  },
+  "event-bus": {
+    "0": "createeventbus-event-bus",
+    "1": "imports",
+    "2": "creating",
+    "3": "actionspublish-publishing-an-event",
+    "4": "actionssubscribe-subscribing-to-events",
+    "5": "actionsgeteventhistory-event-history",
+    "6": "actionsgetactivesubscriptions-active-subscriptions",
+    "7": "actionsclearevents-clearing-events",
+    "8": "destroy",
+    "9": "example-communication-between-modules"
+  },
+  "hook-indexeddb": {
+    "0": "usecreatestorage-indexeddb",
+    "1": "usage",
+    "2": "full-example"
+  },
+  "hook-local-storage": {
+    "0": "usecreatestorage-localstorage",
+    "1": "usage",
+    "2": "full-example"
+  },
+  "hook-memory": {
+    "0": "usecreatestorage-memory",
+    "1": "usecreatestorage",
+    "2": "usestoragesubscribe",
+    "3": "full-example"
+  },
+  "indexeddb-storage": {
+    "0": "indexeddbstorage",
+    "1": "creating",
+    "2": "writing-data-asynchronous",
+    "3": "reading-data-asynchronous",
+    "4": "checking-removing-resetting-asynchronous",
+    "5": "subscriptions-the-same-for-all-types",
+    "6": "differences-from-memorystoragelocalstorage",
+    "7": "persist-migrations-and-ssr"
+  },
+  "local-storage": {
+    "0": "localstorage",
+    "1": "creating",
+    "2": "writing-data",
+    "3": "reading-data",
+    "4": "checking-removing-resetting",
+    "5": "subscriptions",
+    "6": "differences-from-memorystorage",
+    "7": "destroy-and-clearondestroy",
+    "8": "persist-migrations-and-ssr"
+  },
+  "memory-storage": {
+    "0": "memorystorage",
+    "1": "creating",
+    "2": "writing-data",
+    "3": "reading-data",
+    "4": "checking-removing-resetting",
+    "5": "subscriptions",
+    "6": "lifecycle"
+  },
+  "middlewares": {
+    "0": "middlewares",
+    "1": "configuration",
+    "2": "1-batching-middleware",
+    "3": "2-shallowcompare-middleware",
+    "4": "3-shallowcompare-a-custom-comparator",
+    "5": "4-combining-middlewares",
+    "6": "5-broadcastmiddleware-cross-tab-synchronization",
+    "7": "6-logger-middleware-dev-only",
+    "8": "types"
+  },
+  "persist-migration": {
+    "0": "persist-migrations-version-migrate",
+    "1": "how-it-works",
+    "2": "bumping-the-version-without-migrate",
+    "3": "migrate-is-called-once",
+    "4": "ssr-hydration",
+    "5": "types",
+    "6": "see-also"
+  },
+  "pokemon-advanced": {
+    "0": "pokemon-advanced-a-full-architecture-example",
+    "1": "project-structure",
+    "2": "1-types",
+    "3": "2-external-settings-a-dependency",
+    "4": "3-apiclient",
+    "5": "4-selectors-class-selectors",
+    "6": "5-dispatcher-class-dispatcher-action-signal-apiactions-watcher",
+    "7": "6-effects-class-effects-validatemap-apiresult",
+    "8": "7-createsynapse-wiring-it-all-together",
+    "9": "the-5-state-request-protocol",
+    "10": "key-utilities"
+  },
+  "reading-data": {
+    "0": "reading-data-getgetstate",
+    "1": "getkey-reading-a-single-field",
+    "2": "getstate-the-entire-state",
+    "3": "getstatesync-synchronous-read-from-cache",
+    "4": "haskey-keys-checking-and-listing"
+  },
+  "selector-system": {
+    "0": "selectors",
+    "1": "1-the-selectors-class",
+    "2": "2-thisselect-simple",
+    "3": "3-thiscombine-combined",
+    "4": "4-reactive-selector-selector",
+    "5": "5-useselector-react-hook-current-value",
+    "6": "6-programmatic-access-to-a-selector"
+  },
+  "singleton": {
+    "0": "singleton-pattern",
+    "1": "enabling-singleton",
+    "2": "merge-strategies-mergestrategy",
+    "3": "custom-key-singletonkey",
+    "4": "singleton-in-react",
+    "5": "full-singletonoptions-configuration"
+  },
+  "ssr-hydration": {
+    "0": "ssr-hydration-hydrate",
+    "1": "hydration-before-initialize",
+    "2": "hydration-after-initialize",
+    "3": "with-persist-migrations",
+    "4": "react-createsynapse",
+    "5": "types",
+    "6": "see-also"
+  },
+  "static-create": {
+    "0": "static-create",
+    "1": "usage"
+  },
+  "storage-factory": {
+    "0": "storagefactory",
+    "1": "typed-methods",
+    "2": "universal-create"
+  },
+  "subscriptions": {
+    "0": "subscriptions-subscribe",
+    "1": "1-subscribekey-callback",
+    "2": "2-subscribeselector-callback",
+    "3": "3-subscribetoallcallback",
+    "4": "4-usestoragesubscribe-react-hook"
+  },
+  "synapse-awaiter": {
+    "0": "createsynapseawaiter-framework-agnostic-awaiter",
+    "1": "imports",
+    "2": "creating",
+    "3": "isready-getstatus-geterror",
+    "4": "getstoreifready",
+    "5": "waitforready",
+    "6": "onready-onerror",
+    "7": "destroy",
+    "8": "usage-in-a-react-component"
+  },
+  "synapse-ctx": {
+    "0": "createsynapsectx",
+    "1": "creating-the-context",
+    "2": "using-the-hooks-in-child-components",
+    "3": "hoc-contextsynapse",
+    "4": "usesynapsestate-only-with-effects",
+    "5": "reactive-reads-in-a-component",
+    "6": "cleanup",
+    "7": "three-variants-of-createsynapsectx",
+    "8": "ssr-server-rendering-seeded-sync-stores"
+  },
+  "writing-data": {
+    "0": "writing-data-setupdate",
+    "1": "setkey-value-set-a-value-by-key",
+    "2": "updateupdater-change-several-fields-at-once",
+    "3": "set-vs-update-when-to-use-which",
+    "4": "reset-reset-to-initialstate"
+  }
+}

@@ -1,0 +1,38 @@
+# https://www.robotstxt.org/robotstxt.html
+
+User-agent: *
+Allow: /
+Crawl-delay: 1
+
+# Priority pages for indexing
+Allow: /docs
+Allow: /docs/
+
+# Sitemap location
+Sitemap: https://synapse-homepage.web.app/sitemap.xml
+
+# Block unnecessary files for better crawl budget
+Disallow: /_next/
+Disallow: /static/js/
+Disallow: /static/css/
+Disallow: /node_modules/
+Disallow: /*.json$
+Disallow: /src/
+
+# Allow important static files
+Allow: /logo.webp
+Allow: /manifest.json
+
+# GitHub and development tools
+User-agent: GitHubBot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+# Block resource-heavy crawlers
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: AhrefsBot
+Crawl-delay: 10

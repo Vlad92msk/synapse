@@ -1,0 +1,33 @@
+.Button {
+  padding: 15px 30px;
+  border: none;
+  border-radius: 7px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+  letter-spacing: 0.09em;
+}
+
+.Button--type_primary {
+  background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
+  color: #ffffff;
+}
+
+.Button--type_primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+}
+
+.Button--type_secondary {
+  background: transparent;
+  color: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.Button--type_secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #00d4ff;
+}

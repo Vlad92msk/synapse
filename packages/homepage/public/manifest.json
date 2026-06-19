@@ -1,0 +1,60 @@
+{
+  "short_name": "Synapse Storage",
+  "name": "Synapse Storage - State Management Toolkit",
+  "description": "Framework-agnostic state management toolkit with API client, storage adapters, and reactive capabilities",
+  "icons": [
+    {
+      "src": "logo.webp",
+      "type": "image/webp",
+      "sizes": "362x371"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#3498db",
+  "background_color": "#ffffff",
+  "categories": ["productivity", "developer", "utilities"],
+  "lang": "en",
+  "scope": "/",
+  "orientation": "any",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Documentation",
+      "short_name": "Docs",
+      "description": "Browse Synapse Storage documentation",
+      "url": "/docs",
+      "icons": [
+        {
+          "src": "logo.webp",
+          "sizes": "362x371"
+        }
+      ]
+    },
+    {
+      "name": "Getting Started",
+      "short_name": "Start",
+      "description": "Quick start guide",
+      "url": "/docs#description",
+      "icons": [
+        {
+          "src": "logo.webp",
+          "sizes": "362x371"
+        }
+      ]
+    },
+    {
+      "name": "Basic Usage",
+      "short_name": "Usage",
+      "description": "Learn basic usage patterns",
+      "url": "/docs#create-storages",
+      "icons": [
+        {
+          "src": "logo.webp",
+          "sizes": "362x371"
+        }
+      ]
+    }
+  ]
+}

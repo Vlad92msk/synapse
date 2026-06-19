@@ -12,6 +12,9 @@
     "test:coverage": "yarn workspace synapse-storage test:coverage",
     "dev:examples": "yarn workspace examples dev",
     "build:examples": "yarn workspace examples build",
+    "dev:homepage": "yarn workspace synapse-homepage dev",
+    "build:homepage": "yarn workspace synapse-homepage build",
+    "homepage:docs": "yarn workspace synapse-homepage docs:generate",
     "lint": "yarn workspace synapse-storage lint",
     "lint:fix": "yarn workspace synapse-storage lint:fix",
     "fix": "yarn workspace synapse-storage fix"

@@ -1,0 +1,359 @@
+.docsContent {
+  flex: 1;
+  min-width: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  height: calc(100dvh - 83px);
+}
+
+.docsContent.withSidebar {
+  margin-left: 0;
+}
+
+.docsContent.fullWidth {
+  margin-left: 0;
+  width: 100%;
+}
+
+.container {
+  padding: 0 40px 40px 40px;
+  max-width: 1000px;
+  margin: 0 auto;
+  overflow-y: auto;
+  height: 100%;
+}
+
+/* Breadcrumb навигация */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  padding-left: 0;
+  backdrop-filter: blur(4px);
+}
+
+.breadcrumbLink {
+  /*color: #00d4ff;*/
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+}
+
+.breadcrumbSeparator {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
+  user-select: none;
+}
+
+.breadcrumbCurrent {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 4px 8px;
+}
+
+/* Основной контент */
+.content {
+  line-height: 1.7;
+  color: inherit;
+}
+
+/* Стили для заголовков */
+.content :global(h1) {
+  font-size: 42px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, #ffffff 0%, #00d4ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  line-height: 1.2;
+}
+
+.content :global(h2) {
+  font-size: 32px;
+  font-weight: 600;
+  margin: 48px 0 24px 0;
+  color: #ffffff;
+  padding-bottom: 12px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.content :global(h3) {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 36px 0 16px 0;
+  color: #00d4ff;
+}
+
+.content :global(h4) {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 28px 0 12px 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.content :global(h5) {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 24px 0 8px 0;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.content :global(h6) {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 20px 0 8px 0;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Параграфы и списки */
+.content :global(p),
+.content :global(.edgeLabel),
+.content :global(.labelBkg) {
+  margin: 16px 0;
+  color: rgba(255, 255, 255, 0.8);
+  background: transparent !important;
+}
+
+.content :global(ul),
+.content :global(ol) {
+  margin: 20px 0 20px 24px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.content :global(li) {
+  margin-bottom: 8px;
+}
+
+.content :global(strong) {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.content :global(em) {
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.content :global(a) {
+  color: #00d4ff;
+  /*text-decoration: underline;*/
+  text-decoration-color: rgba(0, 212, 255, 0.4);
+  transition: all 0.2s ease;
+}
+
+.content :global(a:hover) {
+  color: #33e0ff;
+  text-decoration-color: currentColor;
+}
+
+/* Inline код */
+.content :global(code):not(:global(pre code)) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffd6cc;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.9em;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Placeholder для пустых разделов */
+.placeholder {
+  text-align: center;
+  padding: 80px 40px;
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(4px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 40px;
+}
+
+.placeholderIcon {
+  font-size: 48px;
+  margin-bottom: 20px;
+  opacity: 0.6;
+}
+
+.placeholder h2 {
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 12px;
+  font-size: 24px;
+}
+
+.placeholder p {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 16px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* Адаптивность */
+@media (max-width: 1024px) {
+  .container {
+    padding: 32px;
+    max-width: none;
+  }
+
+  .content :global(h1) {
+    font-size: 36px;
+  }
+
+  .content :global(h2) {
+    font-size: 28px;
+    margin: 40px 0 20px 0;
+  }
+
+  .content :global(h3) {
+    font-size: 22px;
+    margin: 32px 0 14px 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .docsContent {
+    width: 100%;
+  }
+
+  .container {
+    padding: 20px;
+  }
+
+  .breadcrumb {
+    margin-bottom: 24px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    gap: 6px;
+  }
+
+  .breadcrumbLink,
+  .breadcrumbSeparator,
+  .breadcrumbCurrent {
+    font-size: 13px;
+  }
+
+  .content :global(h1) {
+    font-size: 32px;
+    margin-bottom: 20px;
+  }
+
+  .content :global(h2) {
+    font-size: 26px;
+    margin: 36px 0 18px 0;
+    padding-bottom: 8px;
+  }
+
+  .content :global(h3) {
+    font-size: 20px;
+    margin: 28px 0 12px 0;
+  }
+
+  .content :global(h4) {
+    font-size: 18px;
+    margin: 24px 0 10px 0;
+  }
+
+  .content :global(ul),
+  .content :global(ol) {
+    margin-left: 20px;
+  }
+
+  .placeholder {
+    padding: 60px 20px;
+    margin-top: 20px;
+  }
+
+  .placeholderIcon {
+    font-size: 40px;
+    margin-bottom: 16px;
+  }
+
+  .placeholder h2 {
+    font-size: 20px;
+    margin-bottom: 10px;
+  }
+
+  .placeholder p {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 16px;
+  }
+
+  .breadcrumb {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .breadcrumbSeparator {
+    display: none;
+  }
+
+  .content :global(h1) {
+    font-size: 28px;
+    margin-bottom: 16px;
+    line-height: 1.3;
+  }
+
+  .content :global(h2) {
+    font-size: 24px;
+    margin: 32px 0 16px 0;
+    padding-bottom: 6px;
+  }
+
+  .content :global(h3) {
+    font-size: 18px;
+    margin: 24px 0 10px 0;
+  }
+
+  .content :global(h4) {
+    font-size: 16px;
+    margin: 20px 0 8px 0;
+  }
+
+  .content :global(ul),
+  .content :global(ol) {
+    margin-left: 16px;
+    margin-top: 12px;
+    margin-bottom: 12px;
+  }
+
+  .content :global(p) {
+    margin: 12px 0;
+    font-size: 14px;
+  }
+
+  .placeholder {
+    padding: 40px 16px;
+    margin-top: 16px;
+    border-radius: 12px;
+  }
+
+  .placeholderIcon {
+    font-size: 32px;
+    margin-bottom: 12px;
+  }
+
+  .placeholder h2 {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+
+  .placeholder p {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+}

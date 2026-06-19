@@ -1,0 +1,62 @@
+{
+  "compilerOptions": {
+    // =================== ДЛЯ VITE + REACT ===================
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ES2022",
+    "skipLibCheck": true,
+
+    // =================== BUNDLER ===================
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    // =================== ПУТИ ===================
+    "baseUrl": "src",
+    "paths": {
+      "@data/*": ["data/*"],
+      "@i18n/*": ["i18n/*"],
+      "@pages/*": ["pages/*"],
+      "@router/*": ["router/*"],
+      "@shared/*": ["shared/*"],
+      "@models/*": ["types/*"]
+    },
+
+    // =================== СТРОГОСТЬ ===================
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // =================== СОВМЕСТИМОСТЬ ===================
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+  },
+
+  // =================== ВКЛЮЧЕНИЯ / ИСКЛЮЧЕНИЯ ===================
+  "include": ["src", "scripts"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "**/*.test.*",
+    "**/*.spec.*"
+  ],
+
+  // =================== СПЕЦИАЛЬНО ДЛЯ TS-NODE ===================
+  "ts-node": {
+    "compilerOptions": {
+      "target": "ES2020",
+      "module": "CommonJS",
+      "moduleResolution": "node",
+      "esModuleInterop": true,
+      "allowSyntheticDefaultImports": true,
+      "skipLibCheck": true
+    }
+  }
+}

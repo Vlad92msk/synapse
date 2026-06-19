@@ -50,7 +50,15 @@
       "Bash(rmdir -p \"/Users/vlad/web_dev/synapse/packages/synapse/.claude/projects/-Users-vlad-web-dev-synapse/memory\")",
       "Read(//Users/vlad/web_dev/sn_client/**)",
       "Bash(ls yarn.lock package-lock.json pnpm-lock.yaml)",
-      "Bash(node -e \"console.log\\(require\\('synapse-storage/package.json'\\).version\\)\")"
+      "Bash(node -e \"console.log\\(require\\('synapse-storage/package.json'\\).version\\)\")",
+      "Bash(yarn -v)",
+      "Bash(echo \"node: $\\(node -v 2>/dev/null\\); yarn: $\\(yarn -v 2>/dev/null\\)\")",
+      "Bash(sed 's/\\\\.md$//')",
+      "Bash(rsync -a /Users/vlad/web_dev/synapse-homepage/src/pages/docs/ /Users/vlad/web_dev/synapse/packages/homepage/src/pages/docs/)",
+      "Bash(yarn install *)",
+      "Bash(yarn workspace *)",
+      "Bash(yarn type-check *)",
+      "Bash(yarn build:homepage)"
     ]
   }
 }
