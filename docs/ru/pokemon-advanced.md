@@ -1,6 +1,6 @@
 # Pokemon Advanced — Полный пример архитектуры
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/tree/master/packages/examples/src/examples/pokemon-advanced)
 
 Полный пример, объединяющий все возможности Synapse: хранилище, селекторы, диспетчер, эффекты, ApiClient, зависимости и внешнее состояние.
 
@@ -100,24 +100,24 @@ export const pokemonApiClient = new ApiClient({
 import { Selectors } from 'synapse-storage/core'
 
 export class PokemonSelectors extends Selectors<PokemonState> {
-  private readonly api = this.select((s) => s.api)        // private = промежуточный слайс
+  private  api = this.select((s) => s.api)        // private = промежуточный слайс
 
-  readonly pokemonList = this.select((s) => s.pokemonList)
-  readonly searchQuery = this.select((s) => s.searchQuery)
-  readonly favorites = this.select((s) => s.favorites)
-  readonly selectedPokemon = this.select((s) => s.selectedPokemon)
-  readonly hasMore = this.select((s) => s.hasMore)
+   pokemonList = this.select((s) => s.pokemonList)
+   searchQuery = this.select((s) => s.searchQuery)
+   favorites = this.select((s) => s.favorites)
+   selectedPokemon = this.select((s) => s.selectedPokemon)
+   hasMore = this.select((s) => s.hasMore)
 
-  readonly listStatus = this.combine([this.api], (a) => a.listRequest.status)
-  readonly isListLoading = this.combine([this.listStatus], (s) => s === 'loading')
+   listStatus = this.combine([this.api], (a) => a.listRequest.status)
+   isListLoading = this.combine([this.listStatus], (s) => s === 'loading')
 
   // Композиция pokemonList + searchQuery → filteredList
-  readonly filteredList = this.combine([this.pokemonList, this.searchQuery], (list, query) =>
+   filteredList = this.combine([this.pokemonList, this.searchQuery], (list, query) =>
     query ? list.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())) : list,
   )
 
-  readonly favoriteCount = this.combine([this.favorites], (favs) => favs.length)
-  readonly favoritePokemon = this.combine([this.pokemonList, this.favorites], (list, favs) =>
+   favoriteCount = this.combine([this.favorites], (favs) => favs.length)
+   favoritePokemon = this.combine([this.pokemonList, this.favorites], (list, favs) =>
     list.filter((p) => favs.includes(p.id)),
   )
 }
@@ -130,13 +130,13 @@ import { Dispatcher } from 'synapse-storage/reactive'
 
 export class PokemonDispatcher extends Dispatcher<PokemonState> {
   // apiActions — вызываемая группа: loadList() = init, .loading/.success/.failure/.reset
-  readonly loadList = this.apiActions<void>((s) => s.api.listRequest)
-  readonly loadDetails = this.apiActions<void>((s) => s.api.detailsRequest)
+   loadList = this.apiActions<void>((s) => s.api.listRequest)
+   loadDetails = this.apiActions<void>((s) => s.api.detailsRequest)
 
   // signal — чистое намерение (статус подгрузки пишется через loadList.*)
-  readonly loadMore = this.signal<void>('Подгрузить следующую страницу')
+   loadMore = this.signal<void>('Подгрузить следующую страницу')
 
-  readonly selectPokemon = this.action((store, id: number | null) => {
+   selectPokemon = this.action((store, id: number | null) => {
     store.update((s) => {
       s.selectedPokemonId = id
       if (id === null) s.selectedPokemon = null
@@ -144,7 +144,7 @@ export class PokemonDispatcher extends Dispatcher<PokemonState> {
     return id
   })
 
-  readonly applyPokemonList = this.action((store, data: { list: PokemonBrief[]; hasMore: boolean; append: boolean }) =>
+   applyPokemonList = this.action((store, data: { list: PokemonBrief[]; hasMore: boolean; append: boolean }) =>
     store.update((s) => {
       s.pokemonList = data.append ? [...s.pokemonList, ...data.list] : data.list
       s.offset = s.pokemonList.length
@@ -152,7 +152,7 @@ export class PokemonDispatcher extends Dispatcher<PokemonState> {
     }),
   )
 
-  readonly watchFavoriteCount = this.watcher({
+   watchFavoriteCount = this.watcher({
     selector: (s) => s.favorites.length,
     notifyAfterSubscribe: true,
   })
@@ -169,11 +169,11 @@ import { Effects, ofType, selectorObject, validateMap, apiResult, fromRequest } 
 // Сервисы (endpoints) и внешние сторы (settings$) — через конструктор, захват в замыкание рецепта.
 export class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {
   constructor(
-    private readonly api: PokemonApiEndpoints,
-    private readonly settings$: Observable<PokemonSettings>,
+    private  api: PokemonApiEndpoints,
+    private  settings$: Observable<PokemonSettings>,
   ) { super() }
 
-  readonly loadList = this.effect((action$, state$, { dispatcher: d }) =>
+   loadList = this.effect((action$, state$, { dispatcher: d }) =>
     action$.pipe(
       ofType(d.loadList),                                  // только init
       withLatestFrom(selectorObject(state$, { listStatus: (s) => s.api.listRequest.status }), this.settings$),

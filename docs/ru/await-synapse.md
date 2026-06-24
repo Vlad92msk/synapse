@@ -1,6 +1,6 @@
 # awaitSynapse
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/AwaitSynapseExample.tsx)
 
 React-утилита для ожидания готовности хранилища Synapse. HOC + хук + программный API.
 

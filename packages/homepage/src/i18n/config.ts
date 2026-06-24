@@ -12,43 +12,75 @@ const resources = {
       'nav.examples': 'Примеры',
       'nav.github': 'GitHub',
 
+      // Документация — ссылки на примеры
+      'docs.examples.single': 'Рабочий пример на GitHub',
+      'docs.examples.multiple': 'Рабочие примеры на GitHub',
+
       // Homepage
-      'homepage.hero.title': 'Synapse Storage',
-      'homepage.hero.subtitle': 'Управление состоянием нового поколения',
+      'homepage.hero.title': 'Synapse',
+      'homepage.hero.subtitle': 'Стейт-менеджер, слой бизнес-логики и API-клиент — три независимых инструмента в одной библиотеке. Берите то, что нужно именно вам.',
       'homepage.hero.getStarted': 'Документация',
+      'homepage.hero.threeBlocks': 'Три блока',
       'homepage.hero.learnMore': 'Ключевые особенности',
 
-      'homepage.features.title': 'Почему Synapse Storage?',
+      // Три блока (столпы)
+      'homepage.pillars.title': 'Три независимых блока',
+      'homepage.pillars.subtitle': 'Каждый блок — отдельный модуль, который можно подключать сам по себе. Поймите, что нужно именно вам.',
+      'homepage.pillars.more': 'Подробнее →',
 
-      // Features
-      'homepage.features.modular.title': 'Модульная архитектура',
-      'homepage.features.modular.description': 'Используйте только нужные модули. Начните с core (~42KB), добавляйте функциональность по мере необходимости',
+      'homepage.pillars.state.name': 'State Manager',
+      'homepage.pillars.state.when': 'Нужно только состояние',
+      'homepage.pillars.state.tagline': 'Реактивные хранилища с единым API. Без RxJS, без React — просто состояние и подписки.',
+      'homepage.pillars.state.point1': 'Memory · LocalStorage · IndexedDB под одним интерфейсом',
+      'homepage.pillars.state.point2': 'Иммутабельные обновления в стиле Immer',
+      'homepage.pillars.state.point3': 'Мемоизированные селекторы с зависимостями между хранилищами',
+      'homepage.pillars.state.point4': 'Подписки на изменения из коробки',
 
+      'homepage.pillars.bll.name': 'Business Logic Layer',
+      'homepage.pillars.bll.when': 'Нужно полноценное решение',
+      'homepage.pillars.bll.tagline': 'Слой бизнес-логики поверх хранилища: действия, эффекты и сборка модуля. Форма как у сервисов NestJS, но без тяжёлого DI.',
+      'homepage.pillars.bll.point1': 'Dispatcher — действия (actions) и обновления стора',
+      'homepage.pillars.bll.point2': 'Effects на RxJS в стиле Redux-Observable / NgRx Effects',
+      'homepage.pillars.bll.point3': 'createSynapse — сборка модуля и связывание synapse между собой',
+      'homepage.pillars.bll.point4': 'React-хуки, SSR (ssr: true) и гидрация, готовые рецепты',
+
+      'homepage.pillars.api.name': 'API Client',
+      'homepage.pillars.api.when': 'Нужны только запросы',
+      'homepage.pillars.api.tagline': 'Встроенный HTTP-клиент с умным кэшированием — как RTK Query, но проще.',
+      'homepage.pillars.api.point1': 'Декларативные эндпоинты с типизацией',
+      'homepage.pillars.api.point2': 'Умное кэширование и инвалидация',
+      'homepage.pillars.api.point3': 'Кэш можно хранить в IndexedDB — переживает перезагрузку (в отличие от RTK Query)',
+      'homepage.pillars.api.point4': 'Работает самостоятельно или внутри эффектов',
+
+      'homepage.features.title': 'Почему Synapse?',
+
+      // Features (сквозные особенности)
       'homepage.features.frameworkAgnostic.title': 'Не привязан к фреймворку',
-      'homepage.features.frameworkAgnostic.description': 'Можно использовать с любым фреймворком или без него',
+      'homepage.features.frameworkAgnostic.description': 'Ядро на чистом TypeScript: работает с любым фреймворком или вообще без него. rxjs и react — опциональные peer-зависимости.',
 
-      'homepage.features.universalStorage.title': 'Универсальные хранилища',
-      'homepage.features.universalStorage.description': 'Memory, LocalStorage, IndexedDB - единый API для работы с любым типом хранилища с поддержкой middleware',
+      'homepage.features.typescript.title': 'TypeScript-first',
+      'homepage.features.typescript.description': 'Строгая типизация и автокомплит сквозь действия, селекторы и эффекты. Типы выводятся, а не дублируются вручную.',
 
-      'homepage.features.readyMiddlewares.title': 'Готовые middlewares',
-      'homepage.features.readyMiddlewares.description':
-        'Используйте готовые middlewares для оптимизации с помощью batching, shallow-compare и шаринга состояния между вкладками с помощью broadcast',
+      'homepage.features.storageChoice.title': 'Хранилище под любой кейс',
+      'homepage.features.storageChoice.description': 'Memory, LocalStorage и IndexedDB под единым интерфейсом IStorage — смена реализации в одну строку, без боли.',
 
-      'homepage.features.layeredLogic.title': 'Разделяйте логику на слои',
-      'homepage.features.layeredLogic.description':
-        'Вы можете разделять логику на слои (context, dispatcher, effects, selectors, store) затем с помощью встроенной утилиты createSynapse создать из этих слоев synapse. А затем при необходимости связывать synapse между собой как с помощью прямого инжектирования или с помощью паттерна EventBus!',
+      'homepage.features.middlewares.title': 'Расширяемость через middleware',
+      'homepage.features.middlewares.description': 'Готовые middleware (batching, shallow-compare) и свои собственные — для оптимизации и перехвата операций хранилища.',
 
-      'homepage.features.api.title': 'HTTP клиент + кэширование',
-      'homepage.features.api.description': 'Встроенный API-клиент с умным кэшированием, как RTK Query, но проще и быстрее',
+      'homepage.features.broadcast.title': 'Синхронизация между вкладками',
+      'homepage.features.broadcast.description': 'Broadcast-шаринг состояния между вкладками браузера из коробки — без сторонних библиотек.',
 
-      'homepage.features.reactive.title': 'Реактивные эффекты',
-      'homepage.features.reactive.description': 'RxJS-powered эффекты в стиле Redux-Observable для сложной асинхронной логики',
+      'homepage.features.ssr.title': 'SSR и Next.js',
+      'homepage.features.ssr.description': 'Серверный рендеринг через createSynapseCtx({ ssr: true }) с dehydrate/hydrate — контент в HTML без рассинхронизации при гидрации.',
 
-      'homepage.features.selectors.title': 'Вычисляемые селекторы',
-      'homepage.features.selectors.description': 'Мемоизированные селекторы в стиле Reselect с автоматической оптимизацией пересчетов',
+      // Блоки документации
+      'nav.pillars.overview': 'Обзор',
+      'nav.pillars.state': 'State Manager',
+      'nav.pillars.api': 'API Client',
+      'nav.pillars.bll': 'Business Logic Layer',
 
-      'homepage.features.react.title': 'React Ready',
-      'homepage.features.react.description': 'Готовые хуки для React с оптимизированными ререндерами и поддержкой Suspense',
+      'nav.sections.overview': 'Начало',
+      'nav.sections.overview.architecture': 'Архитектура',
 
       // Секции документации
       'nav.sections.create': 'Создание хранилищ',
@@ -74,7 +106,6 @@ const resources = {
       'nav.sections.synapse.synapse-effects': 'createSynapse (effects)',
       'nav.sections.synapse.dispatcher-detail': 'Dispatcher (подробно)',
       'nav.sections.synapse.dependencies': 'Dependencies',
-      'nav.sections.synapse.pokemon-advanced': 'Pokemon Pokedex (advanced)',
 
       'nav.sections.react': 'React',
       'nav.sections.react.synapse-ctx': 'createSynapseCtx',
@@ -85,9 +116,14 @@ const resources = {
       'nav.sections.patterns.singleton': 'Singleton pattern',
 
       'nav.sections.utils': 'Утилиты',
-      'nav.sections.utils.api-client': 'ApiClient',
       'nav.sections.utils.synapse-awaiter': 'createSynapseAwaiter',
       'nav.sections.utils.event-bus': 'createEventBus',
+
+      'nav.sections.recipes': 'Рецепты',
+      'nav.sections.recipes.pokemon-advanced': 'Pokemon Pokedex (advanced)',
+
+      'nav.sections.api': 'API-клиент',
+      'nav.sections.api.api-client': 'ApiClient',
 
       'docs.placeholder.title': 'Раздел в разработке',
       'docs.placeholder.description': 'Этот раздел документации еще не готов. Я работаю над его созданием.',
@@ -132,42 +168,75 @@ const resources = {
       'nav.examples': 'Examples',
       'nav.github': 'GitHub',
 
+      // Documentation — example links
+      'docs.examples.single': 'Working example on GitHub',
+      'docs.examples.multiple': 'Working examples on GitHub',
+
       // Homepage
-      'homepage.hero.title': 'Synapse Storage',
-      'homepage.hero.subtitle': 'Next generation state management',
+      'homepage.hero.title': 'Synapse',
+      'homepage.hero.subtitle': 'A state manager, a business logic layer and an API client — three independent tools in one library. Take exactly what you need.',
       'homepage.hero.getStarted': 'Documentation',
+      'homepage.hero.threeBlocks': 'Three blocks',
       'homepage.hero.learnMore': 'Key features',
 
-      'homepage.features.title': 'Why Synapse Storage?',
+      // Three blocks (pillars)
+      'homepage.pillars.title': 'Three independent blocks',
+      'homepage.pillars.subtitle': 'Each block is a standalone module you can use on its own. Figure out which one you actually need.',
+      'homepage.pillars.more': 'Learn more →',
 
-      // Features
-      'homepage.features.modular.title': 'Modular Architecture',
-      'homepage.features.modular.description': 'Use only the modules you need. Start with core (~42KB), add functionality as needed',
+      'homepage.pillars.state.name': 'State Manager',
+      'homepage.pillars.state.when': 'You need only state',
+      'homepage.pillars.state.tagline': 'Reactive storages with a unified API. No RxJS, no React — just state and subscriptions.',
+      'homepage.pillars.state.point1': 'Memory · LocalStorage · IndexedDB under one interface',
+      'homepage.pillars.state.point2': 'Immutable updates, Immer-style',
+      'homepage.pillars.state.point3': 'Memoized selectors with cross-store dependencies',
+      'homepage.pillars.state.point4': 'Subscriptions to changes out of the box',
 
+      'homepage.pillars.bll.name': 'Business Logic Layer',
+      'homepage.pillars.bll.when': 'You need a full solution',
+      'homepage.pillars.bll.tagline': 'A business logic layer on top of storage: actions, effects and module assembly. Shaped like NestJS services, but without a heavy DI container.',
+      'homepage.pillars.bll.point1': 'Dispatcher — actions and store updates',
+      'homepage.pillars.bll.point2': 'Effects on RxJS, Redux-Observable / NgRx Effects style',
+      'homepage.pillars.bll.point3': 'createSynapse — module assembly and wiring synapses together',
+      'homepage.pillars.bll.point4': 'React hooks, SSR (ssr: true) and hydration, ready-made recipes',
+
+      'homepage.pillars.api.name': 'API Client',
+      'homepage.pillars.api.when': 'You need only requests',
+      'homepage.pillars.api.tagline': 'A built-in HTTP client with smart caching — like RTK Query, but simpler.',
+      'homepage.pillars.api.point1': 'Declarative, typed endpoints',
+      'homepage.pillars.api.point2': 'Smart caching and invalidation',
+      'homepage.pillars.api.point3': 'Cache can live in IndexedDB — survives reloads (unlike RTK Query)',
+      'homepage.pillars.api.point4': 'Works standalone or inside effects',
+
+      'homepage.features.title': 'Why Synapse?',
+
+      // Features (cross-cutting)
       'homepage.features.frameworkAgnostic.title': 'Framework agnostic',
-      'homepage.features.frameworkAgnostic.description': 'Can be used with or without any framework',
+      'homepage.features.frameworkAgnostic.description': 'A pure-TypeScript core: works with any framework or none at all. rxjs and react are optional peer dependencies.',
 
-      'homepage.features.universalStorage.title': 'Universal Storage',
-      'homepage.features.universalStorage.description': 'Memory, LocalStorage, IndexedDB - unified API for working with any type of storage with middleware support',
+      'homepage.features.typescript.title': 'TypeScript-first',
+      'homepage.features.typescript.description': 'Strict typing and autocomplete across actions, selectors and effects. Types are inferred, not duplicated by hand.',
 
-      'homepage.features.readyMiddlewares.title': 'Ready Middlewares',
-      'homepage.features.readyMiddlewares.description': 'Use ready-made middlewares for optimization with batching, shallow-compare and state sharing between tabs via broadcast',
+      'homepage.features.storageChoice.title': 'A storage for any case',
+      'homepage.features.storageChoice.description': 'Memory, LocalStorage and IndexedDB under one IStorage interface — swap the implementation in a single line, painlessly.',
 
-      'homepage.features.layeredLogic.title': 'Separate Logic into Layers',
-      'homepage.features.layeredLogic.description':
-        'You can separate logic into layers (context, dispatcher, effects, selectors, store) then use the built-in createSynapse utility to create a synapse from these layers. Then, if necessary, connect synapses to each other either through direct injection or using the EventBus pattern!',
+      'homepage.features.middlewares.title': 'Extensible via middleware',
+      'homepage.features.middlewares.description': 'Ready-made middleware (batching, shallow-compare) plus your own — for optimization and intercepting storage operations.',
 
-      'homepage.features.api.title': 'HTTP Client + Caching',
-      'homepage.features.api.description': 'Built-in API client with smart caching, like RTK Query but simpler and faster',
+      'homepage.features.broadcast.title': 'Cross-tab sync',
+      'homepage.features.broadcast.description': 'Broadcast state sharing between browser tabs out of the box — no third-party libraries.',
 
-      'homepage.features.reactive.title': 'Reactive Effects',
-      'homepage.features.reactive.description': 'RxJS-powered effects in Redux-Observable style for complex async logic',
+      'homepage.features.ssr.title': 'SSR and Next.js',
+      'homepage.features.ssr.description': 'Server rendering via createSynapseCtx({ ssr: true }) with dehydrate/hydrate — content in HTML with no hydration mismatch.',
 
-      'homepage.features.selectors.title': 'Computed Selectors',
-      'homepage.features.selectors.description': 'Memoized selectors in Reselect style with automatic recalculation optimization',
+      // Documentation blocks
+      'nav.pillars.overview': 'Overview',
+      'nav.pillars.state': 'State Manager',
+      'nav.pillars.api': 'API Client',
+      'nav.pillars.bll': 'Business Logic Layer',
 
-      'homepage.features.react.title': 'React Ready',
-      'homepage.features.react.description': 'Ready-to-use React hooks with optimized re-renders and Suspense support',
+      'nav.sections.overview': 'Getting started',
+      'nav.sections.overview.architecture': 'Architecture',
 
       // Documentation sections
       'nav.sections.create': 'Creating Storages',
@@ -193,7 +262,6 @@ const resources = {
       'nav.sections.synapse.synapse-effects': 'createSynapse (effects)',
       'nav.sections.synapse.dispatcher-detail': 'Dispatcher (detailed)',
       'nav.sections.synapse.dependencies': 'Dependencies',
-      'nav.sections.synapse.pokemon-advanced': 'Pokemon Pokedex (advanced)',
 
       'nav.sections.react': 'React',
       'nav.sections.react.synapse-ctx': 'createSynapseCtx',
@@ -204,9 +272,14 @@ const resources = {
       'nav.sections.patterns.singleton': 'Singleton pattern',
 
       'nav.sections.utils': 'Utilities',
-      'nav.sections.utils.api-client': 'ApiClient',
       'nav.sections.utils.synapse-awaiter': 'createSynapseAwaiter',
       'nav.sections.utils.event-bus': 'createEventBus',
+
+      'nav.sections.recipes': 'Recipes',
+      'nav.sections.recipes.pokemon-advanced': 'Pokemon Pokedex (advanced)',
+
+      'nav.sections.api': 'API Client',
+      'nav.sections.api.api-client': 'ApiClient',
 
       'docs.placeholder.title': 'Section under development',
       'docs.placeholder.description': "This documentation section is not ready yet. I'm working on creating it.",

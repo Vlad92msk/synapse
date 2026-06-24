@@ -58,7 +58,12 @@
       "Bash(yarn install *)",
       "Bash(yarn workspace *)",
       "Bash(yarn type-check *)",
-      "Bash(yarn build:homepage)"
+      "Bash(yarn build:homepage)",
+      "Bash(git -C /Users/vlad/web_dev/synapse remote -v)",
+      "Bash(bash *)",
+      "Bash(echo \"EXIT=$?\")",
+      "Read(//tmp/**)",
+      "Bash(echo \"TSC EXIT=$?\")"
     ]
   }
 }

@@ -1,6 +1,6 @@
 # createSynapseAwaiter — Фреймворк-агностик awaiter
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SynapseAwaiterExample.tsx)
 
 Обёртка для ожидания асинхронной инициализации store. Работает в любом JS-окружении: Node.js, браузер, React Native.
 

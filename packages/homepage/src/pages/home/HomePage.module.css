@@ -71,10 +71,136 @@
   text-align: center;
   font-size: 48px;
   font-weight: 700;
-  margin-bottom: 60px;
+  margin-bottom: 16px;
   background-image: linear-gradient(135deg, rgb(255, 255, 255) 0%, rgb(0, 212, 255) 100%);
   background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+.section-subtitle {
+  text-align: center;
+  font-size: 18px;
+  color: #a0a0a0;
+  font-weight: 300;
+  max-width: 720px;
+  margin: 0 auto 60px;
+  line-height: 1.6;
+}
+
+/* ============ Три блока (столпы) ============ */
+/* Горизонтальный скролл-ряд: переполнение остаётся внутри ряда и не вызывает
+   горизонтальный скролл всей страницы. На широких экранах 3 карточки помещаются. */
+.pillars-grid {
+  display: flex;
+  gap: 28px;
+  overflow-x: auto;
+  padding-bottom: 14px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+
+.pillars-grid::-webkit-scrollbar {
+  height: 6px;
+}
+
+.pillars-grid::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
+}
+
+.pillar-card {
+  flex: 0 0 400px;
+  max-width: 400px;
+  min-width: 0;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  background-image: linear-gradient(160deg, rgba(0, 212, 255, 0.08) 0%, rgba(124, 58, 237, 0.08) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 36px 32px;
+  transition: 0.3s;
+}
+
+.pillar-card:hover {
+  transform: translateY(-8px);
+  border-color: rgba(0, 212, 255, 0.35);
+  box-shadow: 0 20px 40px rgba(0, 212, 255, 0.1);
+}
+
+.pillar-name {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: #ffffff;
+}
+
+.pillar-when {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 14px;
+  background-image: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.pillar-tagline {
+  color: #cccccc;
+  line-height: 1.6;
+  margin: 0 0 18px;
+}
+
+.pillar-points {
+  list-style: none;
+  margin: 0 0 22px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pillar-points li {
+  position: relative;
+  padding-left: 22px;
+  color: #b8c0c8;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.pillar-points li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: #00d4ff;
+}
+
+.pillar-import {
+  display: block;
+  font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 12.5px;
+  color: #8be9fd;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.pillar-cta {
+  margin-top: auto;
+  background-color: rgba(226, 232, 240, 0.08) !important;
+  color: #e4e9ed !important;
+  align-self: flex-start;
+}
+
+.pillar-cta:hover {
+  background-color: rgba(0, 212, 255, 0.18) !important;
 }
 
 .features-grid {

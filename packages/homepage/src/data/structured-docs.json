@@ -9,32 +9,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "A typed HTTP client. Endpoints, tag-based caching, request-state subscriptions, abort.",
@@ -48,12 +22,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 13,
+            "wordCount": 10,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -326,7 +300,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:09:43.576Z",
-        "wordCount": 1159,
+        "wordCount": 1155,
         "readingTime": 6,
         "sectionsCount": 12,
         "codeBlocksCount": 11
@@ -340,32 +314,6 @@
           "title": "Two layers: State Manager and Business Logic Layer",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -393,12 +341,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 21,
+            "wordCount": 18,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -805,171 +753,15 @@
             "hasBlockquotes": false,
             "hasTasks": false
           }
-        },
-        {
-          "id": "where-to-go-next",
-          "title": "Where to go next",
-          "level": 2,
-          "content": [
-            {
-              "type": "list",
-              "data": [
-                {
-                  "content": [
-                    {
-                      "type": "paragraph",
-                      "data": {
-                        "text": "Basic assembly (createSynapse) — storage + selectors",
-                        "formatting": {
-                          "bold": [],
-                          "italic": [],
-                          "code": [
-                            {
-                              "start": 16,
-                              "end": 29
-                            }
-                          ],
-                          "links": [
-                            {
-                              "start": 0,
-                              "end": 30,
-                              "url": "./create-synapse-basic.md",
-                              "title": null
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  ],
-                  "level": 0,
-                  "type": "unordered"
-                },
-                {
-                  "content": [
-                    {
-                      "type": "paragraph",
-                      "data": {
-                        "text": "Dispatcher — intents and store updates",
-                        "formatting": {
-                          "bold": [],
-                          "italic": [],
-                          "code": [],
-                          "links": [
-                            {
-                              "start": 0,
-                              "end": 10,
-                              "url": "./create-synapse-dispatcher.md",
-                              "title": null
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  ],
-                  "level": 0,
-                  "type": "unordered"
-                },
-                {
-                  "content": [
-                    {
-                      "type": "paragraph",
-                      "data": {
-                        "text": "Effects — side effects on RxJS",
-                        "formatting": {
-                          "bold": [],
-                          "italic": [],
-                          "code": [],
-                          "links": [
-                            {
-                              "start": 0,
-                              "end": 7,
-                              "url": "./create-synapse-effects.md",
-                              "title": null
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  ],
-                  "level": 0,
-                  "type": "unordered"
-                },
-                {
-                  "content": [
-                    {
-                      "type": "paragraph",
-                      "data": {
-                        "text": "Selectors — derived state and the reactive selector.$",
-                        "formatting": {
-                          "bold": [],
-                          "italic": [],
-                          "code": [
-                            {
-                              "start": 43,
-                              "end": 53
-                            }
-                          ],
-                          "links": [
-                            {
-                              "start": 0,
-                              "end": 9,
-                              "url": "./selector-system.md",
-                              "title": null
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  ],
-                  "level": 0,
-                  "type": "unordered"
-                },
-                {
-                  "content": [
-                    {
-                      "type": "paragraph",
-                      "data": {
-                        "text": "Cross-module dependencies — cross-store and module communication",
-                        "formatting": {
-                          "bold": [],
-                          "italic": [],
-                          "code": [],
-                          "links": [
-                            {
-                              "start": 0,
-                              "end": 25,
-                              "url": "./dependencies.md",
-                              "title": null
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  ],
-                  "level": 0,
-                  "type": "unordered"
-                }
-              ]
-            }
-          ],
-          "metadata": {
-            "wordCount": 34,
-            "codeBlocksCount": 0,
-            "diagramsCount": 0,
-            "tasksCount": 0,
-            "hasTable": false,
-            "hasBlockquotes": false,
-            "hasTasks": false
-          }
         }
       ],
       "features": [],
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:00:18.329Z",
-        "wordCount": 769,
+        "wordCount": 721,
         "readingTime": 4,
-        "sectionsCount": 5,
+        "sectionsCount": 4,
         "codeBlocksCount": 3
       }
     },
@@ -981,32 +773,6 @@
           "title": "awaitSynapse",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -1021,12 +787,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 20,
+            "wordCount": 17,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -1155,7 +921,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:04:38.504Z",
-        "wordCount": 407,
+        "wordCount": 403,
         "readingTime": 3,
         "sectionsCount": 6,
         "codeBlocksCount": 5
@@ -1170,32 +936,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Minimal configuration: storage + selectors, without a dispatcher. Changes go through the storage directly.",
@@ -1209,12 +949,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 17,
+            "wordCount": 14,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -1336,7 +1076,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:04:25.253Z",
-        "wordCount": 393,
+        "wordCount": 389,
         "readingTime": 2,
         "sectionsCount": 5,
         "codeBlocksCount": 4
@@ -1351,32 +1091,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Storage + selectors + dispatcher. Actions for changing the state, watchers for reactive tracking.",
@@ -1390,12 +1104,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 17,
+            "wordCount": 14,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -1575,7 +1289,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:05:22.561Z",
-        "wordCount": 475,
+        "wordCount": 471,
         "readingTime": 3,
         "sectionsCount": 6,
         "codeBlocksCount": 5
@@ -1590,32 +1304,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Full configuration: storage + selectors + dispatcher + RxJS effects for side effects.",
@@ -1629,12 +1317,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 16,
+            "wordCount": 13,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -2253,7 +1941,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-18T15:37:59.560Z",
-        "wordCount": 939,
+        "wordCount": 935,
         "readingTime": 5,
         "sectionsCount": 6,
         "codeBlocksCount": 6
@@ -2268,32 +1956,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Operations for checking existence, removing keys, and resetting the storage. They work the same way for all storage types.",
@@ -2307,12 +1969,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 22,
+            "wordCount": 19,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -2465,7 +2127,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:03:04.326Z",
-        "wordCount": 292,
+        "wordCount": 288,
         "readingTime": 2,
         "sectionsCount": 7,
         "codeBlocksCount": 6
@@ -2479,32 +2141,6 @@
           "title": "Cross-module dependencies",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -2524,12 +2160,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 16,
+            "wordCount": 13,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -2727,7 +2363,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:06:38.725Z",
-        "wordCount": 579,
+        "wordCount": 575,
         "readingTime": 3,
         "sectionsCount": 5,
         "codeBlocksCount": 6
@@ -2741,32 +2377,6 @@
           "title": "Dispatcher (in detail)",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -2816,12 +2426,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 54,
+            "wordCount": 51,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -3196,7 +2806,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:07:10.441Z",
-        "wordCount": 731,
+        "wordCount": 727,
         "readingTime": 4,
         "sectionsCount": 9,
         "codeBlocksCount": 7
@@ -3211,32 +2821,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "A pub/sub bus for communication between modules. Built on createSynapse + MemoryStorage + Dispatcher. Supports wildcard patterns, priorities, TTL, and event history.",
@@ -3250,12 +2834,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 25,
+            "wordCount": 22,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -3480,7 +3064,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:21:15.501Z",
-        "wordCount": 656,
+        "wordCount": 652,
         "readingTime": 4,
         "sectionsCount": 10,
         "codeBlocksCount": 9
@@ -3494,32 +3078,6 @@
           "title": "useCreateStorage (indexedDB)",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -3551,12 +3109,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 18,
+            "wordCount": 15,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -3613,7 +3171,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:02:31.562Z",
-        "wordCount": 276,
+        "wordCount": 272,
         "readingTime": 2,
         "sectionsCount": 3,
         "codeBlocksCount": 2
@@ -3627,32 +3185,6 @@
           "title": "useCreateStorage (localStorage)",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -3672,12 +3204,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 15,
+            "wordCount": 12,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -3734,7 +3266,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:02:06.282Z",
-        "wordCount": 222,
+        "wordCount": 218,
         "readingTime": 2,
         "sectionsCount": 3,
         "codeBlocksCount": 2
@@ -3749,32 +3281,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "A React hook for creating a MemoryStorage. It automatically initializes and destroys it on unmount.",
@@ -3788,12 +3294,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 18,
+            "wordCount": 15,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -3874,7 +3380,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:03:15.410Z",
-        "wordCount": 322,
+        "wordCount": 318,
         "readingTime": 2,
         "sectionsCount": 4,
         "codeBlocksCount": 3
@@ -3888,32 +3394,6 @@
           "title": "IndexedDBStorage",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -3933,12 +3413,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 21,
+            "wordCount": 18,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -4253,7 +3733,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:03:59.149Z",
-        "wordCount": 432,
+        "wordCount": 428,
         "readingTime": 3,
         "sectionsCount": 8,
         "codeBlocksCount": 5
@@ -4267,32 +3747,6 @@
           "title": "LocalStorage",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -4312,12 +3766,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 20,
+            "wordCount": 17,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -4676,7 +4130,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:21:59.435Z",
-        "wordCount": 387,
+        "wordCount": 383,
         "readingTime": 2,
         "sectionsCount": 9,
         "codeBlocksCount": 5
@@ -4691,32 +4145,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "In-memory storage. Data lives only while the page is open. Synchronous API.",
@@ -4730,12 +4158,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 15,
+            "wordCount": 12,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -4888,7 +4316,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:03:35.563Z",
-        "wordCount": 353,
+        "wordCount": 349,
         "readingTime": 2,
         "sectionsCount": 7,
         "codeBlocksCount": 6
@@ -4903,32 +4331,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Middlewares intercept storage operations (set, get, delete, clear) and can modify, filter, or group them.",
@@ -4942,12 +4344,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 18,
+            "wordCount": 15,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -5224,6 +4626,305 @@
           }
         },
         {
+          "id": "7-custom-middleware",
+          "title": "7. Custom middleware",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "There are only three built-in middlewares (batching, shallowCompare, logger), but the\nsystem is fully open: a middleware is just a plain object of type SyncMiddleware\n(for Memory/LocalStorage) or AsyncMiddleware (for IndexedDB). No registration is needed —\njust return your object in the same array as getDefault()….",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 131,
+                      "end": 143
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 43,
+                      "end": 51
+                    },
+                    {
+                      "start": 53,
+                      "end": 67
+                    },
+                    {
+                      "start": 69,
+                      "end": 75
+                    },
+                    {
+                      "start": 152,
+                      "end": 166
+                    },
+                    {
+                      "start": 196,
+                      "end": 211
+                    },
+                    {
+                      "start": 302,
+                      "end": 315
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "heading",
+              "data": {
+                "text": "Anatomy",
+                "level": 3,
+                "id": "anatomy"
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import type { SyncMiddleware } from 'synapse-storage/core'\n\nconst myMiddleware = (): SyncMiddleware => ({\n  name: 'my-middleware',           // name (for debugging)\n\n  setup: (api) => {},              // optional: called once when wired up\n  cleanup: () => {},               // optional: called on destroy()\n\n  // The core — Redux-style triple currying: (api) => (next) => (action)\n  reducer: (api) => (next) => (action) => {\n    // action — what is happening with the storage:\n    //   { type: 'set' | 'get' | 'update' | 'delete' | 'clear' | 'reset' | ...,\n    //     key?, value?, metadata? }\n\n    // next(action)        — pass control further down the chain (run the operation)\n    // NOT calling next()  — block the operation (the write won't happen)\n    // next({ ...action, value: X }) — change the value before writing\n\n    return next(action)\n  },\n})",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "api gives you access to the storage from inside a middleware:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 3
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "api.getState()                       // the whole current state\napi.storage.doGet(key)               // read a value (bypassing the chain)\napi.storage.doSet(key, value)        // write (bypassing the chain — no recursion)\napi.storage.notifySubscribers(key, value)  // notify subscribers manually\napi.dispatch(action)                 // run a new action through the whole chain",
+                "meta": null
+              }
+            },
+            {
+              "type": "blockquote",
+              "data": {
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "data": {
+                      "text": "The chain is wrapped in try/catch: if a middleware throws, the error is swallowed by\nthe error handler and won't \"bubble up\" to the caller of storage.set(...).\nSo to \"reject\" something, don't throw — simply don't call next.",
+                      "formatting": {
+                        "bold": [
+                          {
+                            "start": 200,
+                            "end": 222
+                          }
+                        ],
+                        "italic": [],
+                        "code": [
+                          {
+                            "start": 24,
+                            "end": 33
+                          },
+                          {
+                            "start": 142,
+                            "end": 158
+                          },
+                          {
+                            "start": 218,
+                            "end": 222
+                          }
+                        ],
+                        "links": []
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Wiring it up — next to the built-in ones:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const storage = new MemoryStorage<MyState>({\n  name: 'my-store',\n  initialState: { ... },\n  middlewares: (getDefault) => [\n    getDefault().logger(),   // built-in\n    myMiddleware(),          // yours\n  ],\n})",
+                "meta": null
+              }
+            },
+            {
+              "type": "heading",
+              "data": {
+                "text": "Example A — form validation",
+                "level": 3,
+                "id": "example-a-form-validation"
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Intercept writes to form fields, run them through validators, and block invalid values,\nstoring the error messages in a sibling errors key.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 66,
+                      "end": 86
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 128,
+                      "end": 134
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import type { SyncMiddleware } from 'synapse-storage/core'\n\ntype FormState = {\n  email: string\n  age: number\n  errors: Record<string, string | undefined>\n}\n\n// key → validator: return an error string OR null if everything is fine\nconst validators: Record<string, (value: any) => string | null> = {\n  email: (v) => (/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(v) ? null : 'Invalid e-mail'),\n  age: (v) => (v >= 18 && v <= 120 ? null : 'Age must be 18–120'),\n}\n\nconst validationMiddleware = (): SyncMiddleware => ({\n  name: 'form-validation',\n  reducer: (api) => (next) => (action) => {\n    if (action.type !== 'set' || typeof action.key !== 'string') {\n      return next(action)\n    }\n\n    const validate = validators[action.key]\n    if (!validate) return next(action)\n\n    const error = validate(action.value)\n\n    // Write the error map directly (doSet bypasses the chain — no recursion)\n    const errors = { ...(api.getState().errors ?? {}), [action.key]: error ?? undefined }\n    api.storage.doSet('errors', errors)\n    api.storage.notifySubscribers('errors', errors)\n\n    // Invalid — block the write, return the current value from storage\n    if (error) return api.storage.doGet(action.key)\n\n    // Valid — pass it through\n    return next(action)\n  },\n})\n\nconst form = new MemoryStorage<FormState>({\n  name: 'signup-form',\n  initialState: { email: '', age: 0, errors: {} },\n  middlewares: () => [validationMiddleware()],\n})\nawait form.initialize()\n\nform.set('email', 'not-an-email')      // blocked, errors.email = 'Invalid e-mail'\nform.set('email', 'user@example.com')  // passes, errors.email = undefined\nform.set('age', 15)                    // blocked, errors.age = '...'",
+                "meta": null
+              }
+            },
+            {
+              "type": "heading",
+              "data": {
+                "text": "Example B — normalizing values",
+                "level": 3,
+                "id": "example-b-normalizing-values"
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "A middleware can transform a value instead of blocking it — for example, trim whitespace\nand lowercase an e-mail before writing.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import type { SyncMiddleware } from 'synapse-storage/core'\n\nconst normalizeMiddleware = (): SyncMiddleware => ({\n  name: 'normalize',\n  reducer: () => (next) => (action) => {\n    if (action.type === 'set' && typeof action.value === 'string') {\n      let value = action.value.trim()\n      if (action.key === 'email') value = value.toLowerCase()\n\n      // Pass the already-modified value further\n      return next({ ...action, value })\n    }\n    return next(action)\n  },\n})\n\n// storage.set('email', '  User@Example.COM  ') → stored as 'user@example.com'",
+                "meta": null
+              }
+            },
+            {
+              "type": "heading",
+              "data": {
+                "text": "Example C — audit / analytics of changes",
+                "level": 3,
+                "id": "example-c-audit-analytics-of-changes"
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "An \"observer\" middleware: it changes nothing, it only reacts to write actions\n(handy for logging to your own analytics, sending metrics, etc.).",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import type { SyncMiddleware } from 'synapse-storage/core'\n\nconst auditMiddleware = (onChange: (key: string, value: any) => void): SyncMiddleware => ({\n  name: 'audit',\n  reducer: () => (next) => (action) => {\n    const result = next(action)  // run the operation first\n\n    if (action.type === 'set' && typeof action.key === 'string') {\n      onChange(action.key, action.value)\n    }\n    return result\n  },\n})\n\nconst storage = new MemoryStorage<{ theme: string }>({\n  name: 'settings',\n  initialState: { theme: 'light' },\n  middlewares: () => [\n    auditMiddleware((key, value) => analytics.track('setting_changed', { key, value })),\n  ],\n})",
+                "meta": null
+              }
+            },
+            {
+              "type": "blockquote",
+              "data": {
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "data": {
+                      "text": "For an asynchronous storage (IndexedDB) everything is the same, only the type is\nAsyncMiddleware, and reducer/api.storage.* return a Promise (use async/await\nand return await next(action)).",
+                      "formatting": {
+                        "bold": [
+                          {
+                            "start": 7,
+                            "end": 19
+                          }
+                        ],
+                        "italic": [],
+                        "code": [
+                          {
+                            "start": 81,
+                            "end": 96
+                          },
+                          {
+                            "start": 102,
+                            "end": 109
+                          },
+                          {
+                            "start": 110,
+                            "end": 123
+                          },
+                          {
+                            "start": 133,
+                            "end": 140
+                          },
+                          {
+                            "start": 146,
+                            "end": 157
+                          },
+                          {
+                            "start": 162,
+                            "end": 187
+                          }
+                        ],
+                        "links": []
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 213,
+            "codeBlocksCount": 6,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": true,
+            "hasTasks": false
+          }
+        },
+        {
           "id": "types",
           "title": "Types",
           "level": 2,
@@ -5251,11 +4952,11 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-14T08:08:04.375Z",
-        "wordCount": 844,
-        "readingTime": 5,
-        "sectionsCount": 9,
-        "codeBlocksCount": 8
+        "lastModified": "2026-06-24T17:47:04.772Z",
+        "wordCount": 1642,
+        "readingTime": 9,
+        "sectionsCount": 10,
+        "codeBlocksCount": 14
       }
     },
     "persist-migration": {
@@ -5266,32 +4967,6 @@
           "title": "Persist migrations (version + migrate)",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -5353,12 +5028,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 70,
+            "wordCount": 67,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -5831,7 +5506,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:00:37.701Z",
-        "wordCount": 510,
+        "wordCount": 506,
         "readingTime": 3,
         "sectionsCount": 7,
         "codeBlocksCount": 3
@@ -5846,32 +5521,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "A complete example combining all of Synapse's capabilities: storage, selectors, dispatcher, effects, ApiClient, dependencies, and external state.",
@@ -5885,12 +5534,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 20,
+            "wordCount": 17,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -6248,7 +5897,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:09:08.613Z",
-        "wordCount": 998,
+        "wordCount": 994,
         "readingTime": 5,
         "sectionsCount": 11,
         "codeBlocksCount": 10
@@ -6263,32 +5912,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "All the ways to read data from a storage. Synchronous storages (Memory, LocalStorage) and asynchronous ones (IndexedDB).",
@@ -6302,12 +5925,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 20,
+            "wordCount": 17,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -6434,7 +6057,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:01:37.632Z",
-        "wordCount": 237,
+        "wordCount": 233,
         "readingTime": 2,
         "sectionsCount": 5,
         "codeBlocksCount": 4
@@ -6448,32 +6071,6 @@
           "title": "Selectors",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -6498,12 +6095,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 45,
+            "wordCount": 42,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -6906,7 +6503,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:08:31.679Z",
-        "wordCount": 930,
+        "wordCount": 926,
         "readingTime": 5,
         "sectionsCount": 7,
         "codeBlocksCount": 10
@@ -6921,32 +6518,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Reusing storage instances by name. Useful for shared state and when a storage is created in several places (React components, modules).",
@@ -6960,12 +6531,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 24,
+            "wordCount": 21,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -7094,7 +6665,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:06:20.260Z",
-        "wordCount": 520,
+        "wordCount": 516,
         "readingTime": 3,
         "sectionsCount": 6,
         "codeBlocksCount": 5
@@ -7108,32 +6679,6 @@
           "title": "SSR hydration (hydrate)",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -7231,12 +6776,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 48,
+            "wordCount": 45,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -7545,7 +7090,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:00:47.060Z",
-        "wordCount": 274,
+        "wordCount": 270,
         "readingTime": 2,
         "sectionsCount": 7,
         "codeBlocksCount": 4
@@ -7559,32 +7104,6 @@
           "title": "Static .create()",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -7608,12 +7127,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 16,
+            "wordCount": 13,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -7646,7 +7165,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:01:29.463Z",
-        "wordCount": 109,
+        "wordCount": 105,
         "readingTime": 1,
         "sectionsCount": 2,
         "codeBlocksCount": 1
@@ -7660,32 +7179,6 @@
           "title": "StorageFactory",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -7705,12 +7198,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 15,
+            "wordCount": 12,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -7784,7 +7277,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:01:45.545Z",
-        "wordCount": 186,
+        "wordCount": 182,
         "readingTime": 1,
         "sectionsCount": 3,
         "codeBlocksCount": 2
@@ -7799,32 +7292,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "All the ways to subscribe to data changes in a storage. They work the same way for Memory, LocalStorage and IndexedDB.",
@@ -7838,12 +7305,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 24,
+            "wordCount": 21,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -7984,7 +7451,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:02:20.735Z",
-        "wordCount": 296,
+        "wordCount": 292,
         "readingTime": 2,
         "sectionsCount": 5,
         "codeBlocksCount": 4
@@ -7999,32 +7466,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "A wrapper for waiting on a store's asynchronous initialization. Works in any JS environment: Node.js, browser, React Native.",
@@ -8038,12 +7479,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 21,
+            "wordCount": 18,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -8301,7 +7742,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T15:08:29.693Z",
-        "wordCount": 554,
+        "wordCount": 550,
         "readingTime": 3,
         "sectionsCount": 9,
         "codeBlocksCount": 8
@@ -8315,32 +7756,6 @@
           "title": "createSynapseCtx",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -8360,12 +7775,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 39,
+            "wordCount": 36,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -9003,7 +8418,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-18T14:49:32.444Z",
-        "wordCount": 1031,
+        "wordCount": 1027,
         "readingTime": 6,
         "sectionsCount": 9,
         "codeBlocksCount": 11
@@ -9017,32 +8432,6 @@
           "title": "Writing data (set/update)",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Back to Main",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 12,
-                            "url": "../../README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -9062,12 +8451,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 28,
+            "wordCount": 25,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -9189,7 +8578,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T08:02:55.005Z",
-        "wordCount": 309,
+        "wordCount": 305,
         "readingTime": 2,
         "sectionsCount": 5,
         "codeBlocksCount": 4
@@ -9205,43 +8594,6 @@
           "title": "Synapse Storage",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Русский | English | 📝 ChangeLog",
-                      "formatting": {
-                        "bold": [
-                          {
-                            "start": 0,
-                            "end": 7
-                          }
-                        ],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 10,
-                            "end": 17,
-                            "url": "../../packages/synapse/README.md",
-                            "title": null
-                          },
-                          {
-                            "start": 20,
-                            "end": 32,
-                            "url": "../../packages/synapse/CHANGELOG.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -9305,12 +8657,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 40,
+            "wordCount": 34,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -10226,7 +9578,7 @@
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-14T15:08:55.987Z",
-        "wordCount": 684,
+        "wordCount": 677,
         "readingTime": 4,
         "sectionsCount": 7,
         "codeBlocksCount": 2
@@ -10241,32 +9593,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Типизированный HTTP-клиент. Эндпоинты, кэширование на основе тегов, подписки на состояние запросов, отмена.",
@@ -10280,12 +9606,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 15,
+            "wordCount": 12,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -10557,8 +9883,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-05-29T15:51:23.301Z",
-        "wordCount": 1073,
+        "lastModified": "2026-06-24T18:17:14.088Z",
+        "wordCount": 1069,
         "readingTime": 6,
         "sectionsCount": 12,
         "codeBlocksCount": 11
@@ -10572,37 +9898,6 @@
           "title": "Два слоя: State Manager и Business Logic Layer",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Русский | Главная",
-                      "formatting": {
-                        "bold": [
-                          {
-                            "start": 0,
-                            "end": 7
-                          }
-                        ],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 10,
-                            "end": 17,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -10630,12 +9925,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 20,
+            "wordCount": 17,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -11042,171 +10337,15 @@
             "hasBlockquotes": false,
             "hasTasks": false
           }
-        },
-        {
-          "id": "where-to-go-next",
-          "title": "Куда дальше",
-          "level": 2,
-          "content": [
-            {
-              "type": "list",
-              "data": [
-                {
-                  "content": [
-                    {
-                      "type": "paragraph",
-                      "data": {
-                        "text": "Базовая сборка (createSynapse) — storage + селекторы",
-                        "formatting": {
-                          "bold": [],
-                          "italic": [],
-                          "code": [
-                            {
-                              "start": 16,
-                              "end": 29
-                            }
-                          ],
-                          "links": [
-                            {
-                              "start": 0,
-                              "end": 30,
-                              "url": "./create-synapse-basic.md",
-                              "title": null
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  ],
-                  "level": 0,
-                  "type": "unordered"
-                },
-                {
-                  "content": [
-                    {
-                      "type": "paragraph",
-                      "data": {
-                        "text": "Dispatcher — намерения и обновления стора",
-                        "formatting": {
-                          "bold": [],
-                          "italic": [],
-                          "code": [],
-                          "links": [
-                            {
-                              "start": 0,
-                              "end": 10,
-                              "url": "./create-synapse-dispatcher.md",
-                              "title": null
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  ],
-                  "level": 0,
-                  "type": "unordered"
-                },
-                {
-                  "content": [
-                    {
-                      "type": "paragraph",
-                      "data": {
-                        "text": "Effects — сайд-эффекты на RxJS",
-                        "formatting": {
-                          "bold": [],
-                          "italic": [],
-                          "code": [],
-                          "links": [
-                            {
-                              "start": 0,
-                              "end": 7,
-                              "url": "./create-synapse-effects.md",
-                              "title": null
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  ],
-                  "level": 0,
-                  "type": "unordered"
-                },
-                {
-                  "content": [
-                    {
-                      "type": "paragraph",
-                      "data": {
-                        "text": "Селекторы — derived state и реактивный selector.$",
-                        "formatting": {
-                          "bold": [],
-                          "italic": [],
-                          "code": [
-                            {
-                              "start": 39,
-                              "end": 49
-                            }
-                          ],
-                          "links": [
-                            {
-                              "start": 0,
-                              "end": 9,
-                              "url": "./selector-system.md",
-                              "title": null
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  ],
-                  "level": 0,
-                  "type": "unordered"
-                },
-                {
-                  "content": [
-                    {
-                      "type": "paragraph",
-                      "data": {
-                        "text": "Межмодульные зависимости — cross-store и общение модулей",
-                        "formatting": {
-                          "bold": [],
-                          "italic": [],
-                          "code": [],
-                          "links": [
-                            {
-                              "start": 0,
-                              "end": 24,
-                              "url": "./dependencies.md",
-                              "title": null
-                            }
-                          ]
-                        }
-                      }
-                    }
-                  ],
-                  "level": 0,
-                  "type": "unordered"
-                }
-              ]
-            }
-          ],
-          "metadata": {
-            "wordCount": 32,
-            "codeBlocksCount": 0,
-            "diagramsCount": 0,
-            "tasksCount": 0,
-            "hasTable": false,
-            "hasBlockquotes": false,
-            "hasTasks": false
-          }
         }
       ],
       "features": [],
       "frontMatter": {},
       "metadata": {
         "lastModified": "2026-06-13T14:17:47.573Z",
-        "wordCount": 687,
+        "wordCount": 643,
         "readingTime": 4,
-        "sectionsCount": 5,
+        "sectionsCount": 4,
         "codeBlocksCount": 3
       }
     },
@@ -11218,32 +10357,6 @@
           "title": "awaitSynapse",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -11258,12 +10371,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 15,
+            "wordCount": 12,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -11391,8 +10504,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-13T14:35:34.175Z",
-        "wordCount": 371,
+        "lastModified": "2026-06-24T18:17:14.095Z",
+        "wordCount": 367,
         "readingTime": 2,
         "sectionsCount": 6,
         "codeBlocksCount": 5
@@ -11407,32 +10520,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Минимальная конфигурация: хранилище + селекторы, без диспетчера. Изменения через хранилище напрямую.",
@@ -11446,12 +10533,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 14,
+            "wordCount": 11,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -11464,7 +10551,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "import { MemoryStorage, Selectors } from 'synapse-storage/core'\nimport { createSynapse } from 'synapse-storage/utils'\nimport { useSelector } from 'synapse-storage/react'\n\ninterface TodoState {\n  todos: Array<{ id: number; text: string; done: boolean }>\n  filter: 'all' | 'active' | 'done'\n}\n\n// Селекторы — поля класса, настоящие SelectorAPI сразу (eager). Имя = имя поля.\nclass TodoSelectors extends Selectors<TodoState> {\n  readonly todos = this.select((state) => state.todos)\n  readonly filter = this.select((state) => state.filter)\n\n  // Комбинированный: зависит от todos и filter\n  readonly filteredTodos = this.combine([this.todos, this.filter], (todos, filter) => {\n    if (filter === 'active') return todos.filter((t) => !t.done)\n    if (filter === 'done') return todos.filter((t) => t.done)\n    return todos\n  })\n\n  readonly doneCount = this.combine([this.todos], (todos) => todos.filter((t) => t.done).length)\n}\n\n// createSynapse(factory) → ленивый handle. Фабрика исполняется один раз\n// при первом await / ready(), а не на импорте.\nconst todoSynapse = createSynapse(async () => {\n  const storage = new MemoryStorage<TodoState>({\n    name: 'todo-basic',\n    initialState: { todos: [], filter: 'all' },\n  })\n  return {\n    storage,\n    selectors: new TodoSelectors(storage),\n  }\n})\n\nexport type TodoSynapse = Awaited<typeof todoSynapse>",
+                "code": "import { MemoryStorage, Selectors } from 'synapse-storage/core'\nimport { createSynapse } from 'synapse-storage/utils'\nimport { useSelector } from 'synapse-storage/react'\n\ninterface TodoState {\n  todos: Array<{ id: number; text: string; done: boolean }>\n  filter: 'all' | 'active' | 'done'\n}\n\n// Селекторы — поля класса, настоящие SelectorAPI сразу (eager). Имя = имя поля.\nclass TodoSelectors extends Selectors<TodoState> {\n   todos = this.select((state) => state.todos)\n   filter = this.select((state) => state.filter)\n\n  // Комбинированный: зависит от todos и filter\n   filteredTodos = this.combine([this.todos, this.filter], (todos, filter) => {\n    if (filter === 'active') return todos.filter((t) => !t.done)\n    if (filter === 'done') return todos.filter((t) => t.done)\n    return todos\n  })\n\n   doneCount = this.combine([this.todos], (todos) => todos.filter((t) => t.done).length)\n}\n\n// createSynapse(factory) → ленивый handle. Фабрика исполняется один раз\n// при первом await / ready(), а не на импорте.\nconst todoSynapse = createSynapse(async () => {\n  const storage = new MemoryStorage<TodoState>({\n    name: 'todo-basic',\n    initialState: { todos: [], filter: 'all' },\n  })\n  return {\n    storage,\n    selectors: new TodoSelectors(storage),\n  }\n})\n\nexport type TodoSynapse = Awaited<typeof todoSynapse>",
                 "meta": null
               }
             }
@@ -11572,8 +10659,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-13T14:32:33.599Z",
-        "wordCount": 364,
+        "lastModified": "2026-06-24T18:17:14.102Z",
+        "wordCount": 356,
         "readingTime": 2,
         "sectionsCount": 5,
         "codeBlocksCount": 4
@@ -11588,32 +10675,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Хранилище + селекторы + диспетчер. Действия для изменения состояния, наблюдатели для реактивного отслеживания.",
@@ -11627,12 +10688,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 16,
+            "wordCount": 13,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -11645,7 +10706,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "import { MemoryStorage, Selectors } from 'synapse-storage/core'\nimport { createSynapse } from 'synapse-storage/utils'\nimport { Dispatcher } from 'synapse-storage/reactive'\n\n// Селекторы — поля класса\nclass CartSelectors extends Selectors<CartState> {\n  readonly items = this.select((s) => s.items)\n  readonly discount = this.select((s) => s.discount)\n  readonly totalPrice = this.combine([this.items, this.discount], (items, discount) => {\n    const sum = items.reduce((acc, i) => acc + i.price * i.qty, 0)\n    return sum * (1 - discount / 100)\n  })\n}\n\n// Диспетчер — действия и наблюдатели как поля класса. Имя экшена = имя поля.\nclass CartDispatcher extends Dispatcher<CartState> {\n  readonly addItem = this.action((store, params: { name: string; price: number }) => {\n    store.update((s) => { s.items.push({ id: Date.now(), ...params, qty: 1 }) })\n    return params\n  })\n  readonly setDiscount = this.action((store, percent: number) => {\n    store.set('discount', percent)\n    return percent\n  })\n  readonly watchItemCount = this.watcher({ selector: (s) => s.items.length })\n}\n\nconst cartSynapse = createSynapse(async () => {\n  const storage = new MemoryStorage<CartState>({ name: 'cart', initialState })\n  return {\n    storage,\n    dispatcher: new CartDispatcher(storage),\n    selectors: new CartSelectors(storage),\n  }\n})",
+                "code": "import { MemoryStorage, Selectors } from 'synapse-storage/core'\nimport { createSynapse } from 'synapse-storage/utils'\nimport { Dispatcher } from 'synapse-storage/reactive'\n\n// Селекторы — поля класса\nclass CartSelectors extends Selectors<CartState> {\n   items = this.select((s) => s.items)\n   discount = this.select((s) => s.discount)\n   totalPrice = this.combine([this.items, this.discount], (items, discount) => {\n    const sum = items.reduce((acc, i) => acc + i.price * i.qty, 0)\n    return sum * (1 - discount / 100)\n  })\n}\n\n// Диспетчер — действия и наблюдатели как поля класса. Имя экшена = имя поля.\nclass CartDispatcher extends Dispatcher<CartState> {\n   addItem = this.action((store, params: { name: string; price: number }) => {\n    store.update((s) => { s.items.push({ id: Date.now(), ...params, qty: 1 }) })\n    return params\n  })\n   setDiscount = this.action((store, percent: number) => {\n    store.set('discount', percent)\n    return percent\n  })\n   watchItemCount = this.watcher({ selector: (s) => s.items.length })\n}\n\nconst cartSynapse = createSynapse(async () => {\n  const storage = new MemoryStorage<CartState>({ name: 'cart', initialState })\n  return {\n    storage,\n    dispatcher: new CartDispatcher(storage),\n    selectors: new CartSelectors(storage),\n  }\n})",
                 "meta": null
               }
             }
@@ -11669,7 +10730,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "// this.action((store, params) => result) — handler в «рецептной» сигнатуре.\n// payload экшена = возвращённое значение handler'а.\nclass CartDispatcher extends Dispatcher<CartState> {\n  readonly addItem = this.action((store, params: { name: string; price: number }) => {\n    store.update((s) => {\n      s.items.push({ id: Date.now(), ...params, qty: 1 })\n    })\n    return params                            // return = payload в потоке действий\n  })\n}\n\n// Вызов через store.actions (имя экшена = имя поля)\nstore.actions.addItem({ name: 'Hat', price: 1500 })\n\n// actionType генерируется из имени поля при финализации\nstore.actions.addItem.actionType  // '[cart]addItem'",
+                "code": "// this.action((store, params) => result) — handler в «рецептной» сигнатуре.\n// payload экшена = возвращённое значение handler'а.\nclass CartDispatcher extends Dispatcher<CartState> {\n   addItem = this.action((store, params: { name: string; price: number }) => {\n    store.update((s) => {\n      s.items.push({ id: Date.now(), ...params, qty: 1 })\n    })\n    return params                            // return = payload в потоке действий\n  })\n}\n\n// Вызов через store.actions (имя экшена = имя поля)\nstore.actions.addItem({ name: 'Hat', price: 1500 })\n\n// actionType генерируется из имени поля при финализации\nstore.actions.addItem.actionType  // '[cart]addItem'",
                 "meta": null
               }
             }
@@ -11693,7 +10754,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "// this.watcher — реактивно отслеживает изменения состояния\nclass CartDispatcher extends Dispatcher<CartState> {\n  readonly watchItemCount = this.watcher({\n    selector: (state) => state.items.length,        // что отслеживать\n    notifyAfterSubscribe: true,                     // вызвать сразу при подписке\n    shouldTrigger: (prev, curr) => prev !== curr,   // фильтр (опционально)\n  })\n}\n\n// Подписка — возвращает RxJS Observable\nconst sub = store.dispatcher.watchers.watchItemCount().subscribe((action) => {\n  console.log('количество товаров:', action.payload)\n})\n\n// Отписка\nsub.unsubscribe()",
+                "code": "// this.watcher — реактивно отслеживает изменения состояния\nclass CartDispatcher extends Dispatcher<CartState> {\n   watchItemCount = this.watcher({\n    selector: (state) => state.items.length,        // что отслеживать\n    notifyAfterSubscribe: true,                     // вызвать сразу при подписке\n    shouldTrigger: (prev, curr) => prev !== curr,   // фильтр (опционально)\n  })\n}\n\n// Подписка — возвращает RxJS Observable\nconst sub = store.dispatcher.watchers.watchItemCount().subscribe((action) => {\n  console.log('количество товаров:', action.payload)\n})\n\n// Отписка\nsub.unsubscribe()",
                 "meta": null
               }
             },
@@ -11811,8 +10872,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-13T14:32:53.645Z",
-        "wordCount": 452,
+        "lastModified": "2026-06-24T18:17:14.108Z",
+        "wordCount": 440,
         "readingTime": 3,
         "sectionsCount": 6,
         "codeBlocksCount": 5
@@ -11827,32 +10888,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Полная конфигурация: хранилище + селекторы + диспетчер + RxJS-эффекты для побочных действий.",
@@ -11866,12 +10901,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 15,
+            "wordCount": 12,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -11884,7 +10919,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "import { MemoryStorage, Selectors } from 'synapse-storage/core'\nimport { createSynapse } from 'synapse-storage/utils'\nimport { Dispatcher, Effects, ofType } from 'synapse-storage/reactive'\nimport { debounceTime, switchMap } from 'rxjs/operators'\nimport { from } from 'rxjs'\n\nclass SearchSelectors extends Selectors<SearchState> {\n  readonly query = this.select((s) => s.query)\n  readonly results = this.select((s) => s.results)\n}\n\nclass SearchDispatcher extends Dispatcher<SearchState> {\n  readonly setQuery = this.action((store, query: string) => { store.set('query', query); return query })\n  readonly searchSuccess = this.action((store, results: string[]) => { store.set('results', results); return results })\n}\n\n// Эффекты — класс над Effects<State, Dispatcher>; сервисы через конструктор\nclass SearchEffects extends Effects<SearchState, SearchDispatcher> {\n  constructor(private readonly api: SearchApi) { super() }\n\n  readonly search$ = this.effect((action$, state$, { dispatcher: d }) =>\n    action$.pipe(\n      ofType(d.setQuery),\n      debounceTime(400),\n      switchMap((action) => from(this.api(action.payload)).pipe(\n        switchMap(async (results) => d.searchSuccess(results)),\n      )),\n    ),\n  )\n}\n\nconst searchSynapse = createSynapse(async () => {\n  const storage = new MemoryStorage<SearchState>({ name: 'search', initialState })\n  return {\n    storage,\n    dispatcher: new SearchDispatcher(storage),\n    selectors: new SearchSelectors(storage),\n    effects: new SearchEffects(searchApi),   // сервисы — через конструктор\n  }\n})",
+                "code": "import { MemoryStorage, Selectors } from 'synapse-storage/core'\nimport { createSynapse } from 'synapse-storage/utils'\nimport { Dispatcher, Effects, ofType } from 'synapse-storage/reactive'\nimport { debounceTime, switchMap } from 'rxjs/operators'\nimport { from } from 'rxjs'\n\nclass SearchSelectors extends Selectors<SearchState> {\n   query = this.select((s) => s.query)\n   results = this.select((s) => s.results)\n}\n\nclass SearchDispatcher extends Dispatcher<SearchState> {\n   setQuery = this.action((store, query: string) => { store.set('query', query); return query })\n   searchSuccess = this.action((store, results: string[]) => { store.set('results', results); return results })\n}\n\n// Эффекты — класс над Effects<State, Dispatcher>; сервисы через конструктор\nclass SearchEffects extends Effects<SearchState, SearchDispatcher> {\n  constructor(private  api: SearchApi) { super() }\n\n   search$ = this.effect((action$, state$, { dispatcher: d }) =>\n    action$.pipe(\n      ofType(d.setQuery),\n      debounceTime(400),\n      switchMap((action) => from(this.api(action.payload)).pipe(\n        switchMap(async (results) => d.searchSuccess(results)),\n      )),\n    ),\n  )\n}\n\nconst searchSynapse = createSynapse(async () => {\n  const storage = new MemoryStorage<SearchState>({ name: 'search', initialState })\n  return {\n    storage,\n    dispatcher: new SearchDispatcher(storage),\n    selectors: new SearchSelectors(storage),\n    effects: new SearchEffects(searchApi),   // сервисы — через конструктор\n  }\n})",
                 "meta": null
               }
             }
@@ -11908,7 +10943,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "// this.effect — поле класса; функция получает потоки и контекст, возвращает Observable.\n// Сервисы/внешние сторы приходят через конструктор и захватываются в замыкание рецепта.\nclass SearchEffects extends Effects<SearchState, SearchDispatcher> {\n  constructor(private readonly api: SearchApi) { super() }\n\n  readonly search$ = this.effect((action$, state$, ctx) => {\n    const d = ctx.dispatcher                 // типизированный диспетчер модуля\n    return action$.pipe(\n      ofType(d.setQuery),                    // фильтрация по действию\n      debounceTime(400),\n      switchMap((action) => from(this.api(action.payload)).pipe(\n        switchMap(async (results) => d.searchSuccess(results)),\n      )),\n    )\n  })\n\n  // Опциональный teardown — закрыть сокеты и т.п.\n  override onDestroy() { /* ... */ }\n}",
+                "code": "// this.effect — поле класса; функция получает потоки и контекст, возвращает Observable.\n// Сервисы/внешние сторы приходят через конструктор и захватываются в замыкание рецепта.\nclass SearchEffects extends Effects<SearchState, SearchDispatcher> {\n  constructor(private  api: SearchApi) { super() }\n\n   search$ = this.effect((action$, state$, ctx) => {\n    const d = ctx.dispatcher                 // типизированный диспетчер модуля\n    return action$.pipe(\n      ofType(d.setQuery),                    // фильтрация по действию\n      debounceTime(400),\n      switchMap((action) => from(this.api(action.payload)).pipe(\n        switchMap(async (results) => d.searchSuccess(results)),\n      )),\n    )\n  })\n\n  // Опциональный teardown — закрыть сокеты и т.п.\n  override onDestroy() { /* ... */ }\n}",
                 "meta": null
               }
             },
@@ -12485,8 +11520,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-18T15:38:44.332Z",
-        "wordCount": 880,
+        "lastModified": "2026-06-24T18:17:14.117Z",
+        "wordCount": 868,
         "readingTime": 5,
         "sectionsCount": 6,
         "codeBlocksCount": 6
@@ -12501,32 +11536,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Операции проверки существования, удаления ключей и сброса хранилища. Работают одинаково для всех типов хранилищ.",
@@ -12540,12 +11549,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 17,
+            "wordCount": 14,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -12697,8 +11706,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-05-29T15:28:08.274Z",
-        "wordCount": 273,
+        "lastModified": "2026-06-24T18:17:14.124Z",
+        "wordCount": 269,
         "readingTime": 2,
         "sectionsCount": 7,
         "codeBlocksCount": 6
@@ -12712,32 +11721,6 @@
           "title": "Межмодульные зависимости",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -12757,12 +11740,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 14,
+            "wordCount": 11,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -12775,7 +11758,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "import { MemoryStorage, Selectors } from 'synapse-storage/core'\nimport { createSynapse } from 'synapse-storage/utils'\nimport { Dispatcher } from 'synapse-storage/reactive'\n\nclass AuthSelectors extends Selectors<AuthState> {\n  readonly token = this.select((s) => s.token)\n  readonly userId = this.select((s) => s.userId)\n}\n\nclass AuthDispatcher extends Dispatcher<AuthState> {\n  readonly login = this.action((store, userId: string) => {\n    store.update((s) => { s.token = `jwt-${userId}`; s.userId = userId })\n    return userId\n  })\n  readonly logout = this.action((store) => {\n    store.update((s) => { s.token = null; s.userId = null })\n  })\n}\n\n// Модуль Auth — другие будут зависеть от него\nconst authSynapse = createSynapse(async () => {\n  await fetchAuth()  // async-пролог фабрики\n  const storage = new MemoryStorage<AuthState>({\n    name: 'auth',\n    initialState: { token: 'jwt-123', userId: 'user-1' },\n  })\n  return {\n    storage,\n    dispatcher: new AuthDispatcher(storage),\n    selectors: new AuthSelectors(storage),\n  }\n})\n\nexport type AuthSynapse = Awaited<typeof authSynapse>",
+                "code": "import { MemoryStorage, Selectors } from 'synapse-storage/core'\nimport { createSynapse } from 'synapse-storage/utils'\nimport { Dispatcher } from 'synapse-storage/reactive'\n\nclass AuthSelectors extends Selectors<AuthState> {\n   token = this.select((s) => s.token)\n   userId = this.select((s) => s.userId)\n}\n\nclass AuthDispatcher extends Dispatcher<AuthState> {\n   login = this.action((store, userId: string) => {\n    store.update((s) => { s.token = `jwt-${userId}`; s.userId = userId })\n    return userId\n  })\n   logout = this.action((store) => {\n    store.update((s) => { s.token = null; s.userId = null })\n  })\n}\n\n// Модуль Auth — другие будут зависеть от него\nconst authSynapse = createSynapse(async () => {\n  await fetchAuth()  // async-пролог фабрики\n  const storage = new MemoryStorage<AuthState>({\n    name: 'auth',\n    initialState: { token: 'jwt-123', userId: 'user-1' },\n  })\n  return {\n    storage,\n    dispatcher: new AuthDispatcher(storage),\n    selectors: new AuthSelectors(storage),\n  }\n})\n\nexport type AuthSynapse = Awaited<typeof authSynapse>",
                 "meta": null
               }
             }
@@ -12799,7 +11782,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "import type { IStorage, SelectorAPI } from 'synapse-storage/core'\n\n// Cross-store: внешние селекторы приходят через конструктор\nclass SettingsSelectors extends Selectors<SettingsState> {\n  readonly theme = this.select((s) => s.theme)\n  readonly currentUserId: SelectorAPI<string | null>\n\n  constructor(storage: IStorage<SettingsState>, private auth: AuthSynapse['selectors']) {\n    super(storage)\n    // зависит от селектора другого стора → реактивно пересчитывается\n    this.currentUserId = this.combine([this.auth.userId], (userId) => userId)\n  }\n}\n\nconst settingsSynapse = createSynapse(async () => {\n  const auth = await authSynapse              // handle — thenable\n  const storage = new MemoryStorage<SettingsState>({ name: 'settings', initialState })\n  return {\n    storage,\n    dependencies: [auth],                     // ждём готовности до сборки\n    dependencyTimeout: 5000,                  // мс, по умолчанию 30000\n    selectors: new SettingsSelectors(storage, auth.selectors),\n  }\n})",
+                "code": "import type { IStorage, SelectorAPI } from 'synapse-storage/core'\n\n// Cross-store: внешние селекторы приходят через конструктор\nclass SettingsSelectors extends Selectors<SettingsState> {\n   theme = this.select((s) => s.theme)\n   currentUserId: SelectorAPI<string | null>\n\n  constructor(storage: IStorage<SettingsState>, private auth: AuthSynapse['selectors']) {\n    super(storage)\n    // зависит от селектора другого стора → реактивно пересчитывается\n    this.currentUserId = this.combine([this.auth.userId], (userId) => userId)\n  }\n}\n\nconst settingsSynapse = createSynapse(async () => {\n  const auth = await authSynapse              // handle — thenable\n  const storage = new MemoryStorage<SettingsState>({ name: 'settings', initialState })\n  return {\n    storage,\n    dependencies: [auth],                     // ждём готовности до сборки\n    dependencyTimeout: 5000,                  // мс, по умолчанию 30000\n    selectors: new SettingsSelectors(storage, auth.selectors),\n  }\n})",
                 "meta": null
               }
             }
@@ -12831,7 +11814,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "import { toObservable } from 'synapse-storage/reactive'\n\nclass SettingsEffects extends Effects<SettingsState, SettingsDispatcher> {\n  // raw-стор другого модуля как Observable\n  constructor(private readonly auth$: Observable<AuthState>) { super() }\n\n  readonly onAuthChange = this.effect((_action$, _state$, { dispatcher: d }) =>\n    this.auth$.pipe(/* ... реагируем на изменения чужого состояния ... */),\n  )\n}\n\n// сборка:\neffects: new SettingsEffects(toObservable(auth.storage))",
+                "code": "import { toObservable } from 'synapse-storage/reactive'\n\nclass SettingsEffects extends Effects<SettingsState, SettingsDispatcher> {\n  // raw-стор другого модуля как Observable\n  constructor(private  auth$: Observable<AuthState>) { super() }\n\n   onAuthChange = this.effect((_action$, _state$, { dispatcher: d }) =>\n    this.auth$.pipe(/* ... реагируем на изменения чужого состояния ... */),\n  )\n}\n\n// сборка:\neffects: new SettingsEffects(toObservable(auth.storage))",
                 "meta": null
               }
             },
@@ -12884,7 +11867,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "class SettingsEffects extends Effects<SettingsState, SettingsDispatcher, { auth: AuthDispatcher }> {\n  readonly onLogout = this.effect((action$, _state$, { dispatcher: d, external }) =>\n    action$.pipe(\n      ofType(external.auth.logout),   // экшен из ДРУГОГО модуля\n      tap(() => d.resetSettings()),\n    ),\n  )\n}\n\n// в сборке внешние диспетчеры подключаются как externalDispatchers\nreturn {\n  storage,\n  dependencies: [auth],\n  dispatcher: new SettingsDispatcher(storage),\n  effects: new SettingsEffects(),\n  externalDispatchers: { auth: auth.dispatcher },\n}",
+                "code": "class SettingsEffects extends Effects<SettingsState, SettingsDispatcher, { auth: AuthDispatcher }> {\n   onLogout = this.effect((action$, _state$, { dispatcher: d, external }) =>\n    action$.pipe(\n      ofType(external.auth.logout),   // экшен из ДРУГОГО модуля\n      tap(() => d.resetSettings()),\n    ),\n  )\n}\n\n// в сборке внешние диспетчеры подключаются как externalDispatchers\nreturn {\n  storage,\n  dependencies: [auth],\n  dispatcher: new SettingsDispatcher(storage),\n  effects: new SettingsEffects(),\n  externalDispatchers: { auth: auth.dispatcher },\n}",
                 "meta": null
               }
             },
@@ -12959,8 +11942,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-13T14:34:41.494Z",
-        "wordCount": 541,
+        "lastModified": "2026-06-24T18:17:14.131Z",
+        "wordCount": 528,
         "readingTime": 3,
         "sectionsCount": 5,
         "codeBlocksCount": 6
@@ -12974,32 +11957,6 @@
           "title": "Dispatcher (подробно)",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -13049,12 +12006,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 43,
+            "wordCount": 40,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -13067,7 +12024,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "import { MemoryStorage } from 'synapse-storage/core'\nimport { Dispatcher } from 'synapse-storage/reactive'\n\ninterface CounterState {\n  value: number\n  step: number\n  history: number[]\n}\n\nconst storage = new MemoryStorage<CounterState>({\n  name: 'counter',\n  initialState: { value: 0, step: 1, history: [] },\n})\nawait storage.initialize()\n\nclass CounterDispatcher extends Dispatcher<CounterState> {\n  readonly increment = this.action((store) => store.update((s) => { s.value += s.step }))\n  readonly watchValue = this.watcher({ selector: (s) => s.value })\n}\n\nconst dispatcher = new CounterDispatcher(storage)",
+                "code": "import { MemoryStorage } from 'synapse-storage/core'\nimport { Dispatcher } from 'synapse-storage/reactive'\n\ninterface CounterState {\n  value: number\n  step: number\n  history: number[]\n}\n\nconst storage = new MemoryStorage<CounterState>({\n  name: 'counter',\n  initialState: { value: 0, step: 1, history: [] },\n})\nawait storage.initialize()\n\nclass CounterDispatcher extends Dispatcher<CounterState> {\n   increment = this.action((store) => store.update((s) => { s.value += s.step }))\n   watchValue = this.watcher({ selector: (s) => s.value })\n}\n\nconst dispatcher = new CounterDispatcher(storage)",
                 "meta": null
               }
             }
@@ -13160,7 +12117,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "class CounterDispatcher extends Dispatcher<CounterState> {\n  // Простой экшен (без параметров)\n  readonly increment = this.action((store) => {\n    store.update((s) => { s.value += s.step })\n  })\n\n  // Экшен с параметром (return = payload в потоке действий)\n  readonly setStep = this.action((store, newStep: number) => {\n    store.set('step', newStep)\n    return newStep\n  })\n\n  // Экшен с meta — произвольные метаданные (2-й аргумент this.action)\n  readonly reset = this.action(\n    (store) => { store.reset() },\n    { meta: { description: 'Сброс к значениям по умолчанию', dangerous: true } },\n  )\n\n  // Экшен с мемоизацией — повторный вызов с тем же аргументом пропускается\n  readonly setStepMemo = this.action(\n    (store, step: number) => { store.set('step', step); return step },\n    { memoize: (current, previous) => current === previous },\n  )\n}",
+                "code": "class CounterDispatcher extends Dispatcher<CounterState> {\n  // Простой экшен (без параметров)\n   increment = this.action((store) => {\n    store.update((s) => { s.value += s.step })\n  })\n\n  // Экшен с параметром (return = payload в потоке действий)\n   setStep = this.action((store, newStep: number) => {\n    store.set('step', newStep)\n    return newStep\n  })\n\n  // Экшен с meta — произвольные метаданные (2-й аргумент this.action)\n   reset = this.action(\n    (store) => { store.reset() },\n    { meta: { description: 'Сброс к значениям по умолчанию', dangerous: true } },\n  )\n\n  // Экшен с мемоизацией — повторный вызов с тем же аргументом пропускается\n   setStepMemo = this.action(\n    (store, step: number) => { store.set('step', step); return step },\n    { memoize: (current, previous) => current === previous },\n  )\n}",
                 "meta": null
               }
             }
@@ -13184,7 +12141,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "class CounterDispatcher extends Dispatcher<CounterState> {\n  // Чистое намерение: ничего не пишет в стор, payload пробрасывается дальше эффектам.\n  // description уходит в meta.\n  readonly pinged = this.signal<number>('Ручной пинг')\n}",
+                "code": "class CounterDispatcher extends Dispatcher<CounterState> {\n  // Чистое намерение: ничего не пишет в стор, payload пробрасывается дальше эффектам.\n  // description уходит в meta.\n   pinged = this.signal<number>('Ручной пинг')\n}",
                 "meta": null
               }
             }
@@ -13238,7 +12195,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "class PostsDispatcher extends Dispatcher<PostsState> {\n  // accessor указывает на ячейку ApiRequestState в состоянии\n  readonly loadPosts = this.apiActions<{ page: number }>((s) => s.api.postsRequest)\n}\n\n// Использование:\nd.loadPosts({ page: 1 })      // init: статус → idle, намерение уходит эффектам\nd.loadPosts.loading()         // статус → loading\nd.loadPosts.success()         // статус → success\nd.loadPosts.failure('msg')    // статус → error, error = 'msg'\nd.loadPosts.reset()           // статус → reset",
+                "code": "class PostsDispatcher extends Dispatcher<PostsState> {\n  // accessor указывает на ячейку ApiRequestState в состоянии\n   loadPosts = this.apiActions<{ page: number }>((s) => s.api.postsRequest)\n}\n\n// Использование:\nd.loadPosts({ page: 1 })      // init: статус → idle, намерение уходит эффектам\nd.loadPosts.loading()         // статус → loading\nd.loadPosts.success()         // статус → success\nd.loadPosts.failure('msg')    // статус → error, error = 'msg'\nd.loadPosts.reset()           // статус → reset",
                 "meta": null
               }
             },
@@ -13323,7 +12280,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "class CounterDispatcher extends Dispatcher<CounterState> {\n  // Базовый наблюдатель — отслеживает значение\n  readonly watchValue = this.watcher({ selector: (state) => state.value })\n\n  // С shouldTrigger — фильтрация ложных срабатываний\n  readonly watchBigChanges = this.watcher({\n    selector: (state) => state.value,\n    shouldTrigger: (prev, current) => Math.abs((prev ?? 0) - current) >= 5,\n  })\n\n  // С notifyAfterSubscribe — вызвать callback сразу при подписке\n  readonly watchStep = this.watcher({\n    selector: (state) => state.step,\n    notifyAfterSubscribe: true,\n  })\n}",
+                "code": "class CounterDispatcher extends Dispatcher<CounterState> {\n  // Базовый наблюдатель — отслеживает значение\n   watchValue = this.watcher({ selector: (state) => state.value })\n\n  // С shouldTrigger — фильтрация ложных срабатываний\n   watchBigChanges = this.watcher({\n    selector: (state) => state.value,\n    shouldTrigger: (prev, current) => Math.abs((prev ?? 0) - current) >= 5,\n  })\n\n  // С notifyAfterSubscribe — вызвать callback сразу при подписке\n   watchStep = this.watcher({\n    selector: (state) => state.step,\n    notifyAfterSubscribe: true,\n  })\n}",
                 "meta": null
               }
             }
@@ -13428,8 +12385,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-13T14:33:43.861Z",
-        "wordCount": 666,
+        "lastModified": "2026-06-24T18:17:14.137Z",
+        "wordCount": 653,
         "readingTime": 4,
         "sectionsCount": 9,
         "codeBlocksCount": 7
@@ -13444,32 +12401,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Pub/sub шина для общения между модулями. Построена на createSynapse + MemoryStorage + Dispatcher. Поддерживает wildcard-паттерны, приоритеты, TTL, историю событий.",
@@ -13483,12 +12414,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 22,
+            "wordCount": 19,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -13712,8 +12643,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-14T08:20:35.203Z",
-        "wordCount": 631,
+        "lastModified": "2026-06-24T18:17:14.142Z",
+        "wordCount": 627,
         "readingTime": 4,
         "sectionsCount": 10,
         "codeBlocksCount": 9
@@ -13727,32 +12658,6 @@
           "title": "useCreateStorage (indexedDB)",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -13784,12 +12689,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 19,
+            "wordCount": 16,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -13845,8 +12750,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-05-29T15:28:57.989Z",
-        "wordCount": 275,
+        "lastModified": "2026-06-24T18:17:14.149Z",
+        "wordCount": 271,
         "readingTime": 2,
         "sectionsCount": 3,
         "codeBlocksCount": 2
@@ -13860,32 +12765,6 @@
           "title": "useCreateStorage (localStorage)",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -13905,12 +12784,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 15,
+            "wordCount": 12,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -13966,8 +12845,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-05-29T15:28:44.792Z",
-        "wordCount": 219,
+        "lastModified": "2026-06-24T18:17:14.155Z",
+        "wordCount": 215,
         "readingTime": 2,
         "sectionsCount": 3,
         "codeBlocksCount": 2
@@ -13982,32 +12861,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "React-хук для создания MemoryStorage. Автоматически инициализирует и уничтожает при размонтировании.",
@@ -14021,12 +12874,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 13,
+            "wordCount": 10,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -14106,8 +12959,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-05-29T15:28:36.259Z",
-        "wordCount": 313,
+        "lastModified": "2026-06-24T18:17:14.160Z",
+        "wordCount": 309,
         "readingTime": 2,
         "sectionsCount": 4,
         "codeBlocksCount": 3
@@ -14121,32 +12974,6 @@
           "title": "IndexedDBStorage",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -14166,12 +12993,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 18,
+            "wordCount": 15,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -14485,9 +13312,9 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-14T07:16:14.770Z",
-        "wordCount": 402,
-        "readingTime": 3,
+        "lastModified": "2026-06-24T18:17:14.166Z",
+        "wordCount": 398,
+        "readingTime": 2,
         "sectionsCount": 8,
         "codeBlocksCount": 5
       }
@@ -14500,32 +13327,6 @@
           "title": "LocalStorage",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -14545,12 +13346,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 16,
+            "wordCount": 13,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -14908,8 +13709,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-14T08:21:54.121Z",
-        "wordCount": 350,
+        "lastModified": "2026-06-24T18:17:14.172Z",
+        "wordCount": 346,
         "readingTime": 2,
         "sectionsCount": 9,
         "codeBlocksCount": 5
@@ -14924,32 +13725,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Хранилище в оперативной памяти. Данные существуют только пока открыта страница. Синхронный API.",
@@ -14963,12 +13738,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 15,
+            "wordCount": 12,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -15120,8 +13895,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-05-29T15:27:50.320Z",
-        "wordCount": 340,
+        "lastModified": "2026-06-24T18:17:14.177Z",
+        "wordCount": 336,
         "readingTime": 2,
         "sectionsCount": 7,
         "codeBlocksCount": 6
@@ -15136,32 +13911,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Middlewares перехватывают операции хранилища (set, get, delete, clear) и могут модифицировать, фильтровать или группировать их.",
@@ -15175,12 +13924,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 18,
+            "wordCount": 15,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -15457,6 +14206,310 @@
           }
         },
         {
+          "id": "7-custom-middleware",
+          "title": "7. Своя (кастомная) middleware",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Встроенных middleware всего три (batching, shallowCompare, logger), но система\nполностью открыта: middleware — это обычный объект типа SyncMiddleware\n(для Memory/LocalStorage) или AsyncMiddleware (для IndexedDB). Никакой регистрации не\nнужно — просто верните свой объект в том же массиве, что и getDefault()….",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 115,
+                      "end": 129
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 33,
+                      "end": 41
+                    },
+                    {
+                      "start": 43,
+                      "end": 57
+                    },
+                    {
+                      "start": 59,
+                      "end": 65
+                    },
+                    {
+                      "start": 135,
+                      "end": 149
+                    },
+                    {
+                      "start": 180,
+                      "end": 195
+                    },
+                    {
+                      "start": 295,
+                      "end": 308
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "heading",
+              "data": {
+                "text": "Анатомия",
+                "level": 3,
+                "id": ""
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import type { SyncMiddleware } from 'synapse-storage/core'\n\nconst myMiddleware = (): SyncMiddleware => ({\n  name: 'my-middleware',           // имя (для отладки)\n\n  setup: (api) => {},              // опционально: вызывается один раз при подключении\n  cleanup: () => {},               // опционально: вызывается при destroy()\n\n  // Ядро — Redux-style тройное каррирование: (api) => (next) => (action)\n  reducer: (api) => (next) => (action) => {\n    // action — что происходит с хранилищем:\n    //   { type: 'set' | 'get' | 'update' | 'delete' | 'clear' | 'reset' | ...,\n    //     key?, value?, metadata? }\n\n    // next(action)        — передать управление дальше по цепочке (выполнить операцию)\n    // НЕ вызвать next()   — заблокировать операцию (запись не произойдёт)\n    // next({ ...action, value: X }) — изменить значение перед записью\n\n    return next(action)\n  },\n})",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "api даёт доступ к хранилищу изнутри middleware:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 3
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "api.getState()                       // текущее состояние целиком\napi.storage.doGet(key)               // прочитать значение (минуя цепочку)\napi.storage.doSet(key, value)        // записать (минуя цепочку — без рекурсии)\napi.storage.notifySubscribers(key, value)  // уведомить подписчиков вручную\napi.dispatch(action)                 // прогнать новый action через всю цепочку",
+                "meta": null
+              }
+            },
+            {
+              "type": "blockquote",
+              "data": {
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "data": {
+                      "text": "Цепочка обёрнута в try/catch: если middleware бросит исключение, оно будет\nпоглощено обработчиком ошибок и не «всплывёт» к вызвавшему storage.set(...).\nПоэтому для «отказа» не бросайте ошибку, а просто не вызывайте next.",
+                      "formatting": {
+                        "bold": [
+                          {
+                            "start": 195,
+                            "end": 219
+                          }
+                        ],
+                        "italic": [],
+                        "code": [
+                          {
+                            "start": 19,
+                            "end": 28
+                          },
+                          {
+                            "start": 134,
+                            "end": 150
+                          },
+                          {
+                            "start": 215,
+                            "end": 219
+                          }
+                        ],
+                        "links": []
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Подключение — рядом со встроенными:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const storage = new MemoryStorage<MyState>({\n  name: 'my-store',\n  initialState: { ... },\n  middlewares: (getDefault) => [\n    getDefault().logger(),   // встроенная\n    myMiddleware(),          // ваша\n  ],\n})",
+                "meta": null
+              }
+            },
+            {
+              "type": "heading",
+              "data": {
+                "text": "Пример A — валидация формы",
+                "level": 3,
+                "id": "-a-"
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Перехватываем записи в поля формы, прогоняем через валидаторы и блокируем\nневалидные значения, складывая сообщения об ошибках в соседний ключ errors.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 64,
+                      "end": 93
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 142,
+                      "end": 148
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import type { SyncMiddleware } from 'synapse-storage/core'\n\ntype FormState = {\n  email: string\n  age: number\n  errors: Record<string, string | undefined>\n}\n\n// key → валидатор: вернуть строку с ошибкой ИЛИ null, если всё ок\nconst validators: Record<string, (value: any) => string | null> = {\n  email: (v) => (/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(v) ? null : 'Некорректный e-mail'),\n  age: (v) => (v >= 18 && v <= 120 ? null : 'Возраст должен быть 18–120'),\n}\n\nconst validationMiddleware = (): SyncMiddleware => ({\n  name: 'form-validation',\n  reducer: (api) => (next) => (action) => {\n    if (action.type !== 'set' || typeof action.key !== 'string') {\n      return next(action)\n    }\n\n    const validate = validators[action.key]\n    if (!validate) return next(action)\n\n    const error = validate(action.value)\n\n    // Записываем карту ошибок напрямую (doSet минует цепочку — без рекурсии)\n    const errors = { ...(api.getState().errors ?? {}), [action.key]: error ?? undefined }\n    api.storage.doSet('errors', errors)\n    api.storage.notifySubscribers('errors', errors)\n\n    // Невалидно — блокируем запись, возвращаем текущее значение из хранилища\n    if (error) return api.storage.doGet(action.key)\n\n    // Валидно — пропускаем дальше\n    return next(action)\n  },\n})\n\nconst form = new MemoryStorage<FormState>({\n  name: 'signup-form',\n  initialState: { email: '', age: 0, errors: {} },\n  middlewares: () => [validationMiddleware()],\n})\nawait form.initialize()\n\nform.set('email', 'not-an-email')      // заблокировано, errors.email = 'Некорректный e-mail'\nform.set('email', 'user@example.com')  // прошло, errors.email = undefined\nform.set('age', 15)                    // заблокировано, errors.age = '...'",
+                "meta": null
+              }
+            },
+            {
+              "type": "heading",
+              "data": {
+                "text": "Пример B — нормализация значений",
+                "level": 3,
+                "id": "-b-"
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Middleware может не блокировать, а преобразовывать значение перед записью —\nнапример, обрезать пробелы и приводить e-mail к нижнему регистру.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 35,
+                      "end": 50
+                    }
+                  ],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import type { SyncMiddleware } from 'synapse-storage/core'\n\nconst normalizeMiddleware = (): SyncMiddleware => ({\n  name: 'normalize',\n  reducer: () => (next) => (action) => {\n    if (action.type === 'set' && typeof action.value === 'string') {\n      let value = action.value.trim()\n      if (action.key === 'email') value = value.toLowerCase()\n\n      // Передаём дальше уже изменённое значение\n      return next({ ...action, value })\n    }\n    return next(action)\n  },\n})\n\n// storage.set('email', '  User@Example.COM  ') → сохранится 'user@example.com'",
+                "meta": null
+              }
+            },
+            {
+              "type": "heading",
+              "data": {
+                "text": "Пример C — аудит / аналитика изменений",
+                "level": 3,
+                "id": "-c-"
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Middleware-«наблюдатель»: ничего не меняет, лишь реагирует на пишущие действия\n(удобно для логирования в свою аналитику, отправки метрик и т.п.).",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import type { SyncMiddleware } from 'synapse-storage/core'\n\nconst auditMiddleware = (onChange: (key: string, value: any) => void): SyncMiddleware => ({\n  name: 'audit',\n  reducer: () => (next) => (action) => {\n    const result = next(action)  // сначала выполняем операцию\n\n    if (action.type === 'set' && typeof action.key === 'string') {\n      onChange(action.key, action.value)\n    }\n    return result\n  },\n})\n\nconst storage = new MemoryStorage<{ theme: string }>({\n  name: 'settings',\n  initialState: { theme: 'light' },\n  middlewares: () => [\n    auditMiddleware((key, value) => analytics.track('setting_changed', { key, value })),\n  ],\n})",
+                "meta": null
+              }
+            },
+            {
+              "type": "blockquote",
+              "data": {
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "data": {
+                      "text": "Для асинхронного хранилища (IndexedDB) всё то же самое, только тип — AsyncMiddleware,\nа reducer/api.storage.* возвращают Promise (используйте async/await и\nreturn await next(action)).",
+                      "formatting": {
+                        "bold": [
+                          {
+                            "start": 4,
+                            "end": 16
+                          }
+                        ],
+                        "italic": [],
+                        "code": [
+                          {
+                            "start": 69,
+                            "end": 84
+                          },
+                          {
+                            "start": 88,
+                            "end": 95
+                          },
+                          {
+                            "start": 96,
+                            "end": 109
+                          },
+                          {
+                            "start": 121,
+                            "end": 128
+                          },
+                          {
+                            "start": 142,
+                            "end": 153
+                          },
+                          {
+                            "start": 156,
+                            "end": 181
+                          }
+                        ],
+                        "links": []
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 180,
+            "codeBlocksCount": 6,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": true,
+            "hasTasks": false
+          }
+        },
+        {
           "id": "types",
           "title": "Типы",
           "level": 2,
@@ -15484,11 +14537,11 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-14T07:15:13.947Z",
-        "wordCount": 788,
-        "readingTime": 4,
-        "sectionsCount": 9,
-        "codeBlocksCount": 8
+        "lastModified": "2026-06-24T18:17:14.183Z",
+        "wordCount": 1532,
+        "readingTime": 8,
+        "sectionsCount": 10,
+        "codeBlocksCount": 14
       }
     },
     "persist-migration": {
@@ -15499,32 +14552,6 @@
           "title": "Persist-миграции (version + migrate)",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -15586,12 +14613,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 56,
+            "wordCount": 53,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -16063,8 +15090,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-14T07:14:08.654Z",
-        "wordCount": 419,
+        "lastModified": "2026-06-24T18:17:14.189Z",
+        "wordCount": 415,
         "readingTime": 3,
         "sectionsCount": 7,
         "codeBlocksCount": 3
@@ -16079,32 +15106,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Полный пример, объединяющий все возможности Synapse: хранилище, селекторы, диспетчер, эффекты, ApiClient, зависимости и внешнее состояние.",
@@ -16118,12 +15119,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 18,
+            "wordCount": 15,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -16232,7 +15233,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "import { Selectors } from 'synapse-storage/core'\n\nexport class PokemonSelectors extends Selectors<PokemonState> {\n  private readonly api = this.select((s) => s.api)        // private = промежуточный слайс\n\n  readonly pokemonList = this.select((s) => s.pokemonList)\n  readonly searchQuery = this.select((s) => s.searchQuery)\n  readonly favorites = this.select((s) => s.favorites)\n  readonly selectedPokemon = this.select((s) => s.selectedPokemon)\n  readonly hasMore = this.select((s) => s.hasMore)\n\n  readonly listStatus = this.combine([this.api], (a) => a.listRequest.status)\n  readonly isListLoading = this.combine([this.listStatus], (s) => s === 'loading')\n\n  // Композиция pokemonList + searchQuery → filteredList\n  readonly filteredList = this.combine([this.pokemonList, this.searchQuery], (list, query) =>\n    query ? list.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())) : list,\n  )\n\n  readonly favoriteCount = this.combine([this.favorites], (favs) => favs.length)\n  readonly favoritePokemon = this.combine([this.pokemonList, this.favorites], (list, favs) =>\n    list.filter((p) => favs.includes(p.id)),\n  )\n}",
+                "code": "import { Selectors } from 'synapse-storage/core'\n\nexport class PokemonSelectors extends Selectors<PokemonState> {\n  private  api = this.select((s) => s.api)        // private = промежуточный слайс\n\n   pokemonList = this.select((s) => s.pokemonList)\n   searchQuery = this.select((s) => s.searchQuery)\n   favorites = this.select((s) => s.favorites)\n   selectedPokemon = this.select((s) => s.selectedPokemon)\n   hasMore = this.select((s) => s.hasMore)\n\n   listStatus = this.combine([this.api], (a) => a.listRequest.status)\n   isListLoading = this.combine([this.listStatus], (s) => s === 'loading')\n\n  // Композиция pokemonList + searchQuery → filteredList\n   filteredList = this.combine([this.pokemonList, this.searchQuery], (list, query) =>\n    query ? list.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())) : list,\n  )\n\n   favoriteCount = this.combine([this.favorites], (favs) => favs.length)\n   favoritePokemon = this.combine([this.pokemonList, this.favorites], (list, favs) =>\n    list.filter((p) => favs.includes(p.id)),\n  )\n}",
                 "meta": null
               }
             }
@@ -16256,7 +15257,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "import { Dispatcher } from 'synapse-storage/reactive'\n\nexport class PokemonDispatcher extends Dispatcher<PokemonState> {\n  // apiActions — вызываемая группа: loadList() = init, .loading/.success/.failure/.reset\n  readonly loadList = this.apiActions<void>((s) => s.api.listRequest)\n  readonly loadDetails = this.apiActions<void>((s) => s.api.detailsRequest)\n\n  // signal — чистое намерение (статус подгрузки пишется через loadList.*)\n  readonly loadMore = this.signal<void>('Подгрузить следующую страницу')\n\n  readonly selectPokemon = this.action((store, id: number | null) => {\n    store.update((s) => {\n      s.selectedPokemonId = id\n      if (id === null) s.selectedPokemon = null\n    })\n    return id\n  })\n\n  readonly applyPokemonList = this.action((store, data: { list: PokemonBrief[]; hasMore: boolean; append: boolean }) =>\n    store.update((s) => {\n      s.pokemonList = data.append ? [...s.pokemonList, ...data.list] : data.list\n      s.offset = s.pokemonList.length\n      s.hasMore = data.hasMore\n    }),\n  )\n\n  readonly watchFavoriteCount = this.watcher({\n    selector: (s) => s.favorites.length,\n    notifyAfterSubscribe: true,\n  })\n}",
+                "code": "import { Dispatcher } from 'synapse-storage/reactive'\n\nexport class PokemonDispatcher extends Dispatcher<PokemonState> {\n  // apiActions — вызываемая группа: loadList() = init, .loading/.success/.failure/.reset\n   loadList = this.apiActions<void>((s) => s.api.listRequest)\n   loadDetails = this.apiActions<void>((s) => s.api.detailsRequest)\n\n  // signal — чистое намерение (статус подгрузки пишется через loadList.*)\n   loadMore = this.signal<void>('Подгрузить следующую страницу')\n\n   selectPokemon = this.action((store, id: number | null) => {\n    store.update((s) => {\n      s.selectedPokemonId = id\n      if (id === null) s.selectedPokemon = null\n    })\n    return id\n  })\n\n   applyPokemonList = this.action((store, data: { list: PokemonBrief[]; hasMore: boolean; append: boolean }) =>\n    store.update((s) => {\n      s.pokemonList = data.append ? [...s.pokemonList, ...data.list] : data.list\n      s.offset = s.pokemonList.length\n      s.hasMore = data.hasMore\n    }),\n  )\n\n   watchFavoriteCount = this.watcher({\n    selector: (s) => s.favorites.length,\n    notifyAfterSubscribe: true,\n  })\n}",
                 "meta": null
               }
             },
@@ -16308,7 +15309,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "import { Effects, ofType, selectorObject, validateMap, apiResult, fromRequest } from 'synapse-storage/reactive'\n\n// Сервисы (endpoints) и внешние сторы (settings$) — через конструктор, захват в замыкание рецепта.\nexport class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {\n  constructor(\n    private readonly api: PokemonApiEndpoints,\n    private readonly settings$: Observable<PokemonSettings>,\n  ) { super() }\n\n  readonly loadList = this.effect((action$, state$, { dispatcher: d }) =>\n    action$.pipe(\n      ofType(d.loadList),                                  // только init\n      withLatestFrom(selectorObject(state$, { listStatus: (s) => s.api.listRequest.status }), this.settings$),\n      validateMap({\n        validator: ([, { listStatus }]) => ({\n          conditions: [listStatus !== 'loading'],\n          skipAction: () => d.loadList.reset(),\n        }),\n        loadingAction: () => d.loadList.loading(),\n        errorAction: (err) => d.loadList.failure(String(err)),\n        apiCall: ([, , { pageSize }]) =>\n          fromRequest(this.api.getList.request({ limit: pageSize, offset: 0 })).pipe(\n            apiResult((data) => {\n              d.applyPokemonList({ ...mapListResponse(data), append: false })\n              d.loadList.success()\n            }),\n          ),\n      }),\n    ),\n  )\n}",
+                "code": "import { Effects, ofType, selectorObject, validateMap, apiResult, fromRequest } from 'synapse-storage/reactive'\n\n// Сервисы (endpoints) и внешние сторы (settings$) — через конструктор, захват в замыкание рецепта.\nexport class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {\n  constructor(\n    private  api: PokemonApiEndpoints,\n    private  settings$: Observable<PokemonSettings>,\n  ) { super() }\n\n   loadList = this.effect((action$, state$, { dispatcher: d }) =>\n    action$.pipe(\n      ofType(d.loadList),                                  // только init\n      withLatestFrom(selectorObject(state$, { listStatus: (s) => s.api.listRequest.status }), this.settings$),\n      validateMap({\n        validator: ([, { listStatus }]) => ({\n          conditions: [listStatus !== 'loading'],\n          skipAction: () => d.loadList.reset(),\n        }),\n        loadingAction: () => d.loadList.loading(),\n        errorAction: (err) => d.loadList.failure(String(err)),\n        apiCall: ([, , { pageSize }]) =>\n          fromRequest(this.api.getList.request({ limit: pageSize, offset: 0 })).pipe(\n            apiResult((data) => {\n              d.applyPokemonList({ ...mapListResponse(data), append: false })\n              d.loadList.success()\n            }),\n          ),\n      }),\n    ),\n  )\n}",
                 "meta": null
               }
             }
@@ -16472,8 +15473,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-13T14:36:46.451Z",
-        "wordCount": 958,
+        "lastModified": "2026-06-24T18:16:59.542Z",
+        "wordCount": 934,
         "readingTime": 5,
         "sectionsCount": 11,
         "codeBlocksCount": 9
@@ -16488,32 +15489,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Все способы чтения данных из хранилища. Синхронные хранилища (Memory, LocalStorage) и асинхронные (IndexedDB).",
@@ -16527,12 +15502,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 16,
+            "wordCount": 13,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -16658,8 +15633,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-05-29T15:27:46.219Z",
-        "wordCount": 228,
+        "lastModified": "2026-06-24T18:17:14.194Z",
+        "wordCount": 224,
         "readingTime": 2,
         "sectionsCount": 5,
         "codeBlocksCount": 4
@@ -16673,32 +15648,6 @@
           "title": "Селекторы (Selectors)",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -16723,12 +15672,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 32,
+            "wordCount": 29,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -16741,7 +15690,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "import { MemoryStorage, Selectors } from 'synapse-storage/core'\n\ninterface ProductState {\n  products: Array<{ id: number; name: string; price: number; category: string }>\n  filterCategory: 'all' | 'food' | 'tech'\n  sortBy: 'name' | 'price'\n}\n\nconst storage = new MemoryStorage<ProductState>({\n  name: 'products',\n  initialState: { products: [], filterCategory: 'all', sortBy: 'name' },\n})\nawait storage.initialize()\n\n// Класс привязывается к хранилищу через конструктор.\nclass ProductSelectors extends Selectors<ProductState> {\n  readonly products = this.select((s) => s.products)\n}\nconst selectors = new ProductSelectors(storage)",
+                "code": "import { MemoryStorage, Selectors } from 'synapse-storage/core'\n\ninterface ProductState {\n  products: Array<{ id: number; name: string; price: number; category: string }>\n  filterCategory: 'all' | 'food' | 'tech'\n  sortBy: 'name' | 'price'\n}\n\nconst storage = new MemoryStorage<ProductState>({\n  name: 'products',\n  initialState: { products: [], filterCategory: 'all', sortBy: 'name' },\n})\nawait storage.initialize()\n\n// Класс привязывается к хранилищу через конструктор.\nclass ProductSelectors extends Selectors<ProductState> {\n   products = this.select((s) => s.products)\n}\nconst selectors = new ProductSelectors(storage)",
                 "meta": null
               }
             }
@@ -16765,7 +15714,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "class ProductSelectors extends Selectors<ProductState> {\n  readonly products = this.select((s) => s.products)\n  readonly filterCategory = this.select((s) => s.filterCategory)\n  readonly sortBy = this.select((s) => s.sortBy)\n\n  // С пользовательским equals (для массивов/объектов, чтобы избежать лишних уведомлений)\n  readonly foodNames = this.select(\n    (s) => s.products.filter((p) => p.category === 'food').map((p) => p.name),\n    {\n      equals: (a, b) => JSON.stringify(a) === JSON.stringify(b),\n      name: 'foodNames',   // необязательное имя для отладки\n    },\n  )\n}",
+                "code": "class ProductSelectors extends Selectors<ProductState> {\n   products = this.select((s) => s.products)\n   filterCategory = this.select((s) => s.filterCategory)\n   sortBy = this.select((s) => s.sortBy)\n\n  // С пользовательским equals (для массивов/объектов, чтобы избежать лишних уведомлений)\n   foodNames = this.select(\n    (s) => s.products.filter((p) => p.category === 'food').map((p) => p.name),\n    {\n      equals: (a, b) => JSON.stringify(a) === JSON.stringify(b),\n      name: 'foodNames',   // необязательное имя для отладки\n    },\n  )\n}",
                 "meta": null
               }
             },
@@ -16822,7 +15771,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "class ProductSelectors extends Selectors<ProductState> {\n  readonly products = this.select((s) => s.products)\n  readonly filterCategory = this.select((s) => s.filterCategory)\n  readonly sortBy = this.select((s) => s.sortBy)\n\n  readonly filtered = this.combine([this.products, this.filterCategory], (items, cat) =>\n    cat === 'all' ? items : items.filter((p) => p.category === cat),\n  )\n\n  // Цепочка: filtered -> sorted\n  readonly sorted = this.combine([this.filtered, this.sortBy], (items, sort) =>\n    [...items].sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name) : a.price - b.price)),\n  )\n\n  // Вычисляемое значение из зависимости\n  readonly totalPrice = this.combine([this.filtered], (items) => items.reduce((sum, p) => sum + p.price, 0))\n}",
+                "code": "class ProductSelectors extends Selectors<ProductState> {\n   products = this.select((s) => s.products)\n   filterCategory = this.select((s) => s.filterCategory)\n   sortBy = this.select((s) => s.sortBy)\n\n   filtered = this.combine([this.products, this.filterCategory], (items, cat) =>\n    cat === 'all' ? items : items.filter((p) => p.category === cat),\n  )\n\n  // Цепочка: filtered -> sorted\n   sorted = this.combine([this.filtered, this.sortBy], (items, sort) =>\n    [...items].sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name) : a.price - b.price)),\n  )\n\n  // Вычисляемое значение из зависимости\n   totalPrice = this.combine([this.filtered], (items) => items.reduce((sum, p) => sum + p.price, 0))\n}",
                 "meta": null
               }
             },
@@ -16838,7 +15787,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "class ProductSelectors extends Selectors<ProductState> {\n  // Один SelectorAPI на ключ (кэш по ключу). По умолчанию сравнивает значения структурно.\n  readonly byId = this.keyed((id: number) => (s: ProductState) => s.products.find((p) => p.id === id))\n}\n\nselectors.byId(5).select()   // SelectorAPI для конкретного id",
+                "code": "class ProductSelectors extends Selectors<ProductState> {\n  // Один SelectorAPI на ключ (кэш по ключу). По умолчанию сравнивает значения структурно.\n   byId = this.keyed((id: number) => (s: ProductState) => s.products.find((p) => p.id === id))\n}\n\nselectors.byId(5).select()   // SelectorAPI для конкретного id",
                 "meta": null
               }
             },
@@ -16876,7 +15825,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "import type { IStorage, SelectorAPI } from 'synapse-storage/core'\n\nclass PostsSelectors extends Selectors<PostsState> {\n  readonly list = this.select((s) => s.list)\n\n  // cross-store: реактивно пересчитывается при изменении чужого стора\n  readonly currentUserId: SelectorAPI<number | null>\n\n  constructor(storage: IStorage<PostsState>, private core: CoreSelectors) {\n    super(storage)\n    this.currentUserId = this.combine([this.core.profile], (p) => p?.id ?? null)\n  }\n}",
+                "code": "import type { IStorage, SelectorAPI } from 'synapse-storage/core'\n\nclass PostsSelectors extends Selectors<PostsState> {\n   list = this.select((s) => s.list)\n\n  // cross-store: реактивно пересчитывается при изменении чужого стора\n   currentUserId: SelectorAPI<number | null>\n\n  constructor(storage: IStorage<PostsState>, private core: CoreSelectors) {\n    super(storage)\n    this.currentUserId = this.combine([this.core.profile], (p) => p?.id ?? null)\n  }\n}",
                 "meta": null
               }
             },
@@ -17047,7 +15996,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "class SearchEffects extends Effects<SearchState, SearchDispatcher> {\n  constructor(private readonly selectors: SearchSelectors) { super() }\n\n  readonly autoSearch = this.effect((_action$, _state$, { dispatcher: d }) =>\n    this.selectors.searchQuery.$.pipe(\n      debounceTime(300),\n      distinctUntilChanged(),\n      tap((query) => d.search(query)),\n    ),\n  )\n}",
+                "code": "class SearchEffects extends Effects<SearchState, SearchDispatcher> {\n  constructor(private  selectors: SearchSelectors) { super() }\n\n   autoSearch = this.effect((_action$, _state$, { dispatcher: d }) =>\n    this.selectors.searchQuery.$.pipe(\n      debounceTime(300),\n      distinctUntilChanged(),\n      tap((query) => d.search(query)),\n    ),\n  )\n}",
                 "meta": null
               }
             },
@@ -17130,8 +16079,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-14T07:15:31.960Z",
-        "wordCount": 849,
+        "lastModified": "2026-06-24T18:16:59.550Z",
+        "wordCount": 829,
         "readingTime": 5,
         "sectionsCount": 7,
         "codeBlocksCount": 10
@@ -17146,32 +16095,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Повторное использование экземпляров хранилища по имени. Полезно для общего состояния и когда хранилище создаётся в нескольких местах (React-компоненты, модули).",
@@ -17185,12 +16108,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 22,
+            "wordCount": 19,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -17318,8 +16241,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-05-29T15:29:43.600Z",
-        "wordCount": 511,
+        "lastModified": "2026-06-24T18:17:14.200Z",
+        "wordCount": 507,
         "readingTime": 3,
         "sectionsCount": 6,
         "codeBlocksCount": 5
@@ -17333,32 +16256,6 @@
           "title": "SSR-гидрация (hydrate)",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -17456,12 +16353,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 36,
+            "wordCount": 33,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -17769,8 +16666,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-14T07:14:42.699Z",
-        "wordCount": 233,
+        "lastModified": "2026-06-24T18:17:14.205Z",
+        "wordCount": 229,
         "readingTime": 2,
         "sectionsCount": 7,
         "codeBlocksCount": 4
@@ -17784,32 +16681,6 @@
           "title": "Статический .create()",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -17833,12 +16704,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 14,
+            "wordCount": 11,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -17870,8 +16741,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-05-29T15:28:24.377Z",
-        "wordCount": 104,
+        "lastModified": "2026-06-24T18:17:14.210Z",
+        "wordCount": 100,
         "readingTime": 1,
         "sectionsCount": 2,
         "codeBlocksCount": 1
@@ -17885,32 +16756,6 @@
           "title": "StorageFactory",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -17930,12 +16775,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 12,
+            "wordCount": 9,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -18008,8 +16853,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-05-29T15:28:20.150Z",
-        "wordCount": 177,
+        "lastModified": "2026-06-24T18:17:14.216Z",
+        "wordCount": 173,
         "readingTime": 1,
         "sectionsCount": 3,
         "codeBlocksCount": 2
@@ -18024,32 +16869,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Все способы подписки на изменения данных в хранилище. Работают одинаково для Memory, LocalStorage и IndexedDB.",
@@ -18063,12 +16882,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 18,
+            "wordCount": 15,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -18208,8 +17027,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-05-29T15:28:20.083Z",
-        "wordCount": 270,
+        "lastModified": "2026-06-24T18:17:14.221Z",
+        "wordCount": 266,
         "readingTime": 2,
         "sectionsCount": 5,
         "codeBlocksCount": 4
@@ -18224,32 +17043,6 @@
           "level": 1,
           "content": [
             {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            {
               "type": "paragraph",
               "data": {
                 "text": "Обёртка для ожидания асинхронной инициализации store. Работает в любом JS-окружении: Node.js, браузер, React Native.",
@@ -18263,12 +17056,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 17,
+            "wordCount": 14,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -18525,8 +17318,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-14T15:08:14.905Z",
-        "wordCount": 509,
+        "lastModified": "2026-06-24T18:17:14.226Z",
+        "wordCount": 505,
         "readingTime": 3,
         "sectionsCount": 9,
         "codeBlocksCount": 8
@@ -18540,32 +17333,6 @@
           "title": "createSynapseCtx",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -18585,12 +17352,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 32,
+            "wordCount": 29,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -18802,6 +17569,30 @@
                           }
                         ],
                         "links": []
+                      }
+                    }
+                  },
+                  {
+                    "type": "paragraph",
+                    "data": {
+                      "text": "Полный запускаемый цикл (dehydrate → renderToString → гидрация) — в\nSynapseCtxSsrExample.tsx.",
+                      "formatting": {
+                        "bold": [],
+                        "italic": [],
+                        "code": [
+                          {
+                            "start": 68,
+                            "end": 92
+                          }
+                        ],
+                        "links": [
+                          {
+                            "start": 68,
+                            "end": 92,
+                            "url": "https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SynapseCtxSsrExample.tsx",
+                            "title": null
+                          }
+                        ]
                       }
                     }
                   }
@@ -19214,7 +18005,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 290,
+            "wordCount": 301,
             "codeBlocksCount": 4,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -19227,8 +18018,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-18T14:49:32.444Z",
-        "wordCount": 941,
+        "lastModified": "2026-06-24T18:19:16.584Z",
+        "wordCount": 951,
         "readingTime": 5,
         "sectionsCount": 9,
         "codeBlocksCount": 11
@@ -19242,32 +18033,6 @@
           "title": "Запись данных (set/update)",
           "level": 1,
           "content": [
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Назад к оглавлению",
-                      "formatting": {
-                        "bold": [],
-                        "italic": [],
-                        "code": [],
-                        "links": [
-                          {
-                            "start": 0,
-                            "end": 18,
-                            "url": "./README.md",
-                            "title": null
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
-              }
-            },
             {
               "type": "paragraph",
               "data": {
@@ -19287,12 +18052,12 @@
             }
           ],
           "metadata": {
-            "wordCount": 21,
+            "wordCount": 18,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -19413,8 +18178,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-05-29T15:27:58.680Z",
-        "wordCount": 279,
+        "lastModified": "2026-06-24T18:17:14.231Z",
+        "wordCount": 275,
         "readingTime": 2,
         "sectionsCount": 5,
         "codeBlocksCount": 4

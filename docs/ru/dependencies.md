@@ -1,6 +1,6 @@
 # Межмодульные зависимости
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/DependenciesExample.tsx)
 
 Один `createSynapse` может зависеть от другого. Зависимости ожидаются перед исполнением фабрики.
 
@@ -12,16 +12,16 @@ import { createSynapse } from 'synapse-storage/utils'
 import { Dispatcher } from 'synapse-storage/reactive'
 
 class AuthSelectors extends Selectors<AuthState> {
-  readonly token = this.select((s) => s.token)
-  readonly userId = this.select((s) => s.userId)
+   token = this.select((s) => s.token)
+   userId = this.select((s) => s.userId)
 }
 
 class AuthDispatcher extends Dispatcher<AuthState> {
-  readonly login = this.action((store, userId: string) => {
+   login = this.action((store, userId: string) => {
     store.update((s) => { s.token = `jwt-${userId}`; s.userId = userId })
     return userId
   })
-  readonly logout = this.action((store) => {
+   logout = this.action((store) => {
     store.update((s) => { s.token = null; s.userId = null })
   })
 }
@@ -50,8 +50,8 @@ import type { IStorage, SelectorAPI } from 'synapse-storage/core'
 
 // Cross-store: внешние селекторы приходят через конструктор
 class SettingsSelectors extends Selectors<SettingsState> {
-  readonly theme = this.select((s) => s.theme)
-  readonly currentUserId: SelectorAPI<string | null>
+   theme = this.select((s) => s.theme)
+   currentUserId: SelectorAPI<string | null>
 
   constructor(storage: IStorage<SettingsState>, private auth: AuthSynapse['selectors']) {
     super(storage)
@@ -81,9 +81,9 @@ import { toObservable } from 'synapse-storage/reactive'
 
 class SettingsEffects extends Effects<SettingsState, SettingsDispatcher> {
   // raw-стор другого модуля как Observable
-  constructor(private readonly auth$: Observable<AuthState>) { super() }
+  constructor(private  auth$: Observable<AuthState>) { super() }
 
-  readonly onAuthChange = this.effect((_action$, _state$, { dispatcher: d }) =>
+   onAuthChange = this.effect((_action$, _state$, { dispatcher: d }) =>
     this.auth$.pipe(/* ... реагируем на изменения чужого состояния ... */),
   )
 }
@@ -106,7 +106,7 @@ new SettingsSelectors(storage, auth.selectors)
 
 ```typescript
 class SettingsEffects extends Effects<SettingsState, SettingsDispatcher, { auth: AuthDispatcher }> {
-  readonly onLogout = this.effect((action$, _state$, { dispatcher: d, external }) =>
+   onLogout = this.effect((action$, _state$, { dispatcher: d, external }) =>
     action$.pipe(
       ofType(external.auth.logout),   // экшен из ДРУГОГО модуля
       tap(() => d.resetSettings()),

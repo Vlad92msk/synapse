@@ -1,6 +1,6 @@
 # Persist-миграции (version + migrate)
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/PersistMigrationExample.tsx)
 
 Когда форма `initialState` меняется между релизами, в персистентном хранилище
 (`LocalStorage` / `IndexedDB`) остаются данные **старой схемы**. Опции конфига

@@ -1,3 +1,4 @@
+export * from './architecture'
 export * from './memory-storage'
 export * from './local-storage'
 export * from './indexeddb-storage'

@@ -1,6 +1,6 @@
 # StorageFactory
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/FactoryExample.tsx)
 
 Фабрика для создания хранилищ. Альтернатива прямому вызову `new MemoryStorage()`.
 

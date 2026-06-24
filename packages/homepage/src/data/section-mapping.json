@@ -17,8 +17,7 @@
     "0": "two-layers-state-manager-and-business-logic-layer",
     "1": "layer-1-state-manager-where-the-state-lives",
     "2": "layer-2-business-logic-layer-how-logic-manages-the-state",
-    "3": "why-this-separation-matters",
-    "4": "where-to-go-next"
+    "3": "why-this-separation-matters"
   },
   "await-synapse": {
     "0": "awaitsynapse",
@@ -145,7 +144,8 @@
     "5": "4-combining-middlewares",
     "6": "5-broadcastmiddleware-cross-tab-synchronization",
     "7": "6-logger-middleware-dev-only",
-    "8": "types"
+    "8": "7-custom-middleware",
+    "9": "types"
   },
   "persist-migration": {
     "0": "persist-migrations-version-migrate",

@@ -1,6 +1,6 @@
 # createEventBus — Шина событий
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/EventBusExample.tsx)
 
 Pub/sub шина для общения между модулями. Построена на createSynapse + MemoryStorage + Dispatcher. Поддерживает wildcard-паттерны, приоритеты, TTL, историю событий.
 

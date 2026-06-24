@@ -1,6 +1,6 @@
 # useCreateStorage (localStorage)
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/HookLocalStorageExample.tsx)
 
 Тот же хук, но с `type: 'localStorage'`. Данные сохраняются после перезагрузки страницы.
 

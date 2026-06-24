@@ -1,6 +1,6 @@
 # Статический .create()
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/StaticCreateExample.tsx)
 
 У каждого класса хранилища есть статический метод `.create()` — альтернатива `new`.
 

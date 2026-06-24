@@ -1,6 +1,6 @@
 # Dispatcher (подробно)
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/DispatcherDetailedExample.tsx)
 
 Класс `Dispatcher` можно использовать и автономно, без `createSynapse`. Определяет действия и наблюдатели
 для хранилища. **Имя экшена/вотчера = имя поля класса.**
@@ -27,8 +27,8 @@ const storage = new MemoryStorage<CounterState>({
 await storage.initialize()
 
 class CounterDispatcher extends Dispatcher<CounterState> {
-  readonly increment = this.action((store) => store.update((s) => { s.value += s.step }))
-  readonly watchValue = this.watcher({ selector: (s) => s.value })
+   increment = this.action((store) => store.update((s) => { s.value += s.step }))
+   watchValue = this.watcher({ selector: (s) => s.value })
 }
 
 const dispatcher = new CounterDispatcher(storage)
@@ -36,37 +36,37 @@ const dispatcher = new CounterDispatcher(storage)
 
 ## Поверхность диспетчера
 
-| Фабрика-поле          | Что создаёт                                                                 |
-|-----------------------|------------------------------------------------------------------------------|
-| `this.action(fn)`     | экшен с handler'ом `(store, params) => result`; payload = возвращённое значение |
-| `this.signal<P>(desc)`| чистый сигнал-намерение: `(_store, p) => p`, ничего не пишет в стор           |
-| `this.apiActions<P>(accessor)` | вызываемая группа жизненного цикла API-запроса                      |
-| `this.keyedApiActions<P>(accessor)` | то же, но статус хранится по ключу (`Record<string, ApiRequestState>`) |
-| `this.watcher(config)`| реактивный наблюдатель за частью состояния                                   |
+| Фабрика-поле                        | Что создаёт                                                                     |
+|-------------------------------------|---------------------------------------------------------------------------------|
+| `this.action(fn)`                   | экшен с handler'ом `(store, params) => result`; payload = возвращённое значение |
+| `this.signal<P>(desc)`              | чистый сигнал-намерение: `(_store, p) => p`, ничего не пишет в стор             |
+| `this.apiActions<P>(accessor)`      | вызываемая группа жизненного цикла API-запроса                                  |
+| `this.keyedApiActions<P>(accessor)` | то же, но статус хранится по ключу (`Record<string, ApiRequestState>`)          |
+| `this.watcher(config)`              | реактивный наблюдатель за частью состояния                                      |
 
 ## this.action
 
 ```typescript
 class CounterDispatcher extends Dispatcher<CounterState> {
   // Простой экшен (без параметров)
-  readonly increment = this.action((store) => {
+   increment = this.action((store) => {
     store.update((s) => { s.value += s.step })
   })
 
   // Экшен с параметром (return = payload в потоке действий)
-  readonly setStep = this.action((store, newStep: number) => {
+   setStep = this.action((store, newStep: number) => {
     store.set('step', newStep)
     return newStep
   })
 
   // Экшен с meta — произвольные метаданные (2-й аргумент this.action)
-  readonly reset = this.action(
+   reset = this.action(
     (store) => { store.reset() },
     { meta: { description: 'Сброс к значениям по умолчанию', dangerous: true } },
   )
 
   // Экшен с мемоизацией — повторный вызов с тем же аргументом пропускается
-  readonly setStepMemo = this.action(
+   setStepMemo = this.action(
     (store, step: number) => { store.set('step', step); return step },
     { memoize: (current, previous) => current === previous },
   )
@@ -79,7 +79,7 @@ class CounterDispatcher extends Dispatcher<CounterState> {
 class CounterDispatcher extends Dispatcher<CounterState> {
   // Чистое намерение: ничего не пишет в стор, payload пробрасывается дальше эффектам.
   // description уходит в meta.
-  readonly pinged = this.signal<number>('Ручной пинг')
+   pinged = this.signal<number>('Ручной пинг')
 }
 ```
 
@@ -91,7 +91,7 @@ class CounterDispatcher extends Dispatcher<CounterState> {
 ```typescript
 class PostsDispatcher extends Dispatcher<PostsState> {
   // accessor указывает на ячейку ApiRequestState в состоянии
-  readonly loadPosts = this.apiActions<{ page: number }>((s) => s.api.postsRequest)
+   loadPosts = this.apiActions<{ page: number }>((s) => s.api.postsRequest)
 }
 
 // Использование:
@@ -121,16 +121,16 @@ action$.pipe(ofType(d.loadPosts.failure), /* ... */)
 ```typescript
 class CounterDispatcher extends Dispatcher<CounterState> {
   // Базовый наблюдатель — отслеживает значение
-  readonly watchValue = this.watcher({ selector: (state) => state.value })
+   watchValue = this.watcher({ selector: (state) => state.value })
 
   // С shouldTrigger — фильтрация ложных срабатываний
-  readonly watchBigChanges = this.watcher({
+   watchBigChanges = this.watcher({
     selector: (state) => state.value,
     shouldTrigger: (prev, current) => Math.abs((prev ?? 0) - current) >= 5,
   })
 
   // С notifyAfterSubscribe — вызвать callback сразу при подписке
-  readonly watchStep = this.watcher({
+   watchStep = this.watcher({
     selector: (state) => state.step,
     notifyAfterSubscribe: true,
   })

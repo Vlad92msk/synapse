@@ -1,6 +1,6 @@
 # Паттерн Singleton
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SingletonExample.tsx)
 
 Повторное использование экземпляров хранилища по имени. Полезно для общего состояния и когда хранилище создаётся в нескольких местах (React-компоненты, модули).
 

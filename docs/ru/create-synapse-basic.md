@@ -1,6 +1,6 @@
 # createSynapse (базовый)
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/CreateSynapseBasicExample.tsx)
 
 Минимальная конфигурация: хранилище + селекторы, без диспетчера. Изменения через хранилище напрямую.
 
@@ -18,17 +18,17 @@ interface TodoState {
 
 // Селекторы — поля класса, настоящие SelectorAPI сразу (eager). Имя = имя поля.
 class TodoSelectors extends Selectors<TodoState> {
-  readonly todos = this.select((state) => state.todos)
-  readonly filter = this.select((state) => state.filter)
+   todos = this.select((state) => state.todos)
+   filter = this.select((state) => state.filter)
 
   // Комбинированный: зависит от todos и filter
-  readonly filteredTodos = this.combine([this.todos, this.filter], (todos, filter) => {
+   filteredTodos = this.combine([this.todos, this.filter], (todos, filter) => {
     if (filter === 'active') return todos.filter((t) => !t.done)
     if (filter === 'done') return todos.filter((t) => t.done)
     return todos
   })
 
-  readonly doneCount = this.combine([this.todos], (todos) => todos.filter((t) => t.done).length)
+   doneCount = this.combine([this.todos], (todos) => todos.filter((t) => t.done).length)
 }
 
 // createSynapse(factory) → ленивый handle. Фабрика исполняется один раз

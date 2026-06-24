@@ -1,5 +1,5 @@
 // Auto-generated types for structured documentation
-// Generated at: 2026-06-19T19:57:45.539Z
+// Generated at: 2026-06-24T18:45:32.958Z
 // Master locale: en
 
 export type Locale = 'en' | 'ru'
@@ -10,7 +10,7 @@ export type DocKey = 'api-client' | 'architecture' | 'await-synapse' | 'create-s
 // ✅ ТОЧНЫЕ ТИПЫ ДЛЯ SECTION ID
 export interface DocSectionIds {
   'api-client': 'apiclient-http-client-with-caching' | 'imports' | 'creating-an-apiclient' | 'request-performing-a-request' | 'queryoptions-request-options' | 'requestdefinition-an-endpoints-request-description' | 'caching-and-tags' | 'getendpoints-direct-access-to-endpoints' | 'waitwithcallbacks-callbacks-by-status' | 'abort-aborting-a-request' | 'subscribe-subscribing-to-an-endpoints-state' | 'lifecycle'
-  'architecture': 'two-layers-state-manager-and-business-logic-layer' | 'layer-1-state-manager-where-the-state-lives' | 'layer-2-business-logic-layer-how-logic-manages-the-state' | 'why-this-separation-matters' | 'where-to-go-next'
+  'architecture': 'two-layers-state-manager-and-business-logic-layer' | 'layer-1-state-manager-where-the-state-lives' | 'layer-2-business-logic-layer-how-logic-manages-the-state' | 'why-this-separation-matters'
   'await-synapse': 'awaitsynapse' | 'creating' | 'withsynapseready-hoc' | 'usesynapseready-hook' | 'programmatic-api' | 'relation-to-createsynapseawaiter'
   'create-synapse-basic': 'createsynapse-basic' | 'creating' | 'return-value' | 'usage-in-react' | 'async-initialization-in-the-factory'
   'create-synapse-dispatcher': 'createsynapse-dispatcher' | 'creating' | 'thisaction' | 'thiswatcher' | 'return-value' | 'react-createsynapsectx'
@@ -25,7 +25,7 @@ export interface DocSectionIds {
   'indexeddb-storage': 'indexeddbstorage' | 'creating' | 'writing-data-asynchronous' | 'reading-data-asynchronous' | 'checking-removing-resetting-asynchronous' | 'subscriptions-the-same-for-all-types' | 'differences-from-memorystoragelocalstorage' | 'persist-migrations-and-ssr'
   'local-storage': 'localstorage' | 'creating' | 'writing-data' | 'reading-data' | 'checking-removing-resetting' | 'subscriptions' | 'differences-from-memorystorage' | 'destroy-and-clearondestroy' | 'persist-migrations-and-ssr'
   'memory-storage': 'memorystorage' | 'creating' | 'writing-data' | 'reading-data' | 'checking-removing-resetting' | 'subscriptions' | 'lifecycle'
-  'middlewares': 'middlewares' | 'configuration' | '1-batching-middleware' | '2-shallowcompare-middleware' | '3-shallowcompare-a-custom-comparator' | '4-combining-middlewares' | '5-broadcastmiddleware-cross-tab-synchronization' | '6-logger-middleware-dev-only' | 'types'
+  'middlewares': 'middlewares' | 'configuration' | '1-batching-middleware' | '2-shallowcompare-middleware' | '3-shallowcompare-a-custom-comparator' | '4-combining-middlewares' | '5-broadcastmiddleware-cross-tab-synchronization' | '6-logger-middleware-dev-only' | '7-custom-middleware' | 'types'
   'persist-migration': 'persist-migrations-version-migrate' | 'how-it-works' | 'bumping-the-version-without-migrate' | 'migrate-is-called-once' | 'ssr-hydration' | 'types' | 'see-also'
   'pokemon-advanced': 'pokemon-advanced-a-full-architecture-example' | 'project-structure' | '1-types' | '2-external-settings-a-dependency' | '3-apiclient' | '4-selectors-class-selectors' | '5-dispatcher-class-dispatcher-action-signal-apiactions-watcher' | '6-effects-class-effects-validatemap-apiresult' | '7-createsynapse-wiring-it-all-together' | 'the-5-state-request-protocol' | 'key-utilities'
   'reading-data': 'reading-data-getgetstate' | 'getkey-reading-a-single-field' | 'getstate-the-entire-state' | 'getstatesync-synchronous-read-from-cache' | 'haskey-keys-checking-and-listing'

@@ -1,6 +1,6 @@
 # createSynapseCtx
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SynapseCtxExample.tsx) · [Пример SSR](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SynapseCtxSsrExample.tsx)
 
 React Context + HOC для доступа к модулю Synapse через хуки. Передаётся ленивый handle: фабрика стартует
 при первом монтировании Provider'а (не на импорте), с автоматическим `loadingComponent` на время инициализации.
@@ -159,6 +159,9 @@ const ctx = createSynapseCtx(effectsSynapse)
 ## SSR — серверный рендер засеянных sync-сторов
 
 > Доступно с **5.0.1**. Только классический `renderToString` (streaming/Suspense — вне скоупа).
+>
+> Полный запускаемый цикл (dehydrate → renderToString → гидрация) — в
+> [`SynapseCtxSsrExample.tsx`](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SynapseCtxSsrExample.tsx).
 
 По умолчанию `createSynapseCtx` гейтит детей `loadingComponent`, пока модуль не готов — на сервере
 это даёт пустой HTML (нет SEO, нет первого кадра из server-state). Флаг `ssr: true` включает режим,

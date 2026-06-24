@@ -9,8 +9,11 @@ export const createFormattedSegments = (text: string, formatting: any) => {
 
   Object.entries(formatting).forEach(([type, formats]) => {
     ;(formats as any[]).forEach((format) => {
-      boundaries.push({ pos: format.start, type: 'start', format: { ...format, formatType: type } })
-      boundaries.push({ pos: format.end, type: 'end', format: { ...format, formatType: type } })
+      // ВАЖНО: start и end ссылаются на ОДИН объект — activeFormats (Set) снимает
+      // формат по ссылке. Иначе формат не снимается и «течёт» на весь остаток текста.
+      const fmt = { ...format, formatType: type }
+      boundaries.push({ pos: format.start, type: 'start', format: fmt })
+      boundaries.push({ pos: format.end, type: 'end', format: fmt })
     })
   })
 

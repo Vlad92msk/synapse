@@ -75,25 +75,25 @@ import { createSynapse } from 'synapse-storage'
 // — Dispatcher: action name = field name. apiActions returns a CALLABLE group —
 class PostsDispatcher extends Dispatcher<PostsState> {
   // d.loadPosts(params) = init intent; d.loadPosts.loading/.success/.failure/.reset = lifecycle
-  readonly loadPosts  = this.apiActions<PostsFindAllParams>((s) => s.api.postsRequest)
-  readonly mounted    = this.signal<FeedPayload>('Feed mounted')        // pure signal
-  readonly applyPosts = this.action((store, page: PostsPage) =>          // (storage, params) => result
+   loadPosts  = this.apiActions<PostsFindAllParams>((s) => s.api.postsRequest)
+   mounted    = this.signal<FeedPayload>('Feed mounted')        // pure signal
+   applyPosts = this.action((store, page: PostsPage) =>          // (storage, params) => result
     store.update((s) => { s.list = page.data }))
 }
 
 // — Selectors: eager fields, cross-store deps via constructor —
 class PostsSelectors extends Selectors<PostsState> {
-  constructor(storage: IStorage<PostsState>, private readonly core: CoreSelectors) { super(storage) }
+  constructor(storage: IStorage<PostsState>, private  core: CoreSelectors) { super(storage) }
   private readonly api    = this.select((s) => s.api)                    // private = intermediate
-  readonly list           = this.select((s) => s.list)
-  readonly isPostsLoading = this.combine([this.api], (a) => a.postsRequest.status === 'loading')
-  readonly currentUserId  = this.combine([this.core.profile], (p) => p?.id ?? null) // cross-store
+   list                   = this.select((s) => s.list)
+   isPostsLoading         = this.combine([this.api], (a) => a.postsRequest.status === 'loading')
+   currentUserId          = this.combine([this.core.profile], (p) => p?.id ?? null) // cross-store
 }
 
 // — Effects: services/external stores via constructor, captured in the closure —
 class PostsEffects extends Effects<PostsState, PostsDispatcher> {
-  constructor(private readonly api: PostsEndpoints) { super() }
-  readonly load = this.effect((action$, state$, { dispatcher: d }) =>
+  constructor(private  api: PostsEndpoints) { super() }
+   load = this.effect((action$, state$, { dispatcher: d }) =>
     action$.pipe(
       ofType(d.loadPosts),                                              // catches ONLY init
       validateMap({

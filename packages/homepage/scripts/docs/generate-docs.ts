@@ -58,6 +58,27 @@ class DocsGenerator {
     }
 
     /**
+     * Убирает из markdown навигационные артефакты, которые имеют смысл только
+     * в репозитории/на GitHub, но ломаются на сайте (ведут на несуществующие
+     * страницы). Сами .md-файлы не трогаются — чистится только то, что попадёт
+     * в данные сайта.
+     */
+    private stripSiteNav(content: string): string {
+        let c = content
+
+        // 1) Языковой/«домой» блок-цитата в шапке:
+        //    > **Русский** | [Главная](./README.md)
+        //    > [Back to Main](../../README.md)
+        c = c.replace(/^>.*(?:\[Главная\]|\[Back to Main\]|README\.md).*\r?\n?/gm, '')
+
+        // 2) Завершающая навигационная секция со ссылками на другие .md:
+        //    «Куда дальше» / «Where to go next» / «What's next» / «Next steps»
+        c = c.replace(/\n#{1,6}\s*(?:Куда дальше|Where to go next|What['’]s next|Next steps)[\s\S]*$/i, '\n')
+
+        return c.trimStart()
+    }
+
+    /**
      * Создает slug из текста
      */
     private createSlug(text: string): string {
@@ -129,7 +150,8 @@ class DocsGenerator {
             for (const file of files) {
                 const filePath = path.join(docsDir, file)
                 const fileContent = fs.readFileSync(filePath, 'utf8')
-                const { data: frontMatter, content } = matter(fileContent)
+                const { data: frontMatter, content: rawContent } = matter(fileContent)
+                const content = this.stripSiteNav(rawContent)
 
                 const filename = file.replace('.md', '')
                 const sections = this.parser.extractSections(content)

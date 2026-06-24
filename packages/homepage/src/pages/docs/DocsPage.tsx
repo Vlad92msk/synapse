@@ -36,8 +36,8 @@ export const DocsPage = () => {
       }
     }
 
-    // По умолчанию возвращаем первый элемент
-    return 'memory'
+    // По умолчанию — вводная страница «Архитектура»
+    return 'architecture'
   }
 
   const [activeSection, setActiveSection] = useState(getInitialSection())
@@ -65,7 +65,7 @@ export const DocsPage = () => {
   // Устанавливаем роут по умолчанию при первой загрузке
   useEffect(() => {
     if (location.pathname === '/docs' && !location.hash) {
-      navigate('/docs#memory', { replace: true })
+      navigate('/docs#architecture', { replace: true })
     }
   }, [location.pathname, location.hash, navigate])
 

@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 
 import {
+  ArchitecturePage,
   MemoryStoragePage,
   LocalStoragePage,
   IndexedDBStoragePage,
@@ -30,6 +31,8 @@ import {
 } from '../sections'
 
 export const sectionsList: Record<string, ReactNode> = {
+  // Обзор
+  'nav.sections.overview.architecture': <ArchitecturePage />,
   // Создание хранилищ
   'nav.sections.create.memory': <MemoryStoragePage />,
   'nav.sections.create.local': <LocalStoragePage />,
@@ -51,7 +54,6 @@ export const sectionsList: Record<string, ReactNode> = {
   'nav.sections.synapse.synapse-effects': <SynapseEffectsPage />,
   'nav.sections.synapse.dispatcher-detail': <DispatcherDetailPage />,
   'nav.sections.synapse.dependencies': <DependenciesPage />,
-  'nav.sections.synapse.pokemon-advanced': <PokemonAdvancedPage />,
   // React
   'nav.sections.react.synapse-ctx': <SynapseCtxPage />,
   'nav.sections.react.await-synapse': <AwaitSynapsePage />,
@@ -59,7 +61,10 @@ export const sectionsList: Record<string, ReactNode> = {
   'nav.sections.patterns.middlewares': <MiddlewaresPage />,
   'nav.sections.patterns.singleton': <SingletonPage />,
   // Утилиты
-  'nav.sections.utils.api-client': <ApiClientPage />,
   'nav.sections.utils.synapse-awaiter': <SynapseAwaiterPage />,
   'nav.sections.utils.event-bus': <EventBusPage />,
+  // API Client
+  'nav.sections.api.api-client': <ApiClientPage />,
+  // Рецепты
+  'nav.sections.recipes.pokemon-advanced': <PokemonAdvancedPage />,
 }

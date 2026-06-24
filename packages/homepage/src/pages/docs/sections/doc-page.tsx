@@ -2,6 +2,8 @@ import { useDocumentation } from '@shared/hooks'
 import { Block } from '@shared/utils/md-render/block'
 import { DocKey } from '@models/docs'
 
+import { ExampleLinks } from './example-links'
+
 export const DocPage = ({ docKey }: { docKey: DocKey }) => {
   const { getDoc } = useDocumentation()
   const doc = getDoc(docKey)
@@ -10,6 +12,7 @@ export const DocPage = ({ docKey }: { docKey: DocKey }) => {
 
   return (
     <>
+      <ExampleLinks docKey={docKey} />
       {doc.sections.map((section) => (
         <div key={section.id}>
           <h1>{section.title}</h1>

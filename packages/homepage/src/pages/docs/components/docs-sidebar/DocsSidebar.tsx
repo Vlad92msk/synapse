@@ -1,7 +1,7 @@
 import { Button } from '@shared/components/ui/button/Button'
 import { useDocumentation } from '@shared/hooks'
 
-import { SECTION_LIST } from './data/list'
+import { DOC_NAV } from './data/list'
 
 import style from './DocsSidebar.module.css'
 
@@ -28,23 +28,28 @@ export const DocsSidebar = (props: DocsSidebarProps) => {
       </div>
 
       <div className={style.nav}>
-        {SECTION_LIST.map((section) => (
-          <div key={section.titleKey} className={style.section}>
-            <h3 className={style.sectionTitle}>{t(section.titleKey)}</h3>
-            <ul className={style.sectionList}>
-              {section.items.map((item) => {
-                const fullKey = `${section.titleKey}.${item.key}`
-                const isActive = activeSection === item.key
+        {DOC_NAV.map((pillar, pillarIndex) => (
+          <div key={pillar.pillarKey ?? `pillar-${pillarIndex}`} className={style.pillar}>
+            {pillar.pillarKey && <h2 className={style.pillarTitle}>{t(pillar.pillarKey)}</h2>}
+            {pillar.groups.map((section) => (
+              <div key={section.titleKey} className={style.section}>
+                {!section.hideTitle && <h3 className={style.sectionTitle}>{t(section.titleKey)}</h3>}
+                <ul className={style.sectionList}>
+                  {section.items.map((item) => {
+                    const fullKey = `${section.titleKey}.${item.key}`
+                    const isActive = activeSection === item.key
 
-                return (
-                  <li key={item.key} className={style.sectionItem}>
-                    <Button onClick={() => onSectionChange(item.key)} className={`${style.navButton} ${isActive ? style.active : ''}`} aria-current={isActive ? 'page' : undefined}>
-                      {t(fullKey)}
-                    </Button>
-                  </li>
-                )
-              })}
-            </ul>
+                    return (
+                      <li key={item.key} className={style.sectionItem}>
+                        <Button onClick={() => onSectionChange(item.key)} className={`${style.navButton} ${isActive ? style.active : ''}`} aria-current={isActive ? 'page' : undefined}>
+                          {t(fullKey)}
+                        </Button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            ))}
           </div>
         ))}
       </div>

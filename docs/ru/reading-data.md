@@ -1,6 +1,6 @@
 # Чтение данных (get/getState)
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/ReadingDataExample.tsx)
 
 Все способы чтения данных из хранилища. Синхронные хранилища (Memory, LocalStorage) и асинхронные (IndexedDB).
 

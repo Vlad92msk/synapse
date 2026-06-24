@@ -1,6 +1,6 @@
 # IndexedDBStorage
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/IndexedDBExample.tsx)
 
 Данные хранятся в IndexedDB. Сохраняются после перезагрузки страницы. **Асинхронный API** — все методы возвращают Promise.
 

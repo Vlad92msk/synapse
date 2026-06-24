@@ -21,12 +21,11 @@ export const FormattedSegment = (props: FormattedSegmentProps) => {
     element = (
       <code
         style={{
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          padding: '3px 6px',
+          backgroundColor: 'rgba(255, 255, 255, 0.06)',
+          padding: '1px 5px',
           borderRadius: '4px',
           fontFamily: "'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace",
-          fontSize: '0.9em',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
+          fontSize: '0.88em',
           color: '#ffd6cc',
         }}
       >
@@ -36,17 +35,19 @@ export const FormattedSegment = (props: FormattedSegmentProps) => {
   }
 
   if (segment.link) {
-    element = (
-      <a
-        href={segment.link.url}
-        title={segment.link.title}
-        style={{ color: '#0080ff', textDecoration: 'none' }}
-        target={segment.link.url.startsWith('http') ? '_blank' : undefined}
-        rel={segment.link.url.startsWith('http') ? 'noopener noreferrer' : undefined}
-      >
-        {element}
-      </a>
-    )
+    const url: string = segment.link.url || ''
+    const isExternal = /^https?:\/\//.test(url)
+    const isAnchor = url.startsWith('#')
+
+    // Внутренние относительные ссылки (./foo.md и т.п.) на сайте ведут в никуда —
+    // не делаем их кликабельными, чтобы не редиректить на несуществующую страницу.
+    if (isExternal || isAnchor) {
+      element = (
+        <a href={url} title={segment.link.title} style={{ color: '#0080ff', textDecoration: 'none' }} target={isExternal ? '_blank' : undefined} rel={isExternal ? 'noopener noreferrer' : undefined}>
+          {element}
+        </a>
+      )
+    }
   }
 
   if (segment.strikethrough) {

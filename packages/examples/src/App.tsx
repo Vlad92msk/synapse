@@ -20,6 +20,7 @@ import { SelectorSystemExample } from './examples/SelectorSystemExample'
 import { ReactiveSelectorExample } from './examples/ReactiveSelectorExample'
 import { DispatcherDetailedExample } from './examples/DispatcherDetailedExample'
 import { SynapseCtxExample } from './examples/SynapseCtxExample'
+import { SynapseCtxSsrExample } from './examples/SynapseCtxSsrExample'
 import { AwaitSynapseExample } from './examples/AwaitSynapseExample'
 import { SynapseAwaiterExample } from './examples/SynapseAwaiterExample'
 import { EventBusExample } from './examples/EventBusExample'
@@ -66,6 +67,7 @@ const examples = [
   { id: 'pokemon-advanced', label: 'Pokemon Pokedex (advanced)', component: PokemonAdvancedExample, group: 'synapse' },
   // React
   { id: 'synapse-ctx', label: 'createSynapseCtx', component: SynapseCtxExample, group: 'react' },
+  { id: 'synapse-ctx-ssr', label: 'createSynapseCtx (SSR)', component: SynapseCtxSsrExample, group: 'react' },
   { id: 'await-synapse', label: 'awaitSynapse', component: AwaitSynapseExample, group: 'react' },
   // Паттерны
   { id: 'middlewares', label: 'Middlewares', component: MiddlewaresExample, group: 'patterns' },

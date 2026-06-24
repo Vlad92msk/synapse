@@ -1,6 +1,6 @@
 # LocalStorage
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/LocalStorageExample.tsx)
 
 Данные хранятся в `localStorage` браузера. Сохраняются после перезагрузки страницы. Синхронный API (идентичен MemoryStorage).
 

@@ -1,6 +1,6 @@
 # SSR-гидрация (hydrate)
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/HydrateExample.tsx)
 
 `storage.hydrate(state)` заменяет состояние хранилища готовым снапшотом. Основной сценарий —
 **SSR**: сервер сериализует состояние, клиент инициализирует им хранилище, чтобы избежать

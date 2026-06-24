@@ -1,6 +1,6 @@
 # MemoryStorage
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/MemoryStorageExample.tsx)
 
 Хранилище в оперативной памяти. Данные существуют только пока открыта страница. Синхронный API.
 

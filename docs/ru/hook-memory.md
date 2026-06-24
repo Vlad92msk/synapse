@@ -1,6 +1,6 @@
 # useCreateStorage (memory)
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/HookExample.tsx)
 
 React-хук для создания MemoryStorage. Автоматически инициализирует и уничтожает при размонтировании.
 

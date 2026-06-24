@@ -1,6 +1,6 @@
 # createSynapse (эффекты)
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/CreateSynapseEffectsExample.tsx)
 
 Полная конфигурация: хранилище + селекторы + диспетчер + RxJS-эффекты для побочных действий.
 
@@ -14,20 +14,20 @@ import { debounceTime, switchMap } from 'rxjs/operators'
 import { from } from 'rxjs'
 
 class SearchSelectors extends Selectors<SearchState> {
-  readonly query = this.select((s) => s.query)
-  readonly results = this.select((s) => s.results)
+   query = this.select((s) => s.query)
+   results = this.select((s) => s.results)
 }
 
 class SearchDispatcher extends Dispatcher<SearchState> {
-  readonly setQuery = this.action((store, query: string) => { store.set('query', query); return query })
-  readonly searchSuccess = this.action((store, results: string[]) => { store.set('results', results); return results })
+   setQuery = this.action((store, query: string) => { store.set('query', query); return query })
+   searchSuccess = this.action((store, results: string[]) => { store.set('results', results); return results })
 }
 
 // Эффекты — класс над Effects<State, Dispatcher>; сервисы через конструктор
 class SearchEffects extends Effects<SearchState, SearchDispatcher> {
-  constructor(private readonly api: SearchApi) { super() }
+  constructor(private  api: SearchApi) { super() }
 
-  readonly search$ = this.effect((action$, state$, { dispatcher: d }) =>
+   search$ = this.effect((action$, state$, { dispatcher: d }) =>
     action$.pipe(
       ofType(d.setQuery),
       debounceTime(400),
@@ -55,9 +55,9 @@ const searchSynapse = createSynapse(async () => {
 // this.effect — поле класса; функция получает потоки и контекст, возвращает Observable.
 // Сервисы/внешние сторы приходят через конструктор и захватываются в замыкание рецепта.
 class SearchEffects extends Effects<SearchState, SearchDispatcher> {
-  constructor(private readonly api: SearchApi) { super() }
+  constructor(private  api: SearchApi) { super() }
 
-  readonly search$ = this.effect((action$, state$, ctx) => {
+   search$ = this.effect((action$, state$, ctx) => {
     const d = ctx.dispatcher                 // типизированный диспетчер модуля
     return action$.pipe(
       ofType(d.setQuery),                    // фильтрация по действию

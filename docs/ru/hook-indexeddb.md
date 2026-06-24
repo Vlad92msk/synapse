@@ -1,6 +1,6 @@
 # useCreateStorage (indexedDB)
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/HookIndexedDBExample.tsx)
 
 Тот же хук с `type: 'indexedDB'`. Возвращает `IAsyncStorage`. Примечание: `destroyOnUnmount` по умолчанию равен `false` для IndexedDB.
 

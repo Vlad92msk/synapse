@@ -1,6 +1,6 @@
 # Запись данных (set/update)
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/WritingDataExample.tsx)
 
 Все способы записи данных в хранилище. Работают одинаково для Memory и LocalStorage (синхронно), для IndexedDB — с `await`.
 

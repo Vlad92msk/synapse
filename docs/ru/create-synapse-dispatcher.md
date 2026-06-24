@@ -1,6 +1,6 @@
 # createSynapse (диспетчер)
 
-> [Назад к оглавлению](./README.md)
+> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/CreateSynapseDispatcherExample.tsx)
 
 Хранилище + селекторы + диспетчер. Действия для изменения состояния, наблюдатели для реактивного отслеживания.
 
@@ -13,9 +13,9 @@ import { Dispatcher } from 'synapse-storage/reactive'
 
 // Селекторы — поля класса
 class CartSelectors extends Selectors<CartState> {
-  readonly items = this.select((s) => s.items)
-  readonly discount = this.select((s) => s.discount)
-  readonly totalPrice = this.combine([this.items, this.discount], (items, discount) => {
+   items = this.select((s) => s.items)
+   discount = this.select((s) => s.discount)
+   totalPrice = this.combine([this.items, this.discount], (items, discount) => {
     const sum = items.reduce((acc, i) => acc + i.price * i.qty, 0)
     return sum * (1 - discount / 100)
   })
@@ -23,15 +23,15 @@ class CartSelectors extends Selectors<CartState> {
 
 // Диспетчер — действия и наблюдатели как поля класса. Имя экшена = имя поля.
 class CartDispatcher extends Dispatcher<CartState> {
-  readonly addItem = this.action((store, params: { name: string; price: number }) => {
+   addItem = this.action((store, params: { name: string; price: number }) => {
     store.update((s) => { s.items.push({ id: Date.now(), ...params, qty: 1 }) })
     return params
   })
-  readonly setDiscount = this.action((store, percent: number) => {
+   setDiscount = this.action((store, percent: number) => {
     store.set('discount', percent)
     return percent
   })
-  readonly watchItemCount = this.watcher({ selector: (s) => s.items.length })
+   watchItemCount = this.watcher({ selector: (s) => s.items.length })
 }
 
 const cartSynapse = createSynapse(async () => {
@@ -50,7 +50,7 @@ const cartSynapse = createSynapse(async () => {
 // this.action((store, params) => result) — handler в «рецептной» сигнатуре.
 // payload экшена = возвращённое значение handler'а.
 class CartDispatcher extends Dispatcher<CartState> {
-  readonly addItem = this.action((store, params: { name: string; price: number }) => {
+   addItem = this.action((store, params: { name: string; price: number }) => {
     store.update((s) => {
       s.items.push({ id: Date.now(), ...params, qty: 1 })
     })
@@ -70,7 +70,7 @@ store.actions.addItem.actionType  // '[cart]addItem'
 ```typescript
 // this.watcher — реактивно отслеживает изменения состояния
 class CartDispatcher extends Dispatcher<CartState> {
-  readonly watchItemCount = this.watcher({
+   watchItemCount = this.watcher({
     selector: (state) => state.items.length,        // что отслеживать
     notifyAfterSubscribe: true,                     // вызвать сразу при подписке
     shouldTrigger: (prev, curr) => prev !== curr,   // фильтр (опционально)

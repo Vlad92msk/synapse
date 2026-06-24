@@ -1,44 +1,14 @@
 interface Feature {
-  icon: string
   key: string
 }
 
+// Сквозные особенности (то, что относится ко всем 3 блокам сразу).
+// Сами блоки — хранилища / API / бизнес-логика — вынесены в секцию столпов.
 export const FEATURES: Feature[] = [
-  // {
-  //     icon: '🧩',
-  //     key: 'homepage.features.modular'
-  // },
-  {
-    icon: '🎭',
-    key: 'homepage.features.frameworkAgnostic',
-  },
-  {
-    icon: '🔑',
-    key: 'homepage.features.universalStorage',
-  },
-  {
-    icon: '🛠️',
-    key: 'homepage.features.readyMiddlewares',
-  },
-  {
-    icon: '🧱',
-    key: 'homepage.features.layeredLogic',
-  },
-
-  {
-    icon: '🌐',
-    key: 'homepage.features.api',
-  },
-  {
-    icon: '⚡',
-    key: 'homepage.features.reactive',
-  },
-  {
-    icon: '🧮',
-    key: 'homepage.features.selectors',
-  },
-  {
-    icon: '⚛️',
-    key: 'homepage.features.react',
-  },
+  { key: 'homepage.features.frameworkAgnostic' },
+  { key: 'homepage.features.typescript' },
+  { key: 'homepage.features.storageChoice' },
+  { key: 'homepage.features.middlewares' },
+  { key: 'homepage.features.broadcast' },
+  { key: 'homepage.features.ssr' },
 ]

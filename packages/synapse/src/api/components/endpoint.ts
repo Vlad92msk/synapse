@@ -22,7 +22,7 @@ export interface EndpointClassOptions<RequestParams extends Record<string, any>,
 }
 
 export class EndpointClass<RequestParams extends Record<string, any>, RequestResponse> implements EndpointType<RequestParams, RequestResponse> {
-  private readonly endpointSubscribers = new Set<(state: EndpointState) => void>()
+  private endpointSubscribers = new Set<(state: EndpointState) => void>()
 
   /** Сколько раз был вызван метод request */
   fetchCounts: number = 0
@@ -34,22 +34,22 @@ export class EndpointClass<RequestParams extends Record<string, any>, RequestRes
     tags: [],
   }
 
-  private readonly name: string
-  private readonly queryStorage: QueryStorage
-  private readonly configCurrentEndpoint: EndpointConfig<RequestParams, RequestResponse>
-  private readonly cacheableHeaderKeys: CreateApiClientOptions['cacheableHeaderKeys']
-  private readonly globalRetryConfig: CreateApiClientOptions['retry']
-  private readonly baseQueryConfig: CreateApiClientOptions['baseQuery']
+  private name: string
+  private queryStorage: QueryStorage
+  private configCurrentEndpoint: EndpointConfig<RequestParams, RequestResponse>
+  private cacheableHeaderKeys: CreateApiClientOptions['cacheableHeaderKeys']
+  private globalRetryConfig: CreateApiClientOptions['retry']
+  private baseQueryConfig: CreateApiClientOptions['baseQuery']
 
-  private readonly queryFunction: ReturnType<typeof fetchBaseQuery>
+  private queryFunction: ReturnType<typeof fetchBaseQuery>
 
   /** Массив заголовков, которые нужно включить в ключ кэширования */
-  private readonly cacheableHeaders: string[]
+  private cacheableHeaders: string[]
 
-  private readonly prepareHeaders: ReturnType<typeof createPrepareHeaders>
+  private prepareHeaders: ReturnType<typeof createPrepareHeaders>
 
   /** Карта in-flight запросов для дедупликации (cacheKey → Promise) */
-  private readonly inflightRequests = new Map<string, Promise<QueryResult<RequestResponse, Error>>>()
+  private inflightRequests = new Map<string, Promise<QueryResult<RequestResponse, Error>>>()
 
   constructor(options: EndpointClassOptions<RequestParams, RequestResponse>) {
     this.name = options.name
