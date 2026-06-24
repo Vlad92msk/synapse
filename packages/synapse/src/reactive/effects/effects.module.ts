@@ -282,7 +282,10 @@ export interface RequestMapConfig<T, Body, TResult> {
  * (важно для mergeMap: падение одного удаления не убивает остальные).
  * @internal
  */
-function requestMap<T, Body, TResult>(flatten: FlattenOperator, { validator, prepare, loadingAction, errorAction, apiCall }: RequestMapConfig<T, Body, TResult>): OperatorFunction<T, any> {
+function requestMap<T, Body, TResult>(
+  flatten: FlattenOperator,
+  { validator, prepare, loadingAction, errorAction, apiCall }: RequestMapConfig<T, Body, TResult>,
+): OperatorFunction<T, any> {
   return pipe(
     flatten((pipeData: T) => {
       /**

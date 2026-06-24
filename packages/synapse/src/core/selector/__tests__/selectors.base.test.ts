@@ -86,14 +86,22 @@ describe('eager-материализация полей', () => {
     expect(selectors.postsStatus.select()).toBe('idle')
 
     const received: number[][] = []
-    const unsub = selectors.list.subscribe({ notify: (v) => { received.push(v) } })
+    const unsub = selectors.list.subscribe({
+      notify: (v) => {
+        received.push(v)
+      },
+    })
     expect(received).toEqual([[1, 2, 3]]) // синхронный снапшот при подписке
     unsub()
   })
 
   it('combine поверх private-поля работает как зависимость и пересчитывается', async () => {
     const received: string[] = []
-    selectors.postsStatus.subscribe({ notify: (v) => { received.push(v) } })
+    selectors.postsStatus.subscribe({
+      notify: (v) => {
+        received.push(v)
+      },
+    })
     expect(received).toEqual(['idle'])
 
     await postsStorage.update((s) => {
@@ -112,7 +120,11 @@ describe('cross-store', () => {
     expect(selectors.currentUserId.selectSync()).toBe('u1')
 
     const received: Array<string | null> = []
-    selectors.currentUserId.subscribe({ notify: (v) => { received.push(v) } })
+    selectors.currentUserId.subscribe({
+      notify: (v) => {
+        received.push(v)
+      },
+    })
 
     await coreStorage.update((s) => {
       s.profile = { user_info: { id: 'u2' } }
@@ -135,8 +147,16 @@ describe('keyed-селекторы', () => {
   it('обновление ключа A не уведомляет подписчиков ключа B', async () => {
     const aReceived: number[][] = []
     const bReceived: number[][] = []
-    selectors.byTarget('a').subscribe({ notify: (v) => { aReceived.push(v) } })
-    selectors.byTarget('b').subscribe({ notify: (v) => { bReceived.push(v) } })
+    selectors.byTarget('a').subscribe({
+      notify: (v) => {
+        aReceived.push(v)
+      },
+    })
+    selectors.byTarget('b').subscribe({
+      notify: (v) => {
+        bReceived.push(v)
+      },
+    })
 
     expect(aReceived).toEqual([[10]])
     expect(bReceived).toEqual([[20]])
@@ -163,7 +183,9 @@ describe('SelectorAPI.$', () => {
     expect(selectors.postsStatus.$).toBeInstanceOf(Observable)
 
     const received: string[] = []
-    const sub = selectors.postsStatus.$.subscribe((v) => { received.push(v) })
+    const sub = selectors.postsStatus.$.subscribe((v) => {
+      received.push(v)
+    })
     expect(received).toEqual(['idle']) // снапшот при подписке
 
     await postsStorage.update((s) => {
@@ -187,7 +209,9 @@ describe('SelectorAPI.$', () => {
     vi.useFakeTimers()
     try {
       const received: string[] = []
-      const sub = selectors.postsStatus.$.pipe(debounceTime(300), distinctUntilChanged()).subscribe((v) => { received.push(v) })
+      const sub = selectors.postsStatus.$.pipe(debounceTime(300), distinctUntilChanged()).subscribe((v) => {
+        received.push(v)
+      })
 
       await postsStorage.update((s) => {
         s.api.postsRequest.status = 'a'
@@ -209,7 +233,11 @@ describe('SelectorAPI.$', () => {
 describe('destroy и владение модулем', () => {
   it('свой модуль (из storage) уничтожается: подписки сняты', async () => {
     const received: number[][] = []
-    selectors.list.subscribe({ notify: (v) => { received.push(v) } })
+    selectors.list.subscribe({
+      notify: (v) => {
+        received.push(v)
+      },
+    })
     expect(received).toHaveLength(1)
 
     selectors.destroy()
@@ -230,14 +258,22 @@ describe('destroy и владение модулем', () => {
     // независимый селектор на общем модуле — должен пережить destroy класса
     const survivor = sharedModule.createSelector((s) => s.list)
     const survivorReceived: number[][] = []
-    survivor.subscribe({ notify: (v) => { survivorReceived.push(v) } })
+    survivor.subscribe({
+      notify: (v) => {
+        survivorReceived.push(v)
+      },
+    })
 
     class SharedSelectors extends Selectors<PostsState> {
       readonly status = this.select((s) => s.api.postsRequest.status)
     }
     const shared = new SharedSelectors(sharedModule)
     const ownReceived: string[] = []
-    shared.status.subscribe({ notify: (v) => { ownReceived.push(v) } })
+    shared.status.subscribe({
+      notify: (v) => {
+        ownReceived.push(v)
+      },
+    })
 
     shared.destroy()
 
@@ -263,8 +299,16 @@ describe('SelectorModule.removeSelector', () => {
 
     const aReceived: number[][] = []
     const bReceived: string[] = []
-    a.subscribe({ notify: (v) => { aReceived.push(v) } })
-    b.subscribe({ notify: (v) => { bReceived.push(v) } })
+    a.subscribe({
+      notify: (v) => {
+        aReceived.push(v)
+      },
+    })
+    b.subscribe({
+      notify: (v) => {
+        bReceived.push(v)
+      },
+    })
 
     sm.removeSelector(a.getId())
 

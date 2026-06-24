@@ -63,7 +63,8 @@
       "Bash(bash *)",
       "Bash(echo \"EXIT=$?\")",
       "Read(//tmp/**)",
-      "Bash(echo \"TSC EXIT=$?\")"
+      "Bash(echo \"TSC EXIT=$?\")",
+      "Bash(npm publish *)"
     ]
   }
 }

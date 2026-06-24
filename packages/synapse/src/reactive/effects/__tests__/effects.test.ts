@@ -63,7 +63,12 @@ describe('EffectsModule — lifecycle', () => {
   it('экшены основного диспетчера попадают в action$ эффекта', async () => {
     const seen: number[] = []
     const mod = new EffectsModule(storage, d)
-    mod.add((action$, _s$, { dispatcher }) => action$.pipe(ofType(dispatcher.dispatch.increment), tap((a) => seen.push(a.payload))))
+    mod.add((action$, _s$, { dispatcher }) =>
+      action$.pipe(
+        ofType(dispatcher.dispatch.increment),
+        tap((a) => seen.push(a.payload)),
+      ),
+    )
     await mod.start()
 
     await d.increment(3)
@@ -80,7 +85,12 @@ describe('EffectsModule — lifecycle', () => {
 
     const seen: string[] = []
     const mod = new EffectsModule(storage, d, { other: d2 as any })
-    mod.add((action$, _s$, { externalDispatchers }) => action$.pipe(ofType(externalDispatchers.other.dispatch.extPing), tap((a) => seen.push(a.payload as string))))
+    mod.add((action$, _s$, { externalDispatchers }) =>
+      action$.pipe(
+        ofType(externalDispatchers.other.dispatch.extPing),
+        tap((a) => seen.push(a.payload as string)),
+      ),
+    )
     await mod.start()
 
     await d2.extPing()
@@ -133,7 +143,12 @@ describe('EffectsModule — lifecycle', () => {
   it('Observable эффекта эмитит функцию → она вызывается', async () => {
     let called = false
     const mod = new EffectsModule(storage, d)
-    mod.add((action$, _s$, { dispatcher }) => action$.pipe(ofType(dispatcher.dispatch.increment), map(() => () => (called = true))))
+    mod.add((action$, _s$, { dispatcher }) =>
+      action$.pipe(
+        ofType(dispatcher.dispatch.increment),
+        map(() => () => (called = true)),
+      ),
+    )
     await mod.start()
 
     await d.increment(1)
@@ -155,7 +170,12 @@ describe('EffectsModule — lifecycle', () => {
         }),
       ),
     )
-    mod.add((action$, _s$, { dispatcher }) => action$.pipe(ofType(dispatcher.dispatch.increment), tap((a) => good.push(a.payload))))
+    mod.add((action$, _s$, { dispatcher }) =>
+      action$.pipe(
+        ofType(dispatcher.dispatch.increment),
+        tap((a) => good.push(a.payload)),
+      ),
+    )
     await mod.start()
 
     await d.ping() // убивает первый эффект
@@ -203,7 +223,12 @@ describe('EffectsModule — lifecycle', () => {
   it('stop()/start(): пересоздание action$, эффекты переподписываются, старые подписки сняты', async () => {
     const seen: number[] = []
     const mod = new EffectsModule(storage, d)
-    mod.add((action$, _s$, { dispatcher }) => action$.pipe(ofType(dispatcher.dispatch.increment), tap((a) => seen.push(a.payload))))
+    mod.add((action$, _s$, { dispatcher }) =>
+      action$.pipe(
+        ofType(dispatcher.dispatch.increment),
+        tap((a) => seen.push(a.payload)),
+      ),
+    )
 
     await mod.start()
     await d.increment(1)
@@ -228,7 +253,12 @@ describe('EffectsModule — lifecycle', () => {
     const mod = new EffectsModule(storage, d)
     await mod.start()
 
-    mod.add((action$, _s$, { dispatcher }) => action$.pipe(ofType(dispatcher.dispatch.increment), tap((a) => seen.push(a.payload))))
+    mod.add((action$, _s$, { dispatcher }) =>
+      action$.pipe(
+        ofType(dispatcher.dispatch.increment),
+        tap((a) => seen.push(a.payload)),
+      ),
+    )
 
     await d.increment(1)
     await tick()
@@ -254,9 +284,7 @@ describe('операторы эффектов', () => {
 
   it('ofType фильтрует по actionType', async () => {
     const inc = d.dispatch.increment
-    const result = await lastValueFrom(
-      of({ type: inc.actionType, payload: 5 }, { type: 'other', payload: 9 }, { type: inc.actionType, payload: 6 }).pipe(ofType(inc), toArray()),
-    )
+    const result = await lastValueFrom(of({ type: inc.actionType, payload: 5 }, { type: 'other', payload: 9 }, { type: inc.actionType, payload: 6 }).pipe(ofType(inc), toArray()))
     expect(result.map((a) => a.payload)).toEqual([5, 6])
   })
 

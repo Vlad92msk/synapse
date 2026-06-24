@@ -203,7 +203,9 @@ describe('финализация', () => {
     const d = new TestDispatcher(storage)
     d[FINALIZE]()
 
-    expect(Object.keys(d.dispatch)).toEqual(expect.arrayContaining(['increment', 'mounted', 'loadPosts', 'loadPosts:loading', 'loadPosts:success', 'loadPosts:failure', 'loadPosts:reset']))
+    expect(Object.keys(d.dispatch)).toEqual(
+      expect.arrayContaining(['increment', 'mounted', 'loadPosts', 'loadPosts:loading', 'loadPosts:success', 'loadPosts:failure', 'loadPosts:reset']),
+    )
     expect(Object.keys(d.watchers)).toContain('watchCount')
     expect(d.increment.actionType).toBe(`[${storage.name}]increment`)
   })
@@ -254,7 +256,13 @@ describe('dev-проверки', () => {
 describe('options.type', () => {
   it('переопределяет имя поля', async () => {
     class TypeD extends Dispatcher<State> {
-      readonly bump = this.action((store, n: number) => store.update((s) => { s.count += n }), { type: 'CUSTOM_BUMP' })
+      readonly bump = this.action(
+        (store, n: number) =>
+          store.update((s) => {
+            s.count += n
+          }),
+        { type: 'CUSTOM_BUMP' },
+      )
     }
     const d = new TypeD(storage)
     d[FINALIZE]()
@@ -302,10 +310,18 @@ describe('middleware и memoize', () => {
 describe('наследование', () => {
   it('поля Base и Child финализируются на обоих уровнях', async () => {
     class Base extends Dispatcher<State> {
-      readonly baseAct = this.action((store, n: number) => store.update((s) => { s.count += n }))
+      readonly baseAct = this.action((store, n: number) =>
+        store.update((s) => {
+          s.count += n
+        }),
+      )
     }
     class Child extends Base {
-      readonly childAct = this.action((store, n: number) => store.update((s) => { s.count -= n }))
+      readonly childAct = this.action((store, n: number) =>
+        store.update((s) => {
+          s.count -= n
+        }),
+      )
     }
     const d = new Child(storage)
     d[FINALIZE]()
