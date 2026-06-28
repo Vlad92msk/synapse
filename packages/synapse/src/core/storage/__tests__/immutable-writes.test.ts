@@ -117,7 +117,8 @@ const derivedMiddleware: SyncMiddleware = {
   name: 'derived',
   reducer: (api) => (next) => (action) => {
     const result = next(action)
-    const touchesValues = action.type === 'set' ? String(action.key ?? '').split('.')[0] === 'values' : (action.metadata?.changedPaths ?? []).some((p: string) => String(p).split('.')[0] === 'values')
+    const touchesValues =
+      action.type === 'set' ? String(action.key ?? '').split('.')[0] === 'values' : (action.metadata?.changedPaths ?? []).some((p: string) => String(p).split('.')[0] === 'values')
     if (!touchesValues) return result
 
     const state = api.getState()
@@ -136,9 +137,11 @@ describe.each<Kind>(['memory', 'localStorage'])('update() reflects middleware si
 
   it('ключ, дописанный middleware во время update(), виден в getStateSync()', async () => {
     const name = `bug2_${kind}_${uid++}`
-    storage = (kind === 'memory'
-      ? new MemoryStorage<any>({ name, initialState: { values: {}, derived: 0 }, middlewares: () => [derivedMiddleware] })
-      : new LocalStorage<any>({ name, initialState: { values: {}, derived: 0 }, middlewares: () => [derivedMiddleware] })) as ISyncStorage<any>
+    storage = (
+      kind === 'memory'
+        ? new MemoryStorage<any>({ name, initialState: { values: {}, derived: 0 }, middlewares: () => [derivedMiddleware] })
+        : new LocalStorage<any>({ name, initialState: { values: {}, derived: 0 }, middlewares: () => [derivedMiddleware] })
+    ) as ISyncStorage<any>
     await storage.initialize()
 
     storage.update((s) => {

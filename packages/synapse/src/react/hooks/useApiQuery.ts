@@ -78,7 +78,11 @@ export interface UseApiQueryResult<TData> {
  * @example
  * const { data, isLoading, error, refetch } = useApiQuery(endpoints.getUser, { id })
  */
-export function useApiQuery<TParams extends Record<string, any>, TData>(endpoint: Endpoint<TParams, TData>, params: TParams, options: UseApiQueryOptions = {}): UseApiQueryResult<TData> {
+export function useApiQuery<TParams extends Record<string, any>, TData>(
+  endpoint: Endpoint<TParams, TData>,
+  params: TParams,
+  options: UseApiQueryOptions = {},
+): UseApiQueryResult<TData> {
   const { enabled = true, refetchOnInvalidate = true, ...queryOptions } = options
 
   const paramsKey = stableStringify(params)
@@ -122,7 +126,6 @@ export function useApiQuery<TParams extends Record<string, any>, TData>(endpoint
       req.abort()
       unsubscribe()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint, paramsKey, enabled, refetchToken])
 
   // Авто-рефетч при инвалидации кэша по тегам этого эндпоинта (например, после мутации)

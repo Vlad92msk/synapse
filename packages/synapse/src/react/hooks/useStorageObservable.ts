@@ -36,15 +36,10 @@ export function useStorageObservable<S extends Record<string, any>, R>(storage: 
     () => (selector ? toObservable(storage, selector) : toObservable(storage)),
     // selector намеренно не в deps: пересоздавать поток на каждую новую ссылку
     // селектора не нужно (он редко стабилен), переподписка идёт только по storage.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [storage],
   )
 
-  const initial = useMemo<S | R>(
-    () => (selector ? selector(storage.getStateSync()) : storage.getStateSync()),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [storage],
-  )
+  const initial = useMemo<S | R>(() => (selector ? selector(storage.getStateSync()) : storage.getStateSync()), [storage])
 
   return useObservable<S | R>(observable, initial)
 }
