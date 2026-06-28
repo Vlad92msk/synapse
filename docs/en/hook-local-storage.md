@@ -2,74 +2,39 @@
 
 > [Back to Main](../../README.md)
 
-The same hook, but with `type: 'localStorage'`. Data persists across page reloads.
+The same [`useCreateStorage`](./hook-memory.md), only with `type: 'localStorage'` — data survives a
+page reload. The only difference from the memory variant is the `type` field.
+
+The same end-to-end todo domain (`TodoState`, `initialTodoState` — see [MemoryStorage](./memory-storage.md)).
 
 ## Usage
 
 ```typescript
 import { useCreateStorage, useStorageSubscribe } from 'synapse-storage/react'
 
-interface SettingsState {
-  lang: string
-  notifications: boolean
-  volume: number
-}
-
-function SettingsPage() {
-  const { storage, isReady } = useCreateStorage<SettingsState>({
+function TodoApp() {
+  const { storage, isReady } = useCreateStorage<TodoState>({
     type: 'localStorage',         // <- the only difference from memory
-    name: 'hook-settings',
-    initialState: { lang: 'ru', notifications: true, volume: 50 },
+    name: 'todo-hook-local',
+    initialState: initialTodoState,
   })
 
-  if (!isReady) return <div>Loading...</div>
+  if (!isReady) return <div>Loading…</div>
 
-  // Use useStorageSubscribe to subscribe to fields
-  const lang = useStorageSubscribe(storage, (s) => s.lang)
-  const volume = useStorageSubscribe(storage, (s) => s.volume)
-
-  // set/update/clear/reset — all the same as with memory
-  storage.set('lang', 'en')
-  storage.set('volume', 75)
+  // Reading and writing — same as with memory
+  const todos = useStorageSubscribe(storage, (s) => s.todos)
+  storage.set('filter', 'completed')
 }
 ```
 
-## Full example
+## When to use
 
-```tsx
-function SettingsPage() {
-  const { storage, isReady } = useCreateStorage<SettingsState>({
-    type: 'localStorage',
-    name: 'hook-settings',
-    initialState: { lang: 'ru', notifications: true, volume: 50 },
-  })
+- A component/screen state should survive a reload (draft, selected filter, settings), but you
+  don't want to set up a global module-level store.
 
-  if (!isReady) return <div>Loading...</div>
+## When not to use
 
-  return <SettingsDisplay storage={storage} />
-}
+- The state is ephemeral → [memory variant](./hook-memory.md).
+- Large data → [IndexedDB variant](./hook-indexeddb.md).
 
-function SettingsDisplay({ storage }: { storage: ISyncStorage<SettingsState> }) {
-  const lang = useStorageSubscribe(storage, (s) => s.lang)
-  const notifications = useStorageSubscribe(storage, (s) => s.notifications)
-  const volume = useStorageSubscribe(storage, (s) => s.volume)
-
-  return (
-    <div>
-      <select value={lang ?? 'ru'} onChange={(e) => storage.set('lang', e.target.value)}>
-        <option value="ru">Русский</option>
-        <option value="en">English</option>
-      </select>
-
-      <label>
-        <input type="checkbox" checked={notifications ?? true}
-          onChange={(e) => storage.set('notifications', e.target.checked)} />
-        Notifications
-      </label>
-
-      <input type="range" min={0} max={100} value={volume ?? 50}
-        onChange={(e) => storage.set('volume', Number(e.target.value))} />
-    </div>
-  )
-}
-```
+More on subscriptions and operations — the "Working with data" section.

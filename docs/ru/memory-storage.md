@@ -4,120 +4,88 @@
 
 Хранилище в оперативной памяти. Данные существуют только пока открыта страница. Синхронный API.
 
+Все примеры раздела State Manager построены на одном сквозном домене — todo-list. Это
+канонический стор, который дальше переиспользуется в разделах «Работа с данными» и «Паттерны».
+
+## Домен
+
+```typescript
+export interface Todo {
+  id: string
+  title: string
+  done: boolean
+}
+
+export type Filter = 'all' | 'active' | 'completed'
+
+export interface TodoState {
+  todos: Todo[]
+  filter: Filter
+}
+
+export const initialTodoState: TodoState = {
+  todos: [
+    { id: 't1', title: 'Изучить Synapse', done: true },
+    { id: 't2', title: 'Собрать todo-приложение', done: false },
+  ],
+  filter: 'all',
+}
+```
+
 ## Создание
 
 ```typescript
 import { MemoryStorage } from 'synapse-storage/core'
 
-interface CounterState {
-  count: number
-  label: string
-}
-
 // Через new
-const storage = new MemoryStorage<CounterState>({
-  name: 'memory-counter',
-  initialState: { count: 0, label: 'clicks' },
+export const todoStorage = new MemoryStorage<TodoState>({
+  name: 'todo',
+  initialState: initialTodoState,
 })
 
-// Или через статический .create()
-const storage = MemoryStorage.create<CounterState>({
-  name: 'memory-counter',
-  initialState: { count: 0, label: 'clicks' },
+// Или через статический .create() — полный эквивалент
+const todoStorage = MemoryStorage.create<TodoState>({
+  name: 'todo',
+  initialState: initialTodoState,
 })
 
-// Инициализация (обязательна)
-await storage.initialize()
+// Инициализация обязательна перед использованием
+await todoStorage.initialize()
 ```
 
-## Запись данных
+## Когда брать
 
-```typescript
-// set() — установить значение по ключу
-storage.set('count', 5)
-storage.set('label', 'taps')
+- Эфемерное UI-состояние: фильтры, формы, состояние модалок, выбранные элементы.
+- Состояние, которое не должно переживать перезагрузку страницы.
+- Базовый выбор по умолчанию — если не нужна персистентность.
 
-// update() — изменить несколько полей сразу (в стиле immer)
-storage.update((s) => {
-  s.count += 10
-  s.label = 'updated'
-})
-```
+## Когда не брать
 
-## Чтение данных
+- Нужно сохранять данные между перезагрузками → [LocalStorage](./local-storage.md) или
+  [IndexedDB](./indexeddb-storage.md).
+- Большие объёмы данных или бинарные данные → [IndexedDB](./indexeddb-storage.md).
 
-```typescript
-// get() — получить значение по ключу
-const count = storage.get<number>('count')     // 5
-const label = storage.get<string>('label')     // 'clicks'
+## Работа с данными
 
-// getState() — получить всё состояние целиком
-const state = storage.getState()               // { count: 5, label: 'clicks' }
+Чтение, запись, подписки и селекторы одинаковы для всех синхронных хранилищ и разобраны в
+разделе «Работа с данными»:
 
-// getStateSync() — то же самое для синхронных хранилищ
-const state = storage.getStateSync()           // { count: 5, label: 'clicks' }
-```
-
-## Проверка, удаление, сброс
-
-```typescript
-// has() — проверить наличие ключа
-storage.has('count')   // true
-storage.has('unknown') // false
-
-// keys() — получить список ключей
-storage.keys()         // ['count', 'label']
-
-// remove() — удалить конкретный ключ
-storage.remove('label')
-
-// clear() — очистить всё хранилище (state = {})
-storage.clear()
-
-// reset() — сбросить к initialState
-storage.reset()        // state = { count: 0, label: 'clicks' }
-```
-
-## Подписки
-
-```typescript
-// Подписка на конкретный ключ
-const unsub = storage.subscribe('count', (newValue) => {
-  console.log('count изменился:', newValue)
-})
-
-// Подписка через path-селектор
-const unsub = storage.subscribe(
-  (state) => state.count,
-  (newCount) => console.log('count:', newCount)
-)
-
-// Подписка на все изменения
-const unsub = storage.subscribeToAll((event) => {
-  console.log('изменено:', event)
-})
-
-// Отписка
-unsub()
-```
+- [Чтение данных](./reading-data.md) — `get`, `getState`, `getStateSync`
+- [Запись данных](./writing-data.md) — `set`, `update`, `reset`
+- [remove / has / keys / clear / reset](./delete-has-keys.md)
+- [Подписки](./subscriptions.md) и [Селекторы](./selector-system.md)
 
 ## Жизненный цикл
 
 ```typescript
-// Инициализация
-await storage.initialize()
+await todoStorage.initialize()    // инициализация
+await todoStorage.waitForReady()  // ожидание готовности
+todoStorage.initStatus            // { status: 'ready' }
 
-// Ожидание готовности
-await storage.waitForReady()
-
-// Статус
-storage.initStatus  // { status: 'ready' }
-
-// Подписка на изменения статуса
-const unsub = storage.onStatusChange((status) => {
+// Подписка на изменение статуса
+const unsub = todoStorage.onStatusChange((status) => {
   console.log(status) // { status: 'ready' | 'loading' | 'error' | 'idle' }
 })
 
-// Уничтожение
-await storage.destroy()
+await todoStorage.destroy()       // уничтожение (для memory очищает данные)
 ```

@@ -2,16 +2,17 @@
   "api-client": {
     "0": "apiclient-http-client-with-caching",
     "1": "imports",
-    "2": "creating-an-apiclient",
-    "3": "request-performing-a-request",
-    "4": "queryoptions-request-options",
-    "5": "requestdefinition-an-endpoints-request-description",
-    "6": "caching-and-tags",
-    "7": "getendpoints-direct-access-to-endpoints",
-    "8": "waitwithcallbacks-callbacks-by-status",
-    "9": "abort-aborting-a-request",
-    "10": "subscribe-subscribing-to-an-endpoints-state",
-    "11": "lifecycle"
+    "2": "creating-the-apiclient-pokemonapits",
+    "3": "response-mappers",
+    "4": "request-performing-a-request",
+    "5": "queryoptions-request-options",
+    "6": "requestdefinition-describing-an-endpoints-request",
+    "7": "caching-and-tags",
+    "8": "getendpoints-direct-access-to-the-endpoints",
+    "9": "waitwithcallbacks-callbacks-per-status",
+    "10": "abort-aborting-a-request",
+    "11": "subscribe-subscribing-to-the-endpoint-state",
+    "12": "lifecycle"
   },
   "architecture": {
     "0": "two-layers-state-manager-and-business-logic-layer",
@@ -22,33 +23,39 @@
   "await-synapse": {
     "0": "awaitsynapse",
     "1": "creating",
-    "2": "withsynapseready-hoc",
+    "2": "withsynapseready-hoc-how-the-demo-module-is-lifted",
     "3": "usesynapseready-hook",
     "4": "programmatic-api",
     "5": "relation-to-createsynapseawaiter"
   },
   "create-synapse-basic": {
     "0": "createsynapse-basic",
-    "1": "creating",
-    "2": "return-value",
-    "3": "usage-in-react",
-    "4": "async-initialization-in-the-factory"
+    "1": "storage-and-state-pokemonstorets",
+    "2": "selectors-pokemonselectorsts",
+    "3": "assembly-createsynapsefactory",
+    "4": "the-return-value",
+    "5": "usage-in-react",
+    "6": "async-initialization-in-the-factory"
   },
   "create-synapse-dispatcher": {
     "0": "createsynapse-dispatcher",
-    "1": "creating",
+    "1": "dispatcher-pokemondispatcherts",
     "2": "thisaction",
     "3": "thiswatcher",
-    "4": "return-value",
-    "5": "react-createsynapsectx"
+    "4": "signal-and-apiactions",
+    "5": "assembly",
+    "6": "the-return-value",
+    "7": "react-createsynapsectx"
   },
   "create-synapse-effects": {
     "0": "createsynapse-effects",
-    "1": "creating",
+    "1": "effects-pokemoneffectsts",
     "2": "thiseffect",
     "3": "oftype-oftypes",
-    "4": "handling-requests-validatemap-reads-mutationmap-writes",
-    "5": "return-value"
+    "4": "reading-state-in-an-effect-selectorobject-selectormap",
+    "5": "handling-requests-validatemap-reads-mutationmap-writes",
+    "6": "assembly",
+    "7": "return-value"
   },
   "delete-has-keys": {
     "0": "remove-has-keys-clear-reset",
@@ -61,14 +68,13 @@
   },
   "dependencies": {
     "0": "cross-module-dependencies",
-    "1": "dependency-auth-module",
-    "2": "dependent-storage-settings-cross-store-selector",
-    "3": "four-patterns-of-cross-module-communication",
-    "4": "initialization-order"
+    "1": "the-real-case-pokemon-settingsstorage",
+    "2": "four-patterns-of-cross-module-communication",
+    "3": "initialization-order"
   },
   "dispatcher-detailed": {
     "0": "dispatcher-in-detail",
-    "1": "creating",
+    "1": "standalone-use",
     "2": "dispatcher-surface",
     "3": "thisaction",
     "4": "thissignal",
@@ -87,52 +93,57 @@
     "6": "actionsgetactivesubscriptions-active-subscriptions",
     "7": "actionsclearevents-clearing-events",
     "8": "destroy",
-    "9": "example-communication-between-modules"
+    "9": "example-pokemon-publishes-other-modules-listen",
+    "10": "relation-to-createsynapse-the-bus-as-an-externaldispatcher",
+    "11": "see-also"
   },
   "hook-indexeddb": {
     "0": "usecreatestorage-indexeddb",
     "1": "usage",
-    "2": "full-example"
+    "2": "when-to-use",
+    "3": "when-not-to-use"
   },
   "hook-local-storage": {
     "0": "usecreatestorage-localstorage",
     "1": "usage",
-    "2": "full-example"
+    "2": "when-to-use",
+    "3": "when-not-to-use"
   },
   "hook-memory": {
     "0": "usecreatestorage-memory",
     "1": "usecreatestorage",
-    "2": "usestoragesubscribe",
-    "3": "full-example"
+    "2": "reading-state-usestoragesubscribe",
+    "3": "when-to-use",
+    "4": "when-not-to-use"
   },
   "indexeddb-storage": {
     "0": "indexeddbstorage",
     "1": "creating",
-    "2": "writing-data-asynchronous",
-    "3": "reading-data-asynchronous",
-    "4": "checking-removing-resetting-asynchronous",
-    "5": "subscriptions-the-same-for-all-types",
-    "6": "differences-from-memorystoragelocalstorage",
-    "7": "persist-migrations-and-ssr"
+    "2": "synchronous-vs-asynchronous-api",
+    "3": "when-to-use",
+    "4": "when-not-to-use",
+    "5": "working-with-data",
+    "6": "persist-migrations-and-ssr"
+  },
+  "install": {
+    "0": "install"
   },
   "local-storage": {
     "0": "localstorage",
     "1": "creating",
-    "2": "writing-data",
-    "3": "reading-data",
-    "4": "checking-removing-resetting",
-    "5": "subscriptions",
-    "6": "differences-from-memorystorage",
-    "7": "destroy-and-clearondestroy",
-    "8": "persist-migrations-and-ssr"
+    "2": "when-to-use",
+    "3": "when-not-to-use",
+    "4": "working-with-data",
+    "5": "destroy-and-clearondestroy",
+    "6": "persist-migrations-and-ssr"
   },
   "memory-storage": {
     "0": "memorystorage",
-    "1": "creating",
-    "2": "writing-data",
-    "3": "reading-data",
-    "4": "checking-removing-resetting",
-    "5": "subscriptions",
+    "1": "domain",
+    "2": "creating",
+    "3": "when-to-use",
+    "4": "when-not-to-use",
+    "5": "working-with-data",
     "6": "lifecycle"
   },
   "middlewares": {
@@ -151,23 +162,25 @@
     "0": "persist-migrations-version-migrate",
     "1": "how-it-works",
     "2": "bumping-the-version-without-migrate",
-    "3": "migrate-is-called-once",
+    "3": "migrate-runs-once",
     "4": "ssr-hydration",
     "5": "types",
     "6": "see-also"
   },
   "pokemon-advanced": {
-    "0": "pokemon-advanced-a-full-architecture-example",
-    "1": "project-structure",
-    "2": "1-types",
-    "3": "2-external-settings-a-dependency",
-    "4": "3-apiclient",
-    "5": "4-selectors-class-selectors",
-    "6": "5-dispatcher-class-dispatcher-action-signal-apiactions-watcher",
-    "7": "6-effects-class-effects-validatemap-apiresult",
-    "8": "7-createsynapse-wiring-it-all-together",
-    "9": "the-5-state-request-protocol",
-    "10": "key-utilities"
+    "0": "pokemon-advanced-the-recipe-the-whole-data-layer-on-pokeapi",
+    "1": "module-structure",
+    "2": "data-flow",
+    "3": "1-types-and-state-shape-pokemontypests",
+    "4": "2-apiclient-mappers-pokemonapits",
+    "5": "3-external-settings-pokemonsettingsts",
+    "6": "4-selectors-pokemonselectorsts",
+    "7": "5-dispatcher-pokemondispatcherts",
+    "8": "6-effects-pokemoneffectsts",
+    "9": "7-assembly-pokemonsynapsets",
+    "10": "8-react-pokemonadvancedexampletsx-pokemondemotsx",
+    "11": "the-5-state-request-protocol",
+    "12": "map-capability-page"
   },
   "reading-data": {
     "0": "reading-data-getgetstate",
@@ -195,21 +208,25 @@
   },
   "ssr-hydration": {
     "0": "ssr-hydration-hydrate",
-    "1": "hydration-before-initialize",
-    "2": "hydration-after-initialize",
-    "3": "with-persist-migrations",
-    "4": "react-createsynapse",
-    "5": "types",
-    "6": "see-also"
+    "1": "server-client-flow",
+    "2": "hydration-before-initialize",
+    "3": "hydration-after-initialize",
+    "4": "with-persist-migrations",
+    "5": "react-createsynapse",
+    "6": "types",
+    "7": "see-also"
   },
   "static-create": {
     "0": "static-create",
-    "1": "usage"
+    "1": "usage",
+    "2": "new-create-or-storagefactory"
   },
   "storage-factory": {
     "0": "storagefactory",
     "1": "typed-methods",
-    "2": "universal-create"
+    "2": "universal-create",
+    "3": "when-to-use",
+    "4": "when-not-to-use"
   },
   "subscriptions": {
     "0": "subscriptions-subscribe",
@@ -219,15 +236,11 @@
     "4": "4-usestoragesubscribe-react-hook"
   },
   "synapse-awaiter": {
-    "0": "createsynapseawaiter-framework-agnostic-awaiter",
-    "1": "imports",
-    "2": "creating",
-    "3": "isready-getstatus-geterror",
-    "4": "getstoreifready",
-    "5": "waitforready",
-    "6": "onready-onerror",
-    "7": "destroy",
-    "8": "usage-in-a-react-component"
+    "0": "createsynapseawaiter-framework-independent-awaiter",
+    "1": "imports-and-creation",
+    "2": "programmatic-surface",
+    "3": "ssr-sync-fast-path",
+    "4": "usage-in-react-without-the-wrapper"
   },
   "synapse-ctx": {
     "0": "createsynapsectx",

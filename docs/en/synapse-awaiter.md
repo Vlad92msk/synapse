@@ -1,159 +1,113 @@
-# createSynapseAwaiter — Framework-agnostic awaiter
+# createSynapseAwaiter — framework-independent awaiter
 
 > [Back to Main](../../README.md)
 
-A wrapper for waiting on a store's asynchronous initialization. Works in any JS environment: Node.js, browser, React Native.
+A utility for waiting on a Synapse module's async initialization. Works in any JS environment: Node.js,
+browser, React Native, workers. The React wrapper over it is [awaitSynapse](./await-synapse.md) (it adds
+the `withSynapseReady` HOC and the `useSynapseReady` hook); the method surface itself
+(`waitForReady`/`isReady`/`getStoreIfReady`/`onReady`/`onError`/`getStatus`/`getError`/`destroy`) is
+proxied by `awaitSynapse` straight from here.
 
-## Imports
+It takes the lazy handle from `createSynapse` (see [create-synapse-basic](./create-synapse-basic.md)),
+starts its initialization, and gives synchronous/asynchronous ways to wait for `storage` to be ready.
+
+## Imports and creation
 
 ```typescript
-import { createSynapse, createSynapseAwaiter } from 'synapse-storage/utils'
+import { createSynapseAwaiter } from 'synapse-storage/utils'
+import { pokemonSynapse } from './pokemon.synapse'
+
+// Accepts a lazy handle (typical case — the initPokemonApi async prologue in the factory),
+// a Promise of a ready synapse, or a ready synapse itself.
+const pokemonAwaiter = createSynapseAwaiter(pokemonSynapse)
+
+// Variant with an already-ready module:
+const ready = await pokemonSynapse
+const awaiter2 = createSynapseAwaiter(ready)
 ```
 
-## Creating
+## Programmatic surface
 
 ```typescript
-// createSynapseAwaiter accepts a handle (thenable), a Promise<SynapseStore>, or a ready store
+// Synchronous checks
+pokemonAwaiter.isReady()         // boolean
+pokemonAwaiter.getStatus()       // 'pending' | 'ready' | 'error'
+pokemonAwaiter.getError()        // Error | null
+pokemonAwaiter.getStoreIfReady() // PokemonSynapse | undefined
 
-// Option 1: a lazy handle (the typical case — async initialization in the factory)
-const configSynapse = createSynapse(async () => {
-  const config = await fetch('/api/config').then((r) => r.json())
-  const storage = new MemoryStorage<ConfigState>({ name: 'app-config', initialState: config })
-  return { storage, selectors: new ConfigSelectors(storage) }
+// Asynchronous waiting — Promise<PokemonSynapse>. Safe to call repeatedly: the same store.
+const store = await pokemonAwaiter.waitForReady()
+store.actions.loadList()
+
+// Callbacks (return an unsubscribe function). onReady on a ready module fires immediately.
+const unsub = pokemonAwaiter.onReady((store) => {
+  console.log('pokemon ready, list:', store.storage.getStateSync().pokemonList.length)
 })
+const unsubErr = pokemonAwaiter.onError((error) => console.error('init failed:', error.message))
 
-const awaiter = createSynapseAwaiter(configSynapse)
-
-// Option 2: an already-ready store
-const readyStore = await configSynapse
-const awaiter2 = createSynapseAwaiter(readyStore)
+// Cleanup: resets subscriptions, status -> 'pending', store -> undefined.
+pokemonAwaiter.destroy()
 ```
 
-## isReady() / getStatus() / getError()
+`getStoreIfReady()` returns the assembled module — its shape depends on the `createSynapse`
+configuration. For `pokemonSynapse` that's the full set: `storage`, `selectors`, `dispatcher`/`actions`,
+`state$`, `destroy()`. Until ready — `undefined`.
+
+## SSR sync-fast-path
+
+The key difference from ordinary waiting: if the input is an **already-ready** synapse (or a handle whose
+`getSnapshot()` returns a synapse with a `READY` storage), the awaiter sets `store` and `status = 'ready'`
+**synchronously in the function body**, before returning — no microtask. Then
+`getStoreIfReady()`/`isReady()` return the store on the first synchronous render, which is exactly what
+server `renderToString` needs. A not-yet-warmed handle falls back to the ordinary async path.
 
 ```typescript
-// Synchronous readiness check
-awaiter.isReady()     // boolean
+// On the server: warm the module first, then the awaiter resolves synchronously.
+await pokemonSynapse.ready()           // the factory has run, storage is READY
+const awaiter = createSynapseAwaiter(pokemonSynapse)
 
-// Current status
-awaiter.getStatus()   // 'pending' | 'ready' | 'error'
-
-// Initialization error (if any)
-awaiter.getError()    // Error | null
+awaiter.isReady()          // true — synchronously, no await
+awaiter.getStoreIfReady()  // PokemonSynapse, available in the same tick
+// → renderToString sees the ready state on the first pass
 ```
 
-## getStoreIfReady()
+The full SSR flow (dehydrate on the server → hydrate on the client) — on the
+[createSynapseCtx](./synapse-ctx.md) page.
 
-> **SSR sync-fast-path (5.0.1).** If the input is an already-built synapse (or a handle whose
-> `getSnapshot()` returns a synapse with a `READY` storage), the awaiter sets `store`/`status='ready'`
-> **synchronously in the function body**, before returning. Then `getStoreIfReady()`/`isReady()` return
-> the store on the first synchronous render (needed for server `renderToString`). A not-yet-ready handle
-> falls back to the previous async path.
+## Usage in React (without the wrapper)
 
-```typescript
-// Returns the store if ready, or undefined
-const store = awaiter.getStoreIfReady()
-
-if (store) {
-  // Synapse — the assembled module; its shape depends on the createSynapse configuration:
-  // - basic                (storage + selectors)
-  // - with a dispatcher
-  // - with effects
-  //
-  // Always has:
-  //   store.storage   — ISyncStorage | IAsyncStorage
-  //   store.selectors — the selectors object
-  //   store.destroy() — resource cleanup
-  //
-  // With a dispatcher, additionally:
-  //   store.actions    — typed actions
-  //   store.dispatcher — the raw dispatcher
-  //
-  // With effects, additionally:
-  //   store.state$     — Observable<TStore>
-
-  const state = store.storage.getStateSync()
-  console.log(state.locale)  // 'ru'
-}
-```
-
-## waitForReady()
+If you'd rather not pull in the HOC/hook from `awaitSynapse`, the awaiter can be used manually via
+subscriptions:
 
 ```typescript
-// Asynchronous waiting — returns a Promise<SynapseStore>
-const store = await awaiter.waitForReady()
-
-// Safe to call multiple times — returns the same store
-const store1 = await awaiter.waitForReady()
-const store2 = await awaiter.waitForReady()
-// store1 === store2
-```
-
-## onReady() / onError()
-
-```typescript
-// Subscribing to readiness — returns an unsubscribe function
-const unsub = awaiter.onReady((store) => {
-  console.log('Store ready!')
-  const state = store.storage.getStateSync()
-  console.log(state)
-})
-
-// If the store is already ready — the callback is called immediately (synchronously)
-// Multiple handlers can be subscribed
-
-// Subscribing to an error
-const unsubErr = awaiter.onError((error) => {
-  console.error('Initialization failed:', error.message)
-})
-
-// If the error has already occurred — the callback is called immediately
-
-// Unsubscribe
-unsub()
-unsubErr()
-```
-
-## destroy()
-
-```typescript
-// Resource cleanup: resets subscriptions, status -> 'pending', store -> undefined
-awaiter.destroy()
-
-// After destroy:
-awaiter.isReady()        // false
-awaiter.getStatus()      // 'pending'
-awaiter.getStoreIfReady() // undefined
-```
-
-## Usage in a React component
-
-```typescript
-function ConfigPanel() {
-  const [status, setStatus] = useState(awaiter.getStatus())
-  const [config, setConfig] = useState<ConfigState | null>(null)
+function PokemonStatus() {
+  const [status, setStatus] = useState(pokemonAwaiter.getStatus())
+  const [count, setCount] = useState(0)
 
   useEffect(() => {
-    const unsubReady = awaiter.onReady((store) => {
+    const unsubReady = pokemonAwaiter.onReady((store) => {
       setStatus('ready')
-      setConfig(store.storage.getStateSync())
+      setCount(store.storage.getStateSync().pokemonList.length)
     })
+    const unsubError = pokemonAwaiter.onError(() => setStatus('error'))
 
-    const unsubError = awaiter.onError(() => {
-      setStatus('error')
-    })
-
-    // If already ready — update right away
-    if (awaiter.isReady()) {
+    // If the module is already ready at mount time — sync up right away.
+    if (pokemonAwaiter.isReady()) {
       setStatus('ready')
-      setConfig(awaiter.getStoreIfReady()?.storage.getStateSync() ?? null)
+      setCount(pokemonAwaiter.getStoreIfReady()?.storage.getStateSync().pokemonList.length ?? 0)
     }
 
     return () => { unsubReady(); unsubError() }
   }, [])
 
-  if (status === 'pending') return <div>Loading configuration...</div>
-  if (status === 'error') return <div>Error!</div>
-  return <div>Locale: {config?.locale}</div>
+  if (status === 'pending') return <div>Loading the module...</div>
+  if (status === 'error') return <div>Initialization error</div>
+  return <div>Pokemon loaded: {count}</div>
 }
 ```
+
+> In a real React app this case is better served by [awaitSynapse](./await-synapse.md) — it encapsulates
+> exactly this subscription in a HOC/hook. `createSynapseAwaiter` is needed where there is no React
+> (Node render, data preload, scripts) or where the sync-fast-path is required.
+
+The full module walkthrough — in the [pokemon-advanced recipe](./pokemon-advanced.md).

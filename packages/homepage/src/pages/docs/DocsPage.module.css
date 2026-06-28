@@ -2,33 +2,31 @@
   display: flex;
   flex-direction: row;
   height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
   position: relative;
 }
 
 /* Кнопка открытия сайдбара */
 .sidebarToggle {
   position: fixed;
-  top: 100px;
+  top: 80px;
   left: 20px;
   z-index: 1001;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px;
   cursor: pointer;
+  color: var(--text-secondary);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.1),
-    0 4px 16px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-md);
 }
 
 .sidebarToggle:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
   transform: translateY(-1px);
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.15),
-    0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 .sidebarToggle.hidden {
@@ -37,7 +35,7 @@
   transform: translateX(-100px);
 }
 
-/* Hamburger иконка */
+/* Hamburger */
 .hamburger {
   display: flex;
   flex-direction: column;
@@ -54,20 +52,13 @@
   transition: all 0.2s ease;
 }
 
-.sidebarToggle:hover .hamburger span {
-  background: #00d4ff;
-}
-
-/* Overlay для мобильных */
+/* Overlay */
 .overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
-  z-index: 999;
+  z-index: 1000;
   animation: fadeIn 0.3s ease;
 }
 
@@ -80,31 +71,10 @@
   }
 }
 
-/* Адаптивность */
-@media (max-width: 1024px) {
-  .docs {
-    min-height: calc(100vh - 70px);
-  }
-
-  .sidebarToggle {
-    top: 90px;
-    left: 16px;
-    padding: 10px;
-  }
-
-  .hamburger {
-    width: 18px;
-    height: 14px;
-  }
-}
-
+/* Адаптив */
 @media (max-width: 768px) {
-  .docs {
-    min-height: calc(100vh - 60px);
-  }
-
   .sidebarToggle {
-    top: 60px;
+    top: 76px;
     left: 12px;
     padding: 8px;
     border-radius: 8px;
@@ -113,17 +83,5 @@
   .hamburger {
     width: 16px;
     height: 12px;
-  }
-
-  .hamburger span {
-    height: 1.5px;
-  }
-}
-
-@media (max-width: 480px) {
-  .sidebarToggle {
-    top: 75px;
-    left: 8px;
-    padding: 6px;
   }
 }

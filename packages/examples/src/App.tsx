@@ -13,21 +13,15 @@ import { SubscriptionPatternsExample } from './examples/SubscriptionPatternsExam
 import { ReadingDataExample } from './examples/ReadingDataExample'
 import { WritingDataExample } from './examples/WritingDataExample'
 import { DeleteHasKeysExample } from './examples/DeleteHasKeysExample'
-import { CreateSynapseBasicExample } from './examples/CreateSynapseBasicExample'
-import { CreateSynapseDispatcherExample } from './examples/CreateSynapseDispatcherExample'
-import { CreateSynapseEffectsExample } from './examples/CreateSynapseEffectsExample'
 import { SelectorSystemExample } from './examples/SelectorSystemExample'
 import { ReactiveSelectorExample } from './examples/ReactiveSelectorExample'
-import { DispatcherDetailedExample } from './examples/DispatcherDetailedExample'
 import { SynapseCtxExample } from './examples/SynapseCtxExample'
 import { SynapseCtxSsrExample } from './examples/SynapseCtxSsrExample'
-import { AwaitSynapseExample } from './examples/AwaitSynapseExample'
 import { SynapseAwaiterExample } from './examples/SynapseAwaiterExample'
 import { EventBusExample } from './examples/EventBusExample'
 import { MiddlewaresExample } from './examples/MiddlewaresExample'
 import { SingletonExample } from './examples/SingletonExample'
 import { ApiClientExample } from './examples/ApiClientExample'
-import { DependenciesExample } from './examples/DependenciesExample'
 import { PokemonAdvancedExample } from './examples/pokemon-advanced'
 
 const groupLabels: Record<string, string> = {
@@ -58,17 +52,11 @@ const examples = [
   { id: 'subscriptions', label: 'Подписки (subscribe)', component: SubscriptionPatternsExample, group: 'data' },
   { id: 'selector-system', label: 'Селекторы (Selectors)', component: SelectorSystemExample, group: 'data' },
   { id: 'reactive-selector', label: 'Реактивный селектор (selector.$)', component: ReactiveSelectorExample, group: 'data' },
-  // createSynapse
-  { id: 'synapse-basic', label: 'createSynapse (basic)', component: CreateSynapseBasicExample, group: 'synapse' },
-  { id: 'synapse-dispatcher', label: 'createSynapse (dispatcher)', component: CreateSynapseDispatcherExample, group: 'synapse' },
-  { id: 'synapse-effects', label: 'createSynapse (effects)', component: CreateSynapseEffectsExample, group: 'synapse' },
-  { id: 'dispatcher-detail', label: 'Dispatcher (подробно)', component: DispatcherDetailedExample, group: 'synapse' },
-  { id: 'dependencies', label: 'Dependencies', component: DependenciesExample, group: 'synapse' },
+  // createSynapse / BLL (канонический пример — Pokemon)
   { id: 'pokemon-advanced', label: 'Pokemon Pokedex (advanced)', component: PokemonAdvancedExample, group: 'synapse' },
   // React
   { id: 'synapse-ctx', label: 'createSynapseCtx', component: SynapseCtxExample, group: 'react' },
   { id: 'synapse-ctx-ssr', label: 'createSynapseCtx (SSR)', component: SynapseCtxSsrExample, group: 'react' },
-  { id: 'await-synapse', label: 'awaitSynapse', component: AwaitSynapseExample, group: 'react' },
   // Паттерны
   { id: 'middlewares', label: 'Middlewares', component: MiddlewaresExample, group: 'patterns' },
   { id: 'singleton', label: 'Singleton pattern', component: SingletonExample, group: 'patterns' },

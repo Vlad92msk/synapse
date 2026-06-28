@@ -14,14 +14,17 @@ export interface ExampleLink {
 }
 
 export const exampleLinks: Partial<Record<DocKey, ExampleLink[]>> = {
-  'api-client': [{ url: `${BLOB}/ApiClientExample.tsx` }],
-  'await-synapse': [{ url: `${BLOB}/AwaitSynapseExample.tsx` }],
-  'create-synapse-basic': [{ url: `${BLOB}/CreateSynapseBasicExample.tsx` }],
-  'create-synapse-dispatcher': [{ url: `${BLOB}/CreateSynapseDispatcherExample.tsx` }],
-  'create-synapse-effects': [{ url: `${BLOB}/CreateSynapseEffectsExample.tsx` }],
+  'api-client': [
+    { url: `${BLOB}/pokemon-advanced/pokemon.api.ts`, label: { ru: 'Канонический модуль', en: 'Canonical module' } },
+    { url: `${BLOB}/ApiClientExample.tsx`, label: { ru: 'Интерактивная песочница', en: 'Interactive sandbox' } },
+  ],
+  'await-synapse': [{ url: `${BLOB}/pokemon-advanced/PokemonAdvancedExample.tsx` }],
+  'create-synapse-basic': [{ url: `${BLOB}/pokemon-advanced/pokemon.synapse.ts` }],
+  'create-synapse-dispatcher': [{ url: `${BLOB}/pokemon-advanced/pokemon.dispatcher.ts` }],
+  'create-synapse-effects': [{ url: `${BLOB}/pokemon-advanced/pokemon.effects.ts` }],
   'delete-has-keys': [{ url: `${BLOB}/DeleteHasKeysExample.tsx` }],
-  'dependencies': [{ url: `${BLOB}/DependenciesExample.tsx` }],
-  'dispatcher-detailed': [{ url: `${BLOB}/DispatcherDetailedExample.tsx` }],
+  'dependencies': [{ url: `${BLOB}/pokemon-advanced/pokemon.synapse.ts` }],
+  'dispatcher-detailed': [{ url: `${BLOB}/pokemon-advanced/pokemon.dispatcher.ts` }],
   'event-bus': [{ url: `${BLOB}/EventBusExample.tsx` }],
   'hook-indexeddb': [{ url: `${BLOB}/HookIndexedDBExample.tsx` }],
   'hook-local-storage': [{ url: `${BLOB}/HookLocalStorageExample.tsx` }],

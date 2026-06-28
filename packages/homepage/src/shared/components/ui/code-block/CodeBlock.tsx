@@ -12,8 +12,6 @@ import javascript from 'react-syntax-highlighter/dist/esm/languages/hljs/javascr
 import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json'
 // @ts-ignore
 import typescript from 'react-syntax-highlighter/dist/esm/languages/hljs/typescript'
-// @ts-ignore
-import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs'
 
 import style from './CodeBlock.module.css'
 
@@ -37,7 +35,7 @@ export interface CodeBlockProps {
 }
 
 export const CodeBlock = (props: CodeBlockProps) => {
-  const { children, language = 'typescript', filename, showLineNumbers = true, className = '', maxHeight } = props
+  const { children, language = 'typescript', filename, showLineNumbers = false, className = '', maxHeight } = props
 
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState(false)
@@ -90,16 +88,36 @@ export const CodeBlock = (props: CodeBlockProps) => {
     }
   }
 
-  // Кастомная темная тема
-  const customDarkTheme = {
-    ...atomOneDark,
-    hljs: {
-      ...atomOneDark.hljs,
-      background: 'transparent',
-      color: '#abb2bf',
-      fontSize: '14px',
-      fontFamily: "'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace",
-    },
+  // Палитра подсветки в стиле дизайна Synapse
+  // (ключи — оранжевый акцент, строки/числа — #d8a657, типы — #6ea8e0,
+  //  функции — #e0c08a, комментарии — приглушённый текст).
+  const customDarkTheme: Record<string, React.CSSProperties> = {
+    hljs: { background: 'transparent', color: 'var(--text-primary)' },
+    'hljs-comment': { color: 'var(--text-muted)', fontStyle: 'italic' },
+    'hljs-quote': { color: 'var(--text-muted)', fontStyle: 'italic' },
+    'hljs-keyword': { color: 'var(--accent-orange)' },
+    'hljs-selector-tag': { color: 'var(--accent-orange)' },
+    'hljs-literal': { color: 'var(--accent-orange)' },
+    'hljs-section': { color: 'var(--accent-orange)' },
+    'hljs-link': { color: 'var(--accent-orange)' },
+    'hljs-tag': { color: 'var(--accent-orange)' },
+    'hljs-name': { color: 'var(--accent-orange)' },
+    'hljs-built_in': { color: '#6ea8e0' },
+    'hljs-type': { color: '#6ea8e0' },
+    'hljs-title': { color: '#6ea8e0' },
+    class_: { color: '#6ea8e0' },
+    function_: { color: '#e0c08a' },
+    'hljs-string': { color: '#d8a657' },
+    'hljs-number': { color: '#d8a657' },
+    'hljs-symbol': { color: '#d8a657' },
+    'hljs-bullet': { color: '#d8a657' },
+    'hljs-attribute': { color: '#d8a657' },
+    'hljs-attr': { color: '#6ea8e0' },
+    'hljs-variable': { color: 'var(--text-primary)' },
+    'hljs-template-variable': { color: 'var(--text-primary)' },
+    'hljs-params': { color: 'var(--text-primary)' },
+    'hljs-meta': { color: 'var(--text-muted)' },
+    'hljs-property': { color: 'var(--text-primary)' },
   }
 
   return (
@@ -120,7 +138,7 @@ export const CodeBlock = (props: CodeBlockProps) => {
           title={copied ? 'Скопировано!' : copyError ? 'Ошибка копирования' : 'Копировать код'}
           aria-label="Копировать код"
         >
-          {copied ? <span className={style.copiedIcon}>✓</span> : copyError ? <span className={style.errorIcon}>✗</span> : <span className={style.copyIcon}>📋</span>}
+          {copied ? 'скопировано' : copyError ? 'ошибка' : 'копировать'}
         </button>
       </div>
 
@@ -135,9 +153,11 @@ export const CodeBlock = (props: CodeBlockProps) => {
             background: 'transparent',
             padding: 0,
             margin: 0,
-            fontSize: '14px',
-            lineHeight: '1.5',
+            fontFamily: 'var(--font-mono)',
+            fontSize: '13.5px',
+            lineHeight: '1.75',
           }}
+          codeTagProps={{ style: { fontFamily: 'var(--font-mono)', fontSize: '13.5px' } }}
           lineNumberStyle={{
             color: '#666',
             fontSize: '12px',

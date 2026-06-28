@@ -1,9 +1,9 @@
 import { Selectors } from 'synapse-storage/core'
 
-import type { PokemonState } from '../pokemon-advanced/pokemon.types'
+import type { PokemonState } from './pokemon.types'
 
 /**
- * Class-based селекторы (этап 4 ROADMAP). Поля — настоящие `SelectorAPI` сразу после
+ * Селекторы домена — производные значения. Поля — настоящие `SelectorAPI` сразу после
  * конструирования (eager). Промежуточные слайсы — `private`-поля, наружу не видны, но
  * работают как зависимости в `this.combine([...])`.
  */

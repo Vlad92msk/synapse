@@ -8,26 +8,26 @@
   position: relative;
   overflow: hidden;
   display: inline-block;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.01em;
 }
 
 .Button--type_primary {
-  background: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
-  color: #ffffff;
+  background: var(--accent-orange);
+  color: #1a1207;
 }
 
 .Button--type_primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+  background: var(--accent-orange-hover);
 }
 
 .Button--type_secondary {
   background: transparent;
-  color: #ffffff;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
 .Button--type_secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: #00d4ff;
+  background: var(--hover-overlay);
+  border-color: var(--accent-orange);
 }

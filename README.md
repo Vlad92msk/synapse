@@ -58,27 +58,26 @@ export const counter = createSynapse(async () => {
 
 ## Documentation
 
-### Storage
+The docs are organized into **three independent pillars** — start with the architecture overview.
+
+[**Architecture: the two layers**](./docs/en/architecture.md) — the mental model behind everything below.
+
+### Pillar 1 — State Manager (`synapse-storage/core`)
+
+*Creating storages*
 
 | Topic                                                   | Description                         |
 |---------------------------------------------------------|-------------------------------------|
 | [MemoryStorage](./docs/en/memory-storage.md)            | In-memory storage, synchronous API  |
 | [LocalStorage](./docs/en/local-storage.md)              | Persistent storage via localStorage |
-| [IndexedDB Storage](./docs/en/indexeddb-storage.md)     | Async storage for large data        |
+| [IndexedDBStorage](./docs/en/indexeddb-storage.md)      | Async storage for large data        |
 | [StorageFactory](./docs/en/storage-factory.md)          | Create storages dynamically         |
+| [useCreateStorage (Memory)](./docs/en/hook-memory.md)               | React hook for MemoryStorage  |
+| [useCreateStorage (LocalStorage)](./docs/en/hook-local-storage.md)  | React hook for LocalStorage   |
+| [useCreateStorage (IndexedDB)](./docs/en/hook-indexeddb.md)         | React hook for IndexedDB      |
 | [Static .create()](./docs/en/static-create.md)          | Alternative creation pattern        |
 
-### React Hooks
-
-| Topic                                                                  | Description                 |
-|------------------------------------------------------------------------|-----------------------------|
-| [useCreateStorage (Memory)](./docs/en/hook-memory.md)                  | Hook for MemoryStorage      |
-| [useCreateStorage (LocalStorage)](./docs/en/hook-local-storage.md)     | Hook for LocalStorage       |
-| [useCreateStorage (IndexedDB)](./docs/en/hook-indexeddb.md)            | Hook for IndexedDB          |
-| [createSynapseCtx](./docs/en/synapse-ctx.md)                          | React context integration + SSR (`ssr`, `dehydrate`) |
-| [awaitSynapse](./docs/en/await-synapse.md)                            | Async synapse in components |
-
-### Working with Data
+*Working with data*
 
 | Topic                                                                   | Description                |
 |-------------------------------------------------------------------------|----------------------------|
@@ -86,29 +85,54 @@ export const counter = createSynapse(async () => {
 | [Writing Data](./docs/en/writing-data.md)                               | set, update (Immer-like)   |
 | [Delete / Has / Keys / Clear / Reset](./docs/en/delete-has-keys.md)     | Storage operations         |
 | [Subscriptions](./docs/en/subscriptions.md)                             | Subscribe to state changes |
-| [Selectors](./docs/en/selector-system.md)                              | Memoized derived state     |
+| [Selectors](./docs/en/selector-system.md)                               | Memoized derived state     |
 
-### Synapse (createSynapse)
+*Patterns*
+
+| Topic                                                       | Description                            |
+|-------------------------------------------------------------|----------------------------------------|
+| [Middlewares](./docs/en/middlewares.md)                     | Intercept read/write operations        |
+| [Singleton](./docs/en/singleton.md)                         | Shared instances with merge strategies |
+| [Persist migrations](./docs/en/persist-migration.md)        | `version` + `migrate` on persisted state |
+
+### Pillar 2 — Business Logic Layer (`createSynapse`)
+
+*createSynapse*
 
 | Topic                                                           | Description                |
 |-----------------------------------------------------------------|----------------------------|
 | [Basic](./docs/en/create-synapse-basic.md)                      | Storage + selectors        |
-| [Dispatcher](./docs/en/create-synapse-dispatcher.md)            | Actions and reducers       |
+| [Dispatcher](./docs/en/create-synapse-dispatcher.md)            | Intents and store updates  |
 | [Effects](./docs/en/create-synapse-effects.md)                  | RxJS side effects          |
-| [Dispatcher (standalone)](./docs/en/dispatcher-detailed.md)     | Dispatcher API in detail   |
-| [Dependencies](./docs/en/dependencies.md)                      | Inter-synapse dependencies |
-| [Pokemon Example](./docs/en/pokemon-advanced.md)                | Full working example       |
+| [Dispatcher (in detail)](./docs/en/dispatcher-detailed.md)      | Full Dispatcher API        |
+| [Dependencies](./docs/en/dependencies.md)                       | Cross-module dependencies  |
 
-### Patterns & Utilities
+*React*
+
+| Topic                                                    | Description                                          |
+|----------------------------------------------------------|------------------------------------------------------|
+| [createSynapseCtx](./docs/en/synapse-ctx.md)             | React context integration + SSR (`ssr`, `dehydrate`) |
+| [awaitSynapse](./docs/en/await-synapse.md)               | Async synapse in components                          |
+| [SSR hydration](./docs/en/ssr-hydration.md)              | Server-render state, seed it on the client           |
+
+*Utilities*
 
 | Topic                                                    | Description                            |
 |----------------------------------------------------------|----------------------------------------|
-| [Middlewares](./docs/en/middlewares.md)                   | Intercept read/write operations        |
-| [Plugins](./docs/en/plugins.md)                          | Extend storage lifecycle               |
-| [Singleton](./docs/en/singleton.md)                      | Shared instances with merge strategies |
-| [ApiClient](./docs/en/api-client.md)                     | HTTP client with tag-based cache       |
-| [createSynapseAwaiter](./docs/en/synapse-awaiter.md)     | Await multiple synapses                |
+| [createSynapseAwaiter](./docs/en/synapse-awaiter.md)     | Framework-agnostic readiness primitive |
 | [createEventBus](./docs/en/event-bus.md)                 | Decoupled event communication          |
+
+*Recipes*
+
+| Topic                                                    | Description                            |
+|----------------------------------------------------------|----------------------------------------|
+| [Pokemon (full example)](./docs/en/pokemon-advanced.md)  | A complete data layer end-to-end       |
+
+### Pillar 3 — API Client (`synapse-storage/api`)
+
+| Topic                                                    | Description                            |
+|----------------------------------------------------------|----------------------------------------|
+| [ApiClient](./docs/en/api-client.md)                     | HTTP client with tag-based cache       |
 
 ## Examples
 

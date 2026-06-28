@@ -2,74 +2,39 @@
 
 > [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/HookLocalStorageExample.tsx)
 
-Тот же хук, но с `type: 'localStorage'`. Данные сохраняются после перезагрузки страницы.
+Тот же [`useCreateStorage`](./hook-memory.md), только с `type: 'localStorage'` — данные переживают
+перезагрузку страницы. Единственное отличие от memory-варианта — поле `type`.
+
+Тот же сквозной todo-домен (`TodoState`, `initialTodoState` — см. [MemoryStorage](./memory-storage.md)).
 
 ## Использование
 
 ```typescript
 import { useCreateStorage, useStorageSubscribe } from 'synapse-storage/react'
 
-interface SettingsState {
-  lang: string
-  notifications: boolean
-  volume: number
-}
-
-function SettingsPage() {
-  const { storage, isReady } = useCreateStorage<SettingsState>({
+function TodoApp() {
+  const { storage, isReady } = useCreateStorage<TodoState>({
     type: 'localStorage',         // <- единственное отличие от memory
-    name: 'hook-settings',
-    initialState: { lang: 'ru', notifications: true, volume: 50 },
+    name: 'todo-hook-local',
+    initialState: initialTodoState,
   })
 
-  if (!isReady) return <div>Loading...</div>
+  if (!isReady) return <div>Loading…</div>
 
-  // Используйте useStorageSubscribe для подписки на поля
-  const lang = useStorageSubscribe(storage, (s) => s.lang)
-  const volume = useStorageSubscribe(storage, (s) => s.volume)
-
-  // set/update/clear/reset — всё как с memory
-  storage.set('lang', 'en')
-  storage.set('volume', 75)
+  // Чтение и запись — как с memory
+  const todos = useStorageSubscribe(storage, (s) => s.todos)
+  storage.set('filter', 'completed')
 }
 ```
 
-## Полный пример
+## Когда брать
 
-```tsx
-function SettingsPage() {
-  const { storage, isReady } = useCreateStorage<SettingsState>({
-    type: 'localStorage',
-    name: 'hook-settings',
-    initialState: { lang: 'ru', notifications: true, volume: 50 },
-  })
+- Состояние компонента/экрана должно пережить перезагрузку (черновик, выбранный фильтр,
+  настройки), но глобальный модульный стор заводить не хочется.
 
-  if (!isReady) return <div>Loading...</div>
+## Когда не брать
 
-  return <SettingsDisplay storage={storage} />
-}
+- Состояние эфемерное → [memory-вариант](./hook-memory.md).
+- Большие данные → [IndexedDB-вариант](./hook-indexeddb.md).
 
-function SettingsDisplay({ storage }: { storage: ISyncStorage<SettingsState> }) {
-  const lang = useStorageSubscribe(storage, (s) => s.lang)
-  const notifications = useStorageSubscribe(storage, (s) => s.notifications)
-  const volume = useStorageSubscribe(storage, (s) => s.volume)
-
-  return (
-    <div>
-      <select value={lang ?? 'ru'} onChange={(e) => storage.set('lang', e.target.value)}>
-        <option value="ru">Русский</option>
-        <option value="en">English</option>
-      </select>
-
-      <label>
-        <input type="checkbox" checked={notifications ?? true}
-          onChange={(e) => storage.set('notifications', e.target.checked)} />
-        Уведомления
-      </label>
-
-      <input type="range" min={0} max={100} value={volume ?? 50}
-        onChange={(e) => storage.set('volume', Number(e.target.value))} />
-    </div>
-  )
-}
-```
+Подробнее про подписки и операции — раздел «Работа с данными».

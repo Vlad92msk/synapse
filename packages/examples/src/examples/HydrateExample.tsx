@@ -1,116 +1,83 @@
-import { useCallback, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { MemoryStorage } from 'synapse-storage/core'
-import { buttonRow, cardStyle, codeBlock, sectionTitle } from './styles'
+import { cardStyle, sectionTitle } from './styles'
+import type { PokemonBrief } from './pokemon-advanced/pokemon.types'
 
-interface AppState extends Record<string, any> {
-  user: string | null
-  items: string[]
+/**
+ * SSR-гидрация на домене pokemon: первую страницу покемонов рендерим на СЕРВЕРЕ, снапшот
+ * уезжает на клиент и засевает стор ДО initialize() — первый клиентский рендер идёт уже с
+ * данными, без мигания и без повторного запроса. Это упрощённая копия паттерна из реального
+ * Next.js page.tsx (server fetch → dehydrate → проп dehydratedState → client seed).
+ */
+interface PokemonListState extends Record<string, any> {
+  pokemonList: PokemonBrief[]
 }
 
-const DEFAULT_STATE: AppState = { user: null, items: [] }
-// Состояние, как будто пришло с сервера (SSR).
-const SERVER_STATE: AppState = { user: 'server-user', items: ['a', 'b', 'c'] }
-
-let uid = 0
-
-function HydrateBeforeInitDemo() {
-  const [result, setResult] = useState<AppState | null>(null)
-
-  const run = useCallback(async () => {
-    const storage = new MemoryStorage<AppState>({ name: `hy-before-${uid++}`, initialState: DEFAULT_STATE })
-
-    // hydrate ДО initialize() — серверное состояние побеждает, initialState не перезатирает.
-    storage.hydrate(SERVER_STATE)
-    await storage.initialize()
-
-    setResult(storage.getState())
-    await storage.destroy()
-  }, [])
-
-  return (
-    <div>
-      <div style={buttonRow}>
-        <button onClick={run}>hydrate() → initialize()</button>
-      </div>
-      <p>
-        getState(): <strong>{result ? JSON.stringify(result) : '—'}</strong>
-        {result && <span style={{ color: '#2a7' }}> ← серверное состояние, не дефолт</span>}
-      </p>
-    </div>
-  )
+// ── СЕРВЕР (Next.js: Server Component / page.tsx) ───────────────────────────
+// Фетчим первую страницу на сервере и собираем сериализуемый снапшот стора.
+async function fetchFirstPokemonOnServer(): Promise<PokemonListState> {
+  const res = await fetch('https://pokeapi.co/api/v2/pokemon?limit=12&offset=0')
+  const data = (await res.json()) as { results: Array<{ name: string; url: string }> }
+  const pokemonList: PokemonBrief[] = data.results.map((p) => {
+    const id = Number(p.url.split('/').filter(Boolean).pop())
+    return { id, name: p.name, sprite: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png` }
+  })
+  return { pokemonList }
 }
 
-function HydrateAfterInitDemo() {
-  const [storage] = useState(() => new MemoryStorage<AppState>({ name: `hy-after-${uid++}`, initialState: DEFAULT_STATE }))
-  const [state, setState] = useState<AppState>(DEFAULT_STATE)
-  const [ready, setReady] = useState(false)
-
-  const init = useCallback(async () => {
-    await storage.initialize()
-    // Подписка покажет реактивное обновление при hydrate после initialize.
-    storage.subscribeToAll(() => setState(storage.getStateSync()))
-    setState(storage.getStateSync())
-    setReady(true)
-  }, [storage])
-
-  const hydrate = useCallback(() => {
-    storage.hydrate(SERVER_STATE) // заменяет состояние и уведомляет подписчиков
-  }, [storage])
-
-  return (
-    <div>
-      <div style={buttonRow}>
-        <button onClick={init} disabled={ready}>
-          initialize()
-        </button>
-        <button onClick={hydrate} disabled={!ready}>
-          hydrate(serverState)
-        </button>
-      </div>
-      <p>
-        состояние: <strong>{JSON.stringify(state)}</strong>
-      </p>
-    </div>
-  )
+// ── КЛИЕНТ ('use client') ──────────────────────────────────────────────────
+// Снапшот пришёл пропом. hydrate() ДО initialize() — серверное состояние побеждает initialState,
+// инициализация его не перезатирает, повторного фетча нет.
+function seedStorageFromServer(serverState: PokemonListState): MemoryStorage<PokemonListState> {
+  const storage = new MemoryStorage<PokemonListState>({ name: 'pokemon-ssr', initialState: { pokemonList: [] } })
+  storage.hydrate(serverState)
+  return storage
 }
 
 export function HydrateExample() {
+  const [serverState, setServerState] = useState<PokemonListState | null>(null)
+  const [list, setList] = useState<PokemonBrief[]>([])
+
+  // Имитация серверного рендера (в Next.js произошло бы в page.tsx до отдачи HTML).
+  useEffect(() => {
+    fetchFirstPokemonOnServer().then(setServerState)
+  }, [])
+
+  // Клиент: получили снапшот → засеяли стор → отрисовали из него (без второго запроса к API).
+  useEffect(() => {
+    if (!serverState) return
+    let alive = true
+    const storage = seedStorageFromServer(serverState)
+    storage.initialize().then(() => {
+      if (alive) setList(storage.getStateSync().pokemonList)
+    })
+    return () => {
+      alive = false
+      storage.destroy()
+    }
+  }, [serverState])
+
   return (
     <div style={cardStyle}>
-      <h2>SSR-гидрация (hydrate)</h2>
+      <h2>SSR-гидрация (Pokemon)</h2>
       <p>
-        <code>storage.hydrate(state)</code> заменяет состояние готовым снапшотом. Основной
-        сценарий — SSR: сервер сериализует состояние, клиент инициализирует им хранилище.
-        Sync-хранилища возвращают <code>void</code>, async (IndexedDB) — <code>Promise</code>.
+        Первые покемоны рендерятся на сервере, снапшот засевается на клиенте через
+        <code> storage.hydrate()</code> до <code>initialize()</code> — на экране они появляются сразу,
+        без отдельного клиентского запроса.
       </p>
-
-      <h3 style={sectionTitle}>1. Гидрация ДО initialize()</h3>
-      <p>Засевает хранилище — инициализация не перезатирает его дефолтным `initialState`.</p>
-      <pre style={codeBlock}>{`const storage = new MemoryStorage<AppState>({
-  name: 'app',
-  initialState: { user: null, items: [] },   // дефолт для «чистого» клиента
-})
-
-storage.hydrate(window.__INITIAL_STATE__)     // данные с сервера
-await storage.initialize()                     // initialState НЕ перезатрёт гидрацию`}</pre>
-      <HydrateBeforeInitDemo />
-
-      <h3 style={sectionTitle}>2. Гидрация ПОСЛЕ initialize()</h3>
-      <p>Заменяет состояние и уведомляет подписчиков (селекторы/хуки обновятся реактивно).</p>
-      <pre style={codeBlock}>{`await storage.initialize()
-
-// позже — например при навигации в SPA с серверными данными
-storage.hydrate(nextPageState)
-// подписчики получат новое состояние`}</pre>
-      <HydrateAfterInitDemo />
-
-      <h3 style={sectionTitle}>С persist-миграциями</h3>
-      <pre style={codeBlock}>{`// Если задана version, hydrate фиксирует текущую версию схемы:
-// серверный снапшот считается актуальным — миграция на нём не запускается.
-
-// В createSynapse hydrate доступен на synapse.storage:
-const synapse = await appSynapse.ready()
-synapse.storage.hydrate(serverState)`}</pre>
+      <h3 style={sectionTitle}>Seeded from server</h3>
+      {!serverState ? (
+        <p style={{ color: '#888' }}>Rendering on server…</p>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 8 }}>
+          {list.map((p) => (
+            <div key={p.id} style={{ border: '1px solid #ddd', borderRadius: 8, padding: 8, textAlign: 'center' }}>
+              <img src={p.sprite} alt={p.name} style={{ width: 56, height: 56, imageRendering: 'pixelated' }} />
+              <div style={{ fontSize: 12, textTransform: 'capitalize' }}>{p.name}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

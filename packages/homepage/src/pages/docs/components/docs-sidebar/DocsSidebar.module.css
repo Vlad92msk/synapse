@@ -1,15 +1,16 @@
 .sidebar {
-  width: 280px;
-  backdrop-filter: blur(8px);
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  width: 256px;
+  flex: none;
   position: sticky;
-  height: calc(100dvh - 69px);
+  top: 0;
+  height: 100%;
   overflow-y: auto;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 1000;
+  padding: 24px 8px 60px;
+  border-right: 1px solid var(--border-subtle);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: var(--z-sticky, 800);
   display: flex;
   flex-direction: column;
-  top: 70px;
 }
 
 .sidebar.closed {
@@ -20,78 +21,54 @@
   transform: translateX(0);
 }
 
-/* Заголовок сайдбара */
 .header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
-  background: rgba(255, 255, 255, 0.02);
   height: fit-content;
-}
-
-.title {
-  color: #00d4ff;
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .closeButton {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 4px 8px;
   cursor: pointer;
   transition: all 0.2s ease;
-  display: none; /* Скрыто по умолчанию */
-  color: inherit;
+  display: none;
+  color: var(--text-secondary);
 }
 
 .closeButton:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--hover-overlay);
+  border-color: var(--border-strong);
 }
 
 .closeIcon {
-  color: inherit;
   font-size: 18px;
   line-height: 1;
   display: block;
 }
 
-/* Навигация — без горизонтальных паддингов, чтобы разделители между
-   основными блоками шли до самых границ nav. Внутренние отступы — у .pillar. */
 .nav {
-  padding: 0;
   flex: 1;
   overflow-y: auto;
 }
 
-/* Блок-столп (State Manager / Business Logic Layer / API Client) */
 .pillar {
-  padding: 22px 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.pillar:first-child {
-  border-top: none;
+  padding: 4px 0 0;
 }
 
 .pillarTitle {
-  font-size: 19px;
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.2px;
-  margin: 0 0 18px 0;
-  background-image: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  margin: 22px 12px 12px;
 }
 
 .section {
-  margin-bottom: 18px;
+  margin-bottom: 24px;
 }
 
 .section:last-child {
@@ -99,14 +76,14 @@
 }
 
 .sectionTitle {
-  color: #00d4ff;
-  text-transform: uppercase;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.8px;
-  margin: 0 0 12px 0;
-  padding: 0 4px;
-  opacity: 0.9;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+  padding: 0 12px;
 }
 
 .sectionList {
@@ -116,7 +93,7 @@
 }
 
 .sectionItem {
-  margin: 4px 0;
+  margin: 2px 0;
 }
 
 .navButton {
@@ -124,77 +101,43 @@
   width: 100% !important;
   text-align: left !important;
   background: transparent !important;
-  color: rgba(255, 255, 255, 0.7) !important;
-  padding: 10px 12px !important;
-  border-radius: 8px !important;
-  border: 1px solid transparent !important;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  color: var(--text-secondary) !important;
+  padding: 7px 12px !important;
+  border-radius: 0px !important;
+  border-left: 2px solid transparent !important;
+  transition:
+    color 0.12s,
+    background 0.12s !important;
   font-size: 14px !important;
   font-weight: 400 !important;
   cursor: pointer !important;
 }
 
 .navButton:hover {
-  background: rgba(255, 255, 255, 0.05) !important;
-  color: rgba(255, 255, 255, 0.9) !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-  transform: translateX(2px) !important;
+  background: var(--hover-overlay) !important;
+  color: var(--text-primary) !important;
 }
 
 .navButton.active {
-  background: rgba(0, 212, 255, 0.1) !important;
-  color: #00d4ff !important;
-  border-color: rgba(0, 212, 255, 0.2) !important;
-  font-weight: 500 !important;
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-left: 2px solid var(--accent-orange) !important;
+  font-weight: 600 !important;
 }
 
-.navButton.active:hover {
-  background: rgba(0, 212, 255, 0.15) !important;
-  transform: translateX(4px) !important;
-}
-
-/* Кастомный скроллбар */
-.sidebar::-webkit-scrollbar {
-  width: 4px;
-}
-
-.sidebar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.sidebar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 2px;
-}
-
-.sidebar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
+/* Скроллбар */
+.sidebar::-webkit-scrollbar,
 .nav::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
 
-.nav::-webkit-scrollbar-track {
-  background: transparent;
-}
-
+.sidebar::-webkit-scrollbar-thumb,
 .nav::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 2px;
+  background: var(--border-strong);
+  border-radius: 10px;
 }
 
-/* Адаптивность */
-@media (max-width: 1024px) {
-  .sidebar {
-    width: 260px;
-  }
-
-  .pillar {
-    padding: 20px;
-  }
-}
-
+/* Адаптив */
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
@@ -202,45 +145,16 @@
     left: 0;
     width: 280px;
     height: 100dvh;
+    background: var(--bg-secondary);
     backdrop-filter: blur(12px);
-    border-right: 1px solid rgba(255, 255, 255, 0.15);
+    border-right: 1px solid var(--border-subtle);
     box-shadow: 2px 0 12px rgba(0, 0, 0, 0.3);
-  }
-
-  .sidebar.closed {
-    transform: translateX(-100%);
+    padding: 16px 12px 30px;
+    z-index: 1002;
   }
 
   .closeButton {
     display: block !important;
-  }
-
-  .header {
-    padding: 16px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .title {
-    font-size: 15px;
-  }
-
-  .pillar {
-    padding: 18px 20px;
-  }
-
-  .pillarTitle {
-    font-size: 18px;
-  }
-
-  .sectionTitle {
-    font-size: 11px;
-    margin-bottom: 10px;
-  }
-
-  .navButton {
-    padding: 12px 12px !important;
-    font-size: 14px !important;
-    border-radius: 6px !important;
   }
 }
 
@@ -248,31 +162,5 @@
   .sidebar {
     width: calc(100vw - 40px);
     max-width: 300px;
-  }
-
-  .header {
-    padding: 12px 16px;
-  }
-
-  .title {
-    font-size: 14px;
-  }
-
-  .pillar {
-    padding: 16px;
-  }
-
-  .section {
-    margin-bottom: 20px;
-  }
-
-  .sectionTitle {
-    font-size: 10px;
-    margin-bottom: 8px;
-  }
-
-  .navButton {
-    padding: 10px 10px !important;
-    font-size: 13px !important;
   }
 }

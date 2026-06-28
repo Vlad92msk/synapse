@@ -1,73 +1,125 @@
 .header {
-  height: 83px;
   position: fixed;
   top: 0;
   width: 100%;
-  padding: 10px 0;
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  z-index: 1000;
+  height: 64px;
+  z-index: var(--z-sticky, 800);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  background: var(--bg-elevated-light);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 28px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.brandName {
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.version {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  padding: 2px 6px;
+  border-radius: 6px;
 }
 
 .nav {
+  flex: 1;
+  margin-left: 8px;
   display: flex;
-  justify-content: flex-end;
-  z-index: 10001;
-  height: 100%;
-}
-
-.navLinks {
-  display: flex;
-  gap: 30px;
-  list-style: none;
-  margin: 0;
-  padding: 0;
   align-items: center;
-  z-index: 1000;
+  gap: 10px;
 }
 
-.navLinks li {
-  margin: 0;
-}
-
-.navLinks button {
-  padding-top: 10px;
-  padding-bottom: 10px;
-}
-
-.logo {
-  background-image: linear-gradient(135deg, #00d4ff 0%, #7c3aed 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.navLink {
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
   cursor: pointer;
-  z-index: 1001;
-  font-size: 1.5em;
-  position: absolute;
-  left: 0;
-  display: flex;
-  gap: 5px;
-  align-items: center;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
 }
 
-.logo img {
-  width: 30px;
+.navLink:hover {
+  color: var(--text-primary);
+  background: var(--hover-overlay);
+}
+
+.navLinkActive {
+  color: var(--text-primary);
+  background: var(--hover-overlay);
 }
 
 .githubLink {
-  color: #ffffff;
-  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding: 8px 13px;
+  border-radius: 9px;
+  font-size: 14px;
   font-weight: 500;
-  border-radius: 8px;
-  display: inline-block;
-  padding: 15px 30px;
-  transition: color 0.2s ease;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  text-decoration: none;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
 }
 
 .githubLink:hover {
-  color: #00d4ff;
+  color: var(--text-primary);
+  background: var(--hover-overlay);
+  text-decoration: none;
 }
 
-/* Бургер кнопка */
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1207;
+  background: var(--accent-orange);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.cta:hover {
+  background: var(--accent-orange-hover);
+}
+
+.langWrap {
+  display: flex;
+  align-items: center;
+}
+
+/* Бургер */
 .burgerButton {
   display: none;
   flex-direction: column;
@@ -76,23 +128,22 @@
   border: none;
   cursor: pointer;
   padding: 8px;
-  z-index: 1001;
+  margin-left: auto;
 }
 
 .burgerButton span {
   width: 25px;
   height: 3px;
-  background-color: #ffffff;
+  background-color: var(--text-primary);
   border-radius: 2px;
   transition: all 0.3s ease;
   transform-origin: center;
 }
 
 .burgerButton:hover span {
-  background-color: #00d4ff;
+  background-color: var(--accent-orange);
 }
 
-/* Анимация бургера при активном состоянии */
 .burgerActive span:nth-child(1) {
   transform: rotate(45deg) translate(6px, 6px);
 }
@@ -105,96 +156,58 @@
   transform: rotate(-45deg) translate(6px, -6px);
 }
 
-/* Оверлей для мобильного меню */
 .overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 999;
 }
 
-.languageSwitcherWrapper {
-  display: flex;
-  align-items: center;
-}
-
-/* Медиа запросы для адаптивности */
+/* Адаптив */
 @media (max-width: 800px) {
-  .nav {
-    padding: 0 15px;
-  }
-
   .burgerButton {
     display: flex;
   }
 
-  .navLinks {
+  .nav {
     position: fixed;
     top: 0;
     right: -100%;
     width: 280px;
     height: 100vh;
-    background: rgba(10, 10, 10, 0.98);
+    background: var(--bg-secondary);
     backdrop-filter: blur(20px);
     flex-direction: column;
     justify-content: flex-start;
-    align-items: flex-start;
-    gap: 0;
-    padding: 100px 30px 30px;
+    align-items: stretch;
+    gap: 8px;
+    padding: 90px 24px 30px;
     transition: right 0.3s ease;
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    border-left: 1px solid var(--border-subtle);
+    z-index: 1001;
   }
 
-  .navLinksOpen {
+  .navOpen {
     right: 0;
   }
 
-  .navLinks li {
+  .navLink,
+  .githubLink,
+  .cta {
     width: 100%;
-    margin-bottom: 20px;
-  }
-
-  .navLinks li button,
-  .githubLink {
-    width: 100%;
-    text-align: left;
-    padding: 15px 20px;
-    border-radius: 8px;
-  }
-
-  .githubLink {
-    margin-top: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    margin-left: 0;
+    justify-content: center;
     text-align: center;
   }
 
-  .languageSwitcherWrapper {
-    width: 100%;
+  .githubLink {
+    justify-content: center;
+  }
+
+  .langWrap {
     justify-content: center;
     margin-top: auto;
-    padding-top: 30px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-  }
-}
-
-@media (max-width: 480px) {
-  .header {
-    padding: 15px 0;
-  }
-
-  .nav {
-    padding: 0 10px;
-  }
-
-  .navLinks {
-    width: 100%;
-    padding: 80px 20px 20px;
-  }
-
-  .logo {
-    font-size: 0.9rem;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-subtle);
   }
 }

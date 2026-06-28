@@ -1,108 +1,162 @@
 # createSynapse (диспетчер)
 
-> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/CreateSynapseDispatcherExample.tsx)
+> [Назад к оглавлению](./README.md) · [Диспетчер модуля (`pokemon.dispatcher.ts`)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/pokemon-advanced/pokemon.dispatcher.ts) · [Песочница (Cart)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/CreateSynapseDispatcherExample.tsx)
 
-Хранилище + селекторы + диспетчер. Действия для изменения состояния, наблюдатели для реактивного отслеживания.
+Следующий кирпич после [базовой сборки](./create-synapse-basic.md): добавляем **диспетчер**.
+Он описывает **намерения** — именованные действия, меняющие состояние, — и **наблюдатели**
+(watchers) для реактивного отслеживания. Эффекты (вызовы API по экшенам) — на
+[следующей странице](./create-synapse-effects.md).
 
-## Создание
+Домен тот же — `pokemon-advanced`.
+
+## Диспетчер (`pokemon.dispatcher.ts`)
+
+Экшены и наблюдатели объявляются как **поля класса**, имя экшена = имя поля. Сборщик
+финализирует диспетчер (генерирует `actionType` из имён полей) до старта.
 
 ```typescript
-import { MemoryStorage, Selectors } from 'synapse-storage/core'
-import { createSynapse } from 'synapse-storage/utils'
 import { Dispatcher } from 'synapse-storage/reactive'
+import type { PokemonBrief, PokemonDetails, PokemonState } from './pokemon.types'
 
-// Селекторы — поля класса
-class CartSelectors extends Selectors<CartState> {
-   items = this.select((s) => s.items)
-   discount = this.select((s) => s.discount)
-   totalPrice = this.combine([this.items, this.discount], (items, discount) => {
-    const sum = items.reduce((acc, i) => acc + i.price * i.qty, 0)
-    return sum * (1 - discount / 100)
+export class PokemonDispatcher extends Dispatcher<PokemonState> {
+  // apiActions — вызываемая группа жизненного цикла запроса (см. dispatcher-detailed)
+  readonly loadList = this.apiActions<void>((s) => s.api.listRequest)
+  readonly loadDetails = this.apiActions<void>((s) => s.api.detailsRequest)
+
+  // signal — чистый сигнал-намерение без записи в состояние (его обработает эффект)
+  readonly loadMore = this.signal<void>('Подгрузить следующую страницу')
+
+  // action — намерение, которое само меняет состояние
+  readonly selectPokemon = this.action((store, id: number | null) => {
+    store.update((s) => {
+      s.selectedPokemonId = id
+      if (id === null) s.selectedPokemon = null
+    })
+    return id
+  })
+
+  readonly setSearchQuery = this.action((store, query: string) => {
+    store.set('searchQuery', query)
+    return query
+  })
+
+  readonly toggleFavorite = this.action((store, id: number) => {
+    store.update((s) => {
+      const idx = s.favorites.indexOf(id)
+      if (idx >= 0) s.favorites.splice(idx, 1)
+      else s.favorites.push(id)
+    })
+    return id
+  })
+
+  // Экшены, которыми эффект записывает результат запроса в состояние
+  readonly applyPokemonList = this.action((store, data: { list: PokemonBrief[]; hasMore: boolean; append: boolean }) =>
+    store.update((s) => {
+      s.pokemonList = data.append ? [...s.pokemonList, ...data.list] : data.list
+      s.offset = s.pokemonList.length
+      s.hasMore = data.hasMore
+    }),
+  )
+
+  readonly applyPokemonDetails = this.action((store, details: PokemonDetails) =>
+    store.update((s) => {
+      s.selectedPokemon = details
+    }),
+  )
+
+  // watcher — реактивно отслеживает срез состояния
+  readonly watchFavoriteCount = this.watcher({
+    selector: (s) => s.favorites.length,
+    meta: { description: 'отслеживание кол-ва избранных' },
+    notifyAfterSubscribe: true,
   })
 }
-
-// Диспетчер — действия и наблюдатели как поля класса. Имя экшена = имя поля.
-class CartDispatcher extends Dispatcher<CartState> {
-   addItem = this.action((store, params: { name: string; price: number }) => {
-    store.update((s) => { s.items.push({ id: Date.now(), ...params, qty: 1 }) })
-    return params
-  })
-   setDiscount = this.action((store, percent: number) => {
-    store.set('discount', percent)
-    return percent
-  })
-   watchItemCount = this.watcher({ selector: (s) => s.items.length })
-}
-
-const cartSynapse = createSynapse(async () => {
-  const storage = new MemoryStorage<CartState>({ name: 'cart', initialState })
-  return {
-    storage,
-    dispatcher: new CartDispatcher(storage),
-    selectors: new CartSelectors(storage),
-  }
-})
 ```
 
 ## this.action
 
-```typescript
-// this.action((store, params) => result) — handler в «рецептной» сигнатуре.
-// payload экшена = возвращённое значение handler'а.
-class CartDispatcher extends Dispatcher<CartState> {
-   addItem = this.action((store, params: { name: string; price: number }) => {
-    store.update((s) => {
-      s.items.push({ id: Date.now(), ...params, qty: 1 })
-    })
-    return params                            // return = payload в потоке действий
-  })
-}
+`this.action((store, params) => result)` — handler в «рецептной» сигнатуре. **payload экшена
+= возвращаемое значение** handler'а (поэтому `selectPokemon` возвращает `id`, а
+`toggleFavorite` — `id`: их payload потом ловят эффекты).
 
+```typescript
 // Вызов через store.actions (имя экшена = имя поля)
-store.actions.addItem({ name: 'Hat', price: 1500 })
+store.actions.selectPokemon(25)
+store.actions.setSearchQuery('pika')
+store.actions.toggleFavorite(25)
 
 // actionType генерируется из имени поля при финализации
-store.actions.addItem.actionType  // '[cart]addItem'
+store.actions.selectPokemon.actionType  // '[pokemon-advanced]selectPokemon'
 ```
+
+> `store.actions.X` — это сокращение для `store.dispatcher.dispatch.X`.
 
 ## this.watcher
 
+`this.watcher` реактивно отслеживает изменения состояния и отдаёт RxJS `Observable`:
+
 ```typescript
-// this.watcher — реактивно отслеживает изменения состояния
-class CartDispatcher extends Dispatcher<CartState> {
-   watchItemCount = this.watcher({
-    selector: (state) => state.items.length,        // что отслеживать
-    notifyAfterSubscribe: true,                     // вызвать сразу при подписке
-    shouldTrigger: (prev, curr) => prev !== curr,   // фильтр (опционально)
+class PokemonDispatcher extends Dispatcher<PokemonState> {
+  readonly watchFavoriteCount = this.watcher({
+    selector: (state) => state.favorites.length,    // что отслеживать
+    notifyAfterSubscribe: true,                      // вызвать сразу при подписке
+    shouldTrigger: (prev, curr) => prev !== curr,    // фильтр (опционально)
   })
 }
 
-// Подписка — возвращает RxJS Observable
-const sub = store.dispatcher.watchers.watchItemCount().subscribe((action) => {
-  console.log('количество товаров:', action.payload)
+// Подписка — через реестр watchers (вызов фабрики → Observable)
+const sub = store.dispatcher.watchers.watchFavoriteCount().subscribe((action) => {
+  console.log('избранных:', action.payload)
 })
 
-// Отписка
 sub.unsubscribe()
 ```
 
-Полная поверхность диспетчера (`signal`, `apiActions` и правило `ofType`) — см.
-[Dispatcher (подробно)](./dispatcher-detailed.md).
+## signal и apiActions
+
+`this.signal<T>(description?)` — чистый сигнал `(_store, payload) => payload`: ничего не
+пишет в состояние, только бросает намерение в поток (его подхватит эффект — как `loadMore`).
+
+`this.apiActions(accessor)` — вызываемая **группа** жизненного цикла запроса. Сам вызов
+(`loadList()`) = init (статус `idle`), а `.loading()` / `.success()` / `.failure(error)` /
+`.reset()` пишут статус по указанному пути состояния. Полная поверхность и правило `ofType`
+— [Dispatcher (подробно)](./dispatcher-detailed.md).
+
+## Сборка
+
+```typescript
+import { MemoryStorage } from 'synapse-storage/core'
+import { createSynapse } from 'synapse-storage/utils'
+
+import { PokemonDispatcher } from './pokemon.dispatcher'
+import { PokemonSelectors } from './pokemon.selectors'
+import { initialState } from './pokemon.store'
+import type { PokemonState } from './pokemon.types'
+
+const pokemonSynapse = createSynapse(async () => {
+  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState })
+  return {
+    storage,
+    dispatcher: new PokemonDispatcher(storage),
+    selectors: new PokemonSelectors(storage),
+    // effects — на следующей странице
+  }
+})
+```
 
 ## Возвращаемое значение
 
 ```typescript
-const store = await cartSynapse
+const store = await pokemonSynapse
 
-store.storage     // IStorage<CartState>
-store.selectors   // экземпляр CartSelectors
-store.actions     // { addItem, removeItem, changeQty, setDiscount }
-store.dispatcher  // экземпляр CartDispatcher (dispatch, watchers, action$)
+store.storage     // IStorage<PokemonState>
+store.selectors   // экземпляр PokemonSelectors
+store.dispatcher  // экземпляр PokemonDispatcher (dispatch, watchers, action$)
+store.actions     // алиас store.dispatcher.dispatch: { selectPokemon, setSearchQuery, ... }
 
-// store.actions — это сокращение для store.dispatcher.dispatch
-// store.actions.addItem === store.dispatcher.dispatch.addItem
+// store.actions.selectPokemon === store.dispatcher.dispatch.selectPokemon
 
-// Поток всех действий (RxJS Observable)
+// Поток всех действий (RxJS Observable) — на нём строятся эффекты
 store.dispatcher.actions.subscribe((action) => {
   console.log(action.type, action.payload)
 })
@@ -115,7 +169,8 @@ import { createSynapseCtx } from 'synapse-storage/react'
 
 // Передаём САМ handle (не вызов) — фабрика стартует лениво при первом mount Provider'а
 export const { contextSynapse, useSynapseSelectors, useSynapseActions } =
-  createSynapseCtx(cartSynapse, { loadingComponent: <div>Загрузка...</div> })
+  createSynapseCtx(pokemonSynapse, { loadingComponent: <div>Загрузка...</div> })
 ```
 
-Подробнее — [createSynapseCtx](./synapse-ctx.md).
+Подробнее — [createSynapseCtx](./synapse-ctx.md). Как намерения превращаются в реальные
+вызовы API — [Effects](./create-synapse-effects.md).

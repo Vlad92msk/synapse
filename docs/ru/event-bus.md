@@ -1,8 +1,20 @@
 # createEventBus — Шина событий
 
-> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/EventBusExample.tsx)
+> [Назад к оглавлению](./README.md) · [Песочница (Live demo)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/EventBusExample.tsx)
 
-Pub/sub шина для общения между модулями. Построена на createSynapse + MemoryStorage + Dispatcher. Поддерживает wildcard-паттерны, приоритеты, TTL, историю событий.
+Pub/sub шина для общения **между независимыми модулями**. Построена на тех же кирпичах, что и
+весь BLL: `createSynapse` + `MemoryStorage` + `Dispatcher` (см. [create-synapse-basic](./create-synapse-basic.md)).
+Поддерживает wildcard-паттерны, приоритеты, TTL, историю событий.
+
+Где это уместно в нашем домене: модуль pokemon (см. [pokemon-advanced](./pokemon-advanced.md)) знает
+только про себя — он грузит список, ведёт избранное, держит выбранного покемона. Если на эти
+действия должны реагировать **другие** части приложения (аналитика, тосты, бейдж в шапке), не нужно
+связывать их жёстко. Pokemon публикует доменные события (`POKEMON_SELECTED`, `FAVORITE_TOGGLED`), а
+кто угодно на них подписывается. Это «паттерн 3 / медиатор» из раздела [dependencies](./dependencies.md),
+только оформленный как готовая утилита.
+
+> Сам эталонный модуль pokemon шину **не зашивает** — event-bus это опциональная интеграция поверх
+> него, поэтому канонического pokemon-файла у страницы нет, только запускаемая песочница.
 
 ## Импорты
 
@@ -14,7 +26,7 @@ import { createEventBus } from 'synapse-storage/utils'
 
 ```typescript
 const eventBusHandle = createEventBus({
-  name: 'app-events',        // имя (для singleton/отладки)
+  name: 'pokemon-events',     // имя (для singleton/отладки)
   autoCleanup: true,          // автоочистка старых событий
   maxEvents: 1000,            // макс. хранимых событий (по умолчанию 1000)
 })
@@ -23,12 +35,13 @@ const eventBusHandle = createEventBus({
 // фабрика исполняется при первом await/ready()
 const eventBus = await eventBusHandle
 
-// Результат:
+// Результат (Synapse<EventBusState, EventBusDispatcher, undefined>):
 // {
-//   storage: ISyncStorage<EventBusState>   — хранилище состояния
-//   actions: EventBusActions               — типизированные экшены
-//   dispatcher: Dispatcher                 — raw dispatcher
-//   selectors: {}
+//   storage: IStorage<EventBusState>       — хранилище состояния
+//   actions: EventBusDispatcher            — типизированные экшены (алиас dispatcher)
+//   dispatcher: EventBusDispatcher         — тот же инстанс диспетчера
+//   selectors: undefined                   — селекторов у шины нет
+//   state$: Observable<EventBusState>      — поток состояния (есть всегда)
 //   destroy: () => Promise<void>           — очистка
 // }
 
@@ -39,18 +52,21 @@ const eventBus = await eventBusHandle
 // }
 ```
 
+`actions` и `dispatcher` — один и тот же инстанс `EventBusDispatcher`; его поля (`publish`/`subscribe`/…)
+и есть dispatch-функции. Везде ниже используется `eventBus.actions`.
+
 ## actions.publish() — Публикация события
 
 ```typescript
-const eventBus = await createEventBus({ name: 'my-bus' })
+const eventBus = await createEventBus({ name: 'pokemon-events' })
 
 // Публикация события
 const result = await eventBus.actions.publish({
-  event: 'USER_UPDATED',           // тип события (строка)
-  data: { userId: 123, name: 'John' },  // произвольные данные
-  metadata: {                       // опциональные метаданные
-    priority: 'high',               // 'low' | 'normal' | 'high'
-    ttl: 60000,                     // время жизни события (мс)
+  event: 'POKEMON_SELECTED',            // тип события (строка)
+  data: { id: 25, name: 'pikachu' },    // произвольные данные
+  metadata: {                           // опциональные метаданные
+    priority: 'high',                   // 'low' | 'normal' | 'high'
+    ttl: 60000,                         // время жизни события (мс)
   },
 })
 
@@ -76,20 +92,20 @@ const result = await eventBus.actions.publish({
 ```typescript
 // Подписка на конкретное событие
 const { subscriptionId, unsubscribe } = await eventBus.actions.subscribe({
-  eventPattern: 'USER_UPDATED',    // точное совпадение
+  eventPattern: 'POKEMON_SELECTED',  // точное совпадение
   handler: (data, event) => {
     // data — event.data (полезная нагрузка)
     // event — полный объект EventBusEvent
-    console.log(data)               // { userId: 123, name: 'John' }
-    console.log(event.event)        // 'USER_UPDATED'
+    console.log(data)               // { id: 25, name: 'pikachu' }
+    console.log(event.event)        // 'POKEMON_SELECTED'
     console.log(event.timestamp)    // 1716633600000
   },
 })
 
 // Wildcard-паттерны
 await eventBus.actions.subscribe({
-  eventPattern: 'USER_*',          // все события, начинающиеся с USER_
-  handler: (data, event) => {      // USER_UPDATED, USER_DELETED, USER_CREATED...
+  eventPattern: 'POKEMON_*',       // все события, начинающиеся с POKEMON_
+  handler: (data, event) => {      // POKEMON_SELECTED, POKEMON_LOADED, ...
     console.log(event.event, data)
   },
 })
@@ -103,7 +119,7 @@ await eventBus.actions.subscribe({
 
 // Фильтр по приоритету
 await eventBus.actions.subscribe({
-  eventPattern: 'NOTIFICATION_*',
+  eventPattern: 'FAVORITE_*',
   handler: (data, event) => { ... },
   options: { priority: 'high' },   // только высокоприоритетные события
 })
@@ -112,19 +128,23 @@ await eventBus.actions.subscribe({
 unsubscribe()
 ```
 
+Внутри `subscribe` подписывается на срез `state.events` хранилища: при публикации нового события
+все подходящие по паттерну подписчики получают вызов `handler`. Ошибка в обработчике не роняет
+шину — она логируется через внутренний `handleCallbackError`.
+
 ## actions.getEventHistory() — История событий
 
 ```typescript
 // Получить историю по типу события
 const history = await eventBus.actions.getEventHistory({
-  eventType: 'USER_UPDATED',      // тип события
+  eventType: 'POKEMON_SELECTED',  // тип события
   limit: 10,                       // макс. записей (по умолчанию 100)
 })
 
 // Возвращает EventBusEvent[] — отсортировано по timestamp (сначала новые)
 // [
-//   { id: '...', event: 'USER_UPDATED', data: {...}, timestamp: 1716633600000 },
-//   { id: '...', event: 'USER_UPDATED', data: {...}, timestamp: 1716633500000 },
+//   { id: '...', event: 'POKEMON_SELECTED', data: {...}, timestamp: 1716633600000 },
+//   { id: '...', event: 'POKEMON_SELECTED', data: {...}, timestamp: 1716633500000 },
 // ]
 ```
 
@@ -137,7 +157,7 @@ const subscriptions = await eventBus.actions.getActiveSubscriptions()
 // [
 //   {
 //     id: string,          — ID подписки
-//     pattern: string,     — паттерн ('USER_*', '*', и т.д.)
+//     pattern: string,     — паттерн ('POKEMON_*', '*', и т.д.)
 //     options: {...},       — опции (приоритет и т.д.)
 //     createdAt: number,   — время создания
 //   }
@@ -156,44 +176,82 @@ await eventBus.actions.clearEvents({
 await eventBus.actions.clearEvents({})
 ```
 
+При `autoCleanup: true` старые события подрезаются автоматически при каждой публикации: как только
+их число превышает `maxEvents`, остаются только `maxEvents` самых свежих (по `timestamp`).
+
 ## destroy()
 
 ```typescript
-// Полная очистка: подписки, хранилище, dispatcher
+// Полная очистка: активные подписки, хранилище, dispatcher
 await eventBus.destroy()
 ```
 
-## Пример: Общение между модулями
+`destroy()` сначала вызывает все накопленные `unsubscribe`, затем гасит модуль и сбрасывает
+мемоизацию handle (повторный `await eventBusHandle` пересоберёт шину заново).
+
+## Пример: pokemon публикует, другие модули слушают
 
 ```typescript
-// module-a.ts — публикует события
-const bus = await eventBusHandle
+// pokemon-events.ts — общая шина домена
+import { createEventBus } from 'synapse-storage/utils'
 
-export async function saveUser(user: User) {
-  await api.saveUser(user)
+export const pokemonEventsHandle = createEventBus({ name: 'pokemon-events', autoCleanup: true })
+
+// ─── pokemon-side: публикуем доменные события ────────────────────────────────
+// Удобное место — обёртка над намерениями диспетчера (см. dispatcher-detailed)
+// или эффект, который уже видит поток действий модуля.
+const bus = await pokemonEventsHandle
+
+export async function selectAndAnnounce(store: PokemonSynapse, pokemon: PokemonBrief) {
+  store.actions.selectPokemon(pokemon.id)
   await bus.actions.publish({
-    event: 'USER_SAVED',
-    data: { userId: user.id },
+    event: 'POKEMON_SELECTED',
+    data: { id: pokemon.id, name: pokemon.name },
     metadata: { priority: 'high' },
   })
 }
 
-// module-b.ts — слушает события
-const bus = await eventBusHandle
+// ─── analytics.ts — слушает все события домена ───────────────────────────────
+const bus = await pokemonEventsHandle
 
 bus.actions.subscribe({
-  eventPattern: 'USER_SAVED',
-  handler: (data) => {
-    // Обновить кэш, отправить уведомление и т.д.
-    console.log('Пользователь сохранён:', data.userId)
+  eventPattern: 'POKEMON_*',
+  handler: (data, event) => {
+    analytics.track(event.event, data)   // POKEMON_SELECTED, FAVORITE_TOGGLED, ...
   },
 })
 
-// module-c.ts — слушает все USER_* события
+// ─── toaster.ts — реагирует только на избранное ─────────────────────────────
 bus.actions.subscribe({
-  eventPattern: 'USER_*',
-  handler: (data, event) => {
-    analytics.track(event.event, data)
+  eventPattern: 'FAVORITE_TOGGLED',
+  handler: (data) => {
+    showToast(`Покемон ${data.name} ${data.added ? 'добавлен в' : 'убран из'} избранное`)
   },
 })
 ```
+
+Модули `analytics` и `toaster` не знают про pokemon-синапс и не импортируют его — связь только через
+имена событий. Это и есть развязка, ради которой нужна шина.
+
+## Связь с createSynapse: шина как externalDispatcher
+
+Если нужно не просто слушать события снаружи, а **вливать** их в поток действий другого synapse
+(чтобы его эффекты реагировали на события шины как на обычные экшены), шину передают через
+`externalDispatchers` — это «вариант коммуникации 3» из раздела [dependencies](./dependencies.md):
+
+```typescript
+const bus = await pokemonEventsHandle
+
+const mySynapse = createSynapse(() => ({
+  storage,
+  dispatcher: new MyDispatcher(storage),
+  effects: new MyEffects(),
+  externalDispatchers: { eventBus: bus.dispatcher },  // экшены шины попадут в action$
+}))
+```
+
+## См. также
+
+- [dependencies](./dependencies.md) — паттерны общения модулей (шина = медиатор / externalDispatchers).
+- [create-synapse-basic](./create-synapse-basic.md) — из чего собрана сама шина (storage + dispatcher).
+- [pokemon-advanced](./pokemon-advanced.md) — эталонный модуль, события которого публикует шина.

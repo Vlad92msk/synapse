@@ -1,12 +1,11 @@
 import { Dispatcher } from 'synapse-storage/reactive'
 
-import type { PokemonBrief, PokemonDetails, PokemonState } from '../pokemon-advanced/pokemon.types'
+import type { PokemonBrief, PokemonDetails, PokemonState } from './pokemon.types'
 
 /**
- * Class-based диспетчер (этап 4 ROADMAP). Экшены — поля класса; имя экшена = имя поля.
- *
- * Сравните с функциональной формой в `../pokemon-advanced/pokemon.dispatcher.ts`:
- * группы `apiActions` заменяют ручную раскладку `createApiActions` на 5 экшенов.
+ * Диспетчер домена — описывает намерения. Экшены объявлены как поля класса,
+ * имя экшена = имя поля. Группа `apiActions` раскрывается в жизненный цикл запроса
+ * (init / loading / success / failure / reset) одним полем.
  */
 export class PokemonDispatcher extends Dispatcher<PokemonState> {
   /** Намерение загрузить список с начала. `loadList()` = init (idle), `.loading/.success/.failure` — статусы. */

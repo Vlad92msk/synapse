@@ -2,86 +2,48 @@
 
 > [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/HookIndexedDBExample.tsx)
 
-Тот же хук с `type: 'indexedDB'`. Возвращает `IAsyncStorage`. Примечание: `destroyOnUnmount` по умолчанию равен `false` для IndexedDB.
+Тот же [`useCreateStorage`](./hook-memory.md) с `type: 'indexedDB'`. Возвращает `IAsyncStorage`.
+Примечание: `destroyOnUnmount` по умолчанию равен `false` для IndexedDB (персистентное хранилище
+обычно не нужно стирать при размонтировании).
+
+Тот же сквозной todo-домен (`TodoState`, `initialTodoState` — см. [MemoryStorage](./memory-storage.md)).
 
 ## Использование
 
 ```typescript
 import { useCreateStorage, useStorageSubscribe } from 'synapse-storage/react'
 
-interface NotesState {
-  notes: Array<{ id: number; text: string }>
-  nextId: number
-}
-
-function NotesPage() {
-  const { storage, isReady } = useCreateStorage<NotesState>({
+function TodoApp() {
+  const { storage, isReady } = useCreateStorage<TodoState>({
     type: 'indexedDB',
-    name: 'hook-notes',
-    initialState: { notes: [], nextId: 1 },
+    name: 'todo-hook-idb',
+    initialState: initialTodoState,
   })
-  // storage имеет тип IAsyncStorage<NotesState> | null
+  // storage имеет тип IAsyncStorage<TodoState> | null
 
-  // Важно: destroyOnUnmount = false по умолчанию для indexedDB
-  // Чтобы уничтожить при размонтировании:
-  const result = useCreateStorage<NotesState>(
-    { type: 'indexedDB', name: 'notes', initialState: { notes: [], nextId: 1 } },
-    { destroyOnUnmount: true }
+  // Чтобы уничтожать стор при размонтировании — передайте опцию явно:
+  const result = useCreateStorage<TodoState>(
+    { type: 'indexedDB', name: 'todo-hook-idb', initialState: initialTodoState },
+    { destroyOnUnmount: true },
   )
 
-  if (!isReady) return <div>Loading...</div>
+  if (!isReady) return <div>Loading…</div>
 
   // useStorageSubscribe работает идентично для синхронных и асинхронных хранилищ
-  const notes = useStorageSubscribe(storage, (s) => s.notes)
+  const todos = useStorageSubscribe(storage, (s) => s.todos)
 
-  // set/update — возвращают Promise (но await в обработчиках не нужен)
-  storage.set('nextId', 5)
-  storage.update((s) => { s.notes.push({ id: s.nextId, text: 'New' }) })
+  // set/update возвращают Promise, но await в обработчиках не обязателен
+  storage.update((s) => { s.filter = 'active' })
 }
 ```
 
-## Полный пример
+## Когда брать
 
-```tsx
-function NotesPage() {
-  const { storage, isReady, hasError, status } = useCreateStorage<NotesState>({
-    type: 'indexedDB',
-    name: 'hook-notes',
-    initialState: { notes: [], nextId: 1 },
-  })
+- Компонентному стору нужна персистентность и/или большие объёмы данных.
 
-  if (hasError) return <div>Error: {status.error?.message}</div>
-  if (!isReady) return <div>Loading...</div>
+## Когда не брать
 
-  return <NotesUI storage={storage} />
-}
+- Маленькое состояние без асинхронности → [localStorage-вариант](./hook-local-storage.md).
+- Эфемерное состояние → [memory-вариант](./hook-memory.md).
 
-function NotesUI({ storage }: { storage: IAsyncStorage<NotesState> }) {
-  const notes = useStorageSubscribe(storage, (s) => s.notes)
-  const nextId = useStorageSubscribe(storage, (s) => s.nextId)
-
-  return (
-    <div>
-      <button onClick={() => {
-        storage.update((s) => {
-          s.notes.push({ id: s.nextId, text: `Note #${s.nextId}` })
-          s.nextId++
-        })
-      }}>
-        Добавить заметку
-      </button>
-
-      <ul>
-        {(notes ?? []).map((note) => (
-          <li key={note.id}>
-            {note.text}
-            <button onClick={() =>
-              storage.update((s) => { s.notes = s.notes.filter((n) => n.id !== note.id) })
-            }>x</button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-```
+Подробнее про асинхронные операции — раздел «Работа с данными».

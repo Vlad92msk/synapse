@@ -2,93 +2,51 @@
 
 > [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/LocalStorageExample.tsx)
 
-Данные хранятся в `localStorage` браузера. Сохраняются после перезагрузки страницы. Синхронный API (идентичен MemoryStorage).
+Данные хранятся в `localStorage` браузера и переживают перезагрузку страницы. Синхронный API,
+полностью идентичный [MemoryStorage](./memory-storage.md).
+
+Тот же сквозной todo-домен (`TodoState`, `initialTodoState` — см. [MemoryStorage](./memory-storage.md)),
+но теперь задачи сохраняются между перезагрузками.
 
 ## Создание
 
 ```typescript
 import { LocalStorage } from 'synapse-storage/core'
 
-interface ThemeState {
-  theme: 'light' | 'dark'
-  fontSize: number
-}
-
 // Через new
-const storage = new LocalStorage<ThemeState>({
-  name: 'theme-settings',           // ключ в localStorage
-  initialState: { theme: 'light', fontSize: 14 },
+const storage = new LocalStorage<TodoState>({
+  name: 'todo-local', // ключ в localStorage
+  initialState: initialTodoState,
 })
 
 // Или через статический .create()
-const storage = LocalStorage.create<ThemeState>({
-  name: 'theme-settings',
-  initialState: { theme: 'light', fontSize: 14 },
+const storage = LocalStorage.create<TodoState>({
+  name: 'todo-local',
+  initialState: initialTodoState,
 })
 
-// Инициализация — загружает данные из localStorage, если они есть
+// initialize() загрузит сохранённые данные из localStorage, если они есть
 await storage.initialize()
 ```
 
-## Запись данных
+## Когда брать
 
-```typescript
-// set() — установить значение по ключу
-storage.set('theme', 'dark')
-storage.set('fontSize', 16)
+- Небольшие пользовательские настройки и состояние, которое должно пережить перезагрузку
+  (тема, выбранный фильтр, черновик).
+- Нужен синхронный API и простота — без асинхронных `await`.
 
-// update() — изменить несколько полей сразу
-storage.update((s) => {
-  s.theme = 'dark'
-  s.fontSize = 18
-})
-```
+## Когда не брать
 
-## Чтение данных
+- Большие объёмы данных, массивы на тысячи элементов или бинарные данные → localStorage
+  ограничен (~5 МБ) и сериализует всё в строку. Используйте [IndexedDB](./indexeddb-storage.md).
+- Данные не должны переживать сессию → [MemoryStorage](./memory-storage.md).
 
-```typescript
-// Все методы идентичны MemoryStorage:
-const theme = storage.get<string>('theme')     // 'dark'
-const state = storage.getState()               // { theme: 'dark', fontSize: 16 }
-const state = storage.getStateSync()           // то же самое
-```
+## Работа с данными
 
-## Проверка, удаление, сброс
-
-```typescript
-// Все методы идентичны MemoryStorage:
-storage.has('theme')     // true
-storage.keys()           // ['theme', 'fontSize']
-storage.remove('theme')  // удалить ключ
-storage.clear()          // очистить всё (state = {})
-storage.reset()          // вернуть к initialState
-```
-
-## Подписки
-
-```typescript
-// Идентично MemoryStorage:
-const unsub = storage.subscribe('theme', (newValue) => {
-  console.log('тема изменилась:', newValue)
-})
-
-const unsub = storage.subscribe(
-  (state) => state.fontSize,
-  (newSize) => console.log('fontSize:', newSize)
-)
-
-const unsub = storage.subscribeToAll((event) => {
-  console.log('изменено:', event)
-})
-```
-
-## Отличия от MemoryStorage
-
-API полностью идентичен MemoryStorage. Единственное отличие — данные сохраняются в localStorage браузера:
-
-- При `initialize()` данные загружаются из localStorage
-- При `set/update/clear/reset` данные автоматически синхронизируются
-- Ключ в localStorage равен полю `name` в конфигурации
+API записи/чтения/подписок идентичен MemoryStorage — см. раздел «Работа с данными»
+([Чтение](./reading-data.md), [Запись](./writing-data.md), [Подписки](./subscriptions.md)).
+Единственное отличие — данные автоматически синхронизируются в localStorage; ключ в
+localStorage равен полю `name`.
 
 ## destroy() и clearOnDestroy
 

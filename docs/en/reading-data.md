@@ -2,21 +2,39 @@
 
 > [Back to Main](../../README.md)
 
-All the ways to read data from a storage. Synchronous storages (Memory, LocalStorage) and asynchronous ones (IndexedDB).
+All the ways to read data from a storage. The examples use the end-to-end `todoStorage` — the same
+store created in the [MemoryStorage](./memory-storage.md) section:
+
+```typescript
+import { MemoryStorage } from 'synapse-storage/core'
+
+interface Todo { id: string; title: string; done: boolean }
+type Filter = 'all' | 'active' | 'completed'
+interface TodoState { todos: Todo[]; filter: Filter }
+
+const todoStorage = new MemoryStorage<TodoState>({
+  name: 'todo',
+  initialState: { todos: [], filter: 'all' },
+})
+await todoStorage.initialize()
+```
+
+Synchronous storages (Memory, LocalStorage) return values immediately, while the asynchronous one
+(IndexedDB) returns a `Promise`, so it needs `await`.
 
 ## get(key) — Reading a single field
 
 ```typescript
 // ── Synchronous storage (MemoryStorage / LocalStorage) ──
 
-const name = storage.get<string>('name')     // 'Alice'
-const age = storage.get<number>('age')       // 28
-const missing = storage.get<string>('xxx')   // undefined
+const filter = todoStorage.get<Filter>('filter')   // 'all'
+const todos = todoStorage.get<Todo[]>('todos')     // Todo[]
+const missing = todoStorage.get<string>('xxx')     // undefined
 
 // ── Asynchronous storage (IndexedDBStorage) ──
 
-const name = await storage.get<string>('name')   // 'Bob'
-const age = await storage.get<number>('age')     // 35
+const filter = await todoStorage.get<Filter>('filter')
+const todos = await todoStorage.get<Todo[]>('todos')
 ```
 
 ## getState() — The entire state
@@ -24,13 +42,12 @@ const age = await storage.get<number>('age')     // 35
 ```typescript
 // ── Synchronous storage ──
 
-const state = storage.getState()
-// { name: 'Alice', age: 28, role: 'admin' }
+const state = todoStorage.getState()
+// { todos: [...], filter: 'all' }
 
 // ── Asynchronous storage ──
 
-const state = await storage.getState()
-// { name: 'Bob', age: 35, role: 'user' }
+const state = await todoStorage.getState()
 ```
 
 ## getStateSync() — Synchronous read from cache
@@ -39,7 +56,7 @@ Available on **ALL** storage types — synchronous and asynchronous. Reads from 
 
 ```typescript
 // Synchronous storage — the same as getState()
-const state = storage.getStateSync()
+const state = todoStorage.getStateSync()
 
 // Asynchronous storage — synchronous access to the cache!
 const state = asyncStorage.getStateSync()
@@ -51,13 +68,12 @@ const state = asyncStorage.getStateSync()
 ```typescript
 // ── Synchronous storage ──
 
-storage.has('name')     // true
-storage.has('unknown')  // false
-storage.keys()          // ['name', 'age', 'role']
+todoStorage.has('todos')    // true
+todoStorage.has('unknown')  // false
+todoStorage.keys()          // ['todos', 'filter']
 
 // ── Asynchronous storage ──
 
-await storage.has('name')     // true
-await storage.has('unknown')  // false
-await storage.keys()          // ['name', 'age', 'role']
+await todoStorage.has('todos')   // true
+await todoStorage.keys()         // ['todos', 'filter']
 ```

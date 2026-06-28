@@ -4,33 +4,35 @@
 
 Reusing storage instances by name. Useful for shared state and when a storage is created in several places (React components, modules).
 
+The examples use the end-to-end domain `TodoState = { todos: Todo[]; filter: Filter }` (see the
+[MemoryStorage](./memory-storage.md) section).
+
 ## Enabling Singleton
 
 ```typescript
 import { MemoryStorage } from 'synapse-storage/core'
 
 // First instance — creates the storage
-const storage1 = new MemoryStorage<{ count: number }>({
-  name: 'my-store',
+const storage1 = new MemoryStorage<TodoState>({
+  name: 'my-todo',
   singleton: { enabled: true },
-  initialState: { count: 0 },
+  initialState: { todos: [], filter: 'completed' },
 })
 await storage1.initialize()
-storage1.set('count', 42)
 
 // Second instance with the SAME name — gets the same object
-const storage2 = new MemoryStorage<{ count: number }>({
-  name: 'my-store',
+const storage2 = new MemoryStorage<TodoState>({
+  name: 'my-todo',
   singleton: { enabled: true },
-  initialState: { count: 999 },  // ignored (FIRST_WINS by default)
+  initialState: { todos: [], filter: 'all' },  // ignored (FIRST_WINS by default)
 })
 await storage2.initialize()
 
-storage2.get('count')     // 42 (the same instance!)
+storage2.get('filter')    // 'completed' (the same instance!)
 storage1 === storage2     // true
 
 // Works with MemoryStorage, LocalStorage, IndexedDB
-// Default singleton key: `${storageType}_${name}` (memory_my-store)
+// Default singleton key: `${storageType}_${name}` (memory_my-todo)
 ```
 
 ## Merge strategies (mergeStrategy)
@@ -38,13 +40,13 @@ storage1 === storage2     // true
 ```typescript
 import { MemoryStorage, ConfigMergeStrategy } from 'synapse-storage/core'
 
-const storage = new MemoryStorage({
-  name: 'my-store',
+const storage = new MemoryStorage<TodoState>({
+  name: 'my-todo',
   singleton: {
     enabled: true,
     mergeStrategy: ConfigMergeStrategy.FIRST_WINS,  // default
   },
-  initialState: { ... },
+  initialState: { todos: [], filter: 'all' },
 })
 
 // All strategies:
@@ -54,9 +56,9 @@ const storage = new MemoryStorage({
 
 // DEEP_MERGE
 // Recursive merge of initialState:
-// s1: { theme: 'dark', lang: 'en' }
-// s2: { theme: 'light', extra: true }
-// → { theme: 'dark', lang: 'en', extra: true }
+// s1: { todos: [], filter: 'all' }
+// s2: { filter: 'active' }
+// → { todos: [], filter: 'all' }   (the first one's fields take priority)
 
 // OVERRIDE
 // The last configuration overrides (except name)
@@ -74,19 +76,19 @@ const storage = new MemoryStorage({
 // Default key: `${storageType}_${name}`
 // Two storages with the same name but a different key — different instances
 
-const cache = new MemoryStorage<{ data: string }>({
-  name: 'user-data',
-  singleton: { enabled: true, key: 'user-cache' },
-  initialState: { data: 'cached' },
+const active = new MemoryStorage<TodoState>({
+  name: 'todo-board',
+  singleton: { enabled: true, key: 'board-active' },
+  initialState: { todos: [], filter: 'active' },
 })
 
-const settings = new MemoryStorage<{ data: string }>({
-  name: 'user-data',  // the same name!
-  singleton: { enabled: true, key: 'user-settings' },  // a different key
-  initialState: { data: 'settings' },
+const archive = new MemoryStorage<TodoState>({
+  name: 'todo-board',  // the same name!
+  singleton: { enabled: true, key: 'board-archive' },  // a different key
+  initialState: { todos: [], filter: 'completed' },
 })
 
-cache === settings  // false (different keys → different instances)
+active === archive  // false (different keys → different instances)
 ```
 
 ## Singleton in React
@@ -96,28 +98,28 @@ import { useStorageSubscribe } from 'synapse-storage/react'
 
 // Two components create a storage with the same name — a single instance
 
-const sharedStorage = new MemoryStorage<{ message: string; likes: number }>({
-  name: 'shared-store',
+const sharedStorage = new MemoryStorage<TodoState>({
+  name: 'shared-todo',
   singleton: { enabled: true },
-  initialState: { message: 'Hello!', likes: 0 },
+  initialState: { todos: [], filter: 'all' },
 })
 sharedStorage.initialize()
 
 function ComponentA() {
-  const message = useStorageSubscribe(sharedStorage, (s) => s.message)
-  return <div>{message} <button onClick={() => sharedStorage.set('message', 'Updated!')}>Update</button></div>
+  const count = useStorageSubscribe(sharedStorage, (s) => s.todos.length)
+  return <div>tasks: {count} <button onClick={() => sharedStorage.update((s) => { s.todos.push(createTodo('From A')) })}>Add</button></div>
 }
 
 function ComponentB() {
   // Creates a "new" storage — but gets the same singleton
-  const sameStorage = new MemoryStorage<{ message: string; likes: number }>({
-    name: 'shared-store',
+  const sameStorage = new MemoryStorage<TodoState>({
+    name: 'shared-todo',
     singleton: { enabled: true },
-    initialState: { message: 'different', likes: 0 },
+    initialState: { todos: [], filter: 'all' },
   })
-  const message = useStorageSubscribe(sameStorage, (s) => s.message)
-  // message here = the same as in ComponentA
-  return <div>{message}</div>
+  const count = useStorageSubscribe(sameStorage, (s) => s.todos.length)
+  // count here = the same as in ComponentA
+  return <div>tasks: {count}</div>
 }
 ```
 

@@ -10,7 +10,7 @@ synapse-storage
 │
 ├── State Manager        ← "where the state lives"
 │   └── synapse-storage/core
-│       MemoryStorage · LocalStorage · IndexedDB · IStorage
+│       MemoryStorage · LocalStorage · IndexedDBStorage · IStorage
 │       selectors (Selectors / SelectorModule)
 │
 └── Business Logic Layer ← "how business logic manages the state"
@@ -27,7 +27,7 @@ subscribe to its changes*. A unified `IStorage<T>` interface over three implemen
 |-----------------|-----------------------------------------------|
 | `MemoryStorage` | session-scoped state (most features)          |
 | `LocalStorage`  | synchronous persistence (settings, theme)     |
-| `IndexedDB`     | asynchronous large data (cache, offline)      |
+| `IndexedDBStorage` | asynchronous large data (cache, offline)   |
 
 This layer also includes **selectors** — memoized derived state on top of a storage (like
 `reselect`, but with cross-store dependencies and a reactive `selector.$`).
@@ -45,7 +45,7 @@ storage.subscribe((s) => s.count, (count) => console.log(count))
 storage.update((s) => { s.count++ })   // Immer-like
 ```
 
-No RxJS, no effects, no React — just a reactive storage.
+> No RxJS, no effects, no React — just a reactive storage.
 
 ## Layer 2. Business Logic Layer — "how logic manages the state"
 
@@ -120,7 +120,7 @@ export const postsSynapse = createSynapse(async () => {
 
 2. **Responsibility boundary.** The State Manager knows nothing about intents and networking;
    the BL layer knows nothing about *how* the state is physically stored. Swap `MemoryStorage`
-   for `IndexedDB` — the business logic stays untouched.
+   for `IndexedDBStorage` — the business logic stays untouched.
 
 3. **Testability.** A storage is tested as a data structure. A dispatcher — as a set of pure
    transitions. An effect — in isolation: `new PostsEffects(mockApi).loadPosts(action$, state$, ctx)`

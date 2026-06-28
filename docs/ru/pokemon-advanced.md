@@ -1,41 +1,68 @@
-# Pokemon Advanced — Полный пример архитектуры
+# Pokemon Advanced — рецепт: весь слой данных на PokeAPI
 
-> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/tree/master/packages/examples/src/examples/pokemon-advanced)
+> [Назад к оглавлению](./README.md) · [Модуль на GitHub](https://github.com/Vlad92msk/synapse/tree/master/packages/examples/src/examples/pokemon-advanced)
 
-Полный пример, объединяющий все возможности Synapse: хранилище, селекторы, диспетчер, эффекты, ApiClient, зависимости и внешнее состояние.
+Итоговая страница цепочки. Все предыдущие разделы разбирали по одному кирпичу на этом же домене —
+здесь они собираются в **один работающий модуль**: ApiClient с кэшем → мапперы → storage →
+селекторы → диспетчер → эффекты → `createSynapse` → React. Это эталон того, как разложить слой
+управления данными по файлам-ответственностям и копировать в свой проект.
 
-## Структура проекта
+Каждый раздел ниже ссылается на страницу, где соответствующий кирпич разобран детально.
+
+## Структура модуля
+
+Весь домен живёт в одной папке `pokemon-advanced/`, файл = ответственность:
 
 ```
-pokemon-class/                — class-based модуль
-  pokemon.dispatcher.ts        — class Dispatcher (action / signal / apiActions / watcher)
-  pokemon.selectors.ts         — class Selectors (select / combine)
-  pokemon.effects.ts           — class Effects (this.effect, validateMap/apiResult)
-  pokemon.synapse.ts           — createSynapse(factory), связывающий всё воедино
-
-pokemon-advanced/             — переиспользуемые файлы (не зависят от формы API)
-  pokemon.types.ts             — TypeScript-интерфейсы
-  pokemon.store.ts             — начальное состояние
-  pokemon.settings.ts          — внешнее хранилище настроек (зависимость)
-  pokemon.api.ts               — настройка ApiClient + маппинг ответов
+pokemon-advanced/
+  pokemon.types.ts       — доменные типы + форма состояния запроса
+  pokemon.store.ts       — initialState (форма стора)
+  pokemon.settings.ts    — внешнее хранилище настроек (зависимость)
+  pokemon.api.ts         — ApiClient (endpoints, cache) + мапперы ответа
+  pokemon.selectors.ts   — производные значения (class Selectors)
+  pokemon.dispatcher.ts  — намерения (class Dispatcher)
+  pokemon.effects.ts     — side-effects на RxJS (class Effects)
+  pokemon.synapse.ts     — сборка через createSynapse(factory)
+  index.ts               — публичные экспорты
+  PokemonAdvancedExample.tsx / PokemonDemo.tsx — UI поверх synapse
+  helpers.ts             — мелкие утилиты представления (typeColor)
 ```
 
-## 1. Типы
+## Поток данных
+
+```
+UI (PokemonDemo)
+   │  store.actions.loadList() / selectPokemon(id) / setSearchQuery(q) / toggleFavorite(id)
+   ▼
+dispatcher (намерения)  ──► action$ ──►  effects (RxJS)
+   │ apiActions/action/signal             │ ofType → validateMap → fromRequest(api)
+   │                                       ▼
+   │                                    pokemon.api.ts  (ApiClient + мапперы)
+   │                                       │ apiResult(data) → mapListResponse / mapDetailsResponse
+   ▼                                       ▼
+   └──────────►  applyPokemonList / applyPokemonDetails / loadList.success ──► storage
+                                                                                   │
+                                              selectors (filteredList, isLoading…) ◄┘
+                                                   │  useSelector
+                                                   ▼
+                                                  UI
+```
+
+Связь односторонняя: UI шлёт **намерения** в диспетчер, эффекты делают side-effects и пишут
+результат через экшены в storage, селекторы выдают производные значения обратно в UI.
+
+## 1. Типы и форма состояния — `pokemon.types.ts`
+
+Состояние держит и доменные данные, и **протокол запроса** (`api.listRequest`/`detailsRequest`
+со статусом). Подробнее про форму состояния запроса — в [create-synapse-effects](./create-synapse-effects.md).
 
 ```typescript
-export interface PokemonBrief {
-  id: number
-  name: string
-  sprite: string
-}
-
-export interface PokemonDetails {
-  id: number; name: string; types: string[]
-  stats: Array<{ name: string; value: number }>
-  abilities: string[]; sprite: string; height: number; weight: number
-}
-
 export type ApiStatus = 'idle' | 'loading' | 'success' | 'error' | 'reset'
+
+export interface ApiRequestState {
+  status: ApiStatus
+  error: string | null
+}
 
 export interface PokemonState {
   api: {
@@ -52,136 +79,125 @@ export interface PokemonState {
 }
 ```
 
-## 2. Внешние настройки (зависимость)
+`pokemon.store.ts` рядом — это просто `initialState: PokemonState` (оба запроса в `'idle'`,
+списки пустые).
+
+## 2. ApiClient + мапперы — `pokemon.api.ts`
+
+→ детально: [api-client](./api-client.md)
+
+ApiClient с кэшем по тегам и двумя эндпоинтами (`getList`/`getDetails`). Сырые типы ответа PokeAPI
+не утекают в домен — их разворачивают мапперы.
 
 ```typescript
-import { MemoryStorage } from 'synapse-storage/core'
+export const pokemonApiClient = new ApiClient({
+  storage: new MemoryStorage<Record<string, any>>({ name: 'pokemon-advanced-api-cache', initialState: {} }),
+  baseQuery: { baseUrl: 'https://pokeapi.co/api/v2', timeout: 10000 },
+  cache: { ttl: 60000, invalidateOnError: true },
+  endpoints: async (create) => ({
+    getList: create<{ limit: number; offset: number }, PokemonListApiResponse>({
+      request: (params) => ({ path: '/pokemon', method: 'GET', query: params }),
+      cache: { ttl: 120000 }, tags: ['pokemon-list'],
+    }),
+    getDetails: create<{ id: number }, PokemonApiResponse>({
+      request: ({ id }) => ({ path: `/pokemon/${id}`, method: 'GET' }),
+      cache: true, tags: ['pokemon-details'],
+    }),
+  }),
+})
 
-export interface PokemonSettings {
-  pageSize: number
-}
+export const initPokemonApi = () => pokemonApiClient.init()
+export type PokemonApiEndpoints = ReturnType<typeof pokemonApiClient.getEndpoints>
 
+// Мапперы: сырой ответ → доменный тип (id из url, спрайт по id, плоские stats/abilities)
+export function mapListResponse(data: PokemonListApiResponse): { list: PokemonBrief[]; hasMore: boolean } { /* … */ }
+export function mapDetailsResponse(data: PokemonApiResponse): PokemonDetails { /* … */ }
+```
+
+## 3. Внешние настройки — `pokemon.settings.ts`
+
+→ детально: [dependencies](./dependencies.md)
+
+Отдельное сырое хранилище: то, от чего модуль зависит, но чем не владеет (здесь — размер страницы).
+В synapse оно входит как зависимость.
+
+```typescript
 export const settingsStorage = new MemoryStorage<PokemonSettings>({
   name: 'pokemon-settings',
   initialState: { pageSize: 12 },
 })
 ```
 
-## 3. ApiClient
+## 4. Селекторы — `pokemon.selectors.ts`
+
+→ детально: [create-synapse-basic](./create-synapse-basic.md), [selector-system](./selector-system.md)
+
+Производные значения. Промежуточный слайс `api` — `private` (наружу не видно, но работает
+зависимостью в `combine`). `filteredList` = `pokemonList` × `searchQuery`.
 
 ```typescript
-import { ApiClient } from 'synapse-storage/api'
-
-export const pokemonApiClient = new ApiClient({
-  storage: new MemoryStorage<Record<string, any>>({
-    name: 'pokemon-api-cache',
-    initialState: {},
-  }),
-  baseQuery: { baseUrl: 'https://pokeapi.co/api/v2', timeout: 10000 },
-  cache: { ttl: 60000, invalidateOnError: true },
-  endpoints: async (create) => ({
-    getList: create<{ limit: number; offset: number }, PokemonListApiResponse>({
-      request: (params) => ({ path: '/pokemon', method: 'GET', query: params }),
-      cache: { ttl: 120000 },
-      tags: ['pokemon-list'],
-    }),
-    getDetails: create<{ id: number }, PokemonApiResponse>({
-      request: ({ id }) => ({ path: `/pokemon/${id}`, method: 'GET' }),
-      cache: true,
-      tags: ['pokemon-details'],
-    }),
-  }),
-})
-```
-
-## 4. Селекторы (class Selectors)
-
-```typescript
-import { Selectors } from 'synapse-storage/core'
-
 export class PokemonSelectors extends Selectors<PokemonState> {
-  private  api = this.select((s) => s.api)        // private = промежуточный слайс
+  private readonly api = this.select((s) => s.api)
 
-   pokemonList = this.select((s) => s.pokemonList)
-   searchQuery = this.select((s) => s.searchQuery)
-   favorites = this.select((s) => s.favorites)
-   selectedPokemon = this.select((s) => s.selectedPokemon)
-   hasMore = this.select((s) => s.hasMore)
+  readonly pokemonList = this.select((s) => s.pokemonList)
+  readonly searchQuery = this.select((s) => s.searchQuery)
+  readonly favorites = this.select((s) => s.favorites)
 
-   listStatus = this.combine([this.api], (a) => a.listRequest.status)
-   isListLoading = this.combine([this.listStatus], (s) => s === 'loading')
+  readonly listStatus = this.combine([this.api], (a) => a.listRequest.status)
+  readonly isListLoading = this.combine([this.listStatus], (s) => s === 'loading')
 
-  // Композиция pokemonList + searchQuery → filteredList
-   filteredList = this.combine([this.pokemonList, this.searchQuery], (list, query) =>
+  readonly filteredList = this.combine([this.pokemonList, this.searchQuery], (list, query) =>
     query ? list.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())) : list,
   )
-
-   favoriteCount = this.combine([this.favorites], (favs) => favs.length)
-   favoritePokemon = this.combine([this.pokemonList, this.favorites], (list, favs) =>
-    list.filter((p) => favs.includes(p.id)),
-  )
+  readonly favoriteCount = this.combine([this.favorites], (favs) => favs.length)
 }
 ```
 
-## 5. Диспетчер (class Dispatcher: action / signal / apiActions / watcher)
+## 5. Диспетчер — `pokemon.dispatcher.ts`
+
+→ детально: [create-synapse-dispatcher](./create-synapse-dispatcher.md), [dispatcher-detailed](./dispatcher-detailed.md)
+
+Намерения. `apiActions` раскрывается в жизненный цикл запроса одним полем; `action` — синхронная
+запись (payload = return); `signal` — чистое намерение; `watcher` — реактивный наблюдатель.
 
 ```typescript
-import { Dispatcher } from 'synapse-storage/reactive'
-
 export class PokemonDispatcher extends Dispatcher<PokemonState> {
-  // apiActions — вызываемая группа: loadList() = init, .loading/.success/.failure/.reset
-   loadList = this.apiActions<void>((s) => s.api.listRequest)
-   loadDetails = this.apiActions<void>((s) => s.api.detailsRequest)
+  readonly loadList = this.apiActions<void>((s) => s.api.listRequest)     // init/loading/success/failure/reset
+  readonly loadDetails = this.apiActions<void>((s) => s.api.detailsRequest)
+  readonly loadMore = this.signal<void>('Подгрузить следующую страницу')
 
-  // signal — чистое намерение (статус подгрузки пишется через loadList.*)
-   loadMore = this.signal<void>('Подгрузить следующую страницу')
+  readonly selectPokemon = this.action((store, id: number | null) => { /* update selectedId */ return id })
+  readonly applyPokemonList = this.action((store, data: { list: PokemonBrief[]; hasMore: boolean; append: boolean }) => /* … */)
+  readonly applyPokemonDetails = this.action((store, details: PokemonDetails) => /* … */)
+  readonly setSearchQuery = this.action((store, query: string) => { store.set('searchQuery', query); return query })
+  readonly toggleFavorite = this.action((store, id: number) => { /* toggle in favorites */ return id })
 
-   selectPokemon = this.action((store, id: number | null) => {
-    store.update((s) => {
-      s.selectedPokemonId = id
-      if (id === null) s.selectedPokemon = null
-    })
-    return id
-  })
-
-   applyPokemonList = this.action((store, data: { list: PokemonBrief[]; hasMore: boolean; append: boolean }) =>
-    store.update((s) => {
-      s.pokemonList = data.append ? [...s.pokemonList, ...data.list] : data.list
-      s.offset = s.pokemonList.length
-      s.hasMore = data.hasMore
-    }),
-  )
-
-   watchFavoriteCount = this.watcher({
-    selector: (s) => s.favorites.length,
-    notifyAfterSubscribe: true,
-  })
+  readonly watchFavoriteCount = this.watcher({ selector: (s) => s.favorites.length, notifyAfterSubscribe: true })
 }
 ```
 
-> `ofType(d.loadList)` ловит ТОЛЬКО init. Чтобы среагировать на результат — `ofType(d.loadList.success)`.
+> `ofType(d.loadList)` в эффекте ловит ТОЛЬКО init. Чтобы реагировать на результат — `ofType(d.loadList.success)`.
 
-## 6. Эффекты (class Effects: validateMap + apiResult)
+## 6. Эффекты — `pokemon.effects.ts`
+
+→ детально: [create-synapse-effects](./create-synapse-effects.md)
+
+Side-effects по экшенам. Сервисы (API-endpoints) и внешний стор (`settings$`) приходят **через
+конструктор** и захватываются в замыкание — эффект не лезет за ними в глобальную область.
 
 ```typescript
-import { Effects, ofType, selectorObject, validateMap, apiResult, fromRequest } from 'synapse-storage/reactive'
-
-// Сервисы (endpoints) и внешние сторы (settings$) — через конструктор, захват в замыкание рецепта.
 export class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {
   constructor(
-    private  api: PokemonApiEndpoints,
-    private  settings$: Observable<PokemonSettings>,
+    private readonly api: PokemonApiEndpoints,
+    private readonly settings$: Observable<PokemonSettings>,
   ) { super() }
 
-   loadList = this.effect((action$, state$, { dispatcher: d }) =>
+  readonly loadList = this.effect((action$, state$, { dispatcher: d }) =>
     action$.pipe(
-      ofType(d.loadList),                                  // только init
+      ofType(d.loadList),                                                   // только init
       withLatestFrom(selectorObject(state$, { listStatus: (s) => s.api.listRequest.status }), this.settings$),
       validateMap({
-        validator: ([, { listStatus }]) => ({
-          conditions: [listStatus !== 'loading'],
-          skipAction: () => d.loadList.reset(),
-        }),
+        validator: ([, { listStatus }]) => ({ conditions: [listStatus !== 'loading'], skipAction: () => d.loadList.reset() }),
         loadingAction: () => d.loadList.loading(),
         errorAction: (err) => d.loadList.failure(String(err)),
         apiCall: ([, , { pageSize }]) =>
@@ -194,28 +210,30 @@ export class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {
       }),
     ),
   )
+
+  // loadMore — то же, но offset из стора + append: true; loadDetails — ofType(selectPokemon) → getDetails.
 }
 ```
 
-## 7. createSynapse — связываем всё воедино
+## 7. Сборка — `pokemon.synapse.ts`
+
+→ детально: [create-synapse-basic](./create-synapse-basic.md), [dependencies](./dependencies.md)
+
+`createSynapse(factory)` связывает всё. Фабрика **async** — есть пролог `initPokemonApi()`.
+Возвращается ленивый handle: фабрика стартует при первом `await`/`ready()`, не на импорте.
 
 ```typescript
-import { MemoryStorage } from 'synapse-storage/core'
-import { toObservable } from 'synapse-storage/reactive'
-import { createSynapse } from 'synapse-storage/utils'
-
 export const pokemonSynapse = createSynapse(async () => {
-  await initPokemonApi()  // async-пролог (бывший setup)
+  await initPokemonApi()                                       // async-пролог
 
-  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-class', initialState })
+  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState })
 
   return {
     storage,
-    dependencies: [settingsStorage],   // зависимость от другого стора
+    dependencies: [settingsStorage],                           // зависимость от стора настроек
     dependencyTimeout: 10000,
     dispatcher: new PokemonDispatcher(storage),
     selectors: new PokemonSelectors(storage),
-    // сервисы (endpoints) и внешний стор (settings$) — через конструктор эффектов
     effects: new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage)),
   }
 })
@@ -223,7 +241,35 @@ export const pokemonSynapse = createSynapse(async () => {
 export type PokemonSynapse = Awaited<typeof pokemonSynapse>
 ```
 
+## 8. React — `PokemonAdvancedExample.tsx` + `PokemonDemo.tsx`
+
+→ детально: [await-synapse](./await-synapse.md) (ручной подъём), [synapse-ctx](./synapse-ctx.md) (через провайдер)
+
+Ленивый handle поднимается через `awaitSynapse`: awaiter создаётся на уровне модуля, HOC
+`withSynapseReady` держит `loadingComponent`, пока storage не готов, затем отдаёт стор синхронно.
+
+```typescript
+const pokemonAwaiter = awaitSynapse(pokemonSynapse, {
+  loadingComponent: <div>Initializing...</div>,
+  errorComponent: (error) => <div>Init failed: {error.message}</div>,
+})
+
+function PokemonContent() {
+  const store = pokemonAwaiter.getStoreIfReady()!          // готов — доступен синхронно
+  useEffect(() => { store.actions.loadList() }, [store])   // первичная загрузка
+  return <PokemonDemo store={store} />
+}
+
+export const PokemonAdvancedExample = pokemonAwaiter.withSynapseReady(PokemonContent)
+```
+
+`PokemonDemo` читает через `useSelector(store.selectors.X)`, шлёт намерения через
+`store.actions.X(...)`, а `watchFavoriteCount` подключает через `store.dispatcher.watchers.watchFavoriteCount()`.
+
 ## Протокол запроса с 5 состояниями
+
+Ядро связки dispatcher↔effects: каждый запрос проходит фиксированный жизненный цикл, а UI читает
+его через `status`-селекторы.
 
 ```
 UI dispatch (loadList)  ->  status = 'idle'    (без изменений в UI)
@@ -235,16 +281,15 @@ UI dispatch (loadList)  ->  status = 'idle'    (без изменений в UI)
       \-- валидация FAIL ->  skipAction         -> status = 'reset'   (без мерцания UI)
 ```
 
-## Ключевые утилиты
+## Карта: возможность → страница
 
-| Утилита | Назначение |
-|---|---|
-| `this.action((store, p) => r)` | экшен; payload = возвращённое значение |
-| `this.signal<P>(desc)` | чистый сигнал-намерение |
-| `this.apiActions<P>(accessor)` | вызываемая группа init/loading/success/failure/reset |
-| `this.watcher(config)` | реактивный наблюдатель за частью состояния |
-| `validateMap({...})` | RxJS-оператор: валидация -> loading -> apiCall -> success/error |
-| `apiResult(cb)` | Маппинг успешного ответа API на dispatch |
-| `fromRequest(req)` | Конвертирует endpoint.request() в Observable |
-| `selectorObject(state$, {...})` | Именованный объект из state$ для withLatestFrom |
-| `selectorMap(state$, ...fns)` | Позиционный кортеж из state$ для withLatestFrom |
+| Возможность | Файл модуля | Страница |
+|---|---|---|
+| ApiClient (cache/tags), мапперы | `pokemon.api.ts` | [api-client](./api-client.md) |
+| storage + selectors, минимальный createSynapse | `pokemon.store.ts`, `pokemon.selectors.ts` | [create-synapse-basic](./create-synapse-basic.md) |
+| dispatcher (action/signal/apiActions/watcher) | `pokemon.dispatcher.ts` | [create-synapse-dispatcher](./create-synapse-dispatcher.md), [dispatcher-detailed](./dispatcher-detailed.md) |
+| effects (validateMap/apiResult/fromRequest) | `pokemon.effects.ts` | [create-synapse-effects](./create-synapse-effects.md) |
+| зависимости (settingsStorage, async-фабрика) | `pokemon.settings.ts`, `pokemon.synapse.ts` | [dependencies](./dependencies.md) |
+| React: ручной подъём / провайдер | `PokemonAdvancedExample.tsx` | [await-synapse](./await-synapse.md), [synapse-ctx](./synapse-ctx.md) |
+| фреймворк-независимый awaiter, SSR fast-path | — | [synapse-awaiter](./synapse-awaiter.md) |
+| шина событий между модулями | — | [event-bus](./event-bus.md) |

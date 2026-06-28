@@ -1,225 +1,46 @@
-import { useState, useEffect } from 'react'
-import { MemoryStorage, Selectors } from 'synapse-storage/core'
+import { useEffect, useState } from 'react'
 import { useSelector } from 'synapse-storage/react'
 import { cardStyle, buttonRow, codeBlock, sectionTitle } from './styles'
+import { todoSelectors, todoStorage } from './todo/todo.store'
+import { TodoList, useTodoState } from './todo/TodoDemo'
 
-// ─── Типы ───────────────────────────────────────────────────────────────────
-
-interface ProductState {
-  products: Array<{ id: number; name: string; price: number; category: 'food' | 'tech' }>
-  filterCategory: 'all' | 'food' | 'tech'
-  sortBy: 'name' | 'price'
-}
-
-// ─── Создание хранилища ──────────────────────────────────────────────────────
-
-const storage = new MemoryStorage<ProductState>({
-  name: 'selector-demo',
-  initialState: {
-    products: [
-      { id: 1, name: 'Apple', price: 2, category: 'food' },
-      { id: 2, name: 'Laptop', price: 1200, category: 'tech' },
-      { id: 3, name: 'Bread', price: 3, category: 'food' },
-      { id: 4, name: 'Phone', price: 800, category: 'tech' },
-      { id: 5, name: 'Milk', price: 4, category: 'food' },
-    ],
-    filterCategory: 'all',
-    sortBy: 'name',
-  },
-})
-
-// ─── Селекторы (class-based) ──────────────────────────────────────────────────
-// Поля — настоящие SelectorAPI сразу (eager). Промежуточные — private.
-
-class ProductSelectors extends Selectors<ProductState> {
-  // ─── Простые селекторы ──────────────────────────────────────────────
-  readonly products = this.select((s) => s.products)
-  readonly filterCategory = this.select((s) => s.filterCategory)
-  readonly sortBy = this.select((s) => s.sortBy)
-
-  // ─── Комбинированный селектор ───────────────────────────────────────
-  readonly filtered = this.combine([this.products, this.filterCategory], (items, cat) =>
-    cat === 'all' ? items : items.filter((p) => p.category === cat),
-  )
-
-  // ─── Цепочка: filtered → sorted ────────────────────────────────────
-  readonly sorted = this.combine([this.filtered, this.sortBy], (items, sort) =>
-    [...items].sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name) : a.price - b.price)),
-  )
-
-  // ─── Вычисляемые значения ───────────────────────────────────────────
-  readonly totalPrice = this.combine([this.filtered], (items) => items.reduce((sum, p) => sum + p.price, 0))
-  readonly count = this.combine([this.filtered], (items) => items.length)
-
-  // ─── С кастомным equals ─────────────────────────────────────────────
-  readonly foodNames = this.select((s) => s.products.filter((p) => p.category === 'food').map((p) => p.name), {
-    equals: (a, b) => JSON.stringify(a) === JSON.stringify(b),
-    name: 'foodNames',
-  })
-}
-
-let selectors: ProductSelectors
-
-const readyPromise = storage.initialize().then(() => {
-  selectors = new ProductSelectors(storage)
-})
-
-// ─── Компонент ──────────────────────────────────────────────────────────────
+// Селекторы поверх канонического todoStorage. Определение — в ./todo/todo.store.ts
+// (TodoSelectors: todos, filter, visibleTodos, activeCount, completedCount).
+// Полный разбор select/combine/keyed/.$ — в docs/ru/selector-system.md.
 
 export function SelectorSystemExample() {
-  const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    readyPromise.then(() => setReady(true))
-  }, [])
-
-  if (!ready) return <div>Initializing...</div>
+  const state = useTodoState(todoStorage)
+  if (!state) return <div>Initializing…</div>
 
   return (
     <div style={cardStyle}>
-      <h2>Селекторы (Selector System)</h2>
+      <h2>Селекторы (Selectors)</h2>
       <p>
-        Селекторы извлекают и вычисляют данные из хранилища. Мемоизируются — пересчитываются только
-        при изменении зависимостей. Можно комбинировать.
+        Селекторы извлекают и вычисляют данные из хранилища, мемоизируются и комбинируются.
+        Меняйте задачи и фильтр — производные значения пересчитываются автоматически.
       </p>
 
-      {/* ─── Класс Selectors ──────────────────────────────────────────── */}
-      <h3 style={sectionTitle}>1. Класс Selectors</h3>
-      <pre style={codeBlock}>{`import { MemoryStorage, Selectors } from 'synapse-storage/core'
-
-interface ProductState {
-  products: Array<{ id: number; name: string; price: number; category: string }>
-  filterCategory: 'all' | 'food' | 'tech'
-  sortBy: 'name' | 'price'
-}
-
-const storage = new MemoryStorage<ProductState>({
-  name: 'products',
-  initialState: { products: [...], filterCategory: 'all', sortBy: 'name' },
-})
-await storage.initialize()
-
-// Селекторы — поля класса. Класс привязывается к хранилищу через конструктор.
-class ProductSelectors extends Selectors<ProductState> {
-  readonly products = this.select((s) => s.products)
-}
-const selectors = new ProductSelectors(storage)`}</pre>
-
-      {/* ─── this.select ──────────────────────────────────────────────── */}
-      <h3 style={sectionTitle}>2. this.select — простой</h3>
-      <pre style={codeBlock}>{`class ProductSelectors extends Selectors<ProductState> {
-  // Простой селектор — извлекает часть состояния
-  readonly products = this.select((s) => s.products)
-  readonly filterCategory = this.select((s) => s.filterCategory)
-  readonly sortBy = this.select((s) => s.sortBy)
-
-  // С кастомным equals (для массивов/объектов, чтобы избежать лишних уведомлений)
-  readonly foodNames = this.select(
-    (s) => s.products.filter((p) => p.category === 'food').map((p) => p.name),
-    {
-      equals: (a, b) => JSON.stringify(a) === JSON.stringify(b),
-      name: 'foodNames',   // опциональное имя для отладки
-    },
-  )
-}`}</pre>
-
-      {/* ─── this.combine ─────────────────────────────────────────────── */}
-      <h3 style={sectionTitle}>3. this.combine — комбинированный</h3>
-      <pre style={codeBlock}>{`class ProductSelectors extends Selectors<ProductState> {
-  readonly products = this.select((s) => s.products)
-  readonly filterCategory = this.select((s) => s.filterCategory)
-  readonly sortBy = this.select((s) => s.sortBy)
-
-  // Зависимости — другие поля-селекторы. Пересчёт — только при их изменении.
-  readonly filtered = this.combine([this.products, this.filterCategory], (items, cat) =>
-    cat === 'all' ? items : items.filter((p) => p.category === cat),
-  )
-
-  // Цепочка: filtered → sorted
-  readonly sorted = this.combine([this.filtered, this.sortBy], (items, sort) =>
-    [...items].sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name) : a.price - b.price)),
-  )
-
-  // Вычисляемое значение
-  readonly totalPrice = this.combine([this.filtered], (items) => items.reduce((s, p) => s + p.price, 0))
-}`}</pre>
-
-      {/* ─── Реактивный селектор (selector.$) ──────────────────────────── */}
-      <h3 style={sectionTitle}>4. Реактивный селектор (selector.$)</h3>
-      <pre style={codeBlock}>{`// Каждый селектор имеет поле .$  — это Observable<T>.
-// Эмитит текущее значение при подписке и при каждом реальном изменении.
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators'
-
-// Подписка вне React:
-const sub = selectors.totalPrice.$.subscribe((total) => console.log('total:', total))
-sub.unsubscribe()
-
-// Реактивная трансформация прямо в потоке (debounce, distinct, и т.д.):
-selectors.totalPrice.$
-  .pipe(debounceTime(300), distinctUntilChanged())
-  .subscribe((total) => console.log('debounced total:', total))
-
-// В React — через useObservable, см. отдельный пример «Реактивный селектор».`}</pre>
-
-      {/* ─── useSelector (React hook) ─────────────────────────────────── */}
-      <h3 style={sectionTitle}>5. useSelector — React hook</h3>
-      <pre style={codeBlock}>{`import { useSelector } from 'synapse-storage/react'
-
-function ProductList() {
-  // Базовое использование — возвращает T | undefined
-  const sorted = useSelector(selectors.sorted)
-  const total = useSelector(selectors.totalPrice)
-
-  // С withLoading — возвращает { data: T, isLoading: boolean }
-  const { data: products, isLoading } = useSelector(selectors.products, { withLoading: true })
-
-  if (isLoading) return <div>Loading...</div>
-
-  return <div>{sorted?.map((p) => <div key={p.id}>{p.name}: {p.price}</div>)}</div>
-}`}</pre>
-
-      {/* ─── Программный доступ ───────────────────────────────────────── */}
-      <h3 style={sectionTitle}>6. Программный доступ к селектору</h3>
-      <pre style={codeBlock}>{`// select() — получить текущее значение
-const value = selectors.totalPrice.select()
-
-// selectSync() — синхронное получение из кеша
-const value = selectors.totalPrice.selectSync()
-
-// subscribe() — ручная подписка на изменения
-const unsub = selectors.totalPrice.subscribe({
-  notify: (value) => console.log('total:', value),
-})
-unsub()
-
-// Метаданные
-selectors.totalPrice.getId()            // уникальный ID селектора
-selectors.totalPrice.isSourceReady()    // готово ли хранилище`}</pre>
-
-      {/* ─── Демо ─────────────────────────────────────────────────────── */}
-      <h3 style={sectionTitle}>Демо</h3>
+      <TodoList storage={todoStorage} state={state} />
       <SelectorDemo />
     </div>
   )
 }
 
-// ─── Демо-компонент ─────────────────────────────────────────────────────────
+// ─── Демо ─────────────────────────────────────────────────────────────────────
 
 function SelectorDemo() {
-  const sorted = useSelector(selectors.sorted)
-  const totalPrice = useSelector(selectors.totalPrice)
-  const count = useSelector(selectors.count)
-  const filterCategory = useSelector(selectors.filterCategory)
-  const sortBy = useSelector(selectors.sortBy)
-  const foodNames = useSelector(selectors.foodNames)
-  const { data: allProducts, isLoading } = useSelector(selectors.products, { withLoading: true })
+  // useSelector — подписка на селектор, ре-рендер только при изменении результата.
+  const visible = useSelector(todoSelectors.visibleTodos)
+  const active = useSelector(todoSelectors.activeCount)
+  const completed = useSelector(todoSelectors.completedCount)
+  const { data: allTodos, isLoading } = useSelector(todoSelectors.todos, { withLoading: true })
 
-  const [manualLog, setManualLog] = useState<string[]>([])
+  const [streamLog, setStreamLog] = useState<string[]>([])
 
-  // Ручная подписка на реактивный селектор через selector.$
+  // Реактивный селектор: selector.$ — Observable, эмитит при каждом изменении.
   useEffect(() => {
-    const sub = selectors.totalPrice.$.subscribe((value) =>
-      setManualLog((prev) => [...prev.slice(-3), `totalPrice.$ → ${value}`]),
+    const sub = todoSelectors.activeCount.$.subscribe((value) =>
+      setStreamLog((prev) => [...prev.slice(-3), `activeCount.$ → ${value}`]),
     )
     return () => sub.unsubscribe()
   }, [])
@@ -227,61 +48,25 @@ function SelectorDemo() {
   return (
     <div>
       <div style={{ fontSize: 13, background: '#f9f9f9', padding: 8, borderRadius: 4, marginBottom: 8 }}>
-        <div>Показано: <strong>{count}</strong> товаров | Сумма: <strong>{totalPrice}</strong></div>
-        <div>Фильтр: <strong>{filterCategory}</strong> | Сортировка: <strong>{sortBy}</strong></div>
-        <div>Food names: <strong>{foodNames?.join(', ')}</strong></div>
-        <div>Всего загружено: <strong>{allProducts?.length ?? 0}</strong></div>
-        {isLoading && <div style={{ color: '#888' }}>Loading...</div>}
+        <div>Активных: <strong>{active}</strong> | Выполнено: <strong>{completed}</strong></div>
+        <div>Видно под фильтром: <strong>{visible?.length ?? 0}</strong> | Всего: <strong>{allTodos?.length ?? 0}</strong></div>
+        {isLoading && <div style={{ color: '#888' }}>Loading…</div>}
       </div>
 
-      <div style={buttonRow}>
-        <button onClick={() => storage.set('filterCategory', filterCategory === 'all' ? 'food' : filterCategory === 'food' ? 'tech' : 'all')}>
-          filter: {filterCategory === 'all' ? '→ food' : filterCategory === 'food' ? '→ tech' : '→ all'}
-        </button>
-        <button onClick={() => storage.set('sortBy', sortBy === 'name' ? 'price' : 'name')}>
-          sort: {sortBy === 'name' ? '→ price' : '→ name'}
-        </button>
-        <button onClick={() => storage.update((s) => {
-          s.products.push({
-            id: Date.now(),
-            name: `Item${Math.floor(Math.random() * 100)}`,
-            price: Math.floor(Math.random() * 500),
-            category: Math.random() > 0.5 ? 'food' : 'tech',
-          })
-        })}>+ товар</button>
-        <button onClick={() => storage.reset()}>reset</button>
-      </div>
+      <ul>
+        {visible?.map((todo) => (
+          <li key={todo.id} style={{ textDecoration: todo.done ? 'line-through' : 'none' }}>{todo.title}</li>
+        ))}
+      </ul>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, margin: '8px 0' }}>
-        <thead>
-          <tr style={{ borderBottom: '2px solid #ddd', textAlign: 'left' }}>
-            <th>Name</th><th>Price</th><th>Category</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted?.map((p) => (
-            <tr key={p.id} style={{ borderBottom: '1px solid #eee' }}>
-              <td>{p.name}</td><td>{p.price}</td><td>{p.category}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
+      <h3 style={sectionTitle}>Программный доступ</h3>
       <div style={buttonRow}>
-        <button onClick={() => {
-          const val = selectors.totalPrice.select()
-          alert(`select() = ${val}`)
-        }}>selector.select()</button>
-        <button onClick={() => {
-          const val = selectors.totalPrice.selectSync()
-          alert(`selectSync() = ${val}`)
-        }}>selector.selectSync()</button>
+        <button onClick={() => alert(`activeCount.select() = ${todoSelectors.activeCount.select()}`)}>selector.select()</button>
+        <button onClick={() => alert(`activeCount.selectSync() = ${todoSelectors.activeCount.selectSync()}`)}>selector.selectSync()</button>
       </div>
 
       <p style={{ fontSize: 12 }}>selector.$ subscribe log:</p>
-      <pre style={{ ...codeBlock, minHeight: 30 }}>
-        {manualLog.join('\n') || '(измените данные чтобы увидеть)'}
-      </pre>
+      <pre style={{ ...codeBlock, minHeight: 30 }}>{streamLog.join('\n') || '(измените задачи, чтобы увидеть)'}</pre>
     </div>
   )
 }

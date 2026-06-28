@@ -2,19 +2,21 @@
 
 > [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SubscriptionPatternsExample.tsx)
 
-Все способы подписки на изменения данных в хранилище. Работают одинаково для Memory, LocalStorage и IndexedDB.
+Все способы подписки на изменения данных в хранилище. Примеры используют сквозной `todoStorage`
+(`TodoState = { todos: Todo[]; filter: Filter }`). Работают одинаково для Memory, LocalStorage и
+IndexedDB.
 
 ## 1. subscribe(key, callback)
 
 Подписка на конкретный ключ верхнего уровня. Коллбек вызывается при каждом изменении этого ключа.
 
 ```typescript
-const unsub = storage.subscribe('counter', (newValue) => {
-  console.log('counter изменился:', newValue)  // number
+const unsub = todoStorage.subscribe('filter', (newFilter) => {
+  console.log('фильтр изменился:', newFilter)  // 'all' | 'active' | 'completed'
 })
 
-const unsub = storage.subscribe('user', (newUser) => {
-  console.log('user изменился:', newUser)  // { name, email }
+const unsub2 = todoStorage.subscribe('todos', (newTodos) => {
+  console.log('список изменился:', newTodos)  // Todo[]
 })
 
 // Отписка
@@ -26,21 +28,16 @@ unsub()
 Подписка через функцию-селектор. Коллбек вызывается, когда результат селектора изменяется.
 
 ```typescript
-const unsub = storage.subscribe(
-  (state) => state.settings.theme,
-  (newTheme) => console.log('тема:', newTheme)  // 'light' | 'dark'
+// Вычисляемое значение — число активных задач
+const unsub = todoStorage.subscribe(
+  (state) => state.todos.filter((t) => !t.done).length,
+  (activeCount) => console.log('активных задач:', activeCount)
 )
 
-// Подписка на вложенные поля
-const unsub = storage.subscribe(
-  (state) => state.user.name,
-  (name) => console.log('имя:', name)
-)
-
-// Вычисляемые значения
-const unsub = storage.subscribe(
-  (state) => `${state.user.name} (${state.settings.lang})`,
-  (computed) => console.log('вычисленное:', computed)
+// Подписка на отдельное поле
+const unsub2 = todoStorage.subscribe(
+  (state) => state.filter,
+  (filter) => console.log('фильтр:', filter)
 )
 
 unsub()
@@ -51,7 +48,7 @@ unsub()
 Подписка на ВСЕ изменения хранилища. Коллбек получает событие с информацией об изменении.
 
 ```typescript
-const unsub = storage.subscribeToAll((event) => {
+const unsub = todoStorage.subscribeToAll((event) => {
   console.log(event.type)          // 'set' | 'update' | 'remove' | 'clear' | 'reset'
   console.log(event.key)           // ключ или массив ключей
   console.log(event.changedPaths)  // пути к изменённым полям
@@ -65,22 +62,14 @@ unsub()
 ```typescript
 import { useStorageSubscribe } from 'synapse-storage/react'
 
-function MyComponent({ storage }: { storage: ISyncStorage<AppState> }) {
+function TodoStats({ storage }: { storage: ISyncStorage<TodoState> }) {
   // Подписка на одно поле
-  const counter = useStorageSubscribe(storage, (s) => s.counter)
-
-  // Подписка на вложенное поле
-  const theme = useStorageSubscribe(storage, (s) => s.settings.theme)
-
-  // Подписка на всё состояние
-  const fullState = useStorageSubscribe(storage, (s) => s)
+  const filter = useStorageSubscribe(storage, (s) => s.filter)
 
   // Вычисляемое значение — ре-рендер только при изменении результата
-  const summary = useStorageSubscribe(
-    storage,
-    (s) => `${s.user.name}, counter: ${s.counter}`
-  )
+  const total = useStorageSubscribe(storage, (s) => s.todos.length)
+  const active = useStorageSubscribe(storage, (s) => s.todos.filter((t) => !t.done).length)
 
-  return <div>{counter} / {theme} / {summary}</div>
+  return <div>{filter}: {active} активных из {total}</div>
 }
 ```

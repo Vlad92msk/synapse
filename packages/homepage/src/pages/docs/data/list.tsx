@@ -2,6 +2,7 @@ import { ReactNode } from 'react'
 
 import {
   ArchitecturePage,
+  InstallPage,
   MemoryStoragePage,
   LocalStoragePage,
   IndexedDBStoragePage,
@@ -28,11 +29,14 @@ import {
   ApiClientPage,
   SynapseAwaiterPage,
   EventBusPage,
+  PersistMigrationPage,
+  SsrHydrationPage,
 } from '../sections'
 
 export const sectionsList: Record<string, ReactNode> = {
   // Обзор
   'nav.sections.overview.architecture': <ArchitecturePage />,
+  'nav.sections.overview.install': <InstallPage />,
   // Создание хранилищ
   'nav.sections.create.memory': <MemoryStoragePage />,
   'nav.sections.create.local': <LocalStoragePage />,
@@ -57,9 +61,11 @@ export const sectionsList: Record<string, ReactNode> = {
   // React
   'nav.sections.react.synapse-ctx': <SynapseCtxPage />,
   'nav.sections.react.await-synapse': <AwaitSynapsePage />,
+  'nav.sections.react.ssr-hydration': <SsrHydrationPage />,
   // Паттерны
   'nav.sections.patterns.middlewares': <MiddlewaresPage />,
   'nav.sections.patterns.singleton': <SingletonPage />,
+  'nav.sections.patterns.persist-migration': <PersistMigrationPage />,
   // Утилиты
   'nav.sections.utils.synapse-awaiter': <SynapseAwaiterPage />,
   'nav.sections.utils.event-bus': <EventBusPage />,

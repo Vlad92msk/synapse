@@ -2,111 +2,76 @@
 
 > [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/IndexedDBExample.tsx)
 
-Данные хранятся в IndexedDB. Сохраняются после перезагрузки страницы. **Асинхронный API** — все методы возвращают Promise.
+Данные хранятся в IndexedDB и переживают перезагрузку. **Асинхронный API** — операции
+чтения/записи возвращают Promise.
+
+Тот же сквозной todo-домен (`TodoState`, `initialTodoState` — см. [MemoryStorage](./memory-storage.md)),
+но в персистентном асинхронном хранилище.
 
 ## Создание
 
 ```typescript
 import { IndexedDBStorage } from 'synapse-storage/core'
 
-interface TodoState {
-  items: string[]
-  filter: 'all' | 'active'
-}
-
-// Через new (options — обязательное поле)
+// options — обязательное поле (может быть пустым объектом)
 const storage = new IndexedDBStorage<TodoState>({
-  name: 'todo-store',
-  initialState: { items: [], filter: 'all' },
-  options: {},                     // может быть пустым объектом
+  name: 'todo-idb',
+  initialState: initialTodoState,
+  options: {},
 })
 
 // С пользовательским dbName
 const storage = new IndexedDBStorage<TodoState>({
-  name: 'todo-store',
-  initialState: { items: [], filter: 'all' },
+  name: 'todo-idb',
+  initialState: initialTodoState,
   options: { dbName: 'my_app_db' }, // по умолчанию 'app_storage'
 })
 
 // Или через статический .create()
 const storage = IndexedDBStorage.create<TodoState>({
-  name: 'todo-store',
-  initialState: { items: [], filter: 'all' },
+  name: 'todo-idb',
+  initialState: initialTodoState,
   options: {},
 })
 
-// Инициализация (обязательна)
 await storage.initialize()
 ```
 
-## Запись данных (асинхронная!)
+## Синхронный vs асинхронный API
+
+Главное отличие от Memory/LocalStorage: операции возвращают Promise.
 
 ```typescript
-// set() — возвращает Promise
+// Запись
 await storage.set('filter', 'active')
-await storage.set('items', ['Buy milk', 'Walk dog'])
+await storage.update((s) => { s.todos.push(createTodo('Новая задача')) })
 
-// update() — возвращает Promise
-await storage.update((s) => {
-  s.items.push('New item')
-  s.filter = 'all'
-})
+// Чтение
+const todos = await storage.get<Todo[]>('todos')
+const state = await storage.getState()
+
+// getStateSync() — синхронное чтение из кеша, доступно всегда (в том числе в render)
+const cached = storage.getStateSync()
 ```
 
-## Чтение данных (асинхронное!)
+Подписки (`subscribe`, `subscribeToAll`, `useStorageSubscribe`) идентичны синхронным хранилищам.
 
-```typescript
-// get() — возвращает Promise
-const items = await storage.get<string[]>('items')   // ['Buy milk']
-const filter = await storage.get<string>('filter')   // 'all'
+## Когда брать
 
-// getState() — возвращает Promise
-const state = await storage.getState()               // { items: [...], filter: 'all' }
+- Большие объёмы данных, массивы на тысячи элементов, бинарные данные (Blob/ArrayBuffer).
+- Нужна персистентность за пределами лимита localStorage (~5 МБ).
 
-// getStateSync() — синхронное чтение из кэша (всегда доступно!)
-const state = storage.getStateSync()                 // { items: [...], filter: 'all' }
-```
+## Когда не брать
 
-## Проверка, удаление, сброс (асинхронные!)
+- Маленькое состояние, где не хочется асинхронности → [LocalStorage](./local-storage.md).
+- Эфемерное UI-состояние → [MemoryStorage](./memory-storage.md).
 
-```typescript
-// Все методы возвращают Promise:
-await storage.has('items')      // true
-await storage.keys()            // ['items', 'filter']
-await storage.remove('filter')  // удалить ключ
-await storage.clear()           // очистить всё (state = {})
-await storage.reset()           // вернуть к initialState
-```
+## Работа с данными
 
-## Подписки (одинаковы для всех типов!)
-
-```typescript
-// Подписки работают идентично для синхронных и асинхронных хранилищ:
-const unsub = storage.subscribe('items', (newValue) => {
-  console.log('items изменились:', newValue)
-})
-
-const unsub = storage.subscribe(
-  (state) => state.items.length,
-  (count) => console.log('количество items:', count)
-)
-
-const unsub = storage.subscribeToAll((event) => {
-  console.log('изменено:', event)
-})
-```
-
-## Отличия от MemoryStorage/LocalStorage
-
-1. В конфигурации обязательно поле `options` (даже пустой объект):
-   `{ name, initialState, options: {} }` vs `{ name, initialState }`
-
-2. Все операции чтения/записи возвращают Promise:
-   `await storage.set(...)` vs `storage.set(...)`
-
-3. `getStateSync()` — работает из кэша, общий для всех типов
-
-4. Подписки идентичны для всех типов хранилищ
+Полный разбор операций — в разделе «Работа с данными»: [Чтение](./reading-data.md),
+[Запись](./writing-data.md), [remove/has/keys](./delete-has-keys.md),
+[Подписки](./subscriptions.md). Везде, где у синхронных хранилищ операция возвращает значение,
+у IndexedDB она возвращает Promise.
 
 ## Persist-миграции и SSR
 

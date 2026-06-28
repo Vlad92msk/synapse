@@ -20,7 +20,7 @@ export interface NavPillar {
 // Сверху — вводная «Архитектура» без заголовка блока.
 export const DOC_NAV: NavPillar[] = [
   {
-    groups: [{ titleKey: 'nav.sections.overview', hideTitle: true, items: [{ key: 'architecture' }] }],
+    groups: [{ titleKey: 'nav.sections.overview', hideTitle: true, items: [{ key: 'architecture' }, { key: 'install' }] }],
   },
   {
     pillarKey: 'nav.pillars.state',
@@ -35,7 +35,7 @@ export const DOC_NAV: NavPillar[] = [
       },
       {
         titleKey: 'nav.sections.patterns',
-        items: [{ key: 'middlewares' }, { key: 'singleton' }],
+        items: [{ key: 'middlewares' }, { key: 'singleton' }, { key: 'persist-migration' }],
       },
     ],
   },
@@ -48,7 +48,7 @@ export const DOC_NAV: NavPillar[] = [
       },
       {
         titleKey: 'nav.sections.react',
-        items: [{ key: 'synapse-ctx' }, { key: 'await-synapse' }],
+        items: [{ key: 'synapse-ctx' }, { key: 'await-synapse' }, { key: 'ssr-hydration' }],
       },
       {
         titleKey: 'nav.sections.utils',

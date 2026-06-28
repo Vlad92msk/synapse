@@ -6,46 +6,46 @@ Selectors extract and compute data from a storage. They are memoized — recompu
 dependencies change. They can be combined. In the class form, selectors are declared as **class fields** —
 the fields are real `SelectorAPI` right away (eager materialization).
 
+The examples use the end-to-end `todoStorage` (`TodoState = { todos: Todo[]; filter: Filter }`) from the
+[MemoryStorage](./memory-storage.md) section and its canonical `TodoSelectors` set.
+
 ## 1. The Selectors class
 
 ```typescript
 import { MemoryStorage, Selectors } from 'synapse-storage/core'
 
-interface ProductState {
-  products: Array<{ id: number; name: string; price: number; category: string }>
-  filterCategory: 'all' | 'food' | 'tech'
-  sortBy: 'name' | 'price'
-}
+interface Todo { id: string; title: string; done: boolean }
+type Filter = 'all' | 'active' | 'completed'
+interface TodoState { todos: Todo[]; filter: Filter }
 
-const storage = new MemoryStorage<ProductState>({
-  name: 'products',
-  initialState: { products: [], filterCategory: 'all', sortBy: 'name' },
+const todoStorage = new MemoryStorage<TodoState>({
+  name: 'todo',
+  initialState: { todos: [], filter: 'all' },
 })
-await storage.initialize()
+await todoStorage.initialize()
 
 // The class is bound to the storage through the constructor.
-class ProductSelectors extends Selectors<ProductState> {
-  readonly products = this.select((s) => s.products)
+class TodoSelectors extends Selectors<TodoState> {
+  readonly todos = this.select((s) => s.todos)
 }
-const selectors = new ProductSelectors(storage)
+const selectors = new TodoSelectors(todoStorage)
 ```
 
 ## 2. this.select — simple
 
 ```typescript
-class ProductSelectors extends Selectors<ProductState> {
-  readonly products = this.select((s) => s.products)
-  readonly filterCategory = this.select((s) => s.filterCategory)
-  readonly sortBy = this.select((s) => s.sortBy)
+const filterTodos = (todos: Todo[], filter: Filter) =>
+  filter === 'all' ? todos : todos.filter((t) => (filter === 'active' ? !t.done : t.done))
+
+class TodoSelectors extends Selectors<TodoState> {
+  readonly todos = this.select((s) => s.todos)
+  readonly filter = this.select((s) => s.filter)
 
   // With a custom equals (for arrays/objects, to avoid extra notifications)
-  readonly foodNames = this.select(
-    (s) => s.products.filter((p) => p.category === 'food').map((p) => p.name),
-    {
-      equals: (a, b) => JSON.stringify(a) === JSON.stringify(b),
-      name: 'foodNames',   // an optional name for debugging
-    },
-  )
+  readonly titles = this.select((s) => s.todos.map((t) => t.title), {
+    equals: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+    name: 'titles',   // an optional name for debugging
+  })
 }
 ```
 
@@ -56,34 +56,30 @@ Intermediate slices can be declared `private` — they aren't visible from the o
 Combined selectors depend on other selectors. They are recomputed only when their dependencies change.
 
 ```typescript
-class ProductSelectors extends Selectors<ProductState> {
-  readonly products = this.select((s) => s.products)
-  readonly filterCategory = this.select((s) => s.filterCategory)
-  readonly sortBy = this.select((s) => s.sortBy)
+class TodoSelectors extends Selectors<TodoState> {
+  readonly todos = this.select((s) => s.todos)
+  readonly filter = this.select((s) => s.filter)
 
-  readonly filtered = this.combine([this.products, this.filterCategory], (items, cat) =>
-    cat === 'all' ? items : items.filter((p) => p.category === cat),
+  // Chain: todos + filter -> visible tasks
+  readonly visibleTodos = this.combine([this.todos, this.filter], (todos, filter) =>
+    filterTodos(todos, filter),
   )
 
-  // Chain: filtered -> sorted
-  readonly sorted = this.combine([this.filtered, this.sortBy], (items, sort) =>
-    [...items].sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name) : a.price - b.price)),
-  )
-
-  // A value computed from a dependency
-  readonly totalPrice = this.combine([this.filtered], (items) => items.reduce((sum, p) => sum + p.price, 0))
+  // Values computed from a dependency
+  readonly activeCount = this.combine([this.todos], (todos) => todos.filter((t) => !t.done).length)
+  readonly completedCount = this.combine([this.todos], (todos) => todos.filter((t) => t.done).length)
 }
 ```
 
 ### this.keyed — a parametric selector
 
 ```typescript
-class ProductSelectors extends Selectors<ProductState> {
+class TodoSelectors extends Selectors<TodoState> {
   // One SelectorAPI per key (cache by key). Compares values structurally by default.
-  readonly byId = this.keyed((id: number) => (s: ProductState) => s.products.find((p) => p.id === id))
+  readonly byId = this.keyed((id: string) => (s: TodoState) => s.todos.find((t) => t.id === id))
 }
 
-selectors.byId(5).select()   // a SelectorAPI for a specific id
+selectors.byId('t1').select()   // a SelectorAPI for a specific id
 ```
 
 ### Cross-store: external selectors through the constructor
@@ -128,13 +124,13 @@ not only in React.
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators'
 
 // A regular subscription
-const sub = selectors.totalPrice.$.subscribe((total) => console.log('total:', total))
+const sub = selectors.activeCount.$.subscribe((count) => console.log('active:', count))
 sub.unsubscribe()
 
 // Transformation straight in the stream
-selectors.searchQuery.$
+selectors.activeCount.$
   .pipe(debounceTime(300), distinctUntilChanged())
-  .subscribe((query) => runSearch(query))
+  .subscribe((count) => console.log('debounced:', count))
 ```
 
 ### In effects
@@ -159,25 +155,24 @@ class SearchEffects extends Effects<SearchState, SearchDispatcher> {
 
 ```typescript
 import { useObservable, useSubscription } from 'synapse-storage/react'
+import { debounceTime, distinctUntilChanged, map } from 'rxjs/operators'
 
-function SearchBox() {
-  const selectors = useSynapseSelectors()
-
+function TodoStats() {
   // useObservable — renders a derived value from the selector's stream.
   // deps recreate the chain (important for stateful operators like debounceTime/scan).
-  const debounced = useObservable(
-    () => selectors.searchQuery.$.pipe(debounceTime(300), distinctUntilChanged()),
-    '',
-    [selectors],
+  const debouncedActive = useObservable(
+    () => selectors.activeCount.$.pipe(debounceTime(300), distinctUntilChanged(), map((n) => `${n}`)),
+    '0',
+    [],
   )
 
   // useSubscription — an imperative side-effect with no value returned to render.
   useSubscription(
-    () => selectors.lastId.$.pipe(skip(1), tap(scrollToEnd)).subscribe(),
-    [selectors],
+    () => selectors.activeCount.$.pipe(distinctUntilChanged()).subscribe((n) => console.log('changed:', n)),
+    [],
   )
 
-  return <div>{debounced}</div>
+  return <div>active (debounced): {debouncedActive}</div>
 }
 ```
 
@@ -186,17 +181,17 @@ function SearchBox() {
 ```typescript
 import { useSelector } from 'synapse-storage/react'
 
-function ProductList() {
+function TodoList() {
   // Basic usage — returns T | undefined
-  const sorted = useSelector(selectors.sorted)
-  const total = useSelector(selectors.totalPrice)
+  const visible = useSelector(selectors.visibleTodos)
+  const active = useSelector(selectors.activeCount)
 
   // With withLoading — returns { data: T, isLoading: boolean }
-  const { data: products, isLoading } = useSelector(selectors.products, { withLoading: true })
+  const { data: todos, isLoading } = useSelector(selectors.todos, { withLoading: true })
 
   if (isLoading) return <div>Loading...</div>
 
-  return <div>{sorted?.map((p) => <div key={p.id}>{p.name}: {p.price}</div>)}</div>
+  return <div>{visible?.map((t) => <div key={t.id}>{t.title}</div>)}</div>
 }
 ```
 
@@ -204,25 +199,25 @@ function ProductList() {
 
 ```typescript
 // select() — get the current value
-const value = selectors.totalPrice.select()
+const value = selectors.activeCount.select()
 
 // selectSync() — synchronous read from the cache
-const value = selectors.totalPrice.selectSync()
+const value = selectors.activeCount.selectSync()
 
 // subscribe() — manual subscription to changes
-const unsub = selectors.totalPrice.subscribe({
-  notify: (value) => console.log('total:', value),
+const unsub = selectors.activeCount.subscribe({
+  notify: (value) => console.log('active:', value),
 })
 unsub()
 
 // Metadata
-selectors.totalPrice.getId()            // the selector's unique ID
-selectors.totalPrice.isSourceReady()    // are ALL of the selector's sources ready?
+selectors.activeCount.getId()            // the selector's unique ID
+selectors.activeCount.isSourceReady()    // are ALL of the selector's sources ready?
 
 // For a combined selector, isSourceReady() aggregates the readiness of all dependency
 // sources (important for cross-store). onSourceStatusChange — subscribe to this readiness:
-const unsub = selectors.totalPrice.onSourceStatusChange((isReady) => {
+const unsub2 = selectors.activeCount.onSourceStatusChange((isReady) => {
   console.log('sources ready:', isReady)
 })
-unsub()
+unsub2()
 ```

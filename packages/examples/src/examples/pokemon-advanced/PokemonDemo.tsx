@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSelector } from 'synapse-storage/react'
 import { buttonRow } from '../styles'
 import { typeColor } from './helpers'
-import type { PokemonSynapse } from '../pokemon-class'
+import type { PokemonSynapse } from './pokemon.synapse'
 
 export function PokemonDemo({ store }: { store: PokemonSynapse }) {
   const filteredList = useSelector(store.selectors.filteredList)

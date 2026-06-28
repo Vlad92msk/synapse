@@ -2,32 +2,34 @@
 
 > [Back to Main](../../README.md)
 
-Operations for checking existence, removing keys, and resetting the storage. They work the same way for all storage types.
+Operations for checking existence, removing keys, and resetting the storage. The examples use the
+end-to-end `todoStorage` (`TodoState = { todos: Todo[]; filter: Filter }`). They work the same way for
+all storage types — for IndexedDB the same methods return a `Promise`.
 
 ## has(key) — Check whether a key exists
 
 ```typescript
 // ── Synchronous storage (MemoryStorage / LocalStorage) ──
 
-storage.has('name')      // true
-storage.has('age')       // true
-storage.has('unknown')   // false
+todoStorage.has('todos')     // true
+todoStorage.has('filter')    // true
+todoStorage.has('unknown')   // false
 
 // ── Asynchronous storage (IndexedDBStorage) ──
 
-await storage.has('name')      // true
-await storage.has('unknown')   // false
+await todoStorage.has('todos')     // true
+await todoStorage.has('unknown')   // false
 ```
 
 ## keys() — Get all keys
 
 ```typescript
 // ── Synchronously ──
-const allKeys = storage.keys()
-// ['name', 'age', 'role', 'active']
+const allKeys = todoStorage.keys()
+// ['todos', 'filter']
 
 // ── Asynchronously ──
-const allKeys = await storage.keys()
+const allKeys = await todoStorage.keys()
 ```
 
 ## remove(key) — Remove a specific key
@@ -37,12 +39,12 @@ const allKeys = await storage.keys()
 // After removal has(key) returns false, and keys() does not contain that key.
 
 // ── Synchronously ──
-storage.remove('role')
-storage.has('role')   // false
-storage.keys()        // ['name', 'age', 'active']
+todoStorage.remove('filter')
+todoStorage.has('filter')   // false
+todoStorage.keys()          // ['todos']
 
 // ── Asynchronously ──
-await storage.remove('role')
+await todoStorage.remove('filter')
 ```
 
 ## clear() — Clear the storage
@@ -51,12 +53,12 @@ await storage.remove('role')
 // Removes ALL keys. The state becomes an empty object {}.
 
 // ── Synchronously ──
-storage.clear()
-storage.getState()   // {}
-storage.keys()       // []
+todoStorage.clear()
+todoStorage.getState()   // {}
+todoStorage.keys()       // []
 
 // ── Asynchronously ──
-await storage.clear()
+await todoStorage.clear()
 ```
 
 ## reset() — Reset to initialState
@@ -65,31 +67,30 @@ await storage.clear()
 // Returns the state to its initial value (initialState from the config).
 
 // ── Synchronously ──
-storage.reset()
-storage.getState()   // { name: 'Alice', age: 28, role: 'admin', active: true }
+todoStorage.reset()
+todoStorage.getState()   // { todos: [...], filter: 'all' }
 
 // ── Asynchronously ──
-await storage.reset()
+await todoStorage.reset()
 ```
 
 ## clear() vs reset() — What's the difference
 
 ```typescript
-const storage = new MemoryStorage({
-  name: 'example',
-  initialState: { count: 0, label: 'hello' },
+const todoStorage = new MemoryStorage<TodoState>({
+  name: 'todo',
+  initialState: { todos: [], filter: 'all' },
 })
 
-storage.set('count', 99)
-storage.set('label', 'world')
+todoStorage.set('filter', 'completed')
 
 // clear() — a full wipe
-storage.clear()
-storage.getState()   // {}
-storage.keys()       // []
+todoStorage.clear()
+todoStorage.getState()   // {}
+todoStorage.keys()       // []
 
 // reset() — back to initialState
-storage.reset()
-storage.getState()   // { count: 0, label: 'hello' }
-storage.keys()       // ['count', 'label']
+todoStorage.reset()
+todoStorage.getState()   // { todos: [], filter: 'all' }
+todoStorage.keys()       // ['todos', 'filter']
 ```

@@ -2,26 +2,26 @@ import { MemoryStorage } from 'synapse-storage/core'
 import { toObservable } from 'synapse-storage/reactive'
 import { createSynapse } from 'synapse-storage/utils'
 
-import { initPokemonApi, pokemonApiClient } from '../pokemon-advanced/pokemon.api'
-import { settingsStorage } from '../pokemon-advanced/pokemon.settings'
-import { initialState } from '../pokemon-advanced/pokemon.store'
-import type { PokemonState } from '../pokemon-advanced/pokemon.types'
+import { initPokemonApi, pokemonApiClient } from './pokemon.api'
+import { settingsStorage } from './pokemon.settings'
+import { initialState } from './pokemon.store'
+import type { PokemonState } from './pokemon.types'
 import { PokemonDispatcher } from './pokemon.dispatcher'
 import { PokemonEffects } from './pokemon.effects'
 import { PokemonSelectors } from './pokemon.selectors'
 
 /**
- * Class-based сборка (этап 4 ROADMAP) — новая перегрузка `createSynapse(factory)`.
+ * Сборка слоя данных через `createSynapse(factory)`.
  *
  * Возвращает ленивый `SynapseModule`-handle: фабрика исполняется один раз при первом
  * `await pokemonSynapse` / `pokemonSynapse.ready()`, а не на импорте. `destroy()`
  * сбрасывает мемоизацию — handle пересоздаваемый.
  */
 export const pokemonSynapse = createSynapse(async () => {
-  // async-пролог: инициализация API-клиента (бывший `setup`).
+  // async-пролог: инициализация API-клиента.
   await initPokemonApi()
 
-  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-class', initialState })
+  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState })
 
   return {
     storage,

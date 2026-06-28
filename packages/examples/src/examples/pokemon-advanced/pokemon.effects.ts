@@ -1,15 +1,14 @@
 import { Observable, withLatestFrom } from 'rxjs'
 import { Effects, apiResult, fromRequest, ofType, selectorMap, selectorObject, validateMap } from 'synapse-storage/reactive'
 
-import { mapDetailsResponse, mapListResponse, type PokemonApiEndpoints } from '../pokemon-advanced/pokemon.api'
-import type { PokemonSettings } from '../pokemon-advanced/pokemon.settings'
-import type { PokemonState } from '../pokemon-advanced/pokemon.types'
+import { mapDetailsResponse, mapListResponse, type PokemonApiEndpoints } from './pokemon.api'
+import type { PokemonSettings } from './pokemon.settings'
+import type { PokemonState } from './pokemon.types'
 import type { PokemonDispatcher } from './pokemon.dispatcher'
 
 /**
- * Class-based эффекты (этап 4 ROADMAP). Сервисы (API-endpoints) и внешние сторы
- * (`settings$`) приходят через конструктор и захватываются в замыкание рецепта —
- * никаких `services`/`externalStates` в конфиге EffectsModule.
+ * Эффекты домена — side-effects по экшенам. Сервисы (API-endpoints) и внешние сторы
+ * (`settings$`) приходят через конструктор и захватываются в замыкание рецепта.
  */
 export class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {
   constructor(

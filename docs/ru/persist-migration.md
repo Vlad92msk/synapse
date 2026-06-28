@@ -3,7 +3,7 @@
 > [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/PersistMigrationExample.tsx)
 
 Когда форма `initialState` меняется между релизами, в персистентном хранилище
-(`LocalStorage` / `IndexedDB`) остаются данные **старой схемы**. Опции конфига
+(`LocalStorage` / `IndexedDBStorage`) остаются данные **старой схемы**. Опции конфига
 `version` и `migrate` позволяют преобразовать их к текущей схеме при инициализации —
 без ручной проверки версий и без потери пользовательских данных.
 
@@ -12,25 +12,28 @@
 
 ## Как это работает
 
+Возьмём реальный кейс: в v1 избранные покемоны хранились **по именам**, в v2 — **по id**.
+`migrate` переводит сохранённые имена в id один раз при инициализации.
+
 ```typescript
 import { LocalStorage } from 'synapse-storage/core'
 
-interface Settings {
-  theme: 'light' | 'dark'
-  locale: string
+interface PokemonPrefs {
+  favorites: number[]   // v2: id (раньше были имена)
 }
 
-const storage = new LocalStorage<Settings>({
-  name: 'settings',
-  version: 2,                            // текущая версия схемы
-  initialState: { theme: 'light', locale: 'en' },
+const NAME_TO_ID: Record<string, number> = { pikachu: 25, charizard: 6, bulbasaur: 1 }
+
+const storage = new LocalStorage<PokemonPrefs>({
+  name: 'pokemon-prefs',
+  version: 2,                              // текущая версия схемы
+  initialState: { favorites: [] },
   migrate: (oldState, oldVersion) => {
-    // oldVersion < 1 — самая первая схема (хранили { dark: boolean })
-    if (oldVersion < 1) {
-      return { theme: oldState.dark ? 'dark' : 'light', locale: 'en' }
+    // v1 → v2: имена → id
+    if (oldVersion < 2) {
+      return { favorites: (oldState.favorites ?? []).map((n: string) => NAME_TO_ID[n]).filter(Boolean) }
     }
-    // 1 → 2: добавили locale
-    return { ...oldState, locale: oldState.locale ?? 'en' }
+    return oldState
   },
 })
 
@@ -59,10 +62,10 @@ await storage.initialize()
 написать миграцию).
 
 ```typescript
-const storage = new LocalStorage<Settings>({
-  name: 'settings',
+const storage = new LocalStorage<PokemonPrefs>({
+  name: 'pokemon-prefs',
   version: 3,                 // подняли
-  initialState: { theme: 'light', locale: 'en' },
+  initialState: { favorites: [] },
   // migrate не задан → старые данные останутся, версия станет 3 (+ dev warn)
 })
 ```

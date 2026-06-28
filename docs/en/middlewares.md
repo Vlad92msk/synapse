@@ -2,16 +2,20 @@
 
 > [Back to Main](../../README.md)
 
-Middlewares intercept storage operations (set, get, delete, clear) and can modify, filter, or group them.
+Middlewares intercept storage operations (set, get, update, delete, clear) and can modify, filter, or group them. They are configured when the store is created — in the `middlewares` field.
+
+The examples use the end-to-end domain `TodoState = { todos: Todo[]; filter: Filter }` (see the
+[MemoryStorage](./memory-storage.md) section). Since middlewares are set at creation time, here we use
+dedicated todo stores with the needed wiring.
 
 ## Configuration
 
 ```typescript
 import { MemoryStorage } from 'synapse-storage/core'
 
-const storage = new MemoryStorage<MyState>({
-  name: 'my-store',
-  initialState: { ... },
+const storage = new MemoryStorage<TodoState>({
+  name: 'my-todo',
+  initialState: { todos: [], filter: 'all' },
   middlewares: (getDefault) => [
     getDefault().batching({ batchSize: 5, batchDelay: 100 }),
     getDefault().shallowCompare(),
@@ -30,9 +34,9 @@ await storage.initialize()
 ## 1. Batching Middleware
 
 ```typescript
-const storage = new MemoryStorage<{ counter: number; items: string[] }>({
+const storage = new MemoryStorage<TodoState>({
   name: 'batching-demo',
-  initialState: { counter: 0, items: [] },
+  initialState: { todos: [], filter: 'all' },
   middlewares: (getDefault) => [
     getDefault().batching({
       batchSize: 5,     // maximum operations in a single group
@@ -42,50 +46,46 @@ const storage = new MemoryStorage<{ counter: number; items: string[] }>({
 })
 await storage.initialize()
 
-// 20 fast sets — only the last value lands in the storage
-for (let i = 0; i < 20; i++) {
-  storage.set('counter', i)
+// 12 fast set('filter') — only the last value reaches the subscribers
+const filters = ['all', 'active', 'completed'] as const
+for (let i = 0; i < 12; i++) {
+  storage.set('filter', filters[i % 3])
 }
-// counter = 19 (one notification instead of 20)
-
-// Several sets on one key — the last one is kept
-storage.set('items', ['a'])
-storage.set('items', ['a', 'b'])
-storage.set('items', ['a', 'b', 'c'])
-// items = ['a', 'b', 'c']
+// one notification instead of twelve
 ```
 
 ## 2. ShallowCompare Middleware
 
 ```typescript
-const storage = new MemoryStorage<{ user: { name: string; age: number } }>({
+const storage = new MemoryStorage<TodoState>({
   name: 'shallow-demo',
-  initialState: { user: { name: 'Alice', age: 30 } },
+  initialState: { todos: [], filter: 'all' },
   middlewares: (getDefault) => [
     getDefault().shallowCompare(),
   ],
 })
 await storage.initialize()
 
-// Setting an identical object — the update will NOT happen
-storage.set('user', { name: 'Alice', age: 30 })  // skipped
+// Setting an identical value — the update will NOT happen
+storage.set('filter', 'all')     // skipped (the value didn't change)
 
-// Setting a different object — the update will happen
-storage.set('user', { name: 'Bob', age: 25 })    // updated
+// Setting a different value — the update will happen
+storage.set('filter', 'active')  // updated
 ```
 
 ## 3. ShallowCompare + a custom comparator
 
 ```typescript
-const storage = new MemoryStorage<{ score: number }>({
+const storage = new MemoryStorage<TodoState>({
   name: 'custom-cmp',
-  initialState: { score: 0 },
+  initialState: { todos: [], filter: 'all' },
   middlewares: (getDefault) => [
     getDefault().shallowCompare({
-      // A custom comparison function
+      // A custom comparison function for a value by key.
+      // Here: treat the task list as "unchanged" if the length is the same.
       comparator: (prev, next) => {
-        if (typeof prev === 'number' && typeof next === 'number') {
-          return Math.abs(prev - next) < 5  // difference < 5 = "the same"
+        if (Array.isArray(prev) && Array.isArray(next)) {
+          return prev.length === next.length
         }
         return prev === next
       },
@@ -93,17 +93,14 @@ const storage = new MemoryStorage<{ score: number }>({
   ],
 })
 await storage.initialize()
-
-storage.set('score', 2)   // skipped (difference < 5)
-storage.set('score', 10)  // updated (difference >= 5)
 ```
 
 ## 4. Combining Middlewares
 
 ```typescript
-const storage = new MemoryStorage<{ value: string; count: number }>({
+const storage = new MemoryStorage<TodoState>({
   name: 'combined',
-  initialState: { value: 'hello', count: 0 },
+  initialState: { todos: [], filter: 'all' },
   middlewares: (getDefault) => [
     // Order matters: first filtering, then grouping
     getDefault().shallowCompare(),
@@ -113,9 +110,9 @@ const storage = new MemoryStorage<{ value: string; count: number }>({
 await storage.initialize()
 
 // shallowCompare filters out duplicates, batching groups the rest
-storage.set('value', 'hello')  // skipped (shallowCompare)
-storage.set('value', 'hello')  // skipped (shallowCompare)
-storage.set('value', 'world')  // passes → into the group
+storage.set('filter', 'all')     // skipped (shallowCompare)
+storage.set('filter', 'all')     // skipped (shallowCompare)
+storage.set('filter', 'active')  // passes → into the group
 ```
 
 ## 5. BroadcastMiddleware (cross-tab synchronization)
@@ -123,9 +120,9 @@ storage.set('value', 'world')  // passes → into the group
 ```typescript
 import { MemoryStorage, syncBroadcastMiddleware } from 'synapse-storage/core'
 
-const storage = new MemoryStorage<{ message: string }>({
+const storage = new MemoryStorage<TodoState>({
   name: 'broadcast-demo',
-  initialState: { message: 'No messages' },
+  initialState: { todos: [], filter: 'all' },
   middlewares: () => [
     syncBroadcastMiddleware({
       storageName: 'broadcast-demo',
@@ -136,7 +133,7 @@ const storage = new MemoryStorage<{ message: string }>({
 await storage.initialize()
 
 // Changes will be synchronized between tabs
-storage.set('message', 'Hello from tab!')
+storage.update((s) => { s.todos.push({ id: 't1', title: 'From another tab', done: false }) })
 
 // For MemoryStorage — full data synchronization
 // For LocalStorage/IndexedDB — only a subscriber notification
@@ -150,19 +147,19 @@ Logs only **write** actions (`set` / `update` / `delete` / `clear` / `reset` /
 Wire it up only in dev.
 
 ```typescript
-const storage = new MemoryStorage<{ count: number }>({
+const storage = new MemoryStorage<TodoState>({
   name: 'logged',
-  initialState: { count: 0 },
+  initialState: { todos: [], filter: 'all' },
   middlewares: (getDefault) =>
     import.meta.env.DEV ? [getDefault().logger()] : [],
 })
 await storage.initialize()
 
-storage.set('count', 1)
-// [synapse storage] set "count" (0ms)
-//   action: { type: 'set', key: 'count', value: 1, ... }
-//   prev:   { count: 0 }
-//   next:   { count: 1 }
+storage.set('filter', 'active')
+// [synapse storage] set "filter" (0ms)
+//   action: { type: 'set', key: 'filter', value: 'active', ... }
+//   prev:   { todos: [...], filter: 'all' }
+//   next:   { todos: [...], filter: 'active' }
 
 // Options:
 //   collapsed?: boolean   — collapse the log group (console.groupCollapsed)
@@ -227,9 +224,9 @@ api.dispatch(action)                 // run a new action through the whole chain
 Wiring it up — next to the built-in ones:
 
 ```typescript
-const storage = new MemoryStorage<MyState>({
-  name: 'my-store',
-  initialState: { ... },
+const storage = new MemoryStorage<TodoState>({
+  name: 'my-todo',
+  initialState: { todos: [], filter: 'all' },
   middlewares: (getDefault) => [
     getDefault().logger(),   // built-in
     myMiddleware(),          // yours
@@ -237,86 +234,59 @@ const storage = new MemoryStorage<MyState>({
 })
 ```
 
-### Example A — form validation
+### Example A — write validation
 
-Intercept writes to form fields, run them through validators, and **block invalid values**,
-storing the error messages in a sibling `errors` key.
+Intercept `set('filter', …)` and **block unknown values**: if the value isn't in the allowed set,
+the operation never reaches the storage (we return the current value).
 
 ```typescript
 import type { SyncMiddleware } from 'synapse-storage/core'
 
-type FormState = {
-  email: string
-  age: number
-  errors: Record<string, string | undefined>
-}
+const ALLOWED_FILTERS = ['all', 'active', 'completed']
 
-// key → validator: return an error string OR null if everything is fine
-const validators: Record<string, (value: any) => string | null> = {
-  email: (v) => (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) ? null : 'Invalid e-mail'),
-  age: (v) => (v >= 18 && v <= 120 ? null : 'Age must be 18–120'),
-}
-
-const validationMiddleware = (): SyncMiddleware => ({
-  name: 'form-validation',
+const validateFilterMiddleware = (): SyncMiddleware => ({
+  name: 'validate-filter',
   reducer: (api) => (next) => (action) => {
-    if (action.type !== 'set' || typeof action.key !== 'string') {
-      return next(action)
+    if (action.type === 'set' && action.key === 'filter' && !ALLOWED_FILTERS.includes(action.value)) {
+      // Invalid — block the write, return the current value from storage
+      return api.storage.doGet('filter')
     }
-
-    const validate = validators[action.key]
-    if (!validate) return next(action)
-
-    const error = validate(action.value)
-
-    // Write the error map directly (doSet bypasses the chain — no recursion)
-    const errors = { ...(api.getState().errors ?? {}), [action.key]: error ?? undefined }
-    api.storage.doSet('errors', errors)
-    api.storage.notifySubscribers('errors', errors)
-
-    // Invalid — block the write, return the current value from storage
-    if (error) return api.storage.doGet(action.key)
-
-    // Valid — pass it through
     return next(action)
   },
 })
 
-const form = new MemoryStorage<FormState>({
-  name: 'signup-form',
-  initialState: { email: '', age: 0, errors: {} },
-  middlewares: () => [validationMiddleware()],
+const storage = new MemoryStorage<TodoState>({
+  name: 'todo-validated',
+  initialState: { todos: [], filter: 'all' },
+  middlewares: () => [validateFilterMiddleware()],
 })
-await form.initialize()
+await storage.initialize()
 
-form.set('email', 'not-an-email')      // blocked, errors.email = 'Invalid e-mail'
-form.set('email', 'user@example.com')  // passes, errors.email = undefined
-form.set('age', 15)                    // blocked, errors.age = '...'
+storage.set('filter', 'archived' as any)  // blocked → filter stays 'all'
+storage.set('filter', 'active')           // passes
 ```
 
 ### Example B — normalizing values
 
 A middleware can transform a value instead of blocking it — for example, trim whitespace
-and lowercase an e-mail before writing.
+from task titles.
 
 ```typescript
 import type { SyncMiddleware } from 'synapse-storage/core'
 
-const normalizeMiddleware = (): SyncMiddleware => ({
-  name: 'normalize',
+const trimTitlesMiddleware = (): SyncMiddleware => ({
+  name: 'trim-titles',
   reducer: () => (next) => (action) => {
-    if (action.type === 'set' && typeof action.value === 'string') {
-      let value = action.value.trim()
-      if (action.key === 'email') value = value.toLowerCase()
-
-      // Pass the already-modified value further
+    if (action.type === 'set' && action.key === 'todos' && Array.isArray(action.value)) {
+      const value = action.value.map((t) => ({ ...t, title: t.title.trim() }))
       return next({ ...action, value })
     }
     return next(action)
   },
 })
 
-// storage.set('email', '  User@Example.COM  ') → stored as 'user@example.com'
+// storage.set('todos', [{ id, title: '  Buy milk  ', done: false }])
+// → stored with title 'Buy milk'
 ```
 
 ### Example C — audit / analytics of changes
@@ -339,11 +309,11 @@ const auditMiddleware = (onChange: (key: string, value: any) => void): SyncMiddl
   },
 })
 
-const storage = new MemoryStorage<{ theme: string }>({
-  name: 'settings',
-  initialState: { theme: 'light' },
+const storage = new MemoryStorage<TodoState>({
+  name: 'todo-audited',
+  initialState: { todos: [], filter: 'all' },
   middlewares: () => [
-    auditMiddleware((key, value) => analytics.track('setting_changed', { key, value })),
+    auditMiddleware((key, value) => analytics.track('todo_changed', { key, value })),
   ],
 })
 ```

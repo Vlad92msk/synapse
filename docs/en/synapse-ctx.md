@@ -2,36 +2,30 @@
 
 > [Back to Main](../../README.md)
 
-React Context + HOC for accessing a Synapse module through hooks. A lazy handle is passed in: the factory starts
-on the first mount of the Provider (not on import), with an automatic `loadingComponent` during initialization.
+React Context + HOC for accessing a Synapse module through hooks. A lazy handle is passed in: the factory
+starts on the first mount of the Provider (not on import), with an automatic `loadingComponent` during
+initialization.
+
+Same domain — the `pokemonSynapse` assembled on the previous pages. This is the "provider" way to hand it
+to the tree; the alternative (manual `await` + prop) is [awaitSynapse](./await-synapse.md), which is what
+the demo in the module actually uses.
 
 ## Creating the context
 
 ```typescript
 import { createSynapseCtx, useSelector } from 'synapse-storage/react'
-import { createSynapse } from 'synapse-storage/utils'
+import { pokemonSynapse } from './pokemon.synapse'   // the lazy handle from previous pages
 
-// 1. Create a lazy handle (as usual)
-const settingsSynapse = createSynapse(async () => {
-  const storage = new MemoryStorage<SettingsState>({ name: 'settings', initialState })
-  return {
-    storage,
-    dispatcher: new SettingsDispatcher(storage),
-    selectors: new SettingsSelectors(storage),
-  }
-})
-
-// 2. Create the context — pass the handle ITSELF, not a call.
-//    The factory starts lazily on the first mount, not on import.
+// Pass the handle ITSELF, not a call. The factory starts lazily on the first mount, not on import.
 const {
   contextSynapse,       // HOC — wraps a component, providing the context
-  useSynapseStorage,    // () => IStorage<T>
-  useSynapseSelectors,  // () => SettingsSelectors
-  useSynapseActions,    // () => SettingsDispatcher (actions)
-  useSynapseState$,     // () => Observable<TState> (only with effects)
+  useSynapseStorage,    // () => IStorage<PokemonState>
+  useSynapseSelectors,  // () => PokemonSelectors
+  useSynapseActions,    // () => PokemonDispatcher (actions)
+  useSynapseState$,     // () => Observable<PokemonState> (only with effects)
   cleanupSynapse,       // () => Promise<void>
-} = createSynapseCtx(settingsSynapse, {
-  loadingComponent: <div>Loading...</div>,  // shown while the module isn't ready
+} = createSynapseCtx(pokemonSynapse, {
+  loadingComponent: <div>Loading the pokedex...</div>,  // shown while the module isn't ready
 })
 ```
 
@@ -40,31 +34,34 @@ const {
 ```typescript
 // Child components are called ONLY inside the contextSynapse HOC
 
-function ThemeDisplay() {
-  const selectors = useSynapseSelectors()
-  const theme = useSelector(selectors.theme)       // reactive value
-  const isDark = useSelector(selectors.isDark)
-
-  return <div>Theme: {theme}, isDark: {String(isDark)}</div>
-}
-
-function FontSizeControl() {
+function PokemonGrid() {
   const selectors = useSynapseSelectors()
   const actions = useSynapseActions()
-  const fontSize = useSelector(selectors.fontSize)
+
+  const filteredList = useSelector(selectors.filteredList)   // reactive values
+  const isListLoading = useSelector(selectors.isListLoading)
 
   return (
     <div>
-      Size: {fontSize}px
-      <button onClick={() => actions.setFontSize(fontSize - 2)}>A-</button>
-      <button onClick={() => actions.setFontSize(fontSize + 2)}>A+</button>
+      {filteredList?.map((p) => (
+        <button key={p.id} onClick={() => actions.selectPokemon(p.id)}>{p.name}</button>
+      ))}
+      {isListLoading && <span>Loading...</span>}
     </div>
   )
 }
 
+function SearchInput() {
+  const selectors = useSynapseSelectors()
+  const actions = useSynapseActions()
+  const query = useSelector(selectors.searchQuery)
+
+  return <input value={query ?? ''} onChange={(e) => actions.setSearchQuery(e.target.value)} />
+}
+
 function DirectAccess() {
   const storage = useSynapseStorage()
-  // Direct access to the storage — e.g. for getStateSync(), update(), set()
+  // Direct access to the storage — e.g. getStateSync(), update(), set()
   const state = storage.getStateSync()
 }
 ```
@@ -72,37 +69,37 @@ function DirectAccess() {
 ## HOC contextSynapse()
 
 ```typescript
-function SettingsPanel() {
+function Pokedex() {
   const actions = useSynapseActions()
   return (
     <div>
-      <button onClick={() => actions.toggleTheme()}>Toggle Theme</button>
-      <ThemeDisplay />
-      <FontSizeControl />
+      <button onClick={() => actions.loadList()}>Reload</button>
+      <SearchInput />
+      <PokemonGrid />
     </div>
   )
 }
 
 // Wrap it — loadingComponent is shown while the module isn't ready
-const SettingsPanelWithContext = contextSynapse(SettingsPanel)
+const PokedexWithContext = contextSynapse(Pokedex)
 
 // Usage in JSX:
-<SettingsPanelWithContext />
+<PokedexWithContext />
 ```
 
 ## useSynapseState$ (only with effects)
 
 ```typescript
-// Available only if effects were passed to the factory.
-// Returns Observable<TState> for use with RxJS.
+// Available only if effects were passed to the factory (pokemon — yes).
+// Returns Observable<PokemonState> for use with RxJS.
 
-const { useSynapseState$ } = createSynapseCtx(synapseWithEffects)
+const { useSynapseState$ } = createSynapseCtx(pokemonSynapse)
 
-function MyComponent() {
+function StateLogger() {
   const state$ = useSynapseState$()
 
   useEffect(() => {
-    const sub = state$.subscribe((state) => console.log('state changed:', state))
+    const sub = state$.subscribe((state) => console.log('selected:', state.selectedPokemonId))
     return () => sub.unsubscribe()
   }, [state$])
 }
@@ -110,12 +107,12 @@ function MyComponent() {
 
 ## Reactive reads in a component
 
-Writes still go through actions, but reading can be reactive — straight from the selector's stream:
+Writes still go through actions, but reading can be reactive — straight from the selector's stream (`.$`):
 
 ```typescript
 import { useObservable, useSubscription } from 'synapse-storage/react'
 
-function SearchBox() {
+function DebouncedSearch() {
   const selectors = useSynapseSelectors()
 
   const debounced = useObservable(
@@ -124,7 +121,7 @@ function SearchBox() {
     [selectors],
   )
 
-  useSubscription(() => selectors.lastId.$.pipe(skip(1), tap(scrollToEnd)).subscribe(), [selectors])
+  useSubscription(() => selectors.favoriteCount.$.pipe(skip(1), tap(logFavChange)).subscribe(), [selectors])
 
   return <div>{debounced}</div>
 }
@@ -151,29 +148,34 @@ const ctx = createSynapseCtx(basicSynapse)
 // Available: + useSynapseActions
 const ctx = createSynapseCtx(dispatcherSynapse)
 
-// 3. With effects (+ state$)
+// 3. With effects (+ state$) — the pokemon case
 // Available: + useSynapseState$
-const ctx = createSynapseCtx(effectsSynapse)
+const ctx = createSynapseCtx(pokemonSynapse)
 ```
 
 ## SSR — server-rendering seeded sync stores
 
 > Available since **5.0.1**. Classic `renderToString` only (streaming/Suspense is out of scope).
+>
+> The full runnable cycle (dehydrate → renderToString → hydration) is in
+> [`SynapseCtxSsrExample.tsx`](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SynapseCtxSsrExample.tsx)
+> (on the Posts domain; below the same mechanics are shown on pokemon).
 
 By default `createSynapseCtx` gates children behind `loadingComponent` until the module is ready —
 on the server this yields empty HTML (no SEO, no first paint from server-state). The `ssr: true`
-flag enables a mode where a synchronously-ready store (Memory/LocalStorage) renders content right away.
+flag enables a mode where a synchronously-ready store (Memory/LocalStorage — like pokemon) renders
+content right away.
 
 ### Options
 
 ```typescript
-const PostsSynapse = createSynapseCtx(postsSynapse, {
+const PokemonCtx = createSynapseCtx(pokemonSynapse, {
   loadingComponent: <Spinner />,
   ssr: true, // enable server-rendering of seeded sync stores
 })
 ```
 
-`dehydrate` helper and the Provider prop:
+The `dehydrate` helper and the Provider prop:
 
 ```typescript
 // Server helper: collect a serializable store snapshot.
@@ -191,10 +193,11 @@ no request bleed), seeds `initialState` via `hydrate`, and returns a serializabl
 `renderToString` gets a ready store on the first render.
 
 ```typescript
-const feed = await fetchFeed()
-const dehydrated = await PostsSynapse.dehydrate({ initialState: { posts: feed } })
+// Any data-fetching path (the pokemon ApiClient, etc.) → a snapshot.
+const list = await fetchInitialPokemon()
+const dehydrated = await PokemonCtx.dehydrate({ initialState: { pokemonList: list } })
 
-const html = renderToString(<PostsFeedWithCtx dehydratedState={dehydrated} />)
+const html = renderToString(<PokedexWithContext dehydratedState={dehydrated} />)
 // serialize into HTML: window.__SYNAPSE_STATE__ = JSON.stringify(dehydrated)
 ```
 
@@ -206,8 +209,8 @@ const html = renderToString(<PostsFeedWithCtx dehydratedState={dehydrated} />)
 > ```typescript
 > import { dehydrateModule } from 'synapse-storage/utils'
 >
-> // in a server (RSC) file — postsSynapse is imported directly, no 'use client' context
-> const dehydrated = await dehydrateModule(postsSynapse, { ssr: true, state: { posts: feed } })
+> // in a server (RSC) file — pokemonSynapse is imported directly, no 'use client' context
+> const dehydrated = await dehydrateModule(pokemonSynapse, { ssr: true, state: { pokemonList: list } })
 > ```
 >
 > `state` is merged on top of the fork's `initialState` (shallow, top-level) — you may pass only the
@@ -222,7 +225,7 @@ continue on the client afterwards.
 ```typescript
 const dehydrated = JSON.parse(window.__SYNAPSE_STATE__)
 
-hydrateRoot(container, <PostsFeedWithCtx dehydratedState={dehydrated} />)
+hydrateRoot(container, <PokedexWithContext dehydratedState={dehydrated} />)
 ```
 
 ### Guarantees and limitations
@@ -237,3 +240,5 @@ hydrateRoot(container, <PostsFeedWithCtx dehydratedState={dehydrated} />)
   collects a correct snapshot (it awaits the async `hydrate`).
 - **Backward compatibility.** Without `ssr` and without `dehydratedState` the behavior is unchanged
   (lazy start + `loadingComponent`); hook signatures did not change.
+
+The full pokemon module — [Pokemon (recipe)](./pokemon-advanced.md).

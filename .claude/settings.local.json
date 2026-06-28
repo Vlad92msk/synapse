@@ -57,7 +57,17 @@
       "Bash(yarn test *)",
       "Bash(echo \"exit: $?\")",
       "Bash(echo \"=== examples typecheck exit: $? ===\")",
-      "Bash(yarn typecheck *)"
+      "Bash(yarn typecheck *)",
+      "Bash(yarn type-check *)",
+      "Bash(yarn run *)",
+      "Bash(node -e \"const p=require\\('./packages/examples/package.json'\\); console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\)\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\)\")",
+      "Bash(yarn homepage:docs)",
+      "Bash(cd *)",
+      "Bash(grep -nE \"protected|public|reserved|RESERVED|storage|action\\\\$|destroy|memoize|meta|notifyAfterSubscribe|shouldTrigger|keyedApiActions\" /Users/vlad/web_dev/synapse/packages/synapse/src/reactive/dispatcher/dispatcher.base.ts)",
+      "Bash(wc -c /Users/vlad/.claude-google/.claude/projects/-Users-vlad-web-dev-synapse/c5eb67f0-9325-4cb8-a1e4-14fbb634a00c/tool-results/toolu_01AhR9UZTuVWDbtjnj7HJcc8.txt)",
+      "Bash(echo \"---DC SCRIPT POS---\")",
+      "Bash(grep -ob data-dc-script /Users/vlad/.claude-google/.claude/projects/-Users-vlad-web-dev-synapse/c5eb67f0-9325-4cb8-a1e4-14fbb634a00c/tool-results/toolu_01AhR9UZTuVWDbtjnj7HJcc8.txt)"
     ]
   }
 }

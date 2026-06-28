@@ -21,15 +21,17 @@
 }
 
 .active {
-  background-color: #3182ce;
-  color: white;
+  background-color: var(--accent-orange);
+  color: #1a1207;
+  font-weight: 600;
 }
 
 .inactive {
-  background-color: rgba(226, 232, 240, 0.08);
-  color: #e4e9ed;
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
 }
 
 .inactive:hover {
-  background-color: rgba(203, 213, 224, 0.29);
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
 }

@@ -4,120 +4,88 @@
 
 In-memory storage. Data lives only while the page is open. Synchronous API.
 
+Every example in the State Manager section is built on a single end-to-end domain — a todo-list.
+It is the canonical store that is reused later in the "Working with data" and "Patterns" sections.
+
+## Domain
+
+```typescript
+export interface Todo {
+  id: string
+  title: string
+  done: boolean
+}
+
+export type Filter = 'all' | 'active' | 'completed'
+
+export interface TodoState {
+  todos: Todo[]
+  filter: Filter
+}
+
+export const initialTodoState: TodoState = {
+  todos: [
+    { id: 't1', title: 'Изучить Synapse', done: true },
+    { id: 't2', title: 'Собрать todo-приложение', done: false },
+  ],
+  filter: 'all',
+}
+```
+
 ## Creating
 
 ```typescript
 import { MemoryStorage } from 'synapse-storage/core'
 
-interface CounterState {
-  count: number
-  label: string
-}
-
 // Via new
-const storage = new MemoryStorage<CounterState>({
-  name: 'memory-counter',
-  initialState: { count: 0, label: 'clicks' },
+export const todoStorage = new MemoryStorage<TodoState>({
+  name: 'todo',
+  initialState: initialTodoState,
 })
 
-// Or via the static .create()
-const storage = MemoryStorage.create<CounterState>({
-  name: 'memory-counter',
-  initialState: { count: 0, label: 'clicks' },
+// Or via the static .create() — a full equivalent
+const todoStorage = MemoryStorage.create<TodoState>({
+  name: 'todo',
+  initialState: initialTodoState,
 })
 
-// Initialization (required)
-await storage.initialize()
+// Initialization is required before use
+await todoStorage.initialize()
 ```
 
-## Writing data
+## When to use
 
-```typescript
-// set() — set a value by key
-storage.set('count', 5)
-storage.set('label', 'taps')
+- Ephemeral UI state: filters, forms, modal state, selected items.
+- State that must not survive a page reload.
+- The default baseline choice — when persistence isn't needed.
 
-// update() — change several fields at once (immer-style)
-storage.update((s) => {
-  s.count += 10
-  s.label = 'updated'
-})
-```
+## When not to use
 
-## Reading data
+- You need to keep data across reloads → [LocalStorage](./local-storage.md) or
+  [IndexedDB](./indexeddb-storage.md).
+- Large amounts of data or binary data → [IndexedDB](./indexeddb-storage.md).
 
-```typescript
-// get() — get a value by key
-const count = storage.get<number>('count')     // 5
-const label = storage.get<string>('label')     // 'clicks'
+## Working with data
 
-// getState() — get the entire state at once
-const state = storage.getState()               // { count: 5, label: 'clicks' }
+Reading, writing, subscriptions, and selectors are the same for all synchronous storages and are
+covered in the "Working with data" section:
 
-// getStateSync() — the same for synchronous storages
-const state = storage.getStateSync()           // { count: 5, label: 'clicks' }
-```
-
-## Checking, removing, resetting
-
-```typescript
-// has() — check whether a key is present
-storage.has('count')   // true
-storage.has('unknown') // false
-
-// keys() — get the list of keys
-storage.keys()         // ['count', 'label']
-
-// remove() — remove a specific key
-storage.remove('label')
-
-// clear() — clear the whole storage (state = {})
-storage.clear()
-
-// reset() — reset to initialState
-storage.reset()        // state = { count: 0, label: 'clicks' }
-```
-
-## Subscriptions
-
-```typescript
-// Subscribing to a specific key
-const unsub = storage.subscribe('count', (newValue) => {
-  console.log('count changed:', newValue)
-})
-
-// Subscribing via a path selector
-const unsub = storage.subscribe(
-  (state) => state.count,
-  (newCount) => console.log('count:', newCount)
-)
-
-// Subscribing to all changes
-const unsub = storage.subscribeToAll((event) => {
-  console.log('changed:', event)
-})
-
-// Unsubscribe
-unsub()
-```
+- [Reading data](./reading-data.md) — `get`, `getState`, `getStateSync`
+- [Writing data](./writing-data.md) — `set`, `update`, `reset`
+- [remove / has / keys / clear / reset](./delete-has-keys.md)
+- [Subscriptions](./subscriptions.md) and [Selectors](./selector-system.md)
 
 ## Lifecycle
 
 ```typescript
-// Initialization
-await storage.initialize()
-
-// Waiting for readiness
-await storage.waitForReady()
-
-// Status
-storage.initStatus  // { status: 'ready' }
+await todoStorage.initialize()    // initialization
+await todoStorage.waitForReady()  // waiting for readiness
+todoStorage.initStatus            // { status: 'ready' }
 
 // Subscribing to status changes
-const unsub = storage.onStatusChange((status) => {
+const unsub = todoStorage.onStatusChange((status) => {
   console.log(status) // { status: 'ready' | 'loading' | 'error' | 'idle' }
 })
 
-// Destruction
-await storage.destroy()
+await todoStorage.destroy()       // destruction (for memory, clears the data)
 ```

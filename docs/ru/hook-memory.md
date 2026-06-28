@@ -2,94 +2,63 @@
 
 > [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/HookExample.tsx)
 
-React-хук для создания MemoryStorage. Автоматически инициализирует и уничтожает при размонтировании.
+React-хук, который создаёт и инициализирует хранилище прямо внутри компонента и уничтожает его
+при размонтировании. Не нужно держать стор на уровне модуля — его жизненный цикл совпадает с
+жизненным циклом компонента.
+
+Тот же сквозной todo-домен (`TodoState`, `initialTodoState` — см. [MemoryStorage](./memory-storage.md)).
 
 ## useCreateStorage
 
 ```typescript
 import { useCreateStorage } from 'synapse-storage/react'
 
-interface FormState {
-  username: string
-  email: string
-  agreed: boolean
-}
-
-function MyComponent() {
-  const { storage, isReady, isLoading, hasError, status } = useCreateStorage<FormState>({
+function TodoApp() {
+  const { storage, isReady, isLoading, hasError, status } = useCreateStorage<TodoState>({
     type: 'memory',           // 'memory' | 'localStorage' | 'indexedDB'
-    name: 'hook-form',
-    initialState: { username: '', email: '', agreed: false },
+    name: 'todo-hook-memory',
+    initialState: initialTodoState,
   })
 
-  // Опционально: настройки жизненного цикла
-  const result = useCreateStorage<FormState>(
-    { type: 'memory', name: 'hook-form', initialState: { ... } },
+  // Опционально: настройки жизненного цикла вторым аргументом
+  const result = useCreateStorage<TodoState>(
+    { type: 'memory', name: 'todo-hook-memory', initialState: initialTodoState },
     {
       autoInitialize: true,    // автоинициализация (по умолчанию: true)
       destroyOnUnmount: true,  // уничтожить при размонтировании (по умолчанию: true для memory/local)
-    }
+    },
   )
 
-  // isReady = true  -> хранилище доступно (тип: ISyncStorage<FormState>)
+  // isReady = true  -> storage доступен (тип: ISyncStorage<TodoState>)
   // isReady = false -> storage = null
-  if (!isReady) return <div>Loading...</div>
+  if (!isReady) return <div>Loading…</div>
 
-  // После isReady хранилище гарантированно не null
-  storage.set('username', 'John')
+  // После isReady storage гарантированно не null
+  storage.set('filter', 'active')
 }
 ```
 
-## useStorageSubscribe
+## Чтение состояния — useStorageSubscribe
 
 ```typescript
 import { useStorageSubscribe } from 'synapse-storage/react'
 
-function FormFields({ storage }: { storage: ISyncStorage<FormState> }) {
-  // Подписка на конкретное поле через селектор
-  const username = useStorageSubscribe(storage, (s) => s.username)
-  const email = useStorageSubscribe(storage, (s) => s.email)
-  const agreed = useStorageSubscribe(storage, (s) => s.agreed)
-
-  // Подписка на всё состояние
-  const fullState = useStorageSubscribe(storage, (s) => s)
-
-  return <div>{username} — {email} — {String(agreed)}</div>
-}
+// Подписка на всё состояние или на отдельные поля (ререндер только при изменении результата)
+const state = useStorageSubscribe(storage, (s) => s)
+const filter = useStorageSubscribe(storage, (s) => s.filter)
+const activeCount = useStorageSubscribe(storage, (s) => s.todos.filter((t) => !t.done).length)
 ```
 
-## Полный пример
+`useStorageSubscribe` принимает `storage | null`, поэтому его можно вызывать до готовности —
+вернёт `undefined`. Подробнее — в разделе [Подписки](./subscriptions.md).
 
-```tsx
-import type { ISyncStorage } from 'synapse-storage/core'
-import { useCreateStorage, useStorageSubscribe } from 'synapse-storage/react'
+## Когда брать
 
-function App() {
-  const { storage, isReady } = useCreateStorage<FormState>({
-    type: 'memory',
-    name: 'hook-form',
-    initialState: { username: '', email: '', agreed: false },
-  })
+- Стор нужен только внутри конкретного компонента/экрана и должен исчезать вместе с ним.
+- Не хочется ручного `initialize()` / `destroy()` в `useEffect`.
 
-  if (!isReady) return <div>Loading...</div>
+## Когда не брать
 
-  return (
-    <>
-      <FormFields storage={storage} />
-      <FormDisplay storage={storage} />
-    </>
-  )
-}
-
-function FormFields({ storage }: { storage: ISyncStorage<FormState> }) {
-  const username = useStorageSubscribe(storage, (s) => s.username)
-  const email = useStorageSubscribe(storage, (s) => s.email)
-
-  return (
-    <div>
-      <input value={username ?? ''} onChange={(e) => storage.set('username', e.target.value)} />
-      <input value={email ?? ''} onChange={(e) => storage.set('email', e.target.value)} />
-    </div>
-  )
-}
-```
+- Стор должен быть глобальным и переживать размонтирование компонента → создавайте его на
+  уровне модуля (см. [MemoryStorage](./memory-storage.md)) или через
+  [createSynapse](./create-synapse-basic.md).

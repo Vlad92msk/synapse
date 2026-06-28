@@ -2,22 +2,21 @@
 
 > [Back to Main](../../README.md)
 
-All the ways to write data to a storage. They work the same way for Memory and LocalStorage (synchronously), and for IndexedDB — with `await`.
+All the ways to write data to a storage. The examples use the end-to-end `todoStorage` from the
+[MemoryStorage](./memory-storage.md) section (`TodoState = { todos: Todo[]; filter: Filter }`). For
+Memory and LocalStorage writes are synchronous, for IndexedDB they need `await`.
 
 ## set(key, value) — Set a value by key
 
 ```typescript
 // ── Synchronous storage (MemoryStorage / LocalStorage) ──
 
-storage.set('name', 'Bob')
-storage.set('age', 30)
-storage.set('tags', ['admin', 'editor'])
-storage.set('settings', { theme: 'dark', notifications: false })
+todoStorage.set('filter', 'completed')
+todoStorage.set('todos', [{ id: 't1', title: 'New', done: false }])
 
 // ── Asynchronous storage (IndexedDBStorage) ──
 
-await storage.set('name', 'Bob')
-await storage.set('age', 30)
+await todoStorage.set('filter', 'completed')
 ```
 
 ## update(updater) — Change several fields at once
@@ -27,23 +26,21 @@ await storage.set('age', 30)
 ```typescript
 // ── Synchronous storage ──
 
-storage.update((state) => {
-  state.name = 'Charlie'
-  state.age += 5
-  state.tags.push('moderator')
-  state.settings.theme = 'dark'
+todoStorage.update((state) => {
+  state.todos.push({ id: 't2', title: 'Buy milk', done: false })
+  state.filter = 'active'
 })
 
-// Convenient for nested objects:
-storage.update((state) => {
-  state.settings.notifications = false
+// Convenient for a targeted change of a nested element:
+todoStorage.update((state) => {
+  const target = state.todos.find((t) => t.id === 't2')
+  if (target) target.done = true
 })
 
 // ── Asynchronous storage ──
 
-await storage.update((state) => {
-  state.name = 'Charlie'
-  state.age += 5
+await todoStorage.update((state) => {
+  state.filter = 'completed'
 })
 ```
 
@@ -51,27 +48,26 @@ await storage.update((state) => {
 
 ```typescript
 // set() — a full replacement of the value at a single key.
-// Suitable for changing one field or fully replacing an object.
-storage.set('name', 'Bob')
-storage.set('settings', { theme: 'dark', notifications: false })
+// Suitable for changing one field or fully replacing an array/object.
+todoStorage.set('filter', 'active')
+todoStorage.set('todos', [])
 
 // update() — mutating several fields at once.
 // Suitable for an atomic change of multiple fields.
 // A single notification to subscribers instead of several.
-storage.update((s) => {
-  s.name = 'Bob'
-  s.age = 30
-  s.settings.theme = 'dark'
+todoStorage.update((s) => {
+  s.todos.push({ id: 't3', title: 'Task', done: false })
+  s.filter = 'all'
 })
 
 // With set() each call = a separate notification:
-storage.set('name', 'Bob')     // notification 1
-storage.set('age', 30)         // notification 2
+todoStorage.set('filter', 'active')   // notification 1
+todoStorage.set('todos', [])          // notification 2
 
 // With update() — a single notification:
-storage.update((s) => {
-  s.name = 'Bob'               // notification 1 (combined)
-  s.age = 30
+todoStorage.update((s) => {
+  s.filter = 'active'                  // notification 1 (combined)
+  s.todos = []
 })
 ```
 
@@ -81,8 +77,8 @@ storage.update((s) => {
 // Returns the storage to its initial state (initialState from the config).
 
 // Synchronously
-storage.reset()
+todoStorage.reset()
 
 // Asynchronously
-await storage.reset()
+await todoStorage.reset()
 ```

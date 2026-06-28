@@ -2,101 +2,155 @@
 
 > [Back to Main](../../README.md)
 
-Full configuration: storage + selectors + dispatcher + RxJS effects for side effects.
+The last brick after the [dispatcher](./create-synapse-dispatcher.md): **effects** — the RxJS layer
+of side actions. The dispatcher describes *intents* (`loadList`, `selectPokemon`, `loadMore`); an
+effect listens for them in the stream, turns them into real API calls, and feeds the result back
+into state through the dispatcher's actions.
 
-## Creating
+Same domain — `pokemon-advanced`.
+
+## Effects (`pokemon.effects.ts`)
+
+Effects are a class over `Effects<State, Dispatcher>`. Each effect is declared as a **class field**
+via `this.effect(...)`; the field name = the effect name. Services (API endpoints) and external
+stores (`settings$`) come **through the constructor** and are captured in the recipe's closure.
 
 ```typescript
-import { MemoryStorage, Selectors } from 'synapse-storage/core'
-import { createSynapse } from 'synapse-storage/utils'
-import { Dispatcher, Effects, ofType } from 'synapse-storage/reactive'
-import { debounceTime, switchMap } from 'rxjs/operators'
-import { from } from 'rxjs'
+import { Observable, withLatestFrom } from 'rxjs'
+import { Effects, apiResult, fromRequest, ofType, selectorMap, selectorObject, validateMap } from 'synapse-storage/reactive'
 
-class SearchSelectors extends Selectors<SearchState> {
-  readonly query = this.select((s) => s.query)
-  readonly results = this.select((s) => s.results)
-}
+import { mapDetailsResponse, mapListResponse, type PokemonApiEndpoints } from './pokemon.api'
+import type { PokemonSettings } from './pokemon.settings'
+import type { PokemonState } from './pokemon.types'
+import type { PokemonDispatcher } from './pokemon.dispatcher'
 
-class SearchDispatcher extends Dispatcher<SearchState> {
-  readonly setQuery = this.action((store, query: string) => { store.set('query', query); return query })
-  readonly searchSuccess = this.action((store, results: string[]) => { store.set('results', results); return results })
-}
+export class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {
+  constructor(
+    private readonly api: PokemonApiEndpoints,
+    private readonly settings$: Observable<PokemonSettings>,
+  ) {
+    super()
+  }
 
-// Effects — a class over Effects<State, Dispatcher>; services through the constructor
-class SearchEffects extends Effects<SearchState, SearchDispatcher> {
-  constructor(private readonly api: SearchApi) { super() }
-
-  readonly search$ = this.effect((action$, state$, { dispatcher: d }) =>
+  // loadList (init/idle) → validateMap → loading → API → success/failure
+  readonly loadList = this.effect((action$, state$, { dispatcher: d }) =>
     action$.pipe(
-      ofType(d.setQuery),
-      debounceTime(400),
-      switchMap((action) => from(this.api(action.payload)).pipe(
-        switchMap(async (results) => d.searchSuccess(results)),
-      )),
+      ofType(d.loadList),
+      withLatestFrom(selectorObject(state$, { listStatus: (s) => s.api.listRequest.status }), this.settings$),
+      validateMap({
+        // gate: don't refetch while a request is already in flight
+        validator: ([, { listStatus }]) => ({
+          conditions: [listStatus !== 'loading'],
+          skipAction: () => d.loadList.reset(),
+        }),
+        loadingAction: () => d.loadList.loading(),
+        errorAction: (err) => d.loadList.failure(String(err)),
+        apiCall: ([, , { pageSize }]) =>
+          fromRequest(this.api.getList.request({ limit: pageSize, offset: 0 })).pipe(
+            apiResult((data) => {
+              d.applyPokemonList({ ...mapListResponse(data), append: false })
+              d.loadList.success()
+            }),
+          ),
+      }),
+    ),
+  )
+
+  // selectPokemon → load the details of the selected pokemon
+  readonly loadDetails = this.effect((action$, state$, { dispatcher: d }) =>
+    action$.pipe(
+      ofType(d.selectPokemon),
+      withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId, (s) => s.api.detailsRequest.status)),
+      validateMap({
+        validator: ([, [selectedId, detailsStatus]]) => ({
+          conditions: [selectedId !== null, detailsStatus !== 'loading'],
+          skipAction: () => d.loadDetails.reset(),
+        }),
+        loadingAction: () => d.loadDetails.loading(),
+        errorAction: (err) => d.loadDetails.failure(String(err)),
+        apiCall: ([, [selectedId]]) =>
+          fromRequest(this.api.getDetails.request({ id: selectedId! })).pipe(
+            apiResult((data) => {
+              d.applyPokemonDetails(mapDetailsResponse(data))
+              d.loadDetails.success()
+            }),
+          ),
+      }),
     ),
   )
 }
-
-const searchSynapse = createSynapse(async () => {
-  const storage = new MemoryStorage<SearchState>({ name: 'search', initialState })
-  return {
-    storage,
-    dispatcher: new SearchDispatcher(storage),
-    selectors: new SearchSelectors(storage),
-    effects: new SearchEffects(searchApi),   // services — through the constructor
-  }
-})
 ```
+
+(`loadMore` is built like `loadList`, only with `offset` from state and `append: true` — see the
+full file.)
 
 ## this.effect
 
+`this.effect((action$, state$, ctx) => Observable)` — a class field; the recipe function receives the
+streams and a context, and returns an `Observable`. The stream's emitted values don't matter — what
+matters are the **side effects** (API calls and dispatched actions) inside the pipe.
+
 ```typescript
-// this.effect — a class field; the function receives streams and a context, returns an Observable.
-// Services/external stores come through the constructor and are captured in the recipe's closure.
-class SearchEffects extends Effects<SearchState, SearchDispatcher> {
-  constructor(private readonly api: SearchApi) { super() }
-
-  readonly search$ = this.effect((action$, state$, ctx) => {
-    const d = ctx.dispatcher                 // the module's typed dispatcher
-    return action$.pipe(
-      ofType(d.setQuery),                    // filter by action
-      debounceTime(400),
-      switchMap((action) => from(this.api(action.payload)).pipe(
-        switchMap(async (results) => d.searchSuccess(results)),
-      )),
-    )
-  })
-
-  // Optional teardown — close sockets etc.
-  override onDestroy() { /* ... */ }
-}
+readonly loadList = this.effect((action$, state$, ctx) => {
+  const d = ctx.dispatcher              // this module's typed dispatcher
+  return action$.pipe(
+    ofType(d.loadList),                  // filter the stream by the action we want
+    // ...processing, this.api.* calls, dispatching d.applyPokemonList(...)
+  )
+})
 ```
 
 The recipe's `ctx` is `{ dispatcher, external }`:
 
-- `dispatcher` — this module's class-dispatcher instance (`ofType(d.x)` + `d.apply(...)`);
-- `external` — external dispatchers (their actions are already merged into the shared `action$`), available if a
-  third generic is declared: `class Effects<State, Dispatcher, ExternalDispatchers>`.
+- `dispatcher` — this module's class-dispatcher instance (`ofType(d.x)` + `d.applyPokemonList(...)`);
+- `external` — external dispatchers (their actions are already merged into the shared `action$`),
+  available if a third generic is declared: `class Effects<State, Dispatcher, ExternalDispatchers>`.
 
-> **Rule**: a service from the constructor (`this.api`) can be *captured in the recipe's closure*, but cannot be
-> dereferenced directly in a field initializer — parameter properties are assigned AFTER the subclass's
-> field initializers.
+> **Rule**: a service from the constructor (`this.api`) can be *captured in the recipe's closure*, but
+> cannot be dereferenced directly in a field initializer — parameter properties are assigned AFTER the
+> subclass's field initializers. That's why effects are arrows inside `this.effect`, not values
+> computed in place.
+
+Optional teardown — `override onDestroy()` (close sockets, unsubscribe from an external source).
 
 ## ofType / ofTypes
 
 ```typescript
 import { ofType, ofTypes } from 'synapse-storage/reactive'
 
-// ofType — filter the stream by a single action type
-action$.pipe(
-  ofType(d.setQuery),
-)
+// ofType — filter the stream by a single dispatcher action
+action$.pipe(ofType(d.loadList))
 
-// ofTypes — filter by several types
-action$.pipe(
-  ofTypes([d.setQuery, d.searchError]),
-)
+// ofTypes — by several
+action$.pipe(ofTypes([d.loadList, d.loadMore]))
+```
+
+`ofType` takes the action itself (`d.loadList`), not a string — the type of `action.payload` is
+inferred automatically. For `apiActions` the filter fires on the group's init call (`d.loadList()`),
+not on `.loading()/.success()` — more in [Dispatcher (detailed)](./dispatcher-detailed.md).
+
+## Reading state in an effect: selectorObject / selectorMap
+
+Often, before a request, you need a slice of state (the current status, `offset`, `pageSize`). Take it
+from `state$` via `withLatestFrom` — it folds in the **latest** value without subscribing on every tick:
+
+```typescript
+// selectorObject — a named slice (key → result)
+withLatestFrom(selectorObject(state$, {
+  offset: (s) => s.offset,
+  hasMore: (s) => s.hasMore,
+  listStatus: (s) => s.api.listRequest.status,
+}))
+
+// selectorMap — a tuple of values (positional)
+withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId, (s) => s.api.detailsRequest.status))
+```
+
+External stores are folded in the same way — `this.settings$` (from `pokemon.settings`) gives `pageSize`:
+
+```typescript
+withLatestFrom(selectorObject(state$, { listStatus: (s) => s.api.listRequest.status }), this.settings$)
+// → the pipe's value: [action, { listStatus }, { pageSize }]
 ```
 
 ## Handling requests: `validateMap` (reads) / `mutationMap` (writes)
@@ -110,24 +164,36 @@ unsubscribe); `apiResult` unwraps a successful `QueryResult` (or throws `ApiErro
 
 ### `validateMap` — reads (resources)
 
-Built on `switchMap` (**last wins**: a new trigger aborts the stale in-flight request). Perfect for loading
-a resource where only the latest matters.
+Built on `switchMap` (**last wins**: a new trigger aborts the stale in-flight request). Perfect for
+loading a resource where only the latest result matters — like `loadList`/`loadDetails`.
+
+- **`validator`** returns `{ conditions, skipAction }`: `conditions` is an array of boolean gates (all
+  must be `true`), otherwise `skipAction` is dispatched and no request is made. In pokemon that's
+  "don't refetch while a request is in flight" (`listStatus !== 'loading'`) and "there is something to
+  load" (`selectedId !== null`).
+- **`loadingAction`** → sets the `loading` status (via the dispatcher's `apiActions` group).
+- **`apiCall`** receives the pipe's value, calls `fromRequest(this.api.X.request(...))`, and inside
+  `apiResult` writes the result (`d.applyPokemon...`) + `d.X.success()`.
+- **`errorAction`** catches `ApiError` → `d.X.failure(...)`.
 
 ```typescript
-import { ofType, validateMap, fromRequest, apiResult } from 'synapse-storage/reactive'
-
-loadPosts$ = this.effect((action$, state$, { dispatcher: d }) =>
+readonly loadDetails = this.effect((action$, state$, { dispatcher: d }) =>
   action$.pipe(
-    ofType(d.loadPosts),
-    withLatestFrom(selectorObject(state$, { status: (s) => s.api.postsRequest.status })),
+    ofType(d.selectPokemon),
+    withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId, (s) => s.api.detailsRequest.status)),
     validateMap({
-      // gate: don't refetch while a request is already in flight
-      validator: ([, { status }]) => ({ conditions: [status !== ApiStatus.Loading], skipAction: () => d.loadPosts.reset() }),
-      loadingAction: () => d.loadPosts.loading(),
-      errorAction: (err) => d.loadPosts.failure(getErrorMessage(err)),
-      apiCall: ([action], { chunkRequest, chunkRequestConsistent }) =>
-        fromRequest(this.api.getPosts.request(action.payload)).pipe(
-          apiResult((page) => { d.applyPosts(page); d.loadPosts.success() }),
+      validator: ([, [selectedId, detailsStatus]]) => ({
+        conditions: [selectedId !== null, detailsStatus !== 'loading'],
+        skipAction: () => d.loadDetails.reset(),
+      }),
+      loadingAction: () => d.loadDetails.loading(),
+      errorAction: (err) => d.loadDetails.failure(String(err)),
+      apiCall: ([, [selectedId]]) =>
+        fromRequest(this.api.getDetails.request({ id: selectedId! })).pipe(
+          apiResult((data) => {
+            d.applyPokemonDetails(mapDetailsResponse(data))
+            d.loadDetails.success()
+          }),
         ),
     }),
   ),
@@ -189,19 +255,66 @@ removePost$ = this.effect((action$, _state$, { dispatcher: d }) =>
 )
 ```
 
-`validateMap` is internally just `mutationMap` with `flatten: switchMap` and no `prepare` — same machine,
-the strategy is the only conceptual difference.
+`validateMap` is internally just `mutationMap` with `flatten: switchMap` and no `prepare` — the same
+machine, the strategy is the only conceptual difference.
+
+> Not every effect is an API request. For simple cases (debouncing search, relaying into another action)
+> a bare `action$.pipe(...)` with ordinary rxjs operators is enough — see the [Search sandbox](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/CreateSynapseEffectsExample.tsx)
+> with `debounceTime` + `switchMap`.
+
+## Assembly
+
+Effects plug into `createSynapse` like the other layers — but their constructor receives **services and
+external stores**: the API endpoints (`pokemonApiClient.getEndpoints()`) and `settings$`
+(`toObservable(settingsStorage)`).
+
+```typescript
+import { MemoryStorage } from 'synapse-storage/core'
+import { toObservable } from 'synapse-storage/reactive'
+import { createSynapse } from 'synapse-storage/utils'
+
+import { initPokemonApi, pokemonApiClient } from './pokemon.api'
+import { settingsStorage } from './pokemon.settings'
+import { initialState } from './pokemon.store'
+import type { PokemonState } from './pokemon.types'
+import { PokemonDispatcher } from './pokemon.dispatcher'
+import { PokemonEffects } from './pokemon.effects'
+import { PokemonSelectors } from './pokemon.selectors'
+
+export const pokemonSynapse = createSynapse(async () => {
+  await initPokemonApi()                 // async prologue: initialize the API client
+  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState })
+
+  return {
+    storage,
+    dependencies: [settingsStorage],     // dependency on another storage
+    dependencyTimeout: 10000,
+    dispatcher: new PokemonDispatcher(storage),
+    selectors: new PokemonSelectors(storage),
+    // services and external stores — through the effects' constructor (captured in the closure)
+    effects: new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage)),
+  }
+})
+```
+
+Effects start **automatically** when the module is initialized (the first `await pokemonSynapse`).
+More on the async factory, `dependencies` and `dependencyTimeout` — [Dependencies](./dependencies.md).
 
 ## Return value
 
 ```typescript
-const store = await searchSynapse
+const store = await pokemonSynapse
 
-store.storage     // IStorage<SearchState>
-store.selectors   // a SearchSelectors instance
-store.actions     // { setQuery, searchSuccess, ... }
-store.dispatcher  // a SearchDispatcher instance
-store.state$      // Observable<SearchState> — the state stream (only with effects!)
+store.storage     // IStorage<PokemonState>
+store.selectors   // a PokemonSelectors instance
+store.dispatcher  // a PokemonDispatcher instance
+store.actions     // { loadList, selectPokemon, ... } (alias of store.dispatcher.dispatch)
+store.state$      // Observable<PokemonState> — the state stream (always present)
 
-// Effects start automatically when the module is initialized
+// Kick off the chain with an intent — the effects drive the rest:
+store.actions.loadList()        // → effect loadList → API → applyPokemonList → success
+store.actions.selectPokemon(25) // → effect loadDetails → API → applyPokemonDetails
 ```
+
+How to hand the assembled `pokemonSynapse` to React components — [createSynapseCtx](./synapse-ctx.md).
+The full module — [Pokemon (recipe)](./pokemon-advanced.md).

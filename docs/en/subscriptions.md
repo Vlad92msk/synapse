@@ -2,19 +2,21 @@
 
 > [Back to Main](../../README.md)
 
-All the ways to subscribe to data changes in a storage. They work the same way for Memory, LocalStorage and IndexedDB.
+All the ways to subscribe to data changes in a storage. The examples use the end-to-end `todoStorage`
+(`TodoState = { todos: Todo[]; filter: Filter }`). They work the same way for Memory, LocalStorage and
+IndexedDB.
 
 ## 1. subscribe(key, callback)
 
 Subscribing to a specific top-level key. The callback is called on every change of that key.
 
 ```typescript
-const unsub = storage.subscribe('counter', (newValue) => {
-  console.log('counter changed:', newValue)  // number
+const unsub = todoStorage.subscribe('filter', (newFilter) => {
+  console.log('filter changed:', newFilter)  // 'all' | 'active' | 'completed'
 })
 
-const unsub = storage.subscribe('user', (newUser) => {
-  console.log('user changed:', newUser)  // { name, email }
+const unsub2 = todoStorage.subscribe('todos', (newTodos) => {
+  console.log('list changed:', newTodos)  // Todo[]
 })
 
 // Unsubscribe
@@ -26,21 +28,16 @@ unsub()
 Subscribing via a selector function. The callback is called when the selector's result changes.
 
 ```typescript
-const unsub = storage.subscribe(
-  (state) => state.settings.theme,
-  (newTheme) => console.log('theme:', newTheme)  // 'light' | 'dark'
+// Computed value — the number of active tasks
+const unsub = todoStorage.subscribe(
+  (state) => state.todos.filter((t) => !t.done).length,
+  (activeCount) => console.log('active tasks:', activeCount)
 )
 
-// Subscribing to nested fields
-const unsub = storage.subscribe(
-  (state) => state.user.name,
-  (name) => console.log('name:', name)
-)
-
-// Computed values
-const unsub = storage.subscribe(
-  (state) => `${state.user.name} (${state.settings.lang})`,
-  (computed) => console.log('computed:', computed)
+// Subscribing to a single field
+const unsub2 = todoStorage.subscribe(
+  (state) => state.filter,
+  (filter) => console.log('filter:', filter)
 )
 
 unsub()
@@ -51,7 +48,7 @@ unsub()
 Subscribing to ALL storage changes. The callback receives an event with information about the change.
 
 ```typescript
-const unsub = storage.subscribeToAll((event) => {
+const unsub = todoStorage.subscribeToAll((event) => {
   console.log(event.type)          // 'set' | 'update' | 'remove' | 'clear' | 'reset'
   console.log(event.key)           // a key or an array of keys
   console.log(event.changedPaths)  // paths to the changed fields
@@ -65,22 +62,14 @@ unsub()
 ```typescript
 import { useStorageSubscribe } from 'synapse-storage/react'
 
-function MyComponent({ storage }: { storage: ISyncStorage<AppState> }) {
+function TodoStats({ storage }: { storage: ISyncStorage<TodoState> }) {
   // Subscribing to a single field
-  const counter = useStorageSubscribe(storage, (s) => s.counter)
-
-  // Subscribing to a nested field
-  const theme = useStorageSubscribe(storage, (s) => s.settings.theme)
-
-  // Subscribing to the entire state
-  const fullState = useStorageSubscribe(storage, (s) => s)
+  const filter = useStorageSubscribe(storage, (s) => s.filter)
 
   // Computed value — re-render only when the result changes
-  const summary = useStorageSubscribe(
-    storage,
-    (s) => `${s.user.name}, counter: ${s.counter}`
-  )
+  const total = useStorageSubscribe(storage, (s) => s.todos.length)
+  const active = useStorageSubscribe(storage, (s) => s.todos.filter((t) => !t.done).length)
 
-  return <div>{counter} / {theme} / {summary}</div>
+  return <div>{filter}: {active} active of {total}</div>
 }
 ```

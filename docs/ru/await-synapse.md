@@ -1,113 +1,131 @@
 # awaitSynapse
 
-> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/AwaitSynapseExample.tsx)
+> [Назад к оглавлению](./README.md) · [Канонический модуль (`PokemonAdvancedExample.tsx`)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/pokemon-advanced/PokemonAdvancedExample.tsx) · [Песочница (Timer)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/AwaitSynapseExample.tsx)
 
-React-утилита для ожидания готовности хранилища Synapse. HOC + хук + программный API.
+React-утилита для ожидания готовности модуля Synapse: HOC + хук + программный API.
+
+`createSynapse` возвращает **ленивый handle** (см. [create-synapse-basic](./create-synapse-basic.md)) —
+фабрика стартует при первом `await`/подписке, а не на импорте. `awaitSynapse` поднимает этот handle:
+запускает инициализацию, держит `loadingComponent` на время async-пролога и отдаёт готовый synapse, когда
+`storage` инициализирован.
+
+Домен тот же — собранный на прошлых страницах `pokemonSynapse`. Это «ручной» способ отдать модуль в
+компоненты (без Context): альтернатива провайдеру [createSynapseCtx](./synapse-ctx.md). Именно `awaitSynapse`
+использует демо модуля — `PokemonAdvancedExample.tsx`.
 
 ## Создание
 
+`awaitSynapse(handle, options?)` создаётся **один раз, на уровне модуля** — не внутри компонента, иначе
+awaiter (и инициализация) пересоздавались бы на каждый рендер.
+
 ```typescript
 import { awaitSynapse } from 'synapse-storage/react'
-import { createSynapse } from 'synapse-storage/utils'
+import { pokemonSynapse } from './pokemon.synapse'
 
-// Инициализация может занять время (IndexedDB, загрузка с сервера и т.д.)
-const configSynapse = createSynapse(async () => {
-  const data = await fetch('/api/config').then((r) => r.json())
-  const storage = new MemoryStorage({ name: 'config', initialState: data })
-  return {
-    storage,
-    dispatcher: new ConfigDispatcher(storage),
-    selectors: new ConfigSelectors(storage),
-  }
-})
-
-// Создаём awaiter — принимает handle (thenable)
-const awaiter = awaitSynapse(configSynapse, {
-  loadingComponent: <div>Loading...</div>,
-  errorComponent: (error) => <div>Error: {error.message}</div>,
+// pokemonSynapse — ленивый handle из createSynapse (async-пролог: initPokemonApi).
+const pokemonAwaiter = awaitSynapse(pokemonSynapse, {
+  loadingComponent: <div>Initializing...</div>,
+  errorComponent: (error) => <div>Init failed: {error.message}</div>,
 })
 ```
 
-## withSynapseReady (HOC)
+`options` необязателен: по умолчанию `loadingComponent` — `<div>Инициализация...</div>`,
+`errorComponent` — текст ошибки. Принимается не только handle, но и Promise готового synapse или сам
+готовый synapse.
+
+## withSynapseReady (HOC) — как поднят демо-модуль
+
+HOC показывает `loadingComponent`, пока модуль не готов, и рендерит компонент **только** когда `storage`
+полностью инициализирован. Это ровно то, что делает `PokemonAdvancedExample.tsx`:
 
 ```typescript
-// HOC: показывает loadingComponent, пока хранилище не готово
-// Компонент рендерится ТОЛЬКО когда хранилище полностью инициализировано
+import { useEffect } from 'react'
 
-function MyComponent() {
-  // Хранилище гарантированно готово — можно безопасно использовать
-  const store = awaiter.getStoreIfReady()!
-  const value = useSelector(store.selectors.someValue)
+function PokemonContent() {
+  // HOC гарантирует готовность — store доступен синхронно, без проверок на undefined.
+  const store = pokemonAwaiter.getStoreIfReady()!
 
-  return <div>{value}</div>
+  // Первичная загрузка списка — один раз, когда модуль готов.
+  useEffect(() => {
+    store.actions.loadList()
+  }, [store])
+
+  return <PokemonDemo store={store} />
 }
 
-// Оборачиваем
-const MyComponentWithReady = awaiter.withSynapseReady(MyComponent)
-
-// В JSX — сначала покажет загрузку, затем компонент:
-<MyComponentWithReady />
+// В JSX сначала покажет loadingComponent, затем PokemonContent с готовым store:
+export const PokemonAdvancedExample = pokemonAwaiter.withSynapseReady(PokemonContent)
 ```
+
+Внутри `PokemonContent` доступна вся поверхность модуля: `store.selectors` (см.
+[selector-system](./selector-system.md)), `store.actions` (намерения диспетчера) и `store.dispatcher`.
 
 ## useSynapseReady (хук)
 
+Хук для ручного контроля готовности — когда нужно показать статус инициализации, а не просто прятать
+компонент за загрузкой:
+
 ```typescript
-// Хук для ручного контроля готовности
+function PokemonStatus() {
+  const { isReady, isPending, isError, store, error } = pokemonAwaiter.useSynapseReady()
 
-function StatusPanel() {
-  const { isReady, isPending, isError, store, error } = awaiter.useSynapseReady()
-
-  if (isPending) return <div>Loading...</div>
-  if (isError)   return <div>Error: {error?.message}</div>
-  if (isReady)   return <div>Store ready! State: {JSON.stringify(store.storage.getStateSync())}</div>
+  if (isPending) return <div>Загрузка модуля...</div>
+  if (isError)   return <div>Ошибка: {error?.message}</div>
+  if (isReady)   return <div>Загружено покемонов: {store!.storage.getStateSync().pokemonList.length}</div>
 }
 
 // Поля возвращаемого объекта:
-// isReady:   boolean — хранилище инициализировано
+// isReady:   boolean — модуль инициализирован
 // isPending: boolean — ожидание инициализации
 // isError:   boolean — ошибка инициализации
-// store:     SynapseStore | undefined
+// store:     PokemonSynapse | undefined  (определён только при isReady)
 // error:     Error | null
 ```
 
 ## Программный API
 
-```typescript
-// Можно использовать вне React-компонентов
+Доступен вне React — в эффектах, утилитах, на сервере:
 
+```typescript
 // Синхронные проверки
-awaiter.isReady()         // boolean
-awaiter.getStatus()       // 'pending' | 'ready' | 'error'
-awaiter.getError()        // Error | null
-awaiter.getStoreIfReady() // store | undefined
+pokemonAwaiter.isReady()         // boolean
+pokemonAwaiter.getStatus()       // 'pending' | 'ready' | 'error'
+pokemonAwaiter.getError()        // Error | null
+pokemonAwaiter.getStoreIfReady() // PokemonSynapse | undefined
 
 // Асинхронное ожидание
-const store = await awaiter.waitForReady()
+const store = await pokemonAwaiter.waitForReady()
+store.actions.loadList()
 
 // Колбэки (возвращают функцию отписки)
-const unsub = awaiter.onReady((store) => {
-  console.log('Store ready!', store.storage.getStateSync())
+const unsub = pokemonAwaiter.onReady((store) => {
+  console.log('Pokemon module ready', store.storage.getStateSync())
 })
 
-const unsub2 = awaiter.onError((error) => {
+const unsubErr = pokemonAwaiter.onError((error) => {
   console.error('Init failed:', error.message)
 })
 
-// Если хранилище уже готово — onReady срабатывает немедленно
+// Если модуль уже готов — onReady срабатывает немедленно.
 
 // Очистка
-awaiter.destroy()
+pokemonAwaiter.destroy()
 ```
 
 ## Связь с createSynapseAwaiter
 
-```typescript
-// awaitSynapse — React-обёртка над createSynapseAwaiter
-// Добавляет: withSynapseReady (HOC) и useSynapseReady (хук)
-// Проксирует: waitForReady, isReady, getStoreIfReady, onReady, onError, getStatus, getError, destroy
+`awaitSynapse` — тонкая React-обёртка над фреймворк-независимым `createSynapseAwaiter`:
 
-// Для vanilla JS / Node.js / без React — используйте createSynapseAwaiter напрямую:
+```typescript
+// awaitSynapse добавляет: withSynapseReady (HOC) и useSynapseReady (хук).
+// Проксирует: waitForReady, isReady, getStoreIfReady, onReady, onError, getStatus, getError, destroy.
+
+// Для vanilla JS / Node.js / без React — createSynapseAwaiter напрямую:
 import { createSynapseAwaiter } from 'synapse-storage/utils'
-const awaiter = createSynapseAwaiter(configSynapse)
-// Тот же программный API, но без React-хуков
+const awaiter = createSynapseAwaiter(pokemonSynapse)
+// Тот же программный API, но без React-хуков.
 ```
+
+Подробнее о фреймворк-независимом варианте и SSR sync-fast-path — на странице
+[synapse-awaiter](./synapse-awaiter.md). Итоговый разбор модуля целиком — в
+[рецепте pokemon-advanced](./pokemon-advanced.md).

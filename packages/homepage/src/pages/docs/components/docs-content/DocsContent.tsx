@@ -17,9 +17,7 @@ export const DocsContent = (props: DocsContentProps) => {
   const navigate = useNavigate()
 
   const contentRef = useRef<HTMLDivElement>(null)
-  console.log('contentRef', contentRef)
   useEffect(() => {
-    console.log('contentRef', contentRef)
     contentRef.current?.scrollTo({
       behavior: 'smooth',
       top: 0,

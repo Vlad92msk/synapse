@@ -1,10 +1,18 @@
+import { readFileSync } from 'fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
+// Версия библиотеки подтягивается напрямую из пакета synapse-storage —
+// единый источник правды, чтобы шапка сайта не расходилась с релизом.
+const synapseVersion = JSON.parse(readFileSync(path.resolve(__dirname, '../synapse/package.json'), 'utf-8')).version
+
 export default defineConfig({
   publicDir: 'public',
   plugins: [react()],
+  define: {
+    __APP_VERSION__: JSON.stringify(synapseVersion),
+  },
   resolve: {
     alias: {
       '@data': path.resolve(__dirname, './src/data'),

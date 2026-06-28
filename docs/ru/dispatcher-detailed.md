@@ -1,37 +1,30 @@
 # Dispatcher (подробно)
 
-> [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/DispatcherDetailedExample.tsx)
+> [Назад к оглавлению](./README.md) · [Диспетчер модуля (`pokemon.dispatcher.ts`)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/pokemon-advanced/pokemon.dispatcher.ts) · [Песочница (Counter)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/DispatcherDetailedExample.tsx)
 
-Класс `Dispatcher` можно использовать и автономно, без `createSynapse`. Определяет действия и наблюдатели
-для хранилища. **Имя экшена/вотчера = имя поля класса.**
+Полная поверхность класса `Dispatcher`. На [странице сборки](./create-synapse-dispatcher.md) показан
+минимум; здесь — все фабрики (`action` / `signal` / `apiActions` / `keyedApiActions` / `watcher`),
+правило `ofType` для `apiActions` и автономное использование без `createSynapse`.
 
-В автономном режиме инстанс финализируется лениво: имена назначаются при первом вызове любого экшена
-или при первом обращении к реестрам `dispatch`/`watchers`.
+Домен тот же — `pokemon-advanced`. **Имя экшена/вотчера = имя поля класса.**
 
-## Создание
+## Автономное использование
+
+`Dispatcher` работает и без `createSynapse` — достаточно `IStorage`. В автономном режиме инстанс
+финализируется лениво: имена назначаются при первом вызове любого экшена или при первом обращении к
+реестрам `dispatch`/`watchers`.
 
 ```typescript
 import { MemoryStorage } from 'synapse-storage/core'
-import { Dispatcher } from 'synapse-storage/reactive'
+import { initialState } from './pokemon.store'
+import { PokemonDispatcher } from './pokemon.dispatcher'
+import type { PokemonState } from './pokemon.types'
 
-interface CounterState {
-  value: number
-  step: number
-  history: number[]
-}
-
-const storage = new MemoryStorage<CounterState>({
-  name: 'counter',
-  initialState: { value: 0, step: 1, history: [] },
-})
+const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState })
 await storage.initialize()
 
-class CounterDispatcher extends Dispatcher<CounterState> {
-   increment = this.action((store) => store.update((s) => { s.value += s.step }))
-   watchValue = this.watcher({ selector: (s) => s.value })
-}
-
-const dispatcher = new CounterDispatcher(storage)
+const dispatcher = new PokemonDispatcher(storage)
+dispatcher.selectPokemon(25)            // экшены — типизированные поля инстанса
 ```
 
 ## Поверхность диспетчера
@@ -46,28 +39,41 @@ const dispatcher = new CounterDispatcher(storage)
 
 ## this.action
 
+`this.action((store, params) => result)` — handler в «рецептной» сигнатуре. **payload экшена =
+возвращаемое значение** handler'а.
+
 ```typescript
-class CounterDispatcher extends Dispatcher<CounterState> {
-  // Простой экшен (без параметров)
-   increment = this.action((store) => {
-    store.update((s) => { s.value += s.step })
+class PokemonDispatcher extends Dispatcher<PokemonState> {
+  // С параметром: return = payload (его ловят эффекты — например loadDetails по selectPokemon)
+  readonly selectPokemon = this.action((store, id: number | null) => {
+    store.update((s) => {
+      s.selectedPokemonId = id
+      if (id === null) s.selectedPokemon = null
+    })
+    return id
   })
 
-  // Экшен с параметром (return = payload в потоке действий)
-   setStep = this.action((store, newStep: number) => {
-    store.set('step', newStep)
-    return newStep
-  })
-
-  // Экшен с meta — произвольные метаданные (2-й аргумент this.action)
-   reset = this.action(
-    (store) => { store.reset() },
-    { meta: { description: 'Сброс к значениям по умолчанию', dangerous: true } },
+  // Запись без возврата payload (применение результата запроса) — payload = void
+  readonly applyPokemonDetails = this.action((store, details: PokemonDetails) =>
+    store.update((s) => { s.selectedPokemon = details }),
   )
 
-  // Экшен с мемоизацией — повторный вызов с тем же аргументом пропускается
-   setStepMemo = this.action(
-    (store, step: number) => { store.set('step', step); return step },
+  // С meta — произвольные метаданные (2-й аргумент this.action)
+  readonly toggleFavorite = this.action(
+    (store, id: number) => {
+      store.update((s) => {
+        const idx = s.favorites.indexOf(id)
+        if (idx >= 0) s.favorites.splice(idx, 1)
+        else s.favorites.push(id)
+      })
+      return id
+    },
+    { meta: { description: 'Добавить/убрать из избранного' } },
+  )
+
+  // С memoize — повторный вызов с тем же аргументом пропускается (не дёргает поиск зря)
+  readonly setSearchQuery = this.action(
+    (store, query: string) => { store.set('searchQuery', query); return query },
     { memoize: (current, previous) => current === previous },
   )
 }
@@ -75,66 +81,90 @@ class CounterDispatcher extends Dispatcher<CounterState> {
 
 ## this.signal
 
+Чистое намерение: ничего не пишет в стор, payload пробрасывается дальше эффектам. `description`
+уходит в `meta`. В pokemon так устроен `loadMore` — сам сигнал не меняет состояние, его
+подхватывает эффект `loadMore` (он же ведёт статус через `loadList.*`).
+
 ```typescript
-class CounterDispatcher extends Dispatcher<CounterState> {
-  // Чистое намерение: ничего не пишет в стор, payload пробрасывается дальше эффектам.
-  // description уходит в meta.
-   pinged = this.signal<number>('Ручной пинг')
+class PokemonDispatcher extends Dispatcher<PokemonState> {
+  readonly loadMore = this.signal<void>('Подгрузить следующую страницу')
 }
 ```
 
 ## this.apiActions (вызываемая группа + жизненный цикл)
 
-`apiActions` возвращает **вызываемую группу**. Сам вызов группы — это `init` (намерение): сбрасывает статус
-в `idle` и пробрасывает payload эффектам. Жизненный цикл — через методы-поля.
+`apiActions` возвращает **вызываемую группу**. Сам вызов группы — это `init` (намерение): сбрасывает
+статус в `idle` и пробрасывает payload эффектам. Жизненный цикл — через методы-поля. `accessor`
+указывает на ячейку `ApiRequestState` в состоянии.
 
 ```typescript
-class PostsDispatcher extends Dispatcher<PostsState> {
-  // accessor указывает на ячейку ApiRequestState в состоянии
-   loadPosts = this.apiActions<{ page: number }>((s) => s.api.postsRequest)
+class PokemonDispatcher extends Dispatcher<PokemonState> {
+  readonly loadList = this.apiActions<void>((s) => s.api.listRequest)
+  readonly loadDetails = this.apiActions<void>((s) => s.api.detailsRequest)
 }
 
 // Использование:
-d.loadPosts({ page: 1 })      // init: статус → idle, намерение уходит эффектам
-d.loadPosts.loading()         // статус → loading
-d.loadPosts.success()         // статус → success
-d.loadPosts.failure('msg')    // статус → error, error = 'msg'
-d.loadPosts.reset()           // статус → reset
+d.loadList()             // init: статус listRequest → idle, намерение уходит эффектам
+d.loadList.loading()     // статус → loading
+d.loadList.success()     // статус → success
+d.loadList.failure('msg')// статус → error, error = 'msg'
+d.loadList.reset()       // статус → reset
 ```
 
-### Правило: `ofType(d.loadPosts)` ловит ТОЛЬКО init
+В pokemon-эффектах группа используется именно так: `ofType(d.loadList)` запускает запрос,
+`d.loadList.loading()` / `.success()` / `.failure()` ведут статус — см. [Effects](./create-synapse-effects.md).
+
+### Правило: `ofType(d.loadList)` ловит ТОЛЬКО init
 
 ```typescript
 // В эффекте: реагируем на НАМЕРЕНИЕ загрузить (init), а не на статусы
-action$.pipe(ofType(d.loadPosts), /* ... запускаем запрос ... */)
+action$.pipe(ofType(d.loadList), /* ... запускаем запрос ... */)
 
 // Чтобы среагировать на РЕЗУЛЬТАТ — слушайте конкретную фазу явно:
-action$.pipe(ofType(d.loadPosts.success), /* ... */)
-action$.pipe(ofType(d.loadPosts.failure), /* ... */)
+action$.pipe(ofType(d.loadList.success), /* ... */)
+action$.pipe(ofType(d.loadList.failure), /* ... */)
 ```
 
-`keyedApiActions` устроен так же, но `init`/`loading`/`success`/`reset` принимают `key`, а `failure` —
-`{ key, error }`.
+`keyedApiActions` устроен так же, но статус хранится **по ключу** (`Record<string, ApiRequestState>`),
+а `init`/`loading`/`success`/`reset` принимают `key`, `failure` — `{ key, error }`. Удобно, когда
+один эндпоинт грузится параллельно под разные сущности (например, детали нескольких покемонов со
+статусом на каждый `id`):
+
+```typescript
+// гипотетическая ячейка: api.detailsByIdRequest: Record<string, ApiRequestState>
+readonly loadDetailsById = this.keyedApiActions<{ key: string }>((s) => s.api.detailsByIdRequest)
+
+d.loadDetailsById({ key: '25' })            // init под ключом '25'
+d.loadDetailsById.loading('25')
+d.loadDetailsById.failure({ key: '25', error: 'msg' })
+```
 
 ## this.watcher
 
+Реактивный наблюдатель за срезом состояния, отдаёт RxJS `Observable`. В pokemon —
+`watchFavoriteCount` (с `meta` и `notifyAfterSubscribe`).
+
 ```typescript
-class CounterDispatcher extends Dispatcher<CounterState> {
-  // Базовый наблюдатель — отслеживает значение
-   watchValue = this.watcher({ selector: (state) => state.value })
+class PokemonDispatcher extends Dispatcher<PokemonState> {
+  // Базовый + notifyAfterSubscribe (вызвать сразу при подписке) + meta
+  readonly watchFavoriteCount = this.watcher({
+    selector: (state) => state.favorites.length,
+    notifyAfterSubscribe: true,
+    meta: { description: 'отслеживание кол-ва избранных' },
+  })
 
   // С shouldTrigger — фильтрация ложных срабатываний
-   watchBigChanges = this.watcher({
-    selector: (state) => state.value,
-    shouldTrigger: (prev, current) => Math.abs((prev ?? 0) - current) >= 5,
-  })
-
-  // С notifyAfterSubscribe — вызвать callback сразу при подписке
-   watchStep = this.watcher({
-    selector: (state) => state.step,
-    notifyAfterSubscribe: true,
+  readonly watchSelected = this.watcher({
+    selector: (state) => state.selectedPokemonId,
+    shouldTrigger: (prev, current) => prev !== current,
   })
 }
+
+// Подписка — через реестр watchers (вызов фабрики → Observable)
+const sub = dispatcher.watchers.watchFavoriteCount().subscribe((action) => {
+  console.log('избранных:', action.payload)
+})
+sub.unsubscribe()
 ```
 
 ## Зарезервированные имена полей
@@ -147,21 +177,21 @@ class CounterDispatcher extends Dispatcher<CounterState> {
 
 ```typescript
 // Вызов действий — через типизированные поля инстанса
-dispatcher.increment()
-dispatcher.setStep(5)
-dispatcher.reset()
+dispatcher.selectPokemon(25)
+dispatcher.setSearchQuery('pika')
+dispatcher.loadMore()
 
 // Или через реестр dispatch
-dispatcher.dispatch.reset.actionType  // '[counter]reset'
-dispatcher.dispatch.reset.meta        // { description: '...', dangerous: true }
+dispatcher.dispatch.selectPokemon.actionType  // '[pokemon-advanced]selectPokemon'
+dispatcher.dispatch.toggleFavorite.meta       // { description: 'Добавить/убрать из избранного' }
 
 // Подписка на наблюдатели (RxJS Observable)
-const sub = dispatcher.watchers.watchValue().subscribe((action) => {
-  console.log('значение:', action.payload)
+const sub = dispatcher.watchers.watchFavoriteCount().subscribe((action) => {
+  console.log('избранных:', action.payload)
 })
 sub.unsubscribe()
 
-// Подписка на ВСЕ действия
+// Подписка на ВСЕ действия (на этом потоке строятся эффекты)
 dispatcher.actions.subscribe((action) => {
   console.log(action.type, action.payload)
 })
@@ -169,3 +199,6 @@ dispatcher.actions.subscribe((action) => {
 // Очистка
 dispatcher.destroy()
 ```
+
+> В сборке `createSynapse` диспетчер доступен как `store.dispatcher`, а `store.actions` — алиас
+> `store.dispatcher.dispatch`. См. [createSynapse (диспетчер)](./create-synapse-dispatcher.md).

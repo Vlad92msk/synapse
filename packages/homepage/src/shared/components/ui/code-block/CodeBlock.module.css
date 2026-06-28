@@ -1,227 +1,99 @@
 .codeBlock {
   position: relative;
-  border-radius: 16px;
-  margin: 20px 0;
-  font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+  margin: 24px 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(8px);
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.1),
-    0 4px 12px rgba(0, 0, 0, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.codeBlock:hover {
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.15),
-    0 8px 24px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background: var(--bg-secondary);
+  font-family: var(--font-mono);
 }
 
 .header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px 20px;
-  padding-bottom: 0;
-  /*border-bottom: 1px solid rgba(255, 255, 255, 0.08);*/
-  /*background: rgba(255, 255, 255, 0.02);*/
-}
-
-.codeBlock:hover .copyButton {
-  opacity: 1;
-  transition: opacity 0.3s ease;
+  justify-content: space-between;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .filename {
-  font-size: 13px;
-  color: inherit;
-  opacity: 0.9;
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
 .language {
-  font-size: 12px;
-  color: inherit;
-  opacity: 0.6;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
 }
 
 .copyButton {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-muted);
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  padding: 6px 12px;
-  color: inherit;
+  border: 1px solid var(--border-subtle);
+  padding: 4px 9px;
+  border-radius: 7px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  opacity: 0;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
 }
 
 .copyButton:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.25);
-  opacity: 1;
-  transform: translateY(-1px);
+  color: var(--text-primary);
+  background: var(--hover-overlay);
 }
 
-.copyButton:active {
-  transform: scale(0.95) translateY(-1px);
+.copyButton.copied {
+  color: var(--accent-green);
+  border-color: var(--accent-green-subtle);
 }
 
-.copyIcon {
-  font-size: 14px;
-}
-
-.copiedIcon {
-  color: #10b981;
-  font-weight: bold;
-  font-size: 14px;
+.copyButton.error {
+  color: var(--accent-red);
 }
 
 .codeContent {
-  padding: 20px;
+  padding: 18px 20px;
   overflow-x: auto;
-  background: transparent;
 }
 
 .codeContent :global(code) {
   background: transparent !important;
-  font-family: inherit !important;
-  color: inherit;
-  opacity: 0.9;
+  font-family: var(--font-mono) !important;
+  font-size: 13.5px;
 }
 
-/* Стили для номеров строк */
-.codeContent :global(.linenumber) {
-  color: inherit !important;
-  opacity: 0.4 !important;
-  user-select: none;
-  padding-right: 1em !important;
-  font-size: 12px !important;
-}
-
-/* Кастомизация скроллбара */
+/* Скроллбар */
 .codeContent::-webkit-scrollbar {
-  height: 4px;
-}
-
-.codeContent::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 2px;
+  height: 8px;
 }
 
 .codeContent::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 2px;
-  transition: background 0.2s ease;
+  background: var(--border-strong);
+  border-radius: 10px;
 }
 
-.codeContent::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-/* Адаптивность */
+/* Адаптив */
 @media (max-width: 768px) {
   .codeBlock {
     margin: 16px 0;
-    border-radius: 12px;
-  }
-
-  .header {
-    padding: 10px 16px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .info {
-    gap: 8px;
-    width: 100%;
   }
 
   .codeContent {
-    padding: 16px;
+    padding: 14px 16px;
   }
-
-  .filename {
-    font-size: 12px;
-    padding: 3px 8px;
-  }
-
-  .language {
-    font-size: 11px;
-    padding: 3px 6px;
-  }
-
-  .copyButton {
-    padding: 4px 10px;
-    font-size: 11px;
-    align-self: flex-end;
-    position: absolute;
-    right: 16px;
-    top: 10px;
-    opacity: 1; /* Всегда видимая на мобильных */
-  }
-}
-
-@media (max-width: 480px) {
-  .codeBlock {
-    border-radius: 8px;
-  }
-
-  .header {
-    padding: 8px 12px;
-  }
-
-  .codeContent {
-    padding: 12px;
-  }
-}
-
-/* Дополнительные стили для лучшей читаемости кода */
-.codeContent :global(.hljs-comment),
-.codeContent :global(.hljs-quote) {
-  opacity: 0.6 !important;
-}
-
-.codeContent :global(.hljs-keyword),
-.codeContent :global(.hljs-selector-tag),
-.codeContent :global(.hljs-literal),
-.codeContent :global(.hljs-title),
-.codeContent :global(.hljs-section),
-.codeContent :global(.hljs-doctag),
-.codeContent :global(.hljs-type),
-.codeContent :global(.hljs-name),
-.codeContent :global(.hljs-strong) {
-  opacity: 1 !important;
-}
-
-.codeContent :global(.hljs-string),
-.codeContent :global(.hljs-number),
-.codeContent :global(.hljs-symbol),
-.codeContent :global(.hljs-bullet),
-.codeContent :global(.hljs-attribute) {
-  opacity: 0.9 !important;
 }

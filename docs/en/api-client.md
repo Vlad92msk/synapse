@@ -2,157 +2,213 @@
 
 > [Back to Main](../../README.md)
 
-A typed HTTP client. Endpoints, tag-based caching, request-state subscriptions, abort.
+A typed HTTP client: endpoints, tag-based caching, request-state subscriptions, abort.
+
+This page is built around the **real `pokemon.api.ts` file** from the
+[`pokemon-advanced`](./pokemon-advanced.md) example. The same `pokemonApiClient` is later used in the
+effects (see [Effects](./create-synapse-effects.md)) — it's the first brick of the data layer.
 
 ## Imports
 
 ```typescript
-import { MemoryStorage } from 'synapse-storage/core'
 import { ApiClient } from 'synapse-storage/api'
+import { MemoryStorage } from 'synapse-storage/core'
 ```
 
-## Creating an ApiClient
+## Creating the ApiClient (`pokemon.api.ts`)
+
+`pokemon.api.ts` is a **single responsibility of the module**: configuring the client, describing the
+endpoints, and mapping the raw response into domain types. Nothing extra.
 
 ```typescript
-// 1. A storage for the request cache
-const apiCacheStorage = new MemoryStorage<Record<string, any>>({
-  name: 'api-cache',
-  initialState: {},
-})
+// ─── Raw API response types ─────────────────────────────────────────────────
+// They describe the shape PokeAPI returns — which we hide behind mappers.
 
-// 2. Creating the client
-const pokemonApi = new ApiClient({
-  storage: apiCacheStorage,         // the cache storage (required)
+interface PokemonListApiResponse {
+  count: number
+  next: string | null
+  results: Array<{ name: string; url: string }>
+}
+
+interface PokemonApiResponse {
+  id: number
+  name: string
+  types: Array<{ type: { name: string } }>
+  stats: Array<{ stat: { name: string }; base_stat: number }>
+  abilities: Array<{ ability: { name: string } }>
+  sprites: { front_default: string }
+  height: number
+  weight: number
+}
+
+// ─── ApiClient ──────────────────────────────────────────────────────────────
+
+export const pokemonApiClient = new ApiClient({
+  // The request-cache storage (required).
+  storage: new MemoryStorage<Record<string, any>>({
+    name: 'pokemon-advanced-api-cache',
+    initialState: {},
+  }),
 
   baseQuery: {
     baseUrl: 'https://pokeapi.co/api/v2',
-    timeout: 10000,                 // request timeout (ms)
-    prepareHeaders: async (headers, context) => {
-      headers.set('Accept', 'application/json')
-      // headers.set('Authorization', `Bearer ${token}`)
-      // context.requestParams — the current request's parameters
-      // context.getFromStorage('key') — read from the storage
-      // context.getCookie('name') — read a cookie
-      return headers
-    },
-    // fetchFn: customFetch,        // a custom fetch function
-    // credentials: 'include',      // CORS credentials
+    timeout: 10000,                       // request timeout (ms)
   },
 
   cache: {
-    ttl: 60000,                     // cache time-to-live (ms)
-    cleanup: {
-      enabled: true,
-      interval: 120000,             // auto-cleanup interval (ms)
-    },
-    invalidateOnError: true,        // invalidate the cache on error
+    ttl: 60000,                           // global cache time-to-live (ms)
+    invalidateOnError: true,              // invalidate cache on error
   },
 
   endpoints: async (create) => ({
-    // GET — a list with query parameters
-    getPokemonList: create<
-      { limit?: number; offset?: number },  // the parameters type
-      PokemonListResponse                   // the response type
-    >({
+    // GET — a list with query params
+    getList: create<{ limit: number; offset: number }, PokemonListApiResponse>({
       request: (params) => ({
         path: '/pokemon',
         method: 'GET',
-        query: params,              // -> ?limit=5&offset=0
+        query: params,                    // -> ?limit=12&offset=0
       }),
-      cache: { ttl: 120000 },      // a custom TTL for this endpoint
-      tags: ['pokemon-list'],       // tags for invalidation
+      cache: { ttl: 120000 },             // its own TTL for this endpoint
+      tags: ['pokemon-list'],             // tags for invalidation
     }),
 
-    // GET — a single resource by ID (a parameter in the path)
-    getPokemonById: create<{ id: number }, Pokemon>({
+    // GET — a single resource by ID (param in the path)
+    getDetails: create<{ id: number }, PokemonApiResponse>({
       request: ({ id }) => ({
-        path: `/pokemon/${id}`,     // -> /pokemon/25
+        path: `/pokemon/${id}`,           // -> /pokemon/25
         method: 'GET',
       }),
-      cache: true,                  // uses the global TTL
-      tags: ['pokemon'],
+      cache: true,                        // uses the global TTL
+      tags: ['pokemon-details'],
     }),
   }),
 })
 
-// 3. Initialization (required before use)
-await apiCacheStorage.initialize()
-await pokemonApi.init()
+// Client initialization (see "Lifecycle" below).
+export const initPokemonApi = () => pokemonApiClient.init()
+
+// The endpoints-set type — passed into the effects as a service.
+export type PokemonApiEndpoints = ReturnType<typeof pokemonApiClient.getEndpoints>
 ```
 
-## request() — Performing a request
+## Response mappers
+
+Endpoints return the **raw** API response. Mappers turn it into domain types (`PokemonBrief` /
+`PokemonDetails` from [`pokemon.types.ts`](./pokemon-advanced.md)) so the rest of the data layer works
+only with a clean domain shape.
 
 ```typescript
-// pokemonApi.request(endpointName, params, options?)
+import type { PokemonBrief, PokemonDetails } from './pokemon.types'
+
+export function mapListResponse(data: PokemonListApiResponse): { list: PokemonBrief[]; hasMore: boolean } {
+  const list: PokemonBrief[] = data.results.map((p) => {
+    // PokeAPI doesn't return an id in the list — we pull it from the url.
+    const id = parseInt(p.url.split('/').filter(Boolean).pop()!)
+    return {
+      id,
+      name: p.name,
+      sprite: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`,
+    }
+  })
+  return { list, hasMore: !!data.next }
+}
+
+export function mapDetailsResponse(data: PokemonApiResponse): PokemonDetails {
+  return {
+    id: data.id,
+    name: data.name,
+    types: data.types.map((t) => t.type.name),
+    stats: data.stats.map((s) => ({ name: s.stat.name, value: s.base_stat })),
+    abilities: data.abilities.map((a) => a.ability.name),
+    sprite: data.sprites.front_default,
+    height: data.height,
+    weight: data.weight,
+  }
+}
+```
+
+> **Why the mappers live here, not in the effects:** the API response shape is a transport detail.
+> Keeping mappers next to the endpoints localizes the knowledge of PokeAPI in one file; effects and
+> selectors only ever see the domain types.
+
+## request() — performing a request
+
+```typescript
+// pokemonApiClient.request(endpointName, params, options?)
 // Returns Promise<QueryResult<T>>
 
-const result = await pokemonApi.request('getPokemonList', { limit: 5 })
+const result = await pokemonApiClient.request('getList', { limit: 12, offset: 0 })
 
 // QueryResult<T>:
 // {
 //   ok: boolean           — whether the request succeeded
 //   data?: T              — the response data (typed)
 //   error?: Error         — the error (if ok = false)
-//   status: number        — the HTTP status (200, 404, ...)
-//   statusText: string    — the HTTP status text
-//   headers: Headers      — the response headers
-//   fromCache?: boolean   — a result from the cache?
+//   status: number        — HTTP status (200, 404, ...)
+//   statusText: string    — HTTP status text
+//   headers: Headers      — response headers
+//   fromCache?: boolean   — was the result from cache?
 // }
 
 if (result.ok) {
-  console.log(result.data)        // PokemonListResponse (typed)
-  console.log(result.fromCache)   // false (the first request)
+  console.log(result.data)        // PokemonListApiResponse (typed)
+  console.log(result.fromCache)   // false (first request)
 }
 
-// A repeated request with the same parameters — from the cache
-const cached = await pokemonApi.request('getPokemonList', { limit: 5 })
+// A repeat request with the same params — from cache
+const cached = await pokemonApiClient.request('getList', { limit: 12, offset: 0 })
 console.log(cached.fromCache)     // true
 ```
 
-## QueryOptions — Request options
+## QueryOptions — request options
 
 ```typescript
 // The third argument of request() — options
-await pokemonApi.request('getPokemonById', { id: 25 }, {
+await pokemonApiClient.request('getDetails', { id: 25 }, {
   disableCache: true,             // bypass the cache
-  timeout: 5000,                  // a timeout for this request
-  signal: abortController.signal, // an abort signal
-  headers: new Headers({          // additional headers
+  timeout: 5000,                  // timeout for this request
+  signal: abortController.signal, // abort signal
+  headers: new Headers({          // extra headers
     'X-Custom': 'value',
   }),
-  context: { source: 'user' },   // passed to prepareHeaders
+  context: { source: 'user' },   // passed into prepareHeaders
 })
 
 // prepareHeaders receives the context:
-prepareHeaders: async (headers, context) => {
-  if (context.context?.source === 'admin') {
-    headers.set('X-Admin', 'true')
-  }
-  return headers
+baseQuery: {
+  baseUrl: 'https://pokeapi.co/api/v2',
+  prepareHeaders: async (headers, context) => {
+    headers.set('Accept', 'application/json')
+    if (context.context?.source === 'admin') headers.set('X-Admin', 'true')
+    // context.requestParams        — the current request's params
+    // context.getFromStorage('key') — read from storage
+    // context.getCookie('name')     — read a cookie
+    return headers
+  },
 }
 ```
 
-## RequestDefinition — An endpoint's request description
+## RequestDefinition — describing an endpoint's request
 
 ```typescript
 // The full structure of the object returned from request()
 request: (params) => ({
-  path: '/pokemon',               // the path (appended to baseUrl)
+  path: '/pokemon',               // path (appended to baseUrl)
   method: 'GET',                  // 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
-  body: params,                   // the request body (POST/PUT/PATCH)
-  query: { limit: 5 },           // query parameters (?limit=5)
+  body: params,                   // request body (POST/PUT/PATCH)
+  query: { limit: 12 },          // query params (?limit=12)
   headers: { 'X-Custom': '1' },  // headers for this request
   responseFormat: 'json',         // 'json' | 'blob' | 'arrayBuffer' | 'text' | 'formData' | 'raw'
 })
 
-// POST with a body + cache invalidation
-createPokemon: create<{ name: string; type: string }, Pokemon>({
+// A mutation example (POST with body + cache invalidation):
+createPokemon: create<{ name: string; type: string }, PokemonApiResponse>({
   request: (params) => ({
     path: '/pokemon',
     method: 'POST',
     body: params,                 // serialized to JSON
   }),
-  invalidatesTags: ['pokemon-list'],  // resets the cache on success
+  invalidatesTags: ['pokemon-list'],  // on success, drops the list cache
   cache: false,                       // don't cache mutations
 })
 ```
@@ -163,93 +219,99 @@ createPokemon: create<{ name: string; type: string }, Pokemon>({
 // Global cache (for all endpoints)
 cache: {
   ttl: 60000,                            // 60 seconds
-  cleanup: { enabled: true, interval: 120000 },
   invalidateOnError: true,
 }
 
 // Cache for a specific endpoint (overrides the global one)
-getPokemonById: create<...>({
-  cache: { ttl: 300000 },               // 5 minutes for this endpoint
+getList: create<...>({
+  cache: { ttl: 120000 },               // 2 minutes for the list
 })
 
-// Disable the cache for an endpoint
+// Disable cache for an endpoint
 createPokemon: create<...>({
   cache: false,
 })
 
-// Disable the cache for a specific request
-await pokemonApi.request('getPokemonById', { id: 1 }, {
-  disableCache: true,                    // a forced network request
+// Disable cache for a specific request
+await pokemonApiClient.request('getDetails', { id: 1 }, {
+  disableCache: true,                    // forced network request
 })
 
 // --- Tags ---
-// An endpoint is marked with a tag:
-getPokemonList: create<...>({
+// An endpoint is tagged:
+getList: create<...>({
   tags: ['pokemon-list'],
 })
 
 // A mutation invalidates tags on success:
 createPokemon: create<...>({
-  invalidatesTags: ['pokemon-list'],     // resets the cache of all endpoints
-                                         // with the 'pokemon-list' tag
+  invalidatesTags: ['pokemon-list'],     // drops the cache of all endpoints
+                                         // tagged 'pokemon-list'
 })
 ```
 
-## getEndpoints() — Direct access to endpoints
+## getEndpoints() — direct access to the endpoints
+
+This is the form the data layer hands to the effects: `pokemonApiClient.getEndpoints()` returns an
+object with typed endpoints (`getList`, `getDetails`), and the `PokemonApiEndpoints` type is passed
+into `PokemonEffects` through the constructor.
 
 ```typescript
-const endpoints = pokemonApi.getEndpoints()
+const endpoints = pokemonApiClient.getEndpoints()
 
 // The endpoint object:
 // {
-//   fetchCounts: number              — the number of executed requests
+//   fetchCounts: number              — number of performed requests
 //   request(params, options?)        — perform a request (returns RequestResponseModify)
-//   subscribe(callback)              — subscribe to the endpoint's state
+//   subscribe(callback)              — subscribe to the endpoint state
 //   reset()                          — reset the counter
 //   meta: { name, tags, invalidatesTags, cache }
 //   destroy()                        — cleanup
 // }
 
-// request() through the endpoint returns RequestResponseModify:
-const req = endpoints.getPokemonById.request({ id: 25 })
+// request() through an endpoint returns RequestResponseModify:
+const req = endpoints.getDetails.request({ id: 25 })
 
 // RequestResponseModify:
 // {
-//   id: string                       — the request's unique ID
-//   subscribe(listener)              — subscribe to the request's state
+//   id: string                       — the unique request ID
+//   subscribe(listener)              — subscribe to the request state
 //   wait()                           — Promise<QueryResult>
 //   waitWithCallbacks({ idle, loading, success, error })
 //   abort()                          — abort the request
-//   then/catch/finally               — Promise API (can be awaited)
+//   then/catch/finally               — Promise API (awaitable)
 // }
 
-// Subscribing to the request's state
+// Subscribe to the request state
 req.subscribe((state) => {
   // RequestState<T>:
   // {
   //   status: 'idle' | 'loading' | 'success' | 'error'
-  //   data?: Pokemon
+  //   data?: PokemonApiResponse
   //   error?: Error
   //   fromCache: boolean
   //   requestParams: { id: number }
   // }
   console.log(state.status)       // 'loading' -> 'success'
-  console.log(state.data)         // Pokemon | undefined
+  console.log(state.data)         // PokemonApiResponse | undefined
 })
 
-// Waiting for the result
+// Wait for the result
 const result = await req.wait()
-console.log(result.data)          // Pokemon
+console.log(result.data)          // PokemonApiResponse
 ```
 
-## waitWithCallbacks() — Callbacks by status
+> In the effects this same endpoint is wrapped in `fromRequest(this.api.getDetails.request(...))` — an
+> RxJS wrapper over `RequestResponseModify`. More in [Effects](./create-synapse-effects.md).
+
+## waitWithCallbacks() — callbacks per status
 
 ```typescript
-const endpoints = pokemonApi.getEndpoints()
-const req = endpoints.getPokemonById.request({ id: 25 })
+const endpoints = pokemonApiClient.getEndpoints()
+const req = endpoints.getDetails.request({ id: 25 })
 
 const result = await req.waitWithCallbacks({
-  idle: (state) => console.log('Waiting'),
+  idle: (state) => console.log('Idle'),
   loading: (state) => console.log('Loading...'),
   success: (data, state) => console.log('Data:', data),
   error: (error, state) => console.log('Error:', error),
@@ -258,29 +320,29 @@ const result = await req.waitWithCallbacks({
 // result — the same QueryResult<T>
 ```
 
-## abort() — Aborting a request
+## abort() — aborting a request
 
 ```typescript
-// Option 1: through the endpoint
-const endpoints = pokemonApi.getEndpoints()
-const req = endpoints.getPokemonById.request({ id: 25 })
+// Way 1: through the endpoint
+const endpoints = pokemonApiClient.getEndpoints()
+const req = endpoints.getDetails.request({ id: 25 })
 req.abort()  // aborts the request via AbortController
 
-// Option 2: through an AbortController in the options
+// Way 2: through an AbortController in the options
 const controller = new AbortController()
-const result = pokemonApi.request('getPokemonById', { id: 25 }, {
+const result = pokemonApiClient.request('getDetails', { id: 25 }, {
   signal: controller.signal,
 })
 controller.abort()  // aborts the request
 ```
 
-## subscribe() — Subscribing to an endpoint's state
+## subscribe() — subscribing to the endpoint state
 
 ```typescript
-const endpoints = pokemonApi.getEndpoints()
+const endpoints = pokemonApiClient.getEndpoints()
 
-// Subscribing to the endpoint's overall state (not a specific request)
-const unsub = endpoints.getPokemonById.subscribe((state) => {
+// Subscribe to the overall endpoint state (not a specific request)
+const unsub = endpoints.getDetails.subscribe((state) => {
   // EndpointState:
   // {
   //   status: 'idle' | 'loading' | 'success' | 'error'
@@ -299,10 +361,14 @@ unsub()
 ## Lifecycle
 
 ```typescript
-// Initialization (required)
-await apiCacheStorage.initialize()  // the storage first
-await pokemonApi.init()             // then the client
+// Initialization (required before use).
+// In the module it's hidden inside initPokemonApi() and called from the createSynapse async factory:
+await initPokemonApi()              // = pokemonApiClient.init()
 
 // Destruction (clears the cache, subscriptions, endpoints)
-await pokemonApi.destroy()
+await pokemonApiClient.destroy()
 ```
+
+> **Where this comes together:** `pokemonApiClient` is created in `pokemon.api.ts`, initialized in the
+> factory's async prologue (`pokemon.synapse.ts`), and its endpoints are passed into `PokemonEffects`.
+> The full assembly is on the [Pokemon example](./pokemon-advanced.md) page.

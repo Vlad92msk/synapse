@@ -10,7 +10,7 @@ synapse-storage
 │
 ├── State Manager        ← «где лежит состояние»
 │   └── synapse-storage/core
-│       MemoryStorage · LocalStorage · IndexedDB · IStorage
+│       MemoryStorage · LocalStorage · IndexedDBStorage · IStorage
 │       селекторы (Selectors / SelectorModule)
 │
 └── Business Logic Layer ← «как состоянием управляет бизнес-логика»
@@ -27,7 +27,7 @@ synapse-storage
 |-----------------|-----------------------------------------------|
 | `MemoryStorage` | состояние на время сессии (большинство фич)   |
 | `LocalStorage`  | синхронная персистентность (настройки, тема)  |
-| `IndexedDB`     | асинхронные большие данные (кэш, офлайн)       |
+| `IndexedDBStorage` | асинхронные большие данные (кэш, офлайн)    |
 
 Сюда же входят **селекторы** — мемоизированный derived state поверх хранилища (как
 `reselect`, но с cross-store зависимостями и реактивным `selector.$`).
@@ -45,7 +45,7 @@ storage.subscribe((s) => s.count, (count) => console.log(count))
 storage.update((s) => { s.count++ })   // Immer-like
 ```
 
-Никакого RxJS, никаких эффектов, никакого React — просто реактивное хранилище.
+> Никакого RxJS, никаких эффектов, никакого React — просто реактивное хранилище.
 
 ## Слой 2. Business Logic Layer — «как состоянием управляет логика»
 
@@ -118,7 +118,7 @@ export const postsSynapse = createSynapse(async () => {
    `rxjs`/`react` — опциональные peer-зависимости именно поэтому.
 
 2. **Граница ответственности.** State Manager не знает про намерения и сеть; BL-слой не
-   знает, *как* физически хранится состояние. Меняешь `MemoryStorage` на `IndexedDB` —
+   знает, *как* физически хранится состояние. Меняешь `MemoryStorage` на `IndexedDBStorage` —
    бизнес-логика не трогается.
 
 3. **Тестируемость.** Хранилище тестируется как структура данных. Диспетчер — как набор
