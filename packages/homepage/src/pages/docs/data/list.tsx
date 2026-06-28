@@ -19,6 +19,7 @@ import {
   UseStorageSubscribePage,
   UseStorageObservablePage,
   ToObservablePage,
+  UseSubscriptionPage,
   SelectorSystemPage,
   SynapseBasicPage,
   SynapseDispatcherPage,
@@ -63,6 +64,7 @@ export const sectionsList: Record<string, ReactNode> = {
   'nav.sections.data.use-storage-subscribe': <UseStorageSubscribePage />,
   'nav.sections.data.use-storage-observable': <UseStorageObservablePage />,
   'nav.sections.data.to-observable': <ToObservablePage />,
+  'nav.sections.data.use-subscription': <UseSubscriptionPage />,
   'nav.sections.data.selector-system': <SelectorSystemPage />,
   // createSynapse
   'nav.sections.synapse.synapse-basic': <SynapseBasicPage />,

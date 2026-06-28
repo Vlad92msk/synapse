@@ -40,6 +40,7 @@ export const DOC_NAV: NavPillar[] = [
           { key: 'use-storage-subscribe' },
           { key: 'use-storage-observable' },
           { key: 'to-observable' },
+          { key: 'use-subscription' },
           { key: 'selector-system' },
         ],
       },

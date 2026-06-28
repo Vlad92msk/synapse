@@ -19287,6 +19287,477 @@
         "codeBlocksCount": 2
       }
     },
+    "use-subscription": {
+      "title": "useSubscription",
+      "sections": [
+        {
+          "id": "usesubscription",
+          "title": "useSubscription",
+          "level": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "An imperative side-effect subscription from a component: subscribe to an Observable and do something\non each emit (show a toast, log, dispatch) without returning anything to render. It's the counterpart\nto useObservable: that one returns a value for JSX, while useSubscription\nis for effects. See the Reactive reads overview.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 14,
+                      "end": 25
+                    },
+                    {
+                      "start": 144,
+                      "end": 180
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 73,
+                      "end": 83
+                    },
+                    {
+                      "start": 261,
+                      "end": 276
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 206,
+                      "end": 219,
+                      "url": "./use-storage-observable.md",
+                      "title": null
+                    },
+                    {
+                      "start": 301,
+                      "end": 315,
+                      "url": "./reactive-reads.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 49,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "signature",
+          "title": "Signature",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "useSubscription(factory: () => Unsubscribable, deps: DependencyList): void",
+                "meta": null
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "factory — creates the subscription (source$.subscribe(...)); its side-effects live inside the\nsubscribe callback.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 7
+                            },
+                            {
+                              "start": 36,
+                              "end": 58
+                            },
+                            {
+                              "start": 94,
+                              "end": 103
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "The returned Unsubscribable is torn down automatically on unmount and on deps change (before\ncreating a new subscription) — no manual unsubscribe needed.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 31,
+                              "end": 54
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 13,
+                              "end": 27
+                            },
+                            {
+                              "start": 73,
+                              "end": 77
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Renders nothing and returns nothing.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 41,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "basic-usage",
+          "title": "Basic usage",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "tsx",
+                "code": "import { useSubscription } from 'synapse-storage/react'\nimport { toObservable } from 'synapse-storage/reactive'\nimport { filter } from 'rxjs/operators'\n\nfunction ErrorToaster() {\n  useSubscription(\n    () =>\n      toObservable(authStorage, (s) => s.error)\n        .pipe(filter((err): err is string => Boolean(err)))\n        .subscribe((message) => {\n          toast.error(message)\n        }),\n    [],\n  )\n\n  return null\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The subscription lives exactly as long as the component is mounted: on unmount useSubscription calls\nunsubscribe() for you.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 79,
+                      "end": 94
+                    },
+                    {
+                      "start": 101,
+                      "end": 114
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 18,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "when-usesubscription-vs-useobservable",
+          "title": "When useSubscription vs useObservable",
+          "level": 2,
+          "content": [
+            {
+              "type": "table",
+              "data": {
+                "headers": [
+                  "You need",
+                  "Hook"
+                ],
+                "rows": [
+                  {
+                    "cells": [
+                      "You need",
+                      "Hook"
+                    ],
+                    "type": "header"
+                  },
+                  {
+                    "cells": [
+                      "A value to render (a slice, a debounced result)",
+                      "useObservable"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "A side-effect on each emit (toast, log, imperative call)",
+                      "useSubscription"
+                    ],
+                    "type": "data"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Simple rule: if the result goes into JSX — useObservable; if it's \"do something outward\" —\nuseSubscription. Don't hand-roll the same thing in useEffect — useSubscription already encapsulates\ncreation and guaranteed teardown.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 43,
+                      "end": 56
+                    },
+                    {
+                      "start": 91,
+                      "end": 106
+                    },
+                    {
+                      "start": 142,
+                      "end": 151
+                    },
+                    {
+                      "start": 154,
+                      "end": 169
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 55,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": true,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "example-a-notification-aggregator",
+          "title": "Example: a notification aggregator",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The classic case — collapse a burst of events into one notification (10 messages in a couple of seconds →\none toast \"10 new messages\"). That's a side-effect, hence useSubscription:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 164,
+                      "end": 179
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "tsx",
+                "code": "import { useSubscription } from 'synapse-storage/react'\nimport { toObservable } from 'synapse-storage/reactive'\nimport { bufferTime, filter, map, pairwise } from 'rxjs/operators'\n\nfunction MessageNotifier() {\n  useSubscription(\n    () =>\n      toObservable(messagesStorage, (s) => s.inbox.length)\n        .pipe(\n          pairwise(),                                        // [was, now]\n          map(([prev, next]) => next - prev),                // how many were added\n          filter((added) => added > 0),                      // arrivals only\n          bufferTime(2000),                                  // collect for 2 seconds\n          filter((batch) => batch.length > 0),               // skip empty windows\n          map((batch) => batch.reduce((sum, n) => sum + n, 0)), // total per window\n        )\n        .subscribe((count) => {\n          toast.show(count === 1 ? 'New message' : `${count} new messages`)\n        }),\n    [],\n  )\n\n  return null\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "A detailed walkthrough of the operators lives on the\nuseStorageObservable page.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": [
+                    {
+                      "start": 53,
+                      "end": 73,
+                      "url": "./use-storage-observable.md#example-a-notification-aggregator",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 41,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "about-deps",
+          "title": "About deps",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Same rules as useObservable: deps holds\neverything the factory closes over that can change. For a singleton store [] is enough; for a store from\nprops/context use [storage], otherwise the subscription stays on the old instance.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 29,
+                      "end": 33
+                    },
+                    {
+                      "start": 114,
+                      "end": 116
+                    },
+                    {
+                      "start": 163,
+                      "end": 172
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 14,
+                      "end": 27,
+                      "url": "./use-storage-observable.md#about-deps--what-goes-in",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 36,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "teardown-and-memory",
+          "title": "Teardown and memory",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "useSubscription tears the subscription down automatically (a useEffect cleanup), and toObservable\nuses shareReplay({ refCount: true }) under the hood — when the subscriber count drops to zero it\nunsubscribes from the store. So sprinkling useSubscription/useObservable across the project does\nnot accumulate listeners on the storage: everything is released on unmount.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 292,
+                      "end": 295
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 15
+                    },
+                    {
+                      "start": 61,
+                      "end": 70
+                    },
+                    {
+                      "start": 85,
+                      "end": 97
+                    },
+                    {
+                      "start": 103,
+                      "end": 134
+                    },
+                    {
+                      "start": 238,
+                      "end": 253
+                    },
+                    {
+                      "start": 254,
+                      "end": 267
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 50,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        }
+      ],
+      "features": [],
+      "frontMatter": {},
+      "metadata": {
+        "lastModified": "2026-06-28T14:21:33.917Z",
+        "wordCount": 487,
+        "readingTime": 3,
+        "sectionsCount": 7,
+        "codeBlocksCount": 3
+      }
+    },
     "writing-data": {
       "title": "Writing data (set/update)",
       "sections": [
@@ -39521,6 +39992,477 @@
         "readingTime": 2,
         "sectionsCount": 4,
         "codeBlocksCount": 2
+      }
+    },
+    "use-subscription": {
+      "title": "useSubscription",
+      "sections": [
+        {
+          "id": "usesubscription",
+          "title": "useSubscription",
+          "level": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Императивная подписка-side-effect из компонента: подписаться на Observable и что-то сделать на\nкаждый эмит (показать тост, залогировать, диспатчнуть), ничего не возвращая в рендер. Это пара к\nuseObservable: тот отдаёт значение для JSX, а useSubscription — для\nэффектов. См. обзор Реактивное чтение.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 22,
+                      "end": 33
+                    },
+                    {
+                      "start": 151,
+                      "end": 179
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 64,
+                      "end": 74
+                    },
+                    {
+                      "start": 238,
+                      "end": 253
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 192,
+                      "end": 205,
+                      "url": "./use-storage-observable.md",
+                      "title": null
+                    },
+                    {
+                      "start": 280,
+                      "end": 297,
+                      "url": "./reactive-reads.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 40,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "signature",
+          "title": "Сигнатура",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "useSubscription(factory: () => Unsubscribable, deps: DependencyList): void",
+                "meta": null
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "factory — создаёт подписку (source$.subscribe(...)); её side-effect'ы живут внутри коллбэка\nsubscribe.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 7
+                            },
+                            {
+                              "start": 28,
+                              "end": 50
+                            },
+                            {
+                              "start": 92,
+                              "end": 101
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Возвращённый Unsubscribable снимается автоматически на unmount и при смене deps (перед\nсозданием новой подписки) — отписывать вручную не нужно.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 28,
+                              "end": 51
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 13,
+                              "end": 27
+                            },
+                            {
+                              "start": 75,
+                              "end": 79
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Ничего не рендерит и не возвращает.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 36,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "basic-usage",
+          "title": "Базовое использование",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "tsx",
+                "code": "import { useSubscription } from 'synapse-storage/react'\nimport { toObservable } from 'synapse-storage/reactive'\nimport { filter } from 'rxjs/operators'\n\nfunction ErrorToaster() {\n  useSubscription(\n    () =>\n      toObservable(authStorage, (s) => s.error)\n        .pipe(filter((err): err is string => Boolean(err)))\n        .subscribe((message) => {\n          toast.error(message)\n        }),\n    [],\n  )\n\n  return null\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Подписка живёт ровно столько, сколько смонтирован компонент: на unmount useSubscription сам вызовет\nunsubscribe().",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 72,
+                      "end": 87
+                    },
+                    {
+                      "start": 100,
+                      "end": 113
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 13,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "when-usesubscription-vs-useobservable",
+          "title": "Когда useSubscription, а когда useObservable",
+          "level": 2,
+          "content": [
+            {
+              "type": "table",
+              "data": {
+                "headers": [
+                  "Нужно",
+                  "Хук"
+                ],
+                "rows": [
+                  {
+                    "cells": [
+                      "Нужно",
+                      "Хук"
+                    ],
+                    "type": "header"
+                  },
+                  {
+                    "cells": [
+                      "Получить значение для рендера (срез, дебаунс-результат)",
+                      "useObservable"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "Выполнить side-effect на каждый эмит (тост, лог, императивный вызов)",
+                      "useSubscription"
+                    ],
+                    "type": "data"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Правило простое: если результат идёт в JSX — useObservable; если это «сделать что-то наружу» —\nuseSubscription. Не подписывайся вручную в useEffect ради того же — useSubscription уже\nинкапсулирует создание и гарантированную отписку.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 45,
+                      "end": 58
+                    },
+                    {
+                      "start": 95,
+                      "end": 110
+                    },
+                    {
+                      "start": 138,
+                      "end": 147
+                    },
+                    {
+                      "start": 163,
+                      "end": 178
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 51,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": true,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "example-a-notification-aggregator",
+          "title": "Пример: агрегатор уведомлений",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Классика — схлопнуть бёрст событий в одно уведомление (10 сообщений за пару секунд → один тост «10 новых\nсообщений»). Это side-effect, поэтому useSubscription:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 143,
+                      "end": 158
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "tsx",
+                "code": "import { useSubscription } from 'synapse-storage/react'\nimport { toObservable } from 'synapse-storage/reactive'\nimport { bufferTime, filter, map, pairwise } from 'rxjs/operators'\n\nfunction MessageNotifier() {\n  useSubscription(\n    () =>\n      toObservable(messagesStorage, (s) => s.inbox.length)\n        .pipe(\n          pairwise(),                                        // [было, стало]\n          map(([prev, next]) => next - prev),                // сколько добавилось\n          filter((added) => added > 0),                      // только приходы\n          bufferTime(2000),                                  // копим 2 секунды\n          filter((batch) => batch.length > 0),               // пустые окна пропускаем\n          map((batch) => batch.reduce((sum, n) => sum + n, 0)), // суммарно за окно\n        )\n        .subscribe((count) => {\n          toast.show(count === 1 ? 'Новое сообщение' : `${count} новых сообщений`)\n        }),\n    [],\n  )\n\n  return null\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Подробный разбор операторов — на странице\nuseStorageObservable.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": [
+                    {
+                      "start": 42,
+                      "end": 62,
+                      "url": "./use-storage-observable.md#пример-агрегатор-уведомлений",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 30,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "about-deps",
+          "title": "Про deps",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Те же правила, что у useObservable: в deps идёт\nвсё, что фабрика замыкает и что может поменяться. Для синглтон-стора [] достаточно; для стора из\nпропсов/контекста — [storage], иначе подписка останется на старом инстансе.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 38,
+                      "end": 42
+                    },
+                    {
+                      "start": 117,
+                      "end": 119
+                    },
+                    {
+                      "start": 165,
+                      "end": 174
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 21,
+                      "end": 34,
+                      "url": "./use-storage-observable.md#про-deps--что-туда-класть",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 33,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "teardown-and-memory",
+          "title": "Отписка и память",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "useSubscription снимает подписку автоматически (cleanup в useEffect), а toObservable под капотом\nиспользует shareReplay({ refCount: true }) — при падении числа подписчиков до нуля он отписывается от\nстора. Так что наставленные по проекту useSubscription/useObservable не копят слушателей на\nхранилище: на unmount всё снимается.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 268,
+                      "end": 287
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 15
+                    },
+                    {
+                      "start": 58,
+                      "end": 67
+                    },
+                    {
+                      "start": 72,
+                      "end": 84
+                    },
+                    {
+                      "start": 108,
+                      "end": 139
+                    },
+                    {
+                      "start": 238,
+                      "end": 253
+                    },
+                    {
+                      "start": 254,
+                      "end": 267
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 42,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        }
+      ],
+      "features": [],
+      "frontMatter": {},
+      "metadata": {
+        "lastModified": "2026-06-28T14:21:21.124Z",
+        "wordCount": 439,
+        "readingTime": 3,
+        "sectionsCount": 7,
+        "codeBlocksCount": 3
       }
     },
     "writing-data": {

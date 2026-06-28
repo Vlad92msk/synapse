@@ -137,6 +137,7 @@ const resources = {
       'nav.sections.data.use-storage-subscribe': 'useStorageSubscribe',
       'nav.sections.data.use-storage-observable': 'useStorageObservable',
       'nav.sections.data.to-observable': 'toObservable',
+      'nav.sections.data.use-subscription': 'useSubscription',
       'nav.sections.data.selector-system': 'Селекторы (createSelector)',
 
       'nav.sections.synapse': 'createSynapse',
@@ -341,6 +342,7 @@ const resources = {
       'nav.sections.data.use-storage-subscribe': 'useStorageSubscribe',
       'nav.sections.data.use-storage-observable': 'useStorageObservable',
       'nav.sections.data.to-observable': 'toObservable',
+      'nav.sections.data.use-subscription': 'useSubscription',
       'nav.sections.data.selector-system': 'Selectors (createSelector)',
 
       'nav.sections.synapse': 'createSynapse',

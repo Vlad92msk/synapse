@@ -330,6 +330,15 @@
     "2": "object-and-array-slices-equals",
     "3": "notes"
   },
+  "use-subscription": {
+    "0": "usesubscription",
+    "1": "signature",
+    "2": "basic-usage",
+    "3": "when-usesubscription-vs-useobservable",
+    "4": "example-a-notification-aggregator",
+    "5": "about-deps",
+    "6": "teardown-and-memory"
+  },
   "writing-data": {
     "0": "writing-data-setupdate",
     "1": "setkey-value-set-a-value-by-key",
