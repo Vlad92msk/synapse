@@ -58,9 +58,14 @@
   <!-- Canonical URL -->
   <link rel="canonical" href="https://synapse-homepage.web.app/" />
 
-  <!-- Preconnect для производительности -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Self-hosted шрифты: preload критичных (видимых в первом экране) файлов,
+       чтобы они качались с высоким приоритетом параллельно и были готовы к
+       первому рендеру — без прыжка/FOUT. Остальные веса/субсеты подтянет
+       @font-face по мере надобности (unicode-range). -->
+  <link rel="preload" href="/fonts/source-sans-3-400-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/source-sans-3-600-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/source-sans-3-700-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/jetbrains-mono-400-latin.woff2" as="font" type="font/woff2" crossorigin />
 
   <!-- Manifest -->
   <link rel="manifest" href="/manifest.json" />
