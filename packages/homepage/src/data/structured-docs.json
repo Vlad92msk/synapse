@@ -9834,22 +9834,74 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "The lazy handle is lifted with awaitSynapse: the awaiter is created at module level, the HOC\nwithSynapseReady keeps loadingComponent until storage is ready, then hands the store over\nsynchronously.",
+                "text": "pokemonSynapse from step 7 is a lazy handle (essentially a Promise of the ready module), so\nin React you first have to await it: loadingComponent stays on screen while storage initializes.\nThree working approaches below — pick per use case. All copy-paste as-is; you only need\npokemonSynapse and PokemonDemo.",
                 "formatting": {
-                  "bold": [],
+                  "bold": [
+                    {
+                      "start": 32,
+                      "end": 43
+                    }
+                  ],
+                  "italic": [
+                    {
+                      "start": 119,
+                      "end": 124
+                    }
+                  ],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 14
+                    },
+                    {
+                      "start": 59,
+                      "end": 66
+                    },
+                    {
+                      "start": 129,
+                      "end": 145
+                    },
+                    {
+                      "start": 277,
+                      "end": 291
+                    },
+                    {
+                      "start": 296,
+                      "end": 307
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Option A — HOC withSynapseReady (as in the repo example). The awaiter is created once at\nmodule level; the HOC keeps loadingComponent until storage is ready, then hands the store over\nsynchronously — inside, getStoreIfReady()! is guaranteed non-undefined:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 0,
+                      "end": 57
+                    }
+                  ],
                   "italic": [],
                   "code": [
                     {
-                      "start": 31,
-                      "end": 43
+                      "start": 15,
+                      "end": 31
                     },
                     {
-                      "start": 93,
-                      "end": 109
+                      "start": 117,
+                      "end": 133
                     },
                     {
-                      "start": 116,
-                      "end": 132
+                      "start": 208,
+                      "end": 226
+                    },
+                    {
+                      "start": 245,
+                      "end": 254
                     }
                   ],
                   "links": []
@@ -9860,37 +9912,125 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "const pokemonAwaiter = awaitSynapse(pokemonSynapse, {\n  loadingComponent: <div>Initializing...</div>,\n  errorComponent: (error) => <div>Init failed: {error.message}</div>,\n})\n\nfunction PokemonContent() {\n  const store = pokemonAwaiter.getStoreIfReady()!          // ready — available synchronously\n  useEffect(() => { store.actions.loadList() }, [store])   // initial load\n  return <PokemonDemo store={store} />\n}\n\nexport const PokemonAdvancedExample = pokemonAwaiter.withSynapseReady(PokemonContent)",
+                "code": "import { useEffect } from 'react'\nimport { awaitSynapse } from 'synapse-storage/react'\nimport { pokemonSynapse } from './pokemon.synapse'\nimport { PokemonDemo } from './PokemonDemo'\n\nconst pokemonAwaiter = awaitSynapse(pokemonSynapse, {\n  loadingComponent: <div>Initializing…</div>,\n  errorComponent: (error) => <div>Init failed: {error.message}</div>,\n})\n\nfunction PokemonContent() {\n  const store = pokemonAwaiter.getStoreIfReady()!          // ready — available synchronously\n  useEffect(() => { store.actions.loadList() }, [store])   // initial load\n  return <PokemonDemo store={store} />\n}\n\nexport const PokemonAdvancedExample = pokemonAwaiter.withSynapseReady(PokemonContent)",
                 "meta": null
               }
             },
             {
               "type": "paragraph",
               "data": {
-                "text": "PokemonDemo reads through useSelector(store.selectors.X), sends intents through\nstore.actions.X(...), and wires up watchFavoriteCount via store.dispatcher.watchers.watchFavoriteCount().",
+                "text": "Option B — useSynapseReady hook. No HOC: gate loading/error right in the component, store\ncomes from the hook (undefined until ready):",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 0,
+                      "end": 32
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 11,
+                      "end": 26
+                    },
+                    {
+                      "start": 84,
+                      "end": 89
+                    },
+                    {
+                      "start": 111,
+                      "end": 120
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const pokemonAwaiter = awaitSynapse(pokemonSynapse)\n\nexport function PokemonAdvancedExample() {\n  const { isPending, isError, error, store } = pokemonAwaiter.useSynapseReady()\n\n  useEffect(() => { store?.actions.loadList() }, [store])\n\n  if (isError) return <div>Error: {error?.message}</div>\n  if (isPending || !store) return <div>Initializing…</div>\n  return <PokemonDemo store={store} />\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Option C — createSynapseCtx provider. When the store is needed in deeply nested components\nwithout prop drilling. Wrap the tree once, children pull selectors / actions / storage /\nstate$ from context hooks:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 0,
+                      "end": 37
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 11,
+                      "end": 27
+                    },
+                    {
+                      "start": 148,
+                      "end": 157
+                    },
+                    {
+                      "start": 160,
+                      "end": 167
+                    },
+                    {
+                      "start": 170,
+                      "end": 177
+                    },
+                    {
+                      "start": 180,
+                      "end": 186
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { useEffect } from 'react'\nimport { createSynapseCtx, useSelector } from 'synapse-storage/react'\nimport { pokemonSynapse } from './pokemon.synapse'\n\nconst pokemonCtx = createSynapseCtx(pokemonSynapse, {\n  loadingComponent: <div>Initializing…</div>,\n})\n\n// The component knows nothing about module creation — it only consumes it from context.\nfunction PokemonPanel() {\n  const selectors = pokemonCtx.useSynapseSelectors()       // = store.selectors\n  const actions = pokemonCtx.useSynapseActions()           // = store.actions\n  const list = useSelector(selectors.filteredList)\n  const query = useSelector(selectors.searchQuery)\n\n  useEffect(() => { actions.loadList() }, [actions])\n  return <input value={query ?? ''} onChange={(e) => actions.setSearchQuery(e.target.value)} /* …UI… */ />\n}\n\n// contextSynapse lifts the module and wraps the component in a Provider.\nexport const PokemonAdvancedExample = pokemonCtx.contextSynapse(PokemonPanel)",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Inside PokemonDemo reads/writes are identical across all options: read through\nuseSelector(store.selectors.X) (from synapse-storage/react), send intents through\nstore.actions.X(...), and wire up watchFavoriteCount via\nstore.dispatcher.watchers.watchFavoriteCount().",
                 "formatting": {
                   "bold": [],
                   "italic": [],
                   "code": [
                     {
-                      "start": 0,
-                      "end": 11
+                      "start": 7,
+                      "end": 18
                     },
                     {
-                      "start": 26,
-                      "end": 56
+                      "start": 79,
+                      "end": 109
                     },
                     {
-                      "start": 80,
-                      "end": 100
+                      "start": 116,
+                      "end": 137
                     },
                     {
-                      "start": 115,
-                      "end": 133
+                      "start": 161,
+                      "end": 181
                     },
                     {
-                      "start": 138,
-                      "end": 184
+                      "start": 195,
+                      "end": 213
+                    },
+                    {
+                      "start": 218,
+                      "end": 264
                     }
                   ],
                   "links": []
@@ -9899,8 +10039,8 @@
             }
           ],
           "metadata": {
-            "wordCount": 52,
-            "codeBlocksCount": 1,
+            "wordCount": 173,
+            "codeBlocksCount": 3,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
@@ -10061,11 +10201,11 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-27T11:09:56.921Z",
-        "wordCount": 1410,
-        "readingTime": 8,
+        "lastModified": "2026-06-28T06:50:46.871Z",
+        "wordCount": 1701,
+        "readingTime": 9,
         "sectionsCount": 13,
-        "codeBlocksCount": 12
+        "codeBlocksCount": 14
       }
     },
     "reading-data": {
@@ -21408,7 +21548,7 @@
               "type": "code",
               "data": {
                 "language": "bash",
-                "code": "npm install synapse-storage\n# или\nyarn add synapse-storage",
+                "code": "yarn add synapse-storage",
                 "meta": null
               }
             },
@@ -21479,8 +21619,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-27T19:11:32.528Z",
-        "wordCount": 61,
+        "lastModified": "2026-06-28T05:34:41.751Z",
+        "wordCount": 56,
         "readingTime": 1,
         "sectionsCount": 1,
         "codeBlocksCount": 2
@@ -23741,33 +23881,12 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "Состояние держит и доменные данные, и протокол запроса (api.listRequest/detailsRequest\nсо статусом). Подробнее про форму состояния запроса — в create-synapse-effects.",
+                "text": "Создаем интерфейсы",
                 "formatting": {
-                  "bold": [
-                    {
-                      "start": 38,
-                      "end": 54
-                    }
-                  ],
+                  "bold": [],
                   "italic": [],
-                  "code": [
-                    {
-                      "start": 56,
-                      "end": 71
-                    },
-                    {
-                      "start": 72,
-                      "end": 86
-                    }
-                  ],
-                  "links": [
-                    {
-                      "start": 143,
-                      "end": 165,
-                      "url": "./create-synapse-effects.md",
-                      "title": null
-                    }
-                  ]
+                  "code": [],
+                  "links": []
                 }
               }
             },
@@ -23806,7 +23925,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 32,
+            "wordCount": 15,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -23823,39 +23942,11 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "→ детально: api-client",
+                "text": "Создаем ApiClient",
                 "formatting": {
                   "bold": [],
                   "italic": [],
                   "code": [],
-                  "links": [
-                    {
-                      "start": 12,
-                      "end": 22,
-                      "url": "./api-client.md",
-                      "title": null
-                    }
-                  ]
-                }
-              }
-            },
-            {
-              "type": "paragraph",
-              "data": {
-                "text": "ApiClient с кэшем по тегам и двумя эндпоинтами (getList/getDetails). Сырые типы ответа PokeAPI\nне утекают в домен — их разворачивают мапперы.",
-                "formatting": {
-                  "bold": [],
-                  "italic": [],
-                  "code": [
-                    {
-                      "start": 48,
-                      "end": 55
-                    },
-                    {
-                      "start": 56,
-                      "end": 66
-                    }
-                  ],
                   "links": []
                 }
               }
@@ -23870,7 +23961,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 24,
+            "wordCount": 2,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -23887,26 +23978,7 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "→ детально: dependencies",
-                "formatting": {
-                  "bold": [],
-                  "italic": [],
-                  "code": [],
-                  "links": [
-                    {
-                      "start": 12,
-                      "end": 24,
-                      "url": "./dependencies.md",
-                      "title": null
-                    }
-                  ]
-                }
-              }
-            },
-            {
-              "type": "paragraph",
-              "data": {
-                "text": "Отдельное сырое хранилище: то, от чего модуль зависит, но чем не владеет (здесь — размер страницы).\nВ synapse оно входит как зависимость.",
+                "text": "Это создаем для демонстрации",
                 "formatting": {
                   "bold": [],
                   "italic": [],
@@ -23925,7 +23997,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 25,
+            "wordCount": 4,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -23942,61 +24014,11 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "→ детально: create-synapse-basic, selector-system",
+                "text": "Создаем селекторы",
                 "formatting": {
                   "bold": [],
                   "italic": [],
                   "code": [],
-                  "links": [
-                    {
-                      "start": 12,
-                      "end": 32,
-                      "url": "./create-synapse-basic.md",
-                      "title": null
-                    },
-                    {
-                      "start": 34,
-                      "end": 49,
-                      "url": "./selector-system.md",
-                      "title": null
-                    }
-                  ]
-                }
-              }
-            },
-            {
-              "type": "paragraph",
-              "data": {
-                "text": "Производные значения. Промежуточный слайс api — private (наружу не видно, но работает\nзависимостью в combine). filteredList = pokemonList × searchQuery.",
-                "formatting": {
-                  "bold": [],
-                  "italic": [],
-                  "code": [
-                    {
-                      "start": 42,
-                      "end": 45
-                    },
-                    {
-                      "start": 48,
-                      "end": 55
-                    },
-                    {
-                      "start": 101,
-                      "end": 108
-                    },
-                    {
-                      "start": 111,
-                      "end": 123
-                    },
-                    {
-                      "start": 126,
-                      "end": 137
-                    },
-                    {
-                      "start": 140,
-                      "end": 151
-                    }
-                  ],
                   "links": []
                 }
               }
@@ -24011,7 +24033,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 24,
+            "wordCount": 2,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -24028,53 +24050,11 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "→ детально: create-synapse-dispatcher, dispatcher-detailed",
+                "text": "Создаем диспетчер",
                 "formatting": {
                   "bold": [],
                   "italic": [],
                   "code": [],
-                  "links": [
-                    {
-                      "start": 12,
-                      "end": 37,
-                      "url": "./create-synapse-dispatcher.md",
-                      "title": null
-                    },
-                    {
-                      "start": 39,
-                      "end": 58,
-                      "url": "./dispatcher-detailed.md",
-                      "title": null
-                    }
-                  ]
-                }
-              }
-            },
-            {
-              "type": "paragraph",
-              "data": {
-                "text": "Намерения. apiActions раскрывается в жизненный цикл запроса одним полем; action — синхронная\nзапись (payload = return); signal — чистое намерение; watcher — реактивный наблюдатель.",
-                "formatting": {
-                  "bold": [],
-                  "italic": [],
-                  "code": [
-                    {
-                      "start": 11,
-                      "end": 21
-                    },
-                    {
-                      "start": 73,
-                      "end": 79
-                    },
-                    {
-                      "start": 120,
-                      "end": 126
-                    },
-                    {
-                      "start": 147,
-                      "end": 154
-                    }
-                  ],
                   "links": []
                 }
               }
@@ -24117,7 +24097,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 40,
+            "wordCount": 14,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -24134,38 +24114,31 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "→ детально: create-synapse-effects",
+                "text": "Создаем эффекты",
                 "formatting": {
                   "bold": [],
                   "italic": [],
                   "code": [],
-                  "links": [
-                    {
-                      "start": 12,
-                      "end": 34,
-                      "url": "./create-synapse-effects.md",
-                      "title": null
-                    }
-                  ]
+                  "links": []
                 }
               }
             },
             {
               "type": "paragraph",
               "data": {
-                "text": "Side-effects по экшенам. Сервисы (API-endpoints) и внешний стор (settings$) приходят через\nконструктор и захватываются в замыкание — эффект не лезет за ними в глобальную область.",
+                "text": "Сервисы (API-endpoints) и внешний стор (settings$) приходят через\nконструктор и захватываются в замыкание — эффект не лезет за ними в глобальную область.",
                 "formatting": {
                   "bold": [
                     {
-                      "start": 85,
-                      "end": 102
+                      "start": 60,
+                      "end": 77
                     }
                   ],
                   "italic": [],
                   "code": [
                     {
-                      "start": 65,
-                      "end": 74
+                      "start": 40,
+                      "end": 49
                     }
                   ],
                   "links": []
@@ -24176,13 +24149,13 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "export class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {\n  constructor(\n    private readonly api: PokemonApiEndpoints,\n    private readonly settings$: Observable<PokemonSettings>,\n  ) { super() }\n\n  readonly loadList = this.effect((action$, state$, { dispatcher: d }) =>\n    action$.pipe(\n      ofType(d.loadList),                                                   // только init\n      withLatestFrom(selectorObject(state$, { listStatus: (s) => s.api.listRequest.status }), this.settings$),\n      validateMap({\n        validator: ([, { listStatus }]) => ({ conditions: [listStatus !== 'loading'], skipAction: () => d.loadList.reset() }),\n        loadingAction: () => d.loadList.loading(),\n        errorAction: (err) => d.loadList.failure(String(err)),\n        apiCall: ([, , { pageSize }]) =>\n          fromRequest(this.api.getList.request({ limit: pageSize, offset: 0 })).pipe(\n            apiResult((data) => {\n              d.applyPokemonList({ ...mapListResponse(data), append: false })\n              d.loadList.success()\n            }),\n          ),\n      }),\n    ),\n  )\n\n  // loadMore — то же, но offset из стора + append: true; loadDetails — ofType(selectPokemon) → getDetails.\n}",
+                "code": "export class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {\n  constructor(\n    private readonly api: PokemonApiEndpoints,\n    private readonly settings$: Observable<PokemonSettings>,\n  ) { super() }\n\n  readonly loadList = this.effect((action$, state$, { dispatcher }) =>\n    action$.pipe(\n      ofType(dispatcher.loadList),                                                   // только init\n      withLatestFrom(selectorObject(state$, { listStatus: (s) => s.api.listRequest.status }), this.settings$),\n      validateMap({\n        validator: ([, { listStatus }]) => ({ conditions: [listStatus !== 'loading'], skipAction: () => d.loadList.reset() }),\n        loadingAction: () => dispatcher.loadList.loading(),\n        errorAction: (err) => dispatcher.loadList.failure(String(err)),\n        apiCall: ([, , { pageSize }]) =>\n          fromRequest(this.api.getList.request({ limit: pageSize, offset: 0 })).pipe(\n            apiResult((data) => {\n              dispatcher.applyPokemonList({ ...mapListResponse(data), append: false })\n              dispatcher.loadList.success()\n            }),\n          ),\n      }),\n    ),\n  )\n\n  // loadMore — то же, но offset из стора + append: true; loadDetails — ofType(selectPokemon) → getDetails.\n}",
                 "meta": null
               }
             }
           ],
           "metadata": {
-            "wordCount": 28,
+            "wordCount": 24,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -24199,58 +24172,11 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "→ детально: create-synapse-basic, dependencies",
+                "text": "Собираем Synapse",
                 "formatting": {
                   "bold": [],
                   "italic": [],
                   "code": [],
-                  "links": [
-                    {
-                      "start": 12,
-                      "end": 32,
-                      "url": "./create-synapse-basic.md",
-                      "title": null
-                    },
-                    {
-                      "start": 34,
-                      "end": 46,
-                      "url": "./dependencies.md",
-                      "title": null
-                    }
-                  ]
-                }
-              }
-            },
-            {
-              "type": "paragraph",
-              "data": {
-                "text": "createSynapse(factory) связывает всё. Фабрика async — есть пролог initPokemonApi().\nВозвращается ленивый handle: фабрика стартует при первом await/ready(), не на импорте.",
-                "formatting": {
-                  "bold": [
-                    {
-                      "start": 46,
-                      "end": 51
-                    }
-                  ],
-                  "italic": [],
-                  "code": [
-                    {
-                      "start": 0,
-                      "end": 22
-                    },
-                    {
-                      "start": 66,
-                      "end": 82
-                    },
-                    {
-                      "start": 141,
-                      "end": 146
-                    },
-                    {
-                      "start": 147,
-                      "end": 154
-                    }
-                  ],
                   "links": []
                 }
               }
@@ -24265,7 +24191,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 24,
+            "wordCount": 2,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -24282,7 +24208,7 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "→ детально: await-synapse (ручной подъём), synapse-ctx (через провайдер)",
+                "text": "→ подробно: await-synapse (ручной подъём), synapse-ctx (через провайдер)",
                 "formatting": {
                   "bold": [],
                   "italic": [],
@@ -24307,22 +24233,73 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "Ленивый handle поднимается через awaitSynapse: awaiter создаётся на уровне модуля, HOC\nwithSynapseReady держит loadingComponent, пока storage не готов, затем отдаёт стор синхронно.",
+                "text": "pokemonSynapse из шага 7 — это ленивый handle (по сути Promise готового модуля), поэтому\nв React его сначала нужно «дождаться»: пока storage инициализируется, на экране висит\nloadingComponent. Ниже три рабочих способа — выбирай под задачу. Все копируются в проект как\nесть, нужны только pokemonSynapse и PokemonDemo.",
                 "formatting": {
-                  "bold": [],
+                  "bold": [
+                    {
+                      "start": 31,
+                      "end": 45
+                    }
+                  ],
                   "italic": [],
                   "code": [
                     {
-                      "start": 33,
-                      "end": 45
+                      "start": 0,
+                      "end": 14
                     },
                     {
-                      "start": 87,
-                      "end": 103
+                      "start": 55,
+                      "end": 62
                     },
                     {
-                      "start": 111,
-                      "end": 127
+                      "start": 175,
+                      "end": 191
+                    },
+                    {
+                      "start": 287,
+                      "end": 301
+                    },
+                    {
+                      "start": 304,
+                      "end": 315
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Вариант A — HOC withSynapseReady (как в примере репозитория). Awaiter создаётся один раз на\nуровне модуля; HOC держит loadingComponent до готовности и затем отдаёт store синхронно — внутри\ngetStoreIfReady()! гарантированно не undefined:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 0,
+                      "end": 61
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 16,
+                      "end": 32
+                    },
+                    {
+                      "start": 118,
+                      "end": 134
+                    },
+                    {
+                      "start": 164,
+                      "end": 169
+                    },
+                    {
+                      "start": 189,
+                      "end": 207
+                    },
+                    {
+                      "start": 226,
+                      "end": 235
                     }
                   ],
                   "links": []
@@ -24333,37 +24310,133 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "const pokemonAwaiter = awaitSynapse(pokemonSynapse, {\n  loadingComponent: <div>Initializing...</div>,\n  errorComponent: (error) => <div>Init failed: {error.message}</div>,\n})\n\nfunction PokemonContent() {\n  const store = pokemonAwaiter.getStoreIfReady()!          // готов — доступен синхронно\n  useEffect(() => { store.actions.loadList() }, [store])   // первичная загрузка\n  return <PokemonDemo store={store} />\n}\n\nexport const PokemonAdvancedExample = pokemonAwaiter.withSynapseReady(PokemonContent)",
+                "code": "import { useEffect } from 'react'\nimport { awaitSynapse } from 'synapse-storage/react'\nimport { pokemonSynapse } from './pokemon.synapse'\nimport { PokemonDemo } from './PokemonDemo'\n\nconst pokemonAwaiter = awaitSynapse(pokemonSynapse, {\n  loadingComponent: <div>Инициализация…</div>,\n  errorComponent: (error) => <div>Ошибка инициализации: {error.message}</div>,\n})\n\nfunction PokemonContent() {\n  const store = pokemonAwaiter.getStoreIfReady()!          // готов — доступен синхронно\n  useEffect(() => { store.actions.loadList() }, [store])   // первичная загрузка\n  return <PokemonDemo store={store} />\n}\n\nexport const PokemonAdvancedExample = pokemonAwaiter.withSynapseReady(PokemonContent)",
                 "meta": null
               }
             },
             {
               "type": "paragraph",
               "data": {
-                "text": "PokemonDemo читает через useSelector(store.selectors.X), шлёт намерения через\nstore.actions.X(...), а watchFavoriteCount подключает через store.dispatcher.watchers.watchFavoriteCount().",
+                "text": "Вариант B — хук useSynapseReady. Без HOC: гейт загрузки/ошибки прямо в компоненте, store\nприходит из хука (store — undefined, пока не готов):",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 0,
+                      "end": 32
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 16,
+                      "end": 31
+                    },
+                    {
+                      "start": 83,
+                      "end": 88
+                    },
+                    {
+                      "start": 107,
+                      "end": 112
+                    },
+                    {
+                      "start": 115,
+                      "end": 124
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const pokemonAwaiter = awaitSynapse(pokemonSynapse)\n\nexport function PokemonAdvancedExample() {\n  const { isPending, isError, error, store } = pokemonAwaiter.useSynapseReady()\n\n  useEffect(() => { store?.actions.loadList() }, [store])\n\n  if (isError) return <div>Ошибка: {error?.message}</div>\n  if (isPending || !store) return <div>Инициализация…</div>\n  return <PokemonDemo store={store} />\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Вариант C — провайдер createSynapseCtx. Когда store нужен в глубоко вложенных компонентах\nбез проп-дриллинга. Оборачиваем дерево один раз, дочерние компоненты берут selectors / actions\n/ storage / state$ из хуков контекста:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 0,
+                      "end": 39
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 22,
+                      "end": 38
+                    },
+                    {
+                      "start": 46,
+                      "end": 51
+                    },
+                    {
+                      "start": 165,
+                      "end": 174
+                    },
+                    {
+                      "start": 177,
+                      "end": 184
+                    },
+                    {
+                      "start": 187,
+                      "end": 194
+                    },
+                    {
+                      "start": 197,
+                      "end": 203
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { useEffect } from 'react'\nimport { createSynapseCtx, useSelector } from 'synapse-storage/react'\nimport { pokemonSynapse } from './pokemon.synapse'\n\nconst pokemonCtx = createSynapseCtx(pokemonSynapse, {\n  loadingComponent: <div>Инициализация…</div>,\n})\n\n// Компонент ничего не знает про создание модуля — только потребляет его из контекста.\nfunction PokemonPanel() {\n  const selectors = pokemonCtx.useSynapseSelectors()       // = store.selectors\n  const actions = pokemonCtx.useSynapseActions()           // = store.actions\n  const list = useSelector(selectors.filteredList)\n  const query = useSelector(selectors.searchQuery)\n\n  useEffect(() => { actions.loadList() }, [actions])\n  return <input value={query ?? ''} onChange={(e) => actions.setSearchQuery(e.target.value)} /* …UI… */ />\n}\n\n// contextSynapse поднимает модуль и оборачивает компонент Provider-ом.\nexport const PokemonAdvancedExample = pokemonCtx.contextSynapse(PokemonPanel)",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Внутри PokemonDemo чтение/запись одинаковы при любом варианте: читаем через\nuseSelector(store.selectors.X) (из synapse-storage/react), шлём намерения через\nstore.actions.X(...), а watchFavoriteCount подключаем через\nstore.dispatcher.watchers.watchFavoriteCount().",
                 "formatting": {
                   "bold": [],
                   "italic": [],
                   "code": [
                     {
-                      "start": 0,
-                      "end": 11
+                      "start": 7,
+                      "end": 18
                     },
                     {
-                      "start": 25,
-                      "end": 55
+                      "start": 76,
+                      "end": 106
                     },
                     {
-                      "start": 78,
-                      "end": 98
+                      "start": 111,
+                      "end": 132
                     },
                     {
-                      "start": 102,
-                      "end": 120
+                      "start": 156,
+                      "end": 176
                     },
                     {
-                      "start": 138,
-                      "end": 184
+                      "start": 180,
+                      "end": 198
+                    },
+                    {
+                      "start": 216,
+                      "end": 262
                     }
                   ],
                   "links": []
@@ -24372,8 +24445,8 @@
             }
           ],
           "metadata": {
-            "wordCount": 43,
-            "codeBlocksCount": 1,
+            "wordCount": 160,
+            "codeBlocksCount": 3,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
@@ -24526,11 +24599,11 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-27T11:05:31.728Z",
-        "wordCount": 1323,
-        "readingTime": 7,
+        "lastModified": "2026-06-28T06:50:27.122Z",
+        "wordCount": 1470,
+        "readingTime": 8,
         "sectionsCount": 13,
-        "codeBlocksCount": 11
+        "codeBlocksCount": 13
       }
     },
     "reading-data": {

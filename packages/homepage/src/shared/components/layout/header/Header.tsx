@@ -64,7 +64,7 @@ export const Header = () => {
           <span className={style.version}>v{__APP_VERSION__}</span>
         </div>
 
-        <div className={style.langWrap}>
+        <div className={`${style.langWrap} ${style.langWrapDesktop}`}>
           <LanguageSwitcher />
         </div>
 
@@ -95,6 +95,10 @@ export const Header = () => {
               <path d="M5 12h13M12 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </span>
+
+          <div className={`${style.langWrap} ${style.langWrapMobile}`}>
+            <LanguageSwitcher />
+          </div>
 
         </nav>
       </div>

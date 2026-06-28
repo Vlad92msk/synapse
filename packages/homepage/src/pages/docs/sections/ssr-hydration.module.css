@@ -1,0 +1,70 @@
+/* Призыв открыть интерактивный разбор SSR-гидрации — над текстом страницы. */
+.infoCta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  margin: 0 0 24px;
+  padding: 14px 16px;
+  border: 1px solid var(--accent-orange);
+  border-radius: 14px;
+  background: linear-gradient(135deg, hsl(25 95% 53% / 0.1), hsl(25 95% 53% / 0.02));
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.infoCta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px hsl(25 95% 53% / 0.15);
+  background: linear-gradient(135deg, hsl(25 95% 53% / 0.16), hsl(25 95% 53% / 0.04));
+}
+
+.infoIcon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent-orange);
+}
+
+.infoTexts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.infoTitle {
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+
+.infoSub {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.infoArrow {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 1.1rem;
+  color: var(--accent-orange);
+  transition: transform 0.15s ease;
+}
+
+.infoCta:hover .infoArrow {
+  transform: translateX(3px);
+}

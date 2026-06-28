@@ -94,7 +94,15 @@
       "Bash(sed -n '1,80p' /Users/vlad/web_dev/sn_client/src/app/\\\\[locale\\\\]/\\\\[userId\\\\]/profile/page.tsx)",
       "Bash(awk '/return \\\\{/{f=1} f{print} /^  \\\\}/{if\\(f\\)c++} c>0 && f && /\\\\}/{}' packages/synapse/src/react/utils/createSynapseCtx.tsx)",
       "Bash(yarn docs:generate)",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -c \"import json,sys; print\\(json.load\\(sys.stdin\\).get\\('scripts'\\)\\)\")",
+      "Bash(echo \"exit=$?\")",
+      "Bash(find . -name 'img_2.png' -not -path '*/node_modules/*')",
+      "Bash(ls *.png packages/homepage/*.png)",
+      "Bash(echo \"gen exit=$?\")",
+      "Bash(echo \"type-check exit=$?\")",
+      "Bash(find packages/examples/src/examples/pokemon-advanced -type f)",
+      "Bash(grep -rln \"awaitSynapse\\\\|withSynapseReady\\\\|getStoreIfReady\\\\|useSynapseReady\" packages/synapse/src)"
     ]
   }
 }

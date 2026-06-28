@@ -10,9 +10,10 @@
 }
 
 .container {
-  padding: 46px 52px 110px;
+  padding: 0 52px 110px;
   max-width: 880px;
   margin: 0 auto;
+  margin-top: 46px;
   overflow-y: auto;
   height: 100%;
 }

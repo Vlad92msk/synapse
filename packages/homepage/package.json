@@ -9,6 +9,7 @@
     "url": "https://github.com/Vlad92msk/synapse-homepage"
   },
   "dependencies": {
+    "@xyflow/react": "^12.11.1",
     "clsx": "^2.1.1",
     "firebase": "^11.9.1",
     "gray-matter": "^4.0.3",

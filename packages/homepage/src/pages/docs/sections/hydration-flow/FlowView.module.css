@@ -1,0 +1,346 @@
+/* Вариант «Полотно» — node-холст на React Flow. Узлы — обычные div со своим кодом
+   и блоками «вход/выход», соединены стрелками потока данных. Pan/zoom, мини-карта. */
+
+.flowRoot {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  background: var(--bg-primary);
+}
+
+.flowRoot :global(.react-flow__attribution) {
+  display: none;
+}
+
+/* ── Узел ──────────────────────────────────────────────────────────────── */
+.node {
+  --z: hsl(50 9% 40%);
+  width: 360px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--z);
+  border-radius: 14px;
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-md);
+  cursor: grab;
+  /* как у дефолтных узлов React Flow — иначе выделение текста перехватывает drag */
+  user-select: none;
+}
+
+.node:active {
+  cursor: grabbing;
+}
+
+.z_server {
+  --z: hsl(142 64% 46%);
+}
+.z_transfer {
+  --z: hsl(25 95% 53%);
+}
+.z_client {
+  --z: hsl(212 78% 62%);
+}
+
+.handle {
+  width: 9px !important;
+  height: 9px !important;
+  background: var(--z) !important;
+  border: 2px solid var(--bg-primary) !important;
+}
+
+.nHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.nNum {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--bg-primary);
+  background: var(--z);
+}
+
+.nTitle {
+  font-size: 0.98rem;
+  font-weight: 650;
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+
+.nFn {
+  display: block;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.76rem;
+  color: var(--z);
+  background: hsl(0 0% 0% / 0.25);
+  border-radius: 8px;
+  padding: 7px 10px;
+  margin-bottom: 6px;
+  word-break: break-word;
+}
+
+.nFile {
+  display: block;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.nRole {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.nWhat {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+
+/* ── Блоки вход/выход ──────────────────────────────────────────────────── */
+.dataMini {
+  margin-top: 8px;
+}
+
+.dataTag {
+  display: inline-block;
+  margin-bottom: 5px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 5px;
+}
+
+.tagIn {
+  color: hsl(212 78% 70%);
+  background: hsl(212 78% 62% / 0.14);
+}
+
+.tagOut {
+  color: hsl(142 64% 56%);
+  background: hsl(142 64% 46% / 0.14);
+}
+
+.codePre {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  background: hsl(0 0% 0% / 0.3);
+  overflow: auto;
+  max-height: 190px;
+  /* код можно выделять и копировать (на узле в целом — user-select: none) */
+  user-select: text;
+  cursor: auto;
+}
+
+.codePre code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  white-space: pre;
+}
+
+/* ── Ответвления: теория и код ─────────────────────────────────────────── */
+.branch {
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-md);
+  padding: 14px 16px;
+  user-select: none;
+}
+
+.bHandle {
+  width: 7px !important;
+  height: 7px !important;
+  background: var(--text-muted) !important;
+  border: 2px solid var(--bg-primary) !important;
+  opacity: 0.6;
+}
+
+.branchKind {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 9px;
+  border-radius: 999px;
+}
+
+/* Теория — фиолетовый «врез», в духе доков Anthropic. */
+.theory {
+  width: 380px;
+  max-height: 360px;
+  overflow-y: auto;
+  border-left: 4px solid hsl(265 60% 62%);
+}
+
+.theory .branchKind {
+  color: hsl(265 70% 78%);
+  background: hsl(265 60% 62% / 0.16);
+}
+
+.intro {
+  width: 440px;
+  max-height: 470px;
+  border-left-width: 4px;
+  border-left-color: hsl(45 90% 58%);
+  background: linear-gradient(180deg, hsl(45 90% 58% / 0.06), var(--bg-secondary) 60%);
+}
+
+.intro .branchKind {
+  color: hsl(45 90% 70%);
+  background: hsl(45 90% 58% / 0.16);
+}
+
+.theoryTitle {
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+  font-weight: 650;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.theoryText {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-line;
+}
+
+.theoryText:last-child {
+  margin-bottom: 0;
+}
+
+/* Код — широкий «врез» с реальными сниппетами. */
+.codeBranch {
+  width: 520px;
+  max-height: 450px;
+  overflow-y: auto;
+  border-left: 4px solid hsl(200 18% 46%);
+}
+
+.codeBranch .branchKind {
+  color: var(--text-secondary);
+  background: hsl(200 18% 46% / 0.18);
+}
+
+.sample {
+  margin-top: 10px;
+}
+
+.sample:first-of-type {
+  margin-top: 0;
+}
+
+.sampleTag {
+  display: inline-block;
+  margin-bottom: 6px;
+  font-size: 0.66rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.kindApp {
+  color: hsl(142 60% 62%);
+  background: hsl(142 64% 46% / 0.15);
+}
+
+.kindLib {
+  color: hsl(212 78% 72%);
+  background: hsl(212 78% 62% / 0.15);
+}
+
+/* ── Легенда зон ───────────────────────────────────────────────────────── */
+.legend {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  background: hsl(0 0% 0% / 0.5);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.legendDash {
+  width: 16px;
+  height: 0;
+  border-top: 1.5px dashed var(--text-muted);
+}
+
+.legendSep {
+  width: 1px;
+  height: 14px;
+  background: var(--border-subtle);
+}
+
+/* ── Контролы / мини-карта / подсказка ─────────────────────────────────── */
+.flowHint {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  background: hsl(0 0% 0% / 0.5);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+
+.controls :global(.react-flow__controls-button) {
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  fill: var(--text-primary);
+}
+
+.controls :global(.react-flow__controls-button:hover) {
+  background: var(--bg-tertiary);
+}

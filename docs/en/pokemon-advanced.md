@@ -246,13 +246,23 @@ export type PokemonSynapse = Awaited<typeof pokemonSynapse>
 
 → in detail: [await-synapse](./await-synapse.md) (manual lift), [synapse-ctx](./synapse-ctx.md) (via provider)
 
-The lazy handle is lifted with `awaitSynapse`: the awaiter is created at module level, the HOC
-`withSynapseReady` keeps `loadingComponent` until storage is ready, then hands the store over
-synchronously.
+`pokemonSynapse` from step 7 is a **lazy handle** (essentially a `Promise` of the ready module), so
+in React you first have to *await* it: `loadingComponent` stays on screen while storage initializes.
+Three working approaches below — pick per use case. All copy-paste as-is; you only need
+`pokemonSynapse` and `PokemonDemo`.
+
+**Option A — HOC `withSynapseReady` (as in the repo example).** The awaiter is created once at
+module level; the HOC keeps `loadingComponent` until storage is ready, then hands the store over
+synchronously — inside, `getStoreIfReady()!` is guaranteed non-`undefined`:
 
 ```typescript
+import { useEffect } from 'react'
+import { awaitSynapse } from 'synapse-storage/react'
+import { pokemonSynapse } from './pokemon.synapse'
+import { PokemonDemo } from './PokemonDemo'
+
 const pokemonAwaiter = awaitSynapse(pokemonSynapse, {
-  loadingComponent: <div>Initializing...</div>,
+  loadingComponent: <div>Initializing…</div>,
   errorComponent: (error) => <div>Init failed: {error.message}</div>,
 })
 
@@ -265,8 +275,55 @@ function PokemonContent() {
 export const PokemonAdvancedExample = pokemonAwaiter.withSynapseReady(PokemonContent)
 ```
 
-`PokemonDemo` reads through `useSelector(store.selectors.X)`, sends intents through
-`store.actions.X(...)`, and wires up `watchFavoriteCount` via `store.dispatcher.watchers.watchFavoriteCount()`.
+**Option B — `useSynapseReady` hook.** No HOC: gate loading/error right in the component, `store`
+comes from the hook (`undefined` until ready):
+
+```typescript
+const pokemonAwaiter = awaitSynapse(pokemonSynapse)
+
+export function PokemonAdvancedExample() {
+  const { isPending, isError, error, store } = pokemonAwaiter.useSynapseReady()
+
+  useEffect(() => { store?.actions.loadList() }, [store])
+
+  if (isError) return <div>Error: {error?.message}</div>
+  if (isPending || !store) return <div>Initializing…</div>
+  return <PokemonDemo store={store} />
+}
+```
+
+**Option C — `createSynapseCtx` provider.** When the store is needed in deeply nested components
+without prop drilling. Wrap the tree once, children pull `selectors` / `actions` / `storage` /
+`state$` from context hooks:
+
+```typescript
+import { useEffect } from 'react'
+import { createSynapseCtx, useSelector } from 'synapse-storage/react'
+import { pokemonSynapse } from './pokemon.synapse'
+
+const pokemonCtx = createSynapseCtx(pokemonSynapse, {
+  loadingComponent: <div>Initializing…</div>,
+})
+
+// The component knows nothing about module creation — it only consumes it from context.
+function PokemonPanel() {
+  const selectors = pokemonCtx.useSynapseSelectors()       // = store.selectors
+  const actions = pokemonCtx.useSynapseActions()           // = store.actions
+  const list = useSelector(selectors.filteredList)
+  const query = useSelector(selectors.searchQuery)
+
+  useEffect(() => { actions.loadList() }, [actions])
+  return <input value={query ?? ''} onChange={(e) => actions.setSearchQuery(e.target.value)} /* …UI… */ />
+}
+
+// contextSynapse lifts the module and wraps the component in a Provider.
+export const PokemonAdvancedExample = pokemonCtx.contextSynapse(PokemonPanel)
+```
+
+Inside `PokemonDemo` reads/writes are identical across all options: read through
+`useSelector(store.selectors.X)` (from `synapse-storage/react`), send intents through
+`store.actions.X(...)`, and wire up `watchFavoriteCount` via
+`store.dispatcher.watchers.watchFavoriteCount()`.
 
 ## The 5-state request protocol
 

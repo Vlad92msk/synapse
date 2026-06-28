@@ -1,0 +1,177 @@
+/* Табы шагов рецепта Pokemon Advanced.
+   Стиль — сдержанные underline-табы (как в доке Anthropic): muted-текст,
+   активный таб подсвечен основным текстом и оранжевой полосой-индикатором.
+   Номер шага вынесен в моноширинный бейдж. */
+
+.tabs {
+  margin: 0 0 36px;
+}
+
+/* Липкая полоса табов: при прокрутке длинного шага шапка с табами остаётся
+   на месте. Фон перекрывает контент, проезжающий под ней. */
+.tabbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: stretch;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Прокручиваемый ряд табов */
+.tablist {
+  display: flex;
+  gap: 28px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tablist::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 12px 2px;
+  margin-bottom: -1px; /* перекрываем линию-рельсу .tabbar */
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--text-muted);
+  white-space: nowrap;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.tab:hover {
+  color: var(--text-primary);
+}
+
+.tab:focus-visible {
+  outline: none;
+  color: var(--text-primary);
+}
+
+.tab:focus-visible .num {
+  border-color: var(--accent-orange);
+  color: var(--accent-orange);
+}
+
+.tabActive {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent-orange);
+}
+
+/* Моноширинный номер шага в виде квадратного бейджа */
+.num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.tabActive .num {
+  color: var(--accent-orange);
+  background: var(--accent-orange-subtle);
+  border-color: var(--accent-orange-subtle);
+}
+
+/* Кнопки прокрутки появляются только когда есть скрытые табы слева/справа.
+   Накрыты градиентом-затуханием, под который «уезжают» крайние табы. */
+.scrollBtn {
+  position: absolute;
+  top: 0;
+  bottom: 1px; /* не перекрываем линию-рельсу */
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  width: 56px;
+  padding: 0;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.2s ease,
+    color 0.2s ease;
+}
+
+.scrollVisible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.scrollBtn:hover {
+  color: var(--text-primary);
+}
+
+.scrollLeft {
+  left: 0;
+  justify-content: flex-start;
+  background: linear-gradient(to right, var(--bg-primary) 45%, transparent);
+}
+
+.scrollRight {
+  right: 0;
+  justify-content: flex-end;
+  background: linear-gradient(to left, var(--bg-primary) 45%, transparent);
+}
+
+.scrollBtn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Панель активного шага */
+.panel {
+  padding-top: 24px;
+  animation: panelIn 0.25s ease;
+}
+
+.panel:focus {
+  outline: none;
+}
+
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
+}

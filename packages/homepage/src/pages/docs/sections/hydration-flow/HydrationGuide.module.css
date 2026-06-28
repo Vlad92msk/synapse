@@ -1,0 +1,128 @@
+/* Общая оболочка интерактивного гайда: overlay + компактная шапка с переключателем
+   вариантов (Полотно / Лента). Контент — FlowView или CanvasView. */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: hsl(0 0% 0% / 0.66);
+  backdrop-filter: blur(6px);
+  animation: fadeIn 0.18s ease;
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: min(1180px, 100%);
+  height: min(880px, 100%);
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: popIn 0.2s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+}
+
+/* ── Компактная шапка (один ряд) ───────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+}
+
+.headTexts {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-size: 0.98rem;
+  font-weight: 650;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0!important;
+}
+
+.subtitle {
+  margin: 1px 0 0!important;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* сегмент-контрол */
+.segmented {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 3px;
+  gap: 3px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-tertiary);
+}
+
+.segBtn {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.segBtn:hover {
+  color: var(--text-primary);
+}
+
+.segActive {
+  background: var(--accent-orange);
+  color: #fff;
+}
+
+/* ── Контент ───────────────────────────────────────────────────────────── */
+.content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 860px) {
+  .overlay {
+    padding: 0;
+  }
+  .modal {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+  .subtitle {
+    display: none;
+  }
+}

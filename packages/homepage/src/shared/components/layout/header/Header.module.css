@@ -119,6 +119,11 @@
   align-items: center;
 }
 
+/* Переключатель языка для мобильной панели — скрыт на десктопе */
+.langWrapMobile {
+  display: none;
+}
+
 /* Бургер */
 .burgerButton {
   display: none;
@@ -204,7 +209,13 @@
     justify-content: center;
   }
 
-  .langWrap {
+  /* На мобильном переключатель в header скрываем, показываем тот, что в панели */
+  .langWrapDesktop {
+    display: none;
+  }
+
+  .langWrapMobile {
+    display: flex;
     justify-content: center;
     margin-top: auto;
     padding-top: 20px;
