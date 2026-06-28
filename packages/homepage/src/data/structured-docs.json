@@ -17899,34 +17899,173 @@
           }
         },
         {
-          "id": "basic-usage",
-          "title": "Basic usage",
+          "id": "signature",
+          "title": "Signature",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// whole state\ntoObservable<T>(storage: IStorageBase<T>): Observable<T>\n\n// slice + optional comparator\ntoObservable<T, R>(\n  storage: IStorageBase<T>,\n  selector: (state: T) => R,\n  equals?: (a: R, b: R) => boolean,\n): Observable<R>",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Three parameters:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "storage — the storage.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 7
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 7
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "ordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "selector (optional) — which slice to pull out of the state.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 8
+                            }
+                          ],
+                          "italic": [
+                            {
+                              "start": 9,
+                              "end": 19
+                            }
+                          ],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 8
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "ordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "equals (optional) — how to compare adjacent slice values to skip duplicates.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 6
+                            }
+                          ],
+                          "italic": [
+                            {
+                              "start": 7,
+                              "end": 17
+                            }
+                          ],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 6
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "ordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 29,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "selector-a-slice-instead-of-the-whole-state",
+          "title": "selector — a slice instead of the whole state",
           "level": 2,
           "content": [
             {
               "type": "paragraph",
               "data": {
-                "text": "Without a selector the stream emits the whole state on every store change. With a selector it emits\nonly the slice, de-duped via distinctUntilChanged (default Object.is, or a custom equals):",
+                "text": "Without a selector the stream emits the whole state on every store change — even when a field you\ndon't care about changed. With a selector the stream maps the state to a slice and runs it through\ndistinctUntilChanged, so it emits only when the slice actually changed:",
                 "formatting": {
                   "bold": [
                     {
                       "start": 40,
                       "end": 45
+                    },
+                    {
+                      "start": 55,
+                      "end": 60
+                    },
+                    {
+                      "start": 231,
+                      "end": 267
                     }
                   ],
                   "italic": [],
                   "code": [
                     {
-                      "start": 129,
-                      "end": 149
+                      "start": 151,
+                      "end": 154
                     },
                     {
-                      "start": 159,
-                      "end": 168
-                    },
-                    {
-                      "start": 182,
-                      "end": 188
+                      "start": 197,
+                      "end": 217
                     }
                   ],
                   "links": []
@@ -17937,25 +18076,29 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "import { toObservable } from 'synapse-storage/reactive'\n\nconst state$ = toObservable(todoStorage)                        // Observable<TodoState>\nconst count$ = toObservable(todoStorage, (s) => s.todos.length) // Observable<number>, distinct",
+                "code": "import { toObservable } from 'synapse-storage/reactive'\n\nconst state$ = toObservable(todoStorage)                        // Observable<TodoState>, on any change\nconst count$ = toObservable(todoStorage, (s) => s.todos.length) // Observable<number>, only when it changes",
                 "meta": null
               }
             },
             {
               "type": "paragraph",
               "data": {
-                "text": "The stream emits the current state immediately on subscribe (via getStateSync()), then on every\nchange. It uses shareReplay(1) under the hood, so multiple subscribers share a single store\nsubscription.",
+                "text": "Here count$ won't fire if filter changed — the todos length is the same. That's the optimization:\nthe subscriber (component/effect) doesn't wake up on unrelated changes.",
                 "formatting": {
                   "bold": [],
                   "italic": [],
                   "code": [
                     {
-                      "start": 65,
-                      "end": 79
+                      "start": 5,
+                      "end": 11
                     },
                     {
-                      "start": 112,
-                      "end": 126
+                      "start": 26,
+                      "end": 32
+                    },
+                    {
+                      "start": 47,
+                      "end": 52
                     }
                   ],
                   "links": []
@@ -17964,12 +18107,182 @@
             }
           ],
           "metadata": {
-            "wordCount": 59,
+            "wordCount": 74,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
             "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "equals-how-slices-are-compared",
+          "title": "equals — how slices are compared",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The third parameter is the comparator for distinctUntilChanged. It decides whether a new slice value is\n\"the same\" (return true → the emission is skipped). By default the comparison uses Object.is.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 42,
+                      "end": 62
+                    },
+                    {
+                      "start": 123,
+                      "end": 127
+                    },
+                    {
+                      "start": 187,
+                      "end": 196
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Object.is is enough for primitives (number, string, boolean) and for slices with a stable\nreference (when immutable updates don't touch that object — the reference is preserved). A custom\nequals is needed in two cases:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 24,
+                      "end": 34
+                    },
+                    {
+                      "start": 83,
+                      "end": 99
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 9
+                    },
+                    {
+                      "start": 36,
+                      "end": 42
+                    },
+                    {
+                      "start": 44,
+                      "end": 50
+                    },
+                    {
+                      "start": 52,
+                      "end": 59
+                    },
+                    {
+                      "start": 188,
+                      "end": 194
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "1. The selector returns a new object/array every time. Then Object.is sees a new reference on every\ntick and distinctUntilChanged won't de-dupe — the stream emits on every store change. Pass a by-content\ncomparison:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 0,
+                      "end": 54
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 60,
+                      "end": 69
+                    },
+                    {
+                      "start": 109,
+                      "end": 129
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// factory selector: a new array each time → needs a by-value equals\nconst ids$ = toObservable(\n  todoStorage,\n  (s) => s.todos.map((t) => t.id),\n  (a, b) => a.length === b.length && a.every((id, i) => id === b[i]),\n)",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "2. You need a coarser equivalence than identity. For example, emit only when a property of the value\nchanges, not the value itself:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 0,
+                      "end": 48
+                    }
+                  ],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// emits only when the parity of the count changes (1→3 stays quiet, 3→4 emits)\nconst parity$ = toObservable(todoStorage, (s) => s.todos.length, (a, b) => a % 2 === b % 2)",
+                "meta": null
+              }
+            },
+            {
+              "type": "blockquote",
+              "data": {
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "data": {
+                      "text": "equals only makes sense together with selector — without a slice there's nothing to compare.",
+                      "formatting": {
+                        "bold": [],
+                        "italic": [],
+                        "code": [
+                          {
+                            "start": 0,
+                            "end": 6
+                          },
+                          {
+                            "start": 38,
+                            "end": 46
+                          }
+                        ],
+                        "links": []
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 138,
+            "codeBlocksCount": 2,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": true,
             "hasTasks": false
           }
         },
@@ -18015,47 +18328,6 @@
           }
         },
         {
-          "id": "custom-equals",
-          "title": "Custom equals",
-          "level": 2,
-          "content": [
-            {
-              "type": "paragraph",
-              "data": {
-                "text": "The second argument of the selector overload is the comparator for distinctUntilChanged:",
-                "formatting": {
-                  "bold": [],
-                  "italic": [],
-                  "code": [
-                    {
-                      "start": 67,
-                      "end": 87
-                    }
-                  ],
-                  "links": []
-                }
-              }
-            },
-            {
-              "type": "code",
-              "data": {
-                "language": "typescript",
-                "code": "// emits only when the parity of the count changes\nconst parity$ = toObservable(todoStorage, (s) => s.todos.length, (a, b) => a % 2 === b % 2)",
-                "meta": null
-              }
-            }
-          ],
-          "metadata": {
-            "wordCount": 12,
-            "codeBlocksCount": 1,
-            "diagramsCount": 0,
-            "tasksCount": 0,
-            "hasTable": false,
-            "hasBlockquotes": false,
-            "hasTasks": false
-          }
-        },
-        {
           "id": "notes",
           "title": "Notes",
           "level": 2,
@@ -18063,6 +18335,52 @@
             {
               "type": "list",
               "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "The stream emits the current state immediately on subscribe (via getStateSync()), then on every\nchange.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 65,
+                              "end": 79
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Under the hood it's shareReplay({ refCount: true }): multiple subscribers share a single store\nsubscription, and when their count drops to zero the stream unsubscribes from the storage (no leaked\nlisteners).",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 20,
+                              "end": 51
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
                 {
                   "content": [
                     {
@@ -18131,7 +18449,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 38,
+            "wordCount": 84,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -18144,11 +18462,11 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-28T13:46:09.543Z",
-        "wordCount": 254,
-        "readingTime": 2,
-        "sectionsCount": 5,
-        "codeBlocksCount": 3
+        "lastModified": "2026-06-28T14:28:35.553Z",
+        "wordCount": 570,
+        "readingTime": 3,
+        "sectionsCount": 6,
+        "codeBlocksCount": 5
       }
     },
     "use-storage-observable": {
@@ -38606,34 +38924,173 @@
           }
         },
         {
-          "id": "basic-usage",
-          "title": "Базовое использование",
+          "id": "signature",
+          "title": "Сигнатура",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// весь стейт\ntoObservable<T>(storage: IStorageBase<T>): Observable<T>\n\n// срез + опциональный компаратор\ntoObservable<T, R>(\n  storage: IStorageBase<T>,\n  selector: (state: T) => R,\n  equals?: (a: R, b: R) => boolean,\n): Observable<R>",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Три параметра:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "storage — хранилище.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 7
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 7
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "ordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "selector (опц.) — какой срез вытащить из состояния.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 8
+                            }
+                          ],
+                          "italic": [
+                            {
+                              "start": 9,
+                              "end": 15
+                            }
+                          ],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 8
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "ordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "equals (опц.) — как сравнивать соседние значения среза, чтобы пропускать повторы.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 6
+                            }
+                          ],
+                          "italic": [
+                            {
+                              "start": 7,
+                              "end": 13
+                            }
+                          ],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 6
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "ordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 24,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "selector-a-slice-instead-of-the-whole-state",
+          "title": "selector — срез вместо всего стейта",
           "level": 2,
           "content": [
             {
               "type": "paragraph",
               "data": {
-                "text": "Без селектора поток эмитит всё состояние на каждое изменение хранилища. Со селектором — только срез,\nдедуплицируя повторы через distinctUntilChanged (по умолчанию Object.is, либо переданный equals):",
+                "text": "Без селектора поток эмитит всё состояние на каждое изменение хранилища — даже если поменялось\nполе, которое тебе не нужно. С селектором поток map-ит состояние в срез и прогоняет его через\ndistinctUntilChanged, поэтому эмитит, только когда срез реально изменился:",
                 "formatting": {
                   "bold": [
                     {
                       "start": 27,
                       "end": 30
+                    },
+                    {
+                      "start": 44,
+                      "end": 50
+                    },
+                    {
+                      "start": 226,
+                      "end": 261
                     }
                   ],
                   "italic": [],
                   "code": [
                     {
-                      "start": 128,
-                      "end": 148
+                      "start": 142,
+                      "end": 145
                     },
                     {
-                      "start": 163,
-                      "end": 172
-                    },
-                    {
-                      "start": 190,
-                      "end": 196
+                      "start": 188,
+                      "end": 208
                     }
                   ],
                   "links": []
@@ -38644,25 +39101,29 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "import { toObservable } from 'synapse-storage/reactive'\n\nconst state$ = toObservable(todoStorage)                        // Observable<TodoState>\nconst count$ = toObservable(todoStorage, (s) => s.todos.length) // Observable<number>, distinct",
+                "code": "import { toObservable } from 'synapse-storage/reactive'\n\nconst state$ = toObservable(todoStorage)                        // Observable<TodoState>, на любой чих\nconst count$ = toObservable(todoStorage, (s) => s.todos.length) // Observable<number>, только при смене числа",
                 "meta": null
               }
             },
             {
               "type": "paragraph",
               "data": {
-                "text": "Поток сразу эмитит текущее состояние при подписке (через getStateSync()), а затем — на каждое\nизменение. Под капотом shareReplay(1), поэтому несколько подписчиков делят одну подписку на стор.",
+                "text": "Здесь count$ не дёрнется, если поменялся filter, — длина todos та же. Это и есть оптимизация:\nподписчик (компонент/эффект) не просыпается на чужие изменения.",
                 "formatting": {
                   "bold": [],
                   "italic": [],
                   "code": [
                     {
-                      "start": 57,
-                      "end": 71
+                      "start": 6,
+                      "end": 12
                     },
                     {
-                      "start": 117,
-                      "end": 131
+                      "start": 41,
+                      "end": 47
+                    },
+                    {
+                      "start": 57,
+                      "end": 62
                     }
                   ],
                   "links": []
@@ -38671,12 +39132,182 @@
             }
           ],
           "metadata": {
-            "wordCount": 51,
+            "wordCount": 61,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
             "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "equals-how-slices-are-compared",
+          "title": "equals — как сравнивать срезы",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Третий параметр — компаратор для distinctUntilChanged. Он решает, считать ли новое значение среза\n«тем же» (вернул true → эмит пропускается). По умолчанию сравнение идёт через Object.is.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 33,
+                      "end": 53
+                    },
+                    {
+                      "start": 115,
+                      "end": 119
+                    },
+                    {
+                      "start": 176,
+                      "end": 185
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Object.is хватает для примитивов (number, string, boolean) и для срезов со стабильной\nссылкой (когда иммутабельные обновления не трогают этот объект — ссылка сохраняется). Свой equals\nнужен в двух случаях:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 22,
+                      "end": 32
+                    },
+                    {
+                      "start": 75,
+                      "end": 93
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 9
+                    },
+                    {
+                      "start": 34,
+                      "end": 40
+                    },
+                    {
+                      "start": 42,
+                      "end": 48
+                    },
+                    {
+                      "start": 50,
+                      "end": 57
+                    },
+                    {
+                      "start": 177,
+                      "end": 183
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "1. Селектор каждый раз возвращает новый объект/массив. Тогда Object.is видит новую ссылку на каждом\nтике и distinctUntilChanged не дедуплицирует — поток эмитит на каждое изменение стора. Передай\nсравнение по содержимому:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 0,
+                      "end": 54
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 61,
+                      "end": 70
+                    },
+                    {
+                      "start": 107,
+                      "end": 127
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// селектор-фабрика: каждый раз новый массив → нужен equals по значению\nconst ids$ = toObservable(\n  todoStorage,\n  (s) => s.todos.map((t) => t.id),\n  (a, b) => a.length === b.length && a.every((id, i) => id === b[i]),\n)",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "2. Нужна более «грубая» эквивалентность, чем идентичность. Например, эмитить только при смене не\nсамого значения, а его свойства:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 0,
+                      "end": 58
+                    }
+                  ],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// эмитит только при смене чётности количества (1→3 молчит, 3→4 эмитит)\nconst parity$ = toObservable(todoStorage, (s) => s.todos.length, (a, b) => a % 2 === b % 2)",
+                "meta": null
+              }
+            },
+            {
+              "type": "blockquote",
+              "data": {
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "data": {
+                      "text": "equals имеет смысл только вместе с selector — без среза сравнивать нечего.",
+                      "formatting": {
+                        "bold": [],
+                        "italic": [],
+                        "code": [
+                          {
+                            "start": 0,
+                            "end": 6
+                          },
+                          {
+                            "start": 35,
+                            "end": 43
+                          }
+                        ],
+                        "links": []
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 115,
+            "codeBlocksCount": 2,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": true,
             "hasTasks": false
           }
         },
@@ -38722,47 +39353,6 @@
           }
         },
         {
-          "id": "custom-equals",
-          "title": "Кастомный equals",
-          "level": 2,
-          "content": [
-            {
-              "type": "paragraph",
-              "data": {
-                "text": "Второй аргумент селекторной перегрузки — компаратор для distinctUntilChanged:",
-                "formatting": {
-                  "bold": [],
-                  "italic": [],
-                  "code": [
-                    {
-                      "start": 56,
-                      "end": 76
-                    }
-                  ],
-                  "links": []
-                }
-              }
-            },
-            {
-              "type": "code",
-              "data": {
-                "language": "typescript",
-                "code": "// эмитит только при смене чётности количества\nconst parity$ = toObservable(todoStorage, (s) => s.todos.length, (a, b) => a % 2 === b % 2)",
-                "meta": null
-              }
-            }
-          ],
-          "metadata": {
-            "wordCount": 8,
-            "codeBlocksCount": 1,
-            "diagramsCount": 0,
-            "tasksCount": 0,
-            "hasTable": false,
-            "hasBlockquotes": false,
-            "hasTasks": false
-          }
-        },
-        {
           "id": "notes",
           "title": "Заметки",
           "level": 2,
@@ -38770,6 +39360,52 @@
             {
               "type": "list",
               "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Поток сразу эмитит текущее состояние при подписке (через getStateSync()), а затем — на каждое\nизменение.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 57,
+                              "end": 71
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Под капотом shareReplay({ refCount: true }): несколько подписчиков делят одну подписку на стор, а при\nпадении их числа до нуля поток отписывается от хранилища (без утечки слушателей).",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 12,
+                              "end": 43
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
                 {
                   "content": [
                     {
@@ -38838,7 +39474,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 30,
+            "wordCount": 72,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -38851,11 +39487,11 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-28T13:46:03.065Z",
-        "wordCount": 222,
-        "readingTime": 2,
-        "sectionsCount": 5,
-        "codeBlocksCount": 3
+        "lastModified": "2026-06-28T14:28:12.864Z",
+        "wordCount": 498,
+        "readingTime": 3,
+        "sectionsCount": 6,
+        "codeBlocksCount": 5
       }
     },
     "use-storage-observable": {

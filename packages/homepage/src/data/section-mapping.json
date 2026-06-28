@@ -309,10 +309,11 @@
   },
   "to-observable": {
     "0": "toobservable",
-    "1": "basic-usage",
-    "2": "in-effects",
-    "3": "custom-equals",
-    "4": "notes"
+    "1": "signature",
+    "2": "selector-a-slice-instead-of-the-whole-state",
+    "3": "equals-how-slices-are-compared",
+    "4": "in-effects",
+    "5": "notes"
   },
   "use-storage-observable": {
     "0": "usestorageobservable",

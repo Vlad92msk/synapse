@@ -1,5 +1,5 @@
 // Auto-generated types for structured documentation
-// Generated at: 2026-06-28T14:24:09.687Z
+// Generated at: 2026-06-28T14:28:49.292Z
 // Master locale: en
 
 export type Locale = 'en' | 'ru'
@@ -43,7 +43,7 @@ export interface DocSectionIds {
   'subscriptions': 'subscriptions-subscribe' | '1-subscribekey-callback' | '2-subscribeselector-callback' | '3-subscribetoallcallback' | '4-usestoragesubscribe-react-hook'
   'synapse-awaiter': 'createsynapseawaiter-framework-independent-awaiter' | 'imports-and-creation' | 'programmatic-surface' | 'ssr-sync-fast-path' | 'usage-in-react-without-the-wrapper'
   'synapse-ctx': 'createsynapsectx' | 'creating-the-context' | 'using-the-hooks-in-child-components' | 'hoc-contextsynapse' | 'usesynapsestate-only-with-effects' | 'reactive-reads-in-a-component' | 'cleanup' | 'three-variants-of-createsynapsectx' | 'ssr-server-rendering-seeded-sync-stores'
-  'to-observable': 'toobservable' | 'basic-usage' | 'in-effects' | 'custom-equals' | 'notes'
+  'to-observable': 'toobservable' | 'signature' | 'selector-a-slice-instead-of-the-whole-state' | 'equals-how-slices-are-compared' | 'in-effects' | 'notes'
   'use-storage-observable': 'usestorageobservable' | 'basic-usage' | 'operators-on-top-of-the-stream' | 'why-debounce-here' | 'about-deps-what-goes-in' | 'example-debounced-search' | 'example-a-notification-aggregator' | 'notes'
   'use-storage-subscribe': 'usestoragesubscribe' | 'basic-usage' | 'object-and-array-slices-equals' | 'notes'
   'use-subscription': 'usesubscription' | 'signature' | 'basic-usage' | 'when-usesubscription-vs-useobservable' | 'example-a-notification-aggregator' | 'about-deps' | 'teardown-and-memory'
