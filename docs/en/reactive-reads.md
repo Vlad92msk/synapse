@@ -3,105 +3,43 @@
 > [Back to Main](../../README.md)
 
 The everyday pattern: you mutate a storage with ordinary methods (`set`/`update`) and read it
-**reactively** inside a component. Synapse gives you several hooks for this — the difference between
-them is **how much control you get over re-renders**. The examples use the end-to-end `todoStorage`
-(`TodoState = { todos: Todo[]; filter: Filter }`).
+**reactively** inside a component. Synapse gives you several hooks for this — the difference between them
+is **how much control you get over re-renders** and whether you need RxJS. This is an overview page: pick
+the right tool from the table, the details live on dedicated pages. The examples use the end-to-end
+`todoStorage` (`TodoState = { todos: Todo[]; filter: Filter }`).
 
-| Hook | Re-renders | RxJS | Use when |
-|------|-----------|------|----------|
-| `useStorageSubscribe` | on every change of the selected slice | no | default reactive read |
-| `useSelector` | on every change of the selected slice | no | reading a `SelectorAPI` |
-| `useStorageObservable` | on every change of the selected slice | yes | you need RxJS operators |
-| `useStorageRef` | **only when you decide** | no | you control re-renders yourself |
+## Which tool when
 
-## useStorageSubscribe — the default
+| Tool | Re-renders | RxJS | Use when | Page |
+|------|-----------|------|----------|------|
+| `useStorageSubscribe` | on every slice change | no | default reactive read | [useStorageSubscribe](./use-storage-subscribe.md) |
+| `useSelector` | on every slice change | no | reading a `SelectorAPI` | [Selectors](./selector-system.md) |
+| `useStorageObservable` | on every slice change | yes | you need RxJS operators | [useStorageObservable](./use-storage-observable.md) |
+| `toObservable` | — (outside React) | yes | effects and non-React code | [toObservable](./to-observable.md) |
+| `getStateSync()` | **none** | no | read the latest on demand in a handler | see below |
 
-`useSyncExternalStore` under the hood (Concurrent-safe), no RxJS. Re-renders when the selected slice
-changes. For primitive selectors it already de-dupes via `Object.is`; for object/array slices pass
-`equals` so an unrelated store change doesn't re-render the component.
+## Reading without a re-render is not a hook
 
-```typescript
-import { useStorageSubscribe } from 'synapse-storage/react'
-
-// primitive slice — de-duped automatically
-const filter = useStorageSubscribe(todoStorage, (s) => s.filter)
-
-// object/array slice — `equals` keeps a stable snapshot and skips needless re-renders
-const todos = useStorageSubscribe(todoStorage, (s) => s.todos, {
-  equals: (a, b) => a === b,
-})
-```
-
-## useStorageObservable — the RxJS path
-
-A memoizing wrapper over `toObservable` + `useObservable`. Equivalent to `useStorageSubscribe`, but
-you can pipe RxJS operators on top of the state stream. It memoizes the observable by `[storage]`, so
-it does **not** re-subscribe on every render (the footgun of inlining `toObservable(storage)` in
-render).
+A common case is "read the current value at the moment of a click/submit without re-rendering the
+component on every store change". You **don't need a dedicated hook** for that: a storage is read
+synchronously on demand via `getStateSync()`.
 
 ```typescript
-import { useStorageObservable } from 'synapse-storage/react'
-
-// whole state
-const state = useStorageObservable(todoStorage)
-
-// a slice — emits only when the slice changes (distinctUntilChanged)
-const total = useStorageObservable(todoStorage, (s) => s.todos.length)
-```
-
-## useStorageRef — you control the re-renders
-
-Holds the **fresh** value in a `ref` (updated on every store change) but does **not** re-render the
-component automatically. It returns `{ ref, get, rerender }` and hands control to you:
-
-```typescript
-import { useStorageRef } from 'synapse-storage/react'
-
-function TodoCounter() {
-  const { ref, get, rerender } = useStorageRef(todoStorage, (s) => s.todos.length)
-
-  // "no re-render at all" — read the latest value on demand inside a handler
-  const logCount = () => console.log('current count:', get())
-
-  // "re-render when I decide" — UI reads ref.current, you re-render manually
-  return (
-    <div>
-      <span>{ref.current}</span>
-      <button onClick={logCount}>log</button>
-      <button onClick={rerender}>refresh</button>
-    </div>
-  )
+// zero subscriptions, zero re-renders — the fresh value at call time
+const onSave = () => {
+  const { todos } = todoStorage.getStateSync()
+  api.save(todos)
 }
 ```
 
-**"Re-render conditionally"** — pass `shouldRerender(prev, next)`; the component re-renders only when
-it returns `true` (the value in `ref` is already fresh at that point):
+If you want a re-render only when a specific slice changes, that's `useStorageSubscribe` with `equals`
+(Concurrent-safe), not a manual force. If you need operators (`debounceTime`, `scan`, …), that's
+`useStorageObservable` / `toObservable`. There is deliberately no "ref hook with a manual re-render" in
+the API: all three scenarios are covered by the tools above.
 
-```typescript
-// re-render only when crossing the empty/non-empty boundary
-const { ref } = useStorageRef(todoStorage, (s) => s.todos.length, {
-  shouldRerender: (prev, next) => (prev === 0) !== (next === 0),
-})
-```
+## Where to go next
 
-Notes:
-
-- `useStorageRef` does **not** use `useSyncExternalStore` (it can't skip a re-render on the
-  component's decision), so it intentionally drops the Concurrent-Mode tearing guarantee — acceptable
-  for the "I control re-renders" scenario.
-- The returned `{ ref, get, rerender }` handle is stable across renders.
-- The default selector returns the whole state. Pass `null` as the storage (before init) and `get()`
-  returns `undefined`.
-
-## toObservable — outside React
-
-For effects and non-React code, `toObservable(storage)` turns a storage into an `Observable` of the
-whole state. With a selector it emits only the slice, de-duped via `distinctUntilChanged` (default
-`Object.is`, or a custom `equals`):
-
-```typescript
-import { toObservable } from 'synapse-storage/reactive'
-
-const state$ = toObservable(todoStorage)                       // Observable<TodoState>
-const count$ = toObservable(todoStorage, (s) => s.todos.length) // Observable<number>, distinct
-```
+- [useStorageSubscribe](./use-storage-subscribe.md) — the default reactive read.
+- [useStorageObservable](./use-storage-observable.md) — the same, but with RxJS operators.
+- [toObservable](./to-observable.md) — a state stream outside React (effects, non-React code).
+- [Selectors](./selector-system.md) — `createSelector` + `useSelector`.

@@ -14309,7 +14309,7 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "The everyday pattern: you mutate a storage with ordinary methods (set/update) and read it\nreactively inside a component. Synapse gives you several hooks for this — the difference between\nthem is how much control you get over re-renders. The examples use the end-to-end todoStorage\n(TodoState = { todos: Todo[]; filter: Filter }).",
+                "text": "The everyday pattern: you mutate a storage with ordinary methods (set/update) and read it\nreactively inside a component. Synapse gives you several hooks for this — the difference between them\nis how much control you get over re-renders and whether you need RxJS. This is an overview page: pick\nthe right tool from the table, the details live on dedicated pages. The examples use the end-to-end\ntodoStorage (TodoState = { todos: Todo[]; filter: Filter }).",
                 "formatting": {
                   "bold": [
                     {
@@ -14332,70 +14332,102 @@
                       "end": 76
                     },
                     {
-                      "start": 269,
-                      "end": 280
+                      "start": 394,
+                      "end": 405
                     },
                     {
-                      "start": 282,
-                      "end": 327
+                      "start": 407,
+                      "end": 452
                     }
                   ],
                   "links": []
                 }
               }
-            },
+            }
+          ],
+          "metadata": {
+            "wordCount": 75,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "which-tool-when",
+          "title": "Which tool when",
+          "level": 2,
+          "content": [
             {
               "type": "table",
               "data": {
                 "headers": [
-                  "Hook",
+                  "Tool",
                   "Re-renders",
                   "RxJS",
-                  "Use when"
+                  "Use when",
+                  "Page"
                 ],
                 "rows": [
                   {
                     "cells": [
-                      "Hook",
+                      "Tool",
                       "Re-renders",
                       "RxJS",
-                      "Use when"
+                      "Use when",
+                      "Page"
                     ],
                     "type": "header"
                   },
                   {
                     "cells": [
                       "useStorageSubscribe",
-                      "on every change of the selected slice",
+                      "on every slice change",
                       "no",
-                      "default reactive read"
+                      "default reactive read",
+                      "useStorageSubscribe"
                     ],
                     "type": "data"
                   },
                   {
                     "cells": [
                       "useSelector",
-                      "on every change of the selected slice",
+                      "on every slice change",
                       "no",
-                      "reading a SelectorAPI"
+                      "reading a SelectorAPI",
+                      "Selectors"
                     ],
                     "type": "data"
                   },
                   {
                     "cells": [
                       "useStorageObservable",
-                      "on every change of the selected slice",
+                      "on every slice change",
                       "yes",
-                      "you need RxJS operators"
+                      "you need RxJS operators",
+                      "useStorageObservable"
                     ],
                     "type": "data"
                   },
                   {
                     "cells": [
-                      "useStorageRef",
-                      "only when you decide",
+                      "toObservable",
+                      "— (outside React)",
+                      "yes",
+                      "effects and non-React code",
+                      "toObservable"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "getStateSync()",
+                      "none",
                       "no",
-                      "you control re-renders yourself"
+                      "read the latest on demand in a handler",
+                      "see below"
                     ],
                     "type": "data"
                   }
@@ -14404,7 +14436,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 104,
+            "wordCount": 60,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -14414,360 +14446,80 @@
           }
         },
         {
-          "id": "usestoragesubscribe-the-default",
-          "title": "useStorageSubscribe — the default",
+          "id": "reading-without-a-re-render-is-not-a-hook",
+          "title": "Reading without a re-render is not a hook",
           "level": 2,
           "content": [
             {
               "type": "paragraph",
               "data": {
-                "text": "useSyncExternalStore under the hood (Concurrent-safe), no RxJS. Re-renders when the selected slice\nchanges. For primitive selectors it already de-dupes via Object.is; for object/array slices pass\nequals so an unrelated store change doesn't re-render the component.",
+                "text": "A common case is \"read the current value at the moment of a click/submit without re-rendering the\ncomponent on every store change\". You don't need a dedicated hook for that: a storage is read\nsynchronously on demand via getStateSync().",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 136,
+                      "end": 163
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 220,
+                      "end": 234
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// zero subscriptions, zero re-renders — the fresh value at call time\nconst onSave = () => {\n  const { todos } = todoStorage.getStateSync()\n  api.save(todos)\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "If you want a re-render only when a specific slice changes, that's useStorageSubscribe with equals\n(Concurrent-safe), not a manual force. If you need operators (debounceTime, scan, …), that's\nuseStorageObservable / toObservable. There is deliberately no \"ref hook with a manual re-render\" in\nthe API: all three scenarios are covered by the tools above.",
                 "formatting": {
                   "bold": [],
                   "italic": [],
                   "code": [
                     {
-                      "start": 0,
-                      "end": 20
+                      "start": 67,
+                      "end": 86
                     },
                     {
-                      "start": 156,
-                      "end": 165
+                      "start": 92,
+                      "end": 98
                     },
                     {
-                      "start": 196,
-                      "end": 202
+                      "start": 161,
+                      "end": 173
+                    },
+                    {
+                      "start": 175,
+                      "end": 179
+                    },
+                    {
+                      "start": 192,
+                      "end": 212
+                    },
+                    {
+                      "start": 215,
+                      "end": 227
                     }
                   ],
                   "links": []
                 }
-              }
-            },
-            {
-              "type": "code",
-              "data": {
-                "language": "typescript",
-                "code": "import { useStorageSubscribe } from 'synapse-storage/react'\n\n// primitive slice — de-duped automatically\nconst filter = useStorageSubscribe(todoStorage, (s) => s.filter)\n\n// object/array slice — `equals` keeps a stable snapshot and skips needless re-renders\nconst todos = useStorageSubscribe(todoStorage, (s) => s.todos, {\n  equals: (a, b) => a === b,\n})",
-                "meta": null
               }
             }
           ],
           "metadata": {
-            "wordCount": 35,
-            "codeBlocksCount": 1,
-            "diagramsCount": 0,
-            "tasksCount": 0,
-            "hasTable": false,
-            "hasBlockquotes": false,
-            "hasTasks": false
-          }
-        },
-        {
-          "id": "usestorageobservable-the-rxjs-path",
-          "title": "useStorageObservable — the RxJS path",
-          "level": 2,
-          "content": [
-            {
-              "type": "paragraph",
-              "data": {
-                "text": "A memoizing wrapper over toObservable + useObservable. Equivalent to useStorageSubscribe, but\nyou can pipe RxJS operators on top of the state stream. It memoizes the observable by [storage], so\nit does not re-subscribe on every render (the footgun of inlining toObservable(storage) in\nrender).",
-                "formatting": {
-                  "bold": [
-                    {
-                      "start": 202,
-                      "end": 205
-                    }
-                  ],
-                  "italic": [],
-                  "code": [
-                    {
-                      "start": 25,
-                      "end": 37
-                    },
-                    {
-                      "start": 40,
-                      "end": 53
-                    },
-                    {
-                      "start": 69,
-                      "end": 88
-                    },
-                    {
-                      "start": 180,
-                      "end": 189
-                    },
-                    {
-                      "start": 260,
-                      "end": 281
-                    }
-                  ],
-                  "links": []
-                }
-              }
-            },
-            {
-              "type": "code",
-              "data": {
-                "language": "typescript",
-                "code": "import { useStorageObservable } from 'synapse-storage/react'\n\n// whole state\nconst state = useStorageObservable(todoStorage)\n\n// a slice — emits only when the slice changes (distinctUntilChanged)\nconst total = useStorageObservable(todoStorage, (s) => s.todos.length)",
-                "meta": null
-              }
-            }
-          ],
-          "metadata": {
-            "wordCount": 43,
-            "codeBlocksCount": 1,
-            "diagramsCount": 0,
-            "tasksCount": 0,
-            "hasTable": false,
-            "hasBlockquotes": false,
-            "hasTasks": false
-          }
-        },
-        {
-          "id": "usestorageref-you-control-the-re-renders",
-          "title": "useStorageRef — you control the re-renders",
-          "level": 2,
-          "content": [
-            {
-              "type": "paragraph",
-              "data": {
-                "text": "Holds the fresh value in a ref (updated on every store change) but does not re-render the\ncomponent automatically. It returns { ref, get, rerender } and hands control to you:",
-                "formatting": {
-                  "bold": [
-                    {
-                      "start": 10,
-                      "end": 15
-                    },
-                    {
-                      "start": 72,
-                      "end": 75
-                    }
-                  ],
-                  "italic": [],
-                  "code": [
-                    {
-                      "start": 27,
-                      "end": 30
-                    },
-                    {
-                      "start": 126,
-                      "end": 148
-                    }
-                  ],
-                  "links": []
-                }
-              }
-            },
-            {
-              "type": "code",
-              "data": {
-                "language": "typescript",
-                "code": "import { useStorageRef } from 'synapse-storage/react'\n\nfunction TodoCounter() {\n  const { ref, get, rerender } = useStorageRef(todoStorage, (s) => s.todos.length)\n\n  // \"no re-render at all\" — read the latest value on demand inside a handler\n  const logCount = () => console.log('current count:', get())\n\n  // \"re-render when I decide\" — UI reads ref.current, you re-render manually\n  return (\n    <div>\n      <span>{ref.current}</span>\n      <button onClick={logCount}>log</button>\n      <button onClick={rerender}>refresh</button>\n    </div>\n  )\n}",
-                "meta": null
-              }
-            },
-            {
-              "type": "paragraph",
-              "data": {
-                "text": "\"Re-render conditionally\" — pass shouldRerender(prev, next); the component re-renders only when\nit returns true (the value in ref is already fresh at that point):",
-                "formatting": {
-                  "bold": [
-                    {
-                      "start": 0,
-                      "end": 25
-                    }
-                  ],
-                  "italic": [],
-                  "code": [
-                    {
-                      "start": 33,
-                      "end": 59
-                    },
-                    {
-                      "start": 107,
-                      "end": 111
-                    },
-                    {
-                      "start": 126,
-                      "end": 129
-                    }
-                  ],
-                  "links": []
-                }
-              }
-            },
-            {
-              "type": "code",
-              "data": {
-                "language": "typescript",
-                "code": "// re-render only when crossing the empty/non-empty boundary\nconst { ref } = useStorageRef(todoStorage, (s) => s.todos.length, {\n  shouldRerender: (prev, next) => (prev === 0) !== (next === 0),\n})",
-                "meta": null
-              }
-            },
-            {
-              "type": "paragraph",
-              "data": {
-                "text": "Notes:",
-                "formatting": {
-                  "bold": [],
-                  "italic": [],
-                  "code": [],
-                  "links": []
-                }
-              }
-            },
-            {
-              "type": "list",
-              "data": [
-                {
-                  "content": [
-                    {
-                      "type": "paragraph",
-                      "data": {
-                        "text": "useStorageRef does not use useSyncExternalStore (it can't skip a re-render on the\ncomponent's decision), so it intentionally drops the Concurrent-Mode tearing guarantee — acceptable\nfor the \"I control re-renders\" scenario.",
-                        "formatting": {
-                          "bold": [
-                            {
-                              "start": 19,
-                              "end": 22
-                            }
-                          ],
-                          "italic": [],
-                          "code": [
-                            {
-                              "start": 0,
-                              "end": 13
-                            },
-                            {
-                              "start": 27,
-                              "end": 47
-                            }
-                          ],
-                          "links": []
-                        }
-                      }
-                    }
-                  ],
-                  "level": 0,
-                  "type": "unordered"
-                },
-                {
-                  "content": [
-                    {
-                      "type": "paragraph",
-                      "data": {
-                        "text": "The returned { ref, get, rerender } handle is stable across renders.",
-                        "formatting": {
-                          "bold": [],
-                          "italic": [],
-                          "code": [
-                            {
-                              "start": 13,
-                              "end": 35
-                            }
-                          ],
-                          "links": []
-                        }
-                      }
-                    }
-                  ],
-                  "level": 0,
-                  "type": "unordered"
-                },
-                {
-                  "content": [
-                    {
-                      "type": "paragraph",
-                      "data": {
-                        "text": "The default selector returns the whole state. Pass null as the storage (before init) and get()\nreturns undefined.",
-                        "formatting": {
-                          "bold": [],
-                          "italic": [],
-                          "code": [
-                            {
-                              "start": 51,
-                              "end": 55
-                            },
-                            {
-                              "start": 89,
-                              "end": 94
-                            },
-                            {
-                              "start": 103,
-                              "end": 112
-                            }
-                          ],
-                          "links": []
-                        }
-                      }
-                    }
-                  ],
-                  "level": 0,
-                  "type": "unordered"
-                }
-              ]
-            }
-          ],
-          "metadata": {
-            "wordCount": 116,
-            "codeBlocksCount": 2,
-            "diagramsCount": 0,
-            "tasksCount": 0,
-            "hasTable": false,
-            "hasBlockquotes": false,
-            "hasTasks": false
-          }
-        },
-        {
-          "id": "toobservable-outside-react",
-          "title": "toObservable — outside React",
-          "level": 2,
-          "content": [
-            {
-              "type": "paragraph",
-              "data": {
-                "text": "For effects and non-React code, toObservable(storage) turns a storage into an Observable of the\nwhole state. With a selector it emits only the slice, de-duped via distinctUntilChanged (default\nObject.is, or a custom equals):",
-                "formatting": {
-                  "bold": [],
-                  "italic": [],
-                  "code": [
-                    {
-                      "start": 32,
-                      "end": 53
-                    },
-                    {
-                      "start": 78,
-                      "end": 88
-                    },
-                    {
-                      "start": 163,
-                      "end": 183
-                    },
-                    {
-                      "start": 193,
-                      "end": 202
-                    },
-                    {
-                      "start": 216,
-                      "end": 222
-                    }
-                  ],
-                  "links": []
-                }
-              }
-            },
-            {
-              "type": "code",
-              "data": {
-                "language": "typescript",
-                "code": "import { toObservable } from 'synapse-storage/reactive'\n\nconst state$ = toObservable(todoStorage)                       // Observable<TodoState>\nconst count$ = toObservable(todoStorage, (s) => s.todos.length) // Observable<number>, distinct",
-                "meta": null
-              }
-            }
-          ],
-          "metadata": {
-            "wordCount": 33,
+            "wordCount": 92,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -14780,11 +14532,11 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-28T11:38:18.564Z",
-        "wordCount": 596,
-        "readingTime": 3,
-        "sectionsCount": 5,
-        "codeBlocksCount": 5
+        "lastModified": "2026-06-28T13:44:58.388Z",
+        "wordCount": 311,
+        "readingTime": 2,
+        "sectionsCount": 3,
+        "codeBlocksCount": 1
       }
     },
     "reading-data": {
@@ -18080,6 +17832,974 @@
         "readingTime": 6,
         "sectionsCount": 9,
         "codeBlocksCount": 11
+      }
+    },
+    "to-observable": {
+      "title": "toObservable",
+      "sections": [
+        {
+          "id": "toobservable",
+          "title": "toObservable",
+          "level": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Turns a storage (IStorageBase) into an RxJS Observable of the state stream — for effects and\nnon-React code. It's the low-level utility that useStorageObservable is\nbuilt on. Imported from synapse-storage/reactive. The examples use the end-to-end todoStorage\n(TodoState = { todos: Todo[]; filter: Filter }).",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 81,
+                      "end": 107
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 17,
+                      "end": 29
+                    },
+                    {
+                      "start": 44,
+                      "end": 54
+                    },
+                    {
+                      "start": 189,
+                      "end": 213
+                    },
+                    {
+                      "start": 247,
+                      "end": 258
+                    },
+                    {
+                      "start": 260,
+                      "end": 305
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 141,
+                      "end": 161,
+                      "url": "./use-storage-observable.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 44,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "basic-usage",
+          "title": "Basic usage",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Without a selector the stream emits the whole state on every store change. With a selector it emits\nonly the slice, de-duped via distinctUntilChanged (default Object.is, or a custom equals):",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 40,
+                      "end": 45
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 129,
+                      "end": 149
+                    },
+                    {
+                      "start": 159,
+                      "end": 168
+                    },
+                    {
+                      "start": 182,
+                      "end": 188
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { toObservable } from 'synapse-storage/reactive'\n\nconst state$ = toObservable(todoStorage)                        // Observable<TodoState>\nconst count$ = toObservable(todoStorage, (s) => s.todos.length) // Observable<number>, distinct",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The stream emits the current state immediately on subscribe (via getStateSync()), then on every\nchange. It uses shareReplay(1) under the hood, so multiple subscribers share a single store\nsubscription.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 65,
+                      "end": 79
+                    },
+                    {
+                      "start": 112,
+                      "end": 126
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 59,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "in-effects",
+          "title": "In effects",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "A typical case is wiring one storage's state as an external state into createEffectConfig:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 71,
+                      "end": 89
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const auth$ = toObservable(authStorage, (s) => s.user.id)\n\ncreateEffectConfig: () => ({\n  externalStates: { userId: auth$ },\n})",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 14,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "custom-equals",
+          "title": "Custom equals",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The second argument of the selector overload is the comparator for distinctUntilChanged:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 67,
+                      "end": 87
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// emits only when the parity of the count changes\nconst parity$ = toObservable(todoStorage, (s) => s.todos.length, (a, b) => a % 2 === b % 2)",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 12,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "notes",
+          "title": "Notes",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "In a React component, do not create toObservable(...) directly in render — memoize it (which is\nwhat useStorageObservable does) or subscribe via useObservable with a\nfactory.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 25,
+                              "end": 28
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 36,
+                              "end": 53
+                            },
+                            {
+                              "start": 145,
+                              "end": 158
+                            }
+                          ],
+                          "links": [
+                            {
+                              "start": 101,
+                              "end": 121,
+                              "url": "./use-storage-observable.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "For a simple reactive read in a component without RxJS, use\nuseStorageSubscribe.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 60,
+                              "end": 79,
+                              "url": "./use-storage-subscribe.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 38,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        }
+      ],
+      "features": [],
+      "frontMatter": {},
+      "metadata": {
+        "lastModified": "2026-06-28T13:46:09.543Z",
+        "wordCount": 254,
+        "readingTime": 2,
+        "sectionsCount": 5,
+        "codeBlocksCount": 3
+      }
+    },
+    "use-storage-observable": {
+      "title": "useStorageObservable",
+      "sections": [
+        {
+          "id": "usestorageobservable",
+          "title": "useStorageObservable",
+          "level": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The RxJS path for \"store → reactive in a component\". Equivalent to\nuseStorageSubscribe, but you can pipe RxJS operators (debounceTime,\nscan, map, …) on top of the state stream. See the Reactive reads overview.\nThe examples use the end-to-end todoStorage (TodoState = { todos: Todo[]; filter: Filter }).",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 121,
+                      "end": 133
+                    },
+                    {
+                      "start": 135,
+                      "end": 139
+                    },
+                    {
+                      "start": 141,
+                      "end": 144
+                    },
+                    {
+                      "start": 242,
+                      "end": 253
+                    },
+                    {
+                      "start": 255,
+                      "end": 300
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 67,
+                      "end": 86,
+                      "url": "./use-storage-subscribe.md",
+                      "title": null
+                    },
+                    {
+                      "start": 185,
+                      "end": 199,
+                      "url": "./reactive-reads.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 48,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "basic-usage",
+          "title": "Basic usage",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { useStorageObservable } from 'synapse-storage/react'\n\n// whole state\nconst state = useStorageObservable(todoStorage)\n\n// a slice — emits only when the slice changes (distinctUntilChanged)\nconst total = useStorageObservable(todoStorage, (s) => s.todos.length)",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Internally it's a memoizing wrapper over toObservable + useObservable. The\nobservable is memoized by [storage], so the hook does not re-subscribe on every render. That avoids\nthe footgun of inlining toObservable(storage) in render (a new Observable each render → needless\nre-subscriptions).",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 129,
+                      "end": 132
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 41,
+                      "end": 53
+                    },
+                    {
+                      "start": 56,
+                      "end": 69
+                    },
+                    {
+                      "start": 101,
+                      "end": 110
+                    },
+                    {
+                      "start": 199,
+                      "end": 220
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 41,
+                      "end": 53,
+                      "url": "./to-observable.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 41,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "operators-on-top-of-the-stream",
+          "title": "Operators on top of the stream",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "If you need a stateful operator chain (debounceTime, scan), build the stream with toObservable and\nsubscribe via useObservable with a factory — so the subscription is stable and the chain is rebuilt\nonly by deps:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 39,
+                      "end": 51
+                    },
+                    {
+                      "start": 53,
+                      "end": 57
+                    },
+                    {
+                      "start": 82,
+                      "end": 94
+                    },
+                    {
+                      "start": 113,
+                      "end": 126
+                    },
+                    {
+                      "start": 207,
+                      "end": 211
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { useObservable } from 'synapse-storage/react'\nimport { toObservable } from 'synapse-storage/reactive'\nimport { debounceTime, map } from 'rxjs/operators'\n\nconst debouncedCount = useObservable(\n  () => toObservable(todoStorage, (s) => s.todos.length).pipe(debounceTime(200), map((n) => `${n} todos`)),\n  '0 todos',\n  [todoStorage],\n)",
+                "meta": null
+              }
+            },
+            {
+              "type": "blockquote",
+              "data": {
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "data": {
+                      "text": "useStorageObservable returns a ready value, not an Observable — you can't call .pipe(...) on\nit. If you need operators, build the stream with toObservable (as above). The key thing: don't call\ntoObservable(...) directly in the render body without memoization — that creates a new Observable on\nevery render → re-subscription and a reset of debounceTime/scan state. The factory + deps in\nuseObservable are exactly what keeps the subscription stable.",
+                      "formatting": {
+                        "bold": [
+                          {
+                            "start": 31,
+                            "end": 42
+                          }
+                        ],
+                        "italic": [],
+                        "code": [
+                          {
+                            "start": 0,
+                            "end": 20
+                          },
+                          {
+                            "start": 51,
+                            "end": 61
+                          },
+                          {
+                            "start": 79,
+                            "end": 89
+                          },
+                          {
+                            "start": 142,
+                            "end": 154
+                          },
+                          {
+                            "start": 193,
+                            "end": 210
+                          },
+                          {
+                            "start": 280,
+                            "end": 290
+                          },
+                          {
+                            "start": 340,
+                            "end": 352
+                          },
+                          {
+                            "start": 353,
+                            "end": 357
+                          },
+                          {
+                            "start": 379,
+                            "end": 383
+                          },
+                          {
+                            "start": 387,
+                            "end": 400
+                          }
+                        ],
+                        "links": []
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 104,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": true,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "notes",
+          "title": "Notes",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "A selector stream already runs through distinctUntilChanged — an extra distinctUntilChanged after\nthe selector is almost always redundant.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 39,
+                              "end": 59
+                            },
+                            {
+                              "start": 71,
+                              "end": 91
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Need a reactive read without RxJS? Use useStorageSubscribe.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 39,
+                              "end": 58,
+                              "url": "./use-storage-subscribe.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 26,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        }
+      ],
+      "features": [],
+      "frontMatter": {},
+      "metadata": {
+        "lastModified": "2026-06-28T14:02:39.003Z",
+        "wordCount": 312,
+        "readingTime": 2,
+        "sectionsCount": 4,
+        "codeBlocksCount": 2
+      }
+    },
+    "use-storage-subscribe": {
+      "title": "useStorageSubscribe",
+      "sections": [
+        {
+          "id": "usestoragesubscribe",
+          "title": "useStorageSubscribe",
+          "level": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The default way to read a storage reactively. useSyncExternalStore under the hood (Concurrent-safe),\nno RxJS. Re-renders the component when the selected slice changes. See also the Reactive\nreads overview. The examples use the end-to-end todoStorage\n(TodoState = { todos: Todo[]; filter: Filter }).",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 4,
+                      "end": 11
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 46,
+                      "end": 66
+                    },
+                    {
+                      "start": 238,
+                      "end": 249
+                    },
+                    {
+                      "start": 251,
+                      "end": 296
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 181,
+                      "end": 195,
+                      "url": "./reactive-reads.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 43,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "basic-usage",
+          "title": "Basic usage",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "For primitive slices it de-dupes automatically via Object.is — no needless re-renders.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 4,
+                      "end": 13
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 51,
+                      "end": 60
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { useStorageSubscribe } from 'synapse-storage/react'\n\n// primitive slice — de-duped automatically\nconst filter = useStorageSubscribe(todoStorage, (s) => s.filter)",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 12,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "object-and-array-slices-equals",
+          "title": "Object and array slices: equals",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "When the selector returns an object/array (a new reference every tick) or you want to re-render only when\na specific slice changes, pass equals. It keeps a stable snapshot and skips needless re-renders even\nwhen the rest of the store changes.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 137,
+                      "end": 143
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// an unrelated store change won't re-render the component until `todos` changes by reference\nconst todos = useStorageSubscribe(todoStorage, (s) => s.todos, {\n  equals: (a, b) => a === b,\n})",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "equals returns true when the slices are \"equal\" — then the snapshot keeps its reference and there is\nno re-render.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 6
+                    },
+                    {
+                      "start": 15,
+                      "end": 19
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 61,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "notes",
+          "title": "Notes",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "useSyncExternalStore gives correct behavior in Concurrent Mode (no tearing).",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 20
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Accepts IStorageBase — the shared interface of sync and async storages; the subscription is the same\nfor all types.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 8,
+                              "end": 20
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Before init you can pass null instead of the storage — the hook returns undefined.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 25,
+                              "end": 29
+                            },
+                            {
+                              "start": 72,
+                              "end": 81
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Need RxJS operators on top of the stream? That's useStorageObservable.\nReading a SelectorAPI? That's useSelector. Need to read without a re-render\nin a handler? todoStorage.getStateSync() — see the overview.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 81,
+                              "end": 92
+                            },
+                            {
+                              "start": 161,
+                              "end": 187
+                            }
+                          ],
+                          "links": [
+                            {
+                              "start": 49,
+                              "end": 69,
+                              "url": "./use-storage-observable.md",
+                              "title": null
+                            },
+                            {
+                              "start": 101,
+                              "end": 112,
+                              "url": "./selector-system.md",
+                              "title": null
+                            },
+                            {
+                              "start": 198,
+                              "end": 206,
+                              "url": "./reactive-reads.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 72,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        }
+      ],
+      "features": [],
+      "frontMatter": {},
+      "metadata": {
+        "lastModified": "2026-06-28T13:45:24.600Z",
+        "wordCount": 258,
+        "readingTime": 2,
+        "sectionsCount": 4,
+        "codeBlocksCount": 2
       }
     },
     "writing-data": {
@@ -33340,7 +34060,7 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "Повседневный паттерн: меняешь хранилище обычными методами (set/update), а в компоненте читаешь его\nреактивно. Synapse даёт для этого несколько хуков — разница между ними в том, насколько ты\nконтролируешь ререндеры. В примерах используется сквозной todoStorage\n(TodoState = { todos: Todo[]; filter: Filter }).",
+                "text": "Повседневный паттерн: меняешь хранилище обычными методами (set/update), а в компоненте читаешь его\nреактивно. Synapse даёт для этого несколько хуков — разница между ними в том, насколько ты\nконтролируешь ререндеры и нужен ли тебе RxJS. Это обзорная страница: выбери подходящий инструмент по\nтаблице, детали — на отдельных страницах. В примерах используется сквозной todoStorage\n(TodoState = { todos: Todo[]; filter: Filter }).",
                 "formatting": {
                   "bold": [
                     {
@@ -33363,70 +34083,102 @@
                       "end": 69
                     },
                     {
-                      "start": 248,
-                      "end": 259
+                      "start": 366,
+                      "end": 377
                     },
                     {
-                      "start": 261,
-                      "end": 306
+                      "start": 379,
+                      "end": 424
                     }
                   ],
                   "links": []
                 }
               }
-            },
+            }
+          ],
+          "metadata": {
+            "wordCount": 60,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "which-tool-when",
+          "title": "Какой инструмент когда",
+          "level": 2,
+          "content": [
             {
               "type": "table",
               "data": {
                 "headers": [
-                  "Хук",
+                  "Инструмент",
                   "Ререндеры",
                   "RxJS",
-                  "Когда использовать"
+                  "Когда использовать",
+                  "Страница"
                 ],
                 "rows": [
                   {
                     "cells": [
-                      "Хук",
+                      "Инструмент",
                       "Ререндеры",
                       "RxJS",
-                      "Когда использовать"
+                      "Когда использовать",
+                      "Страница"
                     ],
                     "type": "header"
                   },
                   {
                     "cells": [
                       "useStorageSubscribe",
-                      "на каждое изменение выбранного среза",
+                      "на каждое изменение среза",
                       "нет",
-                      "реактивное чтение по умолчанию"
+                      "реактивное чтение по умолчанию",
+                      "useStorageSubscribe"
                     ],
                     "type": "data"
                   },
                   {
                     "cells": [
                       "useSelector",
-                      "на каждое изменение выбранного среза",
+                      "на каждое изменение среза",
                       "нет",
-                      "чтение SelectorAPI"
+                      "чтение SelectorAPI",
+                      "Селекторы"
                     ],
                     "type": "data"
                   },
                   {
                     "cells": [
                       "useStorageObservable",
-                      "на каждое изменение выбранного среза",
+                      "на каждое изменение среза",
                       "да",
-                      "нужны RxJS-операторы"
+                      "нужны RxJS-операторы",
+                      "useStorageObservable"
                     ],
                     "type": "data"
                   },
                   {
                     "cells": [
-                      "useStorageRef",
-                      "только когда ты сам решишь",
+                      "toObservable",
+                      "— (вне React)",
+                      "да",
+                      "эффекты и не-React код",
+                      "toObservable"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "getStateSync()",
                       "нет",
-                      "ты сам контролируешь ререндеры"
+                      "нет",
+                      "прочитать свежее по требованию в обработчике",
+                      "см. ниже"
                     ],
                     "type": "data"
                   }
@@ -33435,7 +34187,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 87,
+            "wordCount": 56,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -33445,360 +34197,80 @@
           }
         },
         {
-          "id": "usestoragesubscribe-the-default",
-          "title": "useStorageSubscribe — по умолчанию",
+          "id": "reading-without-a-re-render-is-not-a-hook",
+          "title": "Прочитать без ререндера — это не хук",
           "level": 2,
           "content": [
             {
               "type": "paragraph",
               "data": {
-                "text": "Под капотом useSyncExternalStore (Concurrent-safe), без RxJS. Ререндерит при изменении выбранного\nсреза. Для примитивных селекторов дедуплицирует через Object.is; для объектных/массивных срезов\nпередавай equals, чтобы постороннее изменение стора не дёргало компонент.",
+                "text": "Частый кейс — «прочитать актуальное значение в момент клика/сабмита, не ререндеря компонент на каждое\nизменение стора». Для этого не нужен отдельный хук: хранилище читается синхронно по требованию через\ngetStateSync().",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 130,
+                      "end": 152
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 203,
+                      "end": 217
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// ноль подписок, ноль ререндеров — свежее значение на момент вызова\nconst onSave = () => {\n  const { todos } = todoStorage.getStateSync()\n  api.save(todos)\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Если нужен ререндер только при изменении конкретного среза — это useStorageSubscribe с equals\n(Concurrent-safe), а не ручной форс. Если нужны операторы (debounceTime, scan, …) — это\nuseStorageObservable / toObservable. Отдельного «ref-хука с ручным ререндером» в API намеренно нет:\nвсе три сценария закрыты инструментами выше.",
                 "formatting": {
                   "bold": [],
                   "italic": [],
                   "code": [
                     {
-                      "start": 12,
-                      "end": 32
-                    },
-                    {
-                      "start": 152,
-                      "end": 161
-                    },
-                    {
-                      "start": 204,
-                      "end": 210
-                    }
-                  ],
-                  "links": []
-                }
-              }
-            },
-            {
-              "type": "code",
-              "data": {
-                "language": "typescript",
-                "code": "import { useStorageSubscribe } from 'synapse-storage/react'\n\n// примитивный срез — дедупликация автоматом\nconst filter = useStorageSubscribe(todoStorage, (s) => s.filter)\n\n// объектный/массивный срез — `equals` держит стабильный снапшот и гасит лишние ререндеры\nconst todos = useStorageSubscribe(todoStorage, (s) => s.todos, {\n  equals: (a, b) => a === b,\n})",
-                "meta": null
-              }
-            }
-          ],
-          "metadata": {
-            "wordCount": 29,
-            "codeBlocksCount": 1,
-            "diagramsCount": 0,
-            "tasksCount": 0,
-            "hasTable": false,
-            "hasBlockquotes": false,
-            "hasTasks": false
-          }
-        },
-        {
-          "id": "usestorageobservable-the-rxjs-path",
-          "title": "useStorageObservable — RxJS-путь",
-          "level": 2,
-          "content": [
-            {
-              "type": "paragraph",
-              "data": {
-                "text": "Мемоизирующая обёртка над toObservable + useObservable. Эквивалент useStorageSubscribe, но можно\nнавесить RxJS-операторы поверх потока состояния. Мемоизирует observable по [storage], поэтому не\nпереподписывается на каждый рендер (footgun инлайнового toObservable(storage) в рендере).",
-                "formatting": {
-                  "bold": [
-                    {
-                      "start": 191,
-                      "end": 193
-                    }
-                  ],
-                  "italic": [],
-                  "code": [
-                    {
-                      "start": 26,
-                      "end": 38
-                    },
-                    {
-                      "start": 41,
-                      "end": 54
-                    },
-                    {
-                      "start": 67,
-                      "end": 86
-                    },
-                    {
-                      "start": 172,
-                      "end": 181
-                    },
-                    {
-                      "start": 250,
-                      "end": 271
-                    }
-                  ],
-                  "links": []
-                }
-              }
-            },
-            {
-              "type": "code",
-              "data": {
-                "language": "typescript",
-                "code": "import { useStorageObservable } from 'synapse-storage/react'\n\n// всё состояние\nconst state = useStorageObservable(todoStorage)\n\n// срез — эмитит только при изменении среза (distinctUntilChanged)\nconst total = useStorageObservable(todoStorage, (s) => s.todos.length)",
-                "meta": null
-              }
-            }
-          ],
-          "metadata": {
-            "wordCount": 30,
-            "codeBlocksCount": 1,
-            "diagramsCount": 0,
-            "tasksCount": 0,
-            "hasTable": false,
-            "hasBlockquotes": false,
-            "hasTasks": false
-          }
-        },
-        {
-          "id": "usestorageref-you-control-the-re-renders",
-          "title": "useStorageRef — ты контролируешь ререндеры",
-          "level": 2,
-          "content": [
-            {
-              "type": "paragraph",
-              "data": {
-                "text": "Держит свежее значение в ref (обновляется на каждое изменение стора), но не ререндерит\nкомпонент автоматически. Возвращает { ref, get, rerender } и отдаёт контроль тебе:",
-                "formatting": {
-                  "bold": [
-                    {
-                      "start": 7,
-                      "end": 13
-                    },
-                    {
-                      "start": 73,
-                      "end": 75
-                    }
-                  ],
-                  "italic": [],
-                  "code": [
-                    {
-                      "start": 25,
-                      "end": 28
-                    },
-                    {
-                      "start": 123,
-                      "end": 145
-                    }
-                  ],
-                  "links": []
-                }
-              }
-            },
-            {
-              "type": "code",
-              "data": {
-                "language": "typescript",
-                "code": "import { useStorageRef } from 'synapse-storage/react'\n\nfunction TodoCounter() {\n  const { ref, get, rerender } = useStorageRef(todoStorage, (s) => s.todos.length)\n\n  // «вообще без ререндера» — читаем актуальное значение по требованию в обработчике\n  const logCount = () => console.log('текущее значение:', get())\n\n  // «ререндер, когда я сам решу» — UI читает ref.current, ререндеришь вручную\n  return (\n    <div>\n      <span>{ref.current}</span>\n      <button onClick={logCount}>лог</button>\n      <button onClick={rerender}>обновить</button>\n    </div>\n  )\n}",
-                "meta": null
-              }
-            },
-            {
-              "type": "paragraph",
-              "data": {
-                "text": "«Ререндер по условию» — передай shouldRerender(prev, next); компонент ререндерится только когда\nон вернул true (значение в ref к этому моменту уже свежее):",
-                "formatting": {
-                  "bold": [
-                    {
-                      "start": 0,
-                      "end": 21
-                    }
-                  ],
-                  "italic": [],
-                  "code": [
-                    {
-                      "start": 32,
-                      "end": 58
-                    },
-                    {
-                      "start": 106,
-                      "end": 110
-                    },
-                    {
-                      "start": 123,
-                      "end": 126
-                    }
-                  ],
-                  "links": []
-                }
-              }
-            },
-            {
-              "type": "code",
-              "data": {
-                "language": "typescript",
-                "code": "// ререндерим только при переходе пусто/не-пусто\nconst { ref } = useStorageRef(todoStorage, (s) => s.todos.length, {\n  shouldRerender: (prev, next) => (prev === 0) !== (next === 0),\n})",
-                "meta": null
-              }
-            },
-            {
-              "type": "paragraph",
-              "data": {
-                "text": "Заметки:",
-                "formatting": {
-                  "bold": [],
-                  "italic": [],
-                  "code": [],
-                  "links": []
-                }
-              }
-            },
-            {
-              "type": "list",
-              "data": [
-                {
-                  "content": [
-                    {
-                      "type": "paragraph",
-                      "data": {
-                        "text": "useStorageRef не использует useSyncExternalStore (тот не умеет пропускать ререндер по\nрешению компонента), поэтому осознанно отказывается от tearing-гарантий Concurrent Mode — что\nприемлемо для сценария «я сам контролирую ререндеры».",
-                        "formatting": {
-                          "bold": [
-                            {
-                              "start": 14,
-                              "end": 16
-                            }
-                          ],
-                          "italic": [],
-                          "code": [
-                            {
-                              "start": 0,
-                              "end": 13
-                            },
-                            {
-                              "start": 28,
-                              "end": 48
-                            }
-                          ],
-                          "links": []
-                        }
-                      }
-                    }
-                  ],
-                  "level": 0,
-                  "type": "unordered"
-                },
-                {
-                  "content": [
-                    {
-                      "type": "paragraph",
-                      "data": {
-                        "text": "Возвращаемый { ref, get, rerender } стабилен между рендерами.",
-                        "formatting": {
-                          "bold": [],
-                          "italic": [],
-                          "code": [
-                            {
-                              "start": 13,
-                              "end": 35
-                            }
-                          ],
-                          "links": []
-                        }
-                      }
-                    }
-                  ],
-                  "level": 0,
-                  "type": "unordered"
-                },
-                {
-                  "content": [
-                    {
-                      "type": "paragraph",
-                      "data": {
-                        "text": "Селектор по умолчанию возвращает всё состояние. Если передать null вместо стора (до инициализации),\nget() вернёт undefined.",
-                        "formatting": {
-                          "bold": [],
-                          "italic": [],
-                          "code": [
-                            {
-                              "start": 62,
-                              "end": 66
-                            },
-                            {
-                              "start": 100,
-                              "end": 105
-                            },
-                            {
-                              "start": 113,
-                              "end": 122
-                            }
-                          ],
-                          "links": []
-                        }
-                      }
-                    }
-                  ],
-                  "level": 0,
-                  "type": "unordered"
-                }
-              ]
-            }
-          ],
-          "metadata": {
-            "wordCount": 101,
-            "codeBlocksCount": 2,
-            "diagramsCount": 0,
-            "tasksCount": 0,
-            "hasTable": false,
-            "hasBlockquotes": false,
-            "hasTasks": false
-          }
-        },
-        {
-          "id": "toobservable-outside-react",
-          "title": "toObservable — вне React",
-          "level": 2,
-          "content": [
-            {
-              "type": "paragraph",
-              "data": {
-                "text": "Для эффектов и не-React кода toObservable(storage) превращает хранилище в Observable всего\nсостояния. Со селектором поток эмитит только срез, дедуплицируя через distinctUntilChanged (по\nумолчанию Object.is, либо кастомный equals):",
-                "formatting": {
-                  "bold": [],
-                  "italic": [],
-                  "code": [
-                    {
-                      "start": 29,
-                      "end": 50
-                    },
-                    {
-                      "start": 74,
+                      "start": 65,
                       "end": 84
                     },
                     {
-                      "start": 161,
-                      "end": 181
+                      "start": 87,
+                      "end": 93
                     },
                     {
-                      "start": 196,
-                      "end": 205
+                      "start": 153,
+                      "end": 165
                     },
                     {
-                      "start": 222,
-                      "end": 228
+                      "start": 167,
+                      "end": 171
+                    },
+                    {
+                      "start": 182,
+                      "end": 202
+                    },
+                    {
+                      "start": 205,
+                      "end": 217
                     }
                   ],
                   "links": []
                 }
               }
-            },
-            {
-              "type": "code",
-              "data": {
-                "language": "typescript",
-                "code": "import { toObservable } from 'synapse-storage/reactive'\n\nconst state$ = toObservable(todoStorage)                       // Observable<TodoState>\nconst count$ = toObservable(todoStorage, (s) => s.todos.length) // Observable<number>, distinct",
-                "meta": null
-              }
             }
           ],
           "metadata": {
-            "wordCount": 27,
+            "wordCount": 73,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -33811,11 +34283,11 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-28T11:38:44.116Z",
-        "wordCount": 528,
-        "readingTime": 3,
-        "sectionsCount": 5,
-        "codeBlocksCount": 5
+        "lastModified": "2026-06-28T13:44:50.331Z",
+        "wordCount": 271,
+        "readingTime": 2,
+        "sectionsCount": 3,
+        "codeBlocksCount": 1
       }
     },
     "reading-data": {
@@ -37111,6 +37583,974 @@
         "readingTime": 5,
         "sectionsCount": 9,
         "codeBlocksCount": 11
+      }
+    },
+    "to-observable": {
+      "title": "toObservable",
+      "sections": [
+        {
+          "id": "toobservable",
+          "title": "toObservable",
+          "level": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Превращает хранилище (IStorageBase) в RxJS Observable потока состояния — для эффектов и не-React\nкода. Это низкоуровневая утилита, на которой построен useStorageObservable.\nИмпортируется из synapse-storage/reactive. В примерах — сквозной todoStorage\n(TodoState = { todos: Todo[]; filter: Filter }).",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 77,
+                      "end": 101
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 22,
+                      "end": 34
+                    },
+                    {
+                      "start": 43,
+                      "end": 53
+                    },
+                    {
+                      "start": 190,
+                      "end": 214
+                    },
+                    {
+                      "start": 238,
+                      "end": 249
+                    },
+                    {
+                      "start": 251,
+                      "end": 296
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 151,
+                      "end": 171,
+                      "url": "./use-storage-observable.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 37,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "basic-usage",
+          "title": "Базовое использование",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Без селектора поток эмитит всё состояние на каждое изменение хранилища. Со селектором — только срез,\nдедуплицируя повторы через distinctUntilChanged (по умолчанию Object.is, либо переданный equals):",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 27,
+                      "end": 30
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 128,
+                      "end": 148
+                    },
+                    {
+                      "start": 163,
+                      "end": 172
+                    },
+                    {
+                      "start": 190,
+                      "end": 196
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { toObservable } from 'synapse-storage/reactive'\n\nconst state$ = toObservable(todoStorage)                        // Observable<TodoState>\nconst count$ = toObservable(todoStorage, (s) => s.todos.length) // Observable<number>, distinct",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Поток сразу эмитит текущее состояние при подписке (через getStateSync()), а затем — на каждое\nизменение. Под капотом shareReplay(1), поэтому несколько подписчиков делят одну подписку на стор.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 57,
+                      "end": 71
+                    },
+                    {
+                      "start": 117,
+                      "end": 131
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 51,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "in-effects",
+          "title": "В эффектах",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Типовой кейс — пробросить состояние одного стора как внешний стейт в createEffectConfig:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 69,
+                      "end": 87
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const auth$ = toObservable(authStorage, (s) => s.user.id)\n\ncreateEffectConfig: () => ({\n  externalStates: { userId: auth$ },\n})",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 12,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "custom-equals",
+          "title": "Кастомный equals",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Второй аргумент селекторной перегрузки — компаратор для distinctUntilChanged:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 56,
+                      "end": 76
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// эмитит только при смене чётности количества\nconst parity$ = toObservable(todoStorage, (s) => s.todos.length, (a, b) => a % 2 === b % 2)",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 8,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "notes",
+          "title": "Заметки",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "В React-компоненте не создавай toObservable(...) прямо в рендере — мемоизируй (это и делает\nuseStorageObservable) или подписывайся через useObservable с фабрикой.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 19,
+                              "end": 21
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 31,
+                              "end": 48
+                            },
+                            {
+                              "start": 137,
+                              "end": 150
+                            }
+                          ],
+                          "links": [
+                            {
+                              "start": 92,
+                              "end": 112,
+                              "url": "./use-storage-observable.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Для простого реактивного чтения в компоненте без RxJS бери\nuseStorageSubscribe.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 59,
+                              "end": 78,
+                              "url": "./use-storage-subscribe.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 30,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        }
+      ],
+      "features": [],
+      "frontMatter": {},
+      "metadata": {
+        "lastModified": "2026-06-28T13:46:03.065Z",
+        "wordCount": 222,
+        "readingTime": 2,
+        "sectionsCount": 5,
+        "codeBlocksCount": 3
+      }
+    },
+    "use-storage-observable": {
+      "title": "useStorageObservable",
+      "sections": [
+        {
+          "id": "usestorageobservable",
+          "title": "useStorageObservable",
+          "level": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "RxJS-путь «store → реактивно в компоненте». Эквивалент useStorageSubscribe,\nно поверх потока состояния можно навесить RxJS-операторы (debounceTime, scan, map, …). См. обзор\nРеактивное чтение. В примерах — сквозной todoStorage\n(TodoState = { todos: Todo[]; filter: Filter }).",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 134,
+                      "end": 146
+                    },
+                    {
+                      "start": 148,
+                      "end": 152
+                    },
+                    {
+                      "start": 154,
+                      "end": 157
+                    },
+                    {
+                      "start": 214,
+                      "end": 225
+                    },
+                    {
+                      "start": 227,
+                      "end": 272
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 55,
+                      "end": 74,
+                      "url": "./use-storage-subscribe.md",
+                      "title": null
+                    },
+                    {
+                      "start": 173,
+                      "end": 190,
+                      "url": "./reactive-reads.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 36,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "basic-usage",
+          "title": "Базовое использование",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { useStorageObservable } from 'synapse-storage/react'\n\n// всё состояние\nconst state = useStorageObservable(todoStorage)\n\n// срез — эмитит только при изменении среза (distinctUntilChanged)\nconst total = useStorageObservable(todoStorage, (s) => s.todos.length)",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Внутри — мемоизирующая обёртка над toObservable + useObservable. Observable\nмемоизируется по [storage], поэтому хук не переподписывается на каждый рендер. Это убирает footgun\nинлайнового toObservable(storage) прямо в рендере (новый Observable каждый рендер → лишние\nпереподписки).",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 116,
+                      "end": 118
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 35,
+                      "end": 47
+                    },
+                    {
+                      "start": 50,
+                      "end": 63
+                    },
+                    {
+                      "start": 93,
+                      "end": 102
+                    },
+                    {
+                      "start": 187,
+                      "end": 208
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 35,
+                      "end": 47,
+                      "url": "./to-observable.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 34,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "operators-on-top-of-the-stream",
+          "title": "Операторы поверх потока",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Если нужна цепочка операторов с состоянием (debounceTime, scan), собери поток через toObservable и\nподпишись useObservable с фабрикой — так подписка стабильна, а цепочка пересобирается только по deps:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 44,
+                      "end": 56
+                    },
+                    {
+                      "start": 58,
+                      "end": 62
+                    },
+                    {
+                      "start": 84,
+                      "end": 96
+                    },
+                    {
+                      "start": 109,
+                      "end": 122
+                    },
+                    {
+                      "start": 195,
+                      "end": 199
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { useObservable } from 'synapse-storage/react'\nimport { toObservable } from 'synapse-storage/reactive'\nimport { debounceTime, map } from 'rxjs/operators'\n\nconst debouncedCount = useObservable(\n  () => toObservable(todoStorage, (s) => s.todos.length).pipe(debounceTime(200), map((n) => `${n} задач`)),\n  '0 задач',\n  [todoStorage],\n)",
+                "meta": null
+              }
+            },
+            {
+              "type": "blockquote",
+              "data": {
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "data": {
+                      "text": "useStorageObservable возвращает уже готовое значение, а не Observable, — навесить на него\n.pipe(...) нельзя. Если нужны операторы, строй поток через toObservable (как выше). Главное — не\nвызывай toObservable(...) прямо в теле рендера без мемоизации: это создаёт новый Observable на\nкаждый рендер → переподписка и сброс состояния debounceTime/scan. Фабрика + deps в useObservable\nкак раз держат подписку стабильной.",
+                      "formatting": {
+                        "bold": [
+                          {
+                            "start": 36,
+                            "end": 52
+                          }
+                        ],
+                        "italic": [],
+                        "code": [
+                          {
+                            "start": 0,
+                            "end": 20
+                          },
+                          {
+                            "start": 59,
+                            "end": 69
+                          },
+                          {
+                            "start": 90,
+                            "end": 100
+                          },
+                          {
+                            "start": 149,
+                            "end": 161
+                          },
+                          {
+                            "start": 195,
+                            "end": 212
+                          },
+                          {
+                            "start": 268,
+                            "end": 278
+                          },
+                          {
+                            "start": 329,
+                            "end": 341
+                          },
+                          {
+                            "start": 342,
+                            "end": 346
+                          },
+                          {
+                            "start": 358,
+                            "end": 362
+                          },
+                          {
+                            "start": 365,
+                            "end": 378
+                          }
+                        ],
+                        "links": []
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 84,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": true,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "notes",
+          "title": "Заметки",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Селекторный поток уже прогоняется через distinctUntilChanged — внешний distinctUntilChanged после\nселектора почти всегда избыточен.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 40,
+                              "end": 60
+                            },
+                            {
+                              "start": 71,
+                              "end": 91
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Нужно реактивное чтение без RxJS? Бери useStorageSubscribe.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 39,
+                              "end": 58,
+                              "url": "./use-storage-subscribe.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 21,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        }
+      ],
+      "features": [],
+      "frontMatter": {},
+      "metadata": {
+        "lastModified": "2026-06-28T14:02:35.958Z",
+        "wordCount": 263,
+        "readingTime": 2,
+        "sectionsCount": 4,
+        "codeBlocksCount": 2
+      }
+    },
+    "use-storage-subscribe": {
+      "title": "useStorageSubscribe",
+      "sections": [
+        {
+          "id": "usestoragesubscribe",
+          "title": "useStorageSubscribe",
+          "level": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Реактивное чтение хранилища по умолчанию. Под капотом useSyncExternalStore (Concurrent-safe), без\nRxJS. Ререндерит компонент при изменении выбранного среза. См. также обзор Реактивное\nчтение. В примерах — сквозной todoStorage\n(TodoState = { todos: Todo[]; filter: Filter }).",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 28,
+                      "end": 40
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 54,
+                      "end": 74
+                    },
+                    {
+                      "start": 214,
+                      "end": 225
+                    },
+                    {
+                      "start": 227,
+                      "end": 272
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 173,
+                      "end": 190,
+                      "url": "./reactive-reads.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 35,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "basic-usage",
+          "title": "Базовое использование",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Для примитивных срезов дедупликация идёт автоматически через Object.is — лишних ререндеров нет.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 4,
+                      "end": 15
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 61,
+                      "end": 70
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { useStorageSubscribe } from 'synapse-storage/react'\n\n// примитивный срез — дедупликация автоматом\nconst filter = useStorageSubscribe(todoStorage, (s) => s.filter)",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 12,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "object-and-array-slices-equals",
+          "title": "Объектные и массивные срезы: equals",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Если селектор возвращает объект/массив (новая ссылка на каждый тик) или нужно ререндерить только при\nизменении конкретного среза — передавай equals. Он держит стабильный снапшот и гасит лишние ререндеры,\nдаже если остальное состояние стора поменялось.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 141,
+                      "end": 147
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// постороннее изменение стора не дёргает компонент, пока `todos` не сменился по ссылке\nconst todos = useStorageSubscribe(todoStorage, (s) => s.todos, {\n  equals: (a, b) => a === b,\n})",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "equals возвращает true, когда срезы «равны» — тогда снапшот не меняется по ссылке и ререндера нет.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 6
+                    },
+                    {
+                      "start": 18,
+                      "end": 22
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 50,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "notes",
+          "title": "Заметки",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "useSyncExternalStore даёт корректную работу в Concurrent Mode (без tearing).",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 20
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Принимает IStorageBase — общий интерфейс sync- и async-хранилищ; подписка одинакова для всех типов.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 10,
+                              "end": 22
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "До инициализации можно передать null вместо стора — хук вернёт undefined.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 32,
+                              "end": 36
+                            },
+                            {
+                              "start": 63,
+                              "end": 72
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Нужны RxJS-операторы поверх потока? Это useStorageObservable. Читаешь\nSelectorAPI? Это useSelector. Нужно прочитать без ререндера в обработчике?\ntodoStorage.getStateSync() — см. обзор.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 70,
+                              "end": 81
+                            },
+                            {
+                              "start": 145,
+                              "end": 171
+                            }
+                          ],
+                          "links": [
+                            {
+                              "start": 40,
+                              "end": 60,
+                              "url": "./use-storage-observable.md",
+                              "title": null
+                            },
+                            {
+                              "start": 87,
+                              "end": 98,
+                              "url": "./selector-system.md",
+                              "title": null
+                            },
+                            {
+                              "start": 178,
+                              "end": 183,
+                              "url": "./reactive-reads.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 53,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        }
+      ],
+      "features": [],
+      "frontMatter": {},
+      "metadata": {
+        "lastModified": "2026-06-28T13:45:17.885Z",
+        "wordCount": 219,
+        "readingTime": 2,
+        "sectionsCount": 4,
+        "codeBlocksCount": 2
       }
     },
     "writing-data": {

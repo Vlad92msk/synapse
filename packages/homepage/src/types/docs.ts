@@ -1,10 +1,10 @@
 // Auto-generated types for structured documentation
-// Generated at: 2026-06-28T12:34:00.787Z
+// Generated at: 2026-06-28T14:03:00.029Z
 // Master locale: en
 
 export type Locale = 'en' | 'ru'
 
-export type DocKey = 'api-client' | 'api-ssr-pokemon' | 'api-use-mutation' | 'api-use-query' | 'architecture' | 'await-synapse' | 'create-synapse-basic' | 'create-synapse-dispatcher' | 'create-synapse-effects' | 'delete-has-keys' | 'dependencies' | 'dispatcher-detailed' | 'event-bus' | 'forms' | 'hook-indexeddb' | 'hook-local-storage' | 'hook-memory' | 'indexeddb-storage' | 'install' | 'local-storage' | 'memory-storage' | 'middlewares' | 'persist-migration' | 'pokemon-advanced' | 'reactive-reads' | 'reading-data' | 'selector-system' | 'singleton' | 'ssr-hydration' | 'static-create' | 'storage-factory' | 'subscriptions' | 'synapse-awaiter' | 'synapse-ctx' | 'writing-data'
+export type DocKey = 'api-client' | 'api-ssr-pokemon' | 'api-use-mutation' | 'api-use-query' | 'architecture' | 'await-synapse' | 'create-synapse-basic' | 'create-synapse-dispatcher' | 'create-synapse-effects' | 'delete-has-keys' | 'dependencies' | 'dispatcher-detailed' | 'event-bus' | 'forms' | 'hook-indexeddb' | 'hook-local-storage' | 'hook-memory' | 'indexeddb-storage' | 'install' | 'local-storage' | 'memory-storage' | 'middlewares' | 'persist-migration' | 'pokemon-advanced' | 'reactive-reads' | 'reading-data' | 'selector-system' | 'singleton' | 'ssr-hydration' | 'static-create' | 'storage-factory' | 'subscriptions' | 'synapse-awaiter' | 'synapse-ctx' | 'to-observable' | 'use-storage-observable' | 'use-storage-subscribe' | 'writing-data'
 
 
 // ✅ ТОЧНЫЕ ТИПЫ ДЛЯ SECTION ID
@@ -33,7 +33,7 @@ export interface DocSectionIds {
   'middlewares': 'middlewares' | 'configuration' | '1-batching-middleware' | '2-shallowcompare-middleware' | '3-shallowcompare-a-custom-comparator' | '4-combining-middlewares' | '5-broadcastmiddleware-cross-tab-synchronization' | '6-logger-middleware-dev-only' | '7-custom-middleware' | 'types'
   'persist-migration': 'persist-migrations-version-migrate' | 'how-it-works' | 'bumping-the-version-without-migrate' | 'migrate-runs-once' | 'ssr-hydration' | 'types' | 'see-also'
   'pokemon-advanced': 'pokemon-advanced-the-recipe-the-whole-data-layer-on-pokeapi' | 'module-structure' | 'data-flow' | '1-types-and-state-shape-pokemontypests' | '2-apiclient-mappers-pokemonapits' | '3-external-settings-pokemonsettingsts' | '4-selectors-pokemonselectorsts' | '5-dispatcher-pokemondispatcherts' | '6-effects-pokemoneffectsts' | '7-assembly-pokemonsynapsets' | '8-react-pokemonadvancedexampletsx-pokemondemotsx' | 'the-5-state-request-protocol' | 'map-capability-page'
-  'reactive-reads': 'reactive-reads-controlled-re-renders' | 'usestoragesubscribe-the-default' | 'usestorageobservable-the-rxjs-path' | 'usestorageref-you-control-the-re-renders' | 'toobservable-outside-react'
+  'reactive-reads': 'reactive-reads-controlled-re-renders' | 'which-tool-when' | 'reading-without-a-re-render-is-not-a-hook'
   'reading-data': 'reading-data-getgetstate' | 'getkey-reading-a-single-field' | 'getstate-the-entire-state' | 'getstatesync-synchronous-read-from-cache' | 'haskey-keys-checking-and-listing'
   'selector-system': 'selectors' | '1-the-selectors-class' | '2-thisselect-simple' | '3-thiscombine-combined' | '4-reactive-selector-selector' | '5-useselector-react-hook-current-value' | '6-programmatic-access-to-a-selector'
   'singleton': 'singleton-pattern' | 'enabling-singleton' | 'merge-strategies-mergestrategy' | 'custom-key-singletonkey' | 'singleton-in-react' | 'full-singletonoptions-configuration'
@@ -43,6 +43,9 @@ export interface DocSectionIds {
   'subscriptions': 'subscriptions-subscribe' | '1-subscribekey-callback' | '2-subscribeselector-callback' | '3-subscribetoallcallback' | '4-usestoragesubscribe-react-hook'
   'synapse-awaiter': 'createsynapseawaiter-framework-independent-awaiter' | 'imports-and-creation' | 'programmatic-surface' | 'ssr-sync-fast-path' | 'usage-in-react-without-the-wrapper'
   'synapse-ctx': 'createsynapsectx' | 'creating-the-context' | 'using-the-hooks-in-child-components' | 'hoc-contextsynapse' | 'usesynapsestate-only-with-effects' | 'reactive-reads-in-a-component' | 'cleanup' | 'three-variants-of-createsynapsectx' | 'ssr-server-rendering-seeded-sync-stores'
+  'to-observable': 'toobservable' | 'basic-usage' | 'in-effects' | 'custom-equals' | 'notes'
+  'use-storage-observable': 'usestorageobservable' | 'basic-usage' | 'operators-on-top-of-the-stream' | 'notes'
+  'use-storage-subscribe': 'usestoragesubscribe' | 'basic-usage' | 'object-and-array-slices-equals' | 'notes'
   'writing-data': 'writing-data-setupdate' | 'setkey-value-set-a-value-by-key' | 'updateupdater-change-several-fields-at-once' | 'set-vs-update-when-to-use-which' | 'reset-reset-to-initialstate'
 }
 
@@ -168,5 +171,5 @@ export interface DocsData {
 
 // Constants
 export const AVAILABLE_LOCALES: Locale[] = ['en', 'ru']
-export const AVAILABLE_DOC_KEYS: DocKey[] = ['api-client', 'api-ssr-pokemon', 'api-use-mutation', 'api-use-query', 'architecture', 'await-synapse', 'create-synapse-basic', 'create-synapse-dispatcher', 'create-synapse-effects', 'delete-has-keys', 'dependencies', 'dispatcher-detailed', 'event-bus', 'forms', 'hook-indexeddb', 'hook-local-storage', 'hook-memory', 'indexeddb-storage', 'install', 'local-storage', 'memory-storage', 'middlewares', 'persist-migration', 'pokemon-advanced', 'reactive-reads', 'reading-data', 'selector-system', 'singleton', 'ssr-hydration', 'static-create', 'storage-factory', 'subscriptions', 'synapse-awaiter', 'synapse-ctx', 'writing-data']
+export const AVAILABLE_DOC_KEYS: DocKey[] = ['api-client', 'api-ssr-pokemon', 'api-use-mutation', 'api-use-query', 'architecture', 'await-synapse', 'create-synapse-basic', 'create-synapse-dispatcher', 'create-synapse-effects', 'delete-has-keys', 'dependencies', 'dispatcher-detailed', 'event-bus', 'forms', 'hook-indexeddb', 'hook-local-storage', 'hook-memory', 'indexeddb-storage', 'install', 'local-storage', 'memory-storage', 'middlewares', 'persist-migration', 'pokemon-advanced', 'reactive-reads', 'reading-data', 'selector-system', 'singleton', 'ssr-hydration', 'static-create', 'storage-factory', 'subscriptions', 'synapse-awaiter', 'synapse-ctx', 'to-observable', 'use-storage-observable', 'use-storage-subscribe', 'writing-data']
 export const MASTER_LOCALE: Locale = 'en'

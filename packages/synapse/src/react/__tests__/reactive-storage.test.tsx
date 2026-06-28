@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
 //
 // Реактивное чтение хранилища с контролем ререндеров (STORAGE_REACTIVE_AUDIT):
-//  - useStorageRef:        свежее значение в ref без ререндера + ручной/условный триггер
 //  - useStorageSubscribe:  опция equals (мемоизация снапшота)
 //  - useStorageObservable: мемоизирующая обёртка над toObservable+useObservable
 //  - toObservable(storage, selector): поток среза с distinctUntilChanged
-import { act, render, renderHook, screen } from '@testing-library/react'
+import { act, renderHook } from '@testing-library/react'
 import { firstValueFrom, toArray } from 'rxjs'
 import { take } from 'rxjs/operators'
 import { describe, expect, it, vi } from 'vitest'
@@ -13,7 +12,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { MemoryStorage } from '../../core/storage/adapters/memory-storage.service'
 import { toObservable } from '../../reactive/effects/utils/toObservable'
 import { useStorageObservable } from '../hooks/useStorageObservable'
-import { useStorageRef } from '../hooks/useStorageRef'
 import { useStorageSubscribe } from '../hooks/useStorageSubscribe'
 
 interface State extends Record<string, any> {
@@ -31,137 +29,6 @@ async function makeStorage(initial: Partial<State> = {}) {
   await storage.initialize()
   return storage
 }
-
-// ── useStorageRef ─────────────────────────────────────────────────────────────
-describe('useStorageRef', () => {
-  it('держит свежее значение в ref БЕЗ ререндера (default)', async () => {
-    const storage = await makeStorage({ count: 1 })
-
-    let renders = 0
-    const { result } = renderHook(() => {
-      renders++
-      return useStorageRef(storage, (s) => s.count)
-    })
-
-    expect(result.current.get()).toBe(1)
-    const afterMount = renders
-
-    act(() => {
-      storage.update((s) => {
-        s.count = 2
-      })
-    })
-
-    // ref свежий, но компонент НЕ ререндерился
-    expect(result.current.ref.current).toBe(2)
-    expect(result.current.get()).toBe(2)
-    expect(renders).toBe(afterMount)
-
-    await storage.destroy()
-  })
-
-  it('rerender() форсит ререндер и показывает свежее значение', async () => {
-    const storage = await makeStorage({ count: 0 })
-
-    function Comp() {
-      const { get, rerender } = useStorageRef(storage, (s) => s.count)
-      return (
-        <button type="button" data-testid="btn" onClick={rerender}>
-          {get()}
-        </button>
-      )
-    }
-
-    render(<Comp />)
-    expect(screen.getByTestId('btn').textContent).toBe('0')
-
-    // меняем стор — пока без ручного триггера UI не обновляется
-    act(() => {
-      storage.update((s) => {
-        s.count = 7
-      })
-    })
-    expect(screen.getByTestId('btn').textContent).toBe('0')
-
-    // ручной триггер → UI берёт свежее значение из ref
-    act(() => {
-      screen.getByTestId('btn').click()
-    })
-    expect(screen.getByTestId('btn').textContent).toBe('7')
-
-    await storage.destroy()
-  })
-
-  it('shouldRerender: ререндерит только когда предикат true', async () => {
-    const storage = await makeStorage({ count: 0 })
-
-    let renders = 0
-    const { result } = renderHook(() => {
-      renders++
-      // ререндерим только на чётные значения
-      return useStorageRef(storage, (s) => s.count, {
-        shouldRerender: (_prev, next) => next % 2 === 0,
-      })
-    })
-    const afterMount = renders
-
-    act(() => {
-      storage.update((s) => {
-        s.count = 1 // нечётное → нет ререндера
-      })
-    })
-    expect(renders).toBe(afterMount)
-    expect(result.current.get()).toBe(1) // но ref свежий
-
-    act(() => {
-      storage.update((s) => {
-        s.count = 2 // чётное → ререндер
-      })
-    })
-    expect(renders).toBe(afterMount + 1)
-    expect(result.current.get()).toBe(2)
-
-    await storage.destroy()
-  })
-
-  it('селектор по умолчанию возвращает всё состояние', async () => {
-    const storage = await makeStorage({ count: 5 })
-    const { result } = renderHook(() => useStorageRef(storage))
-    expect(result.current.get()).toEqual({ count: 5, other: 'a', todos: [] })
-    await storage.destroy()
-  })
-
-  it('null storage → undefined без падения', async () => {
-    const { result } = renderHook(() => useStorageRef<State, number>(null, (s) => s.count))
-    expect(result.current.get()).toBeUndefined()
-  })
-
-  it('отписывается на unmount (нет апдейтов ref после размонтирования)', async () => {
-    const storage = await makeStorage({ count: 0 })
-    const { result, unmount } = renderHook(() => useStorageRef(storage, (s) => s.count))
-
-    unmount()
-    act(() => {
-      storage.update((s) => {
-        s.count = 99
-      })
-    })
-    // ref «заморожен» на значении до unmount — подписки больше нет
-    expect(result.current.ref.current).toBe(0)
-
-    await storage.destroy()
-  })
-
-  it('handle (ref/get/rerender) стабилен между рендерами', async () => {
-    const storage = await makeStorage()
-    const { result, rerender } = renderHook(() => useStorageRef(storage, (s) => s.count))
-    const first = result.current
-    rerender()
-    expect(result.current).toBe(first)
-    expect(result.current.get).toBe(first.get)
-    await storage.destroy()
-  })
-})
 
 // ── useStorageSubscribe: equals ───────────────────────────────────────────────
 describe('useStorageSubscribe equals', () => {

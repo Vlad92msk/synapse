@@ -31,7 +31,17 @@ export const DOC_NAV: NavPillar[] = [
       },
       {
         titleKey: 'nav.sections.data',
-        items: [{ key: 'reading-data' }, { key: 'writing-data' }, { key: 'operations' }, { key: 'subscriptions' }, { key: 'reactive-reads' }, { key: 'selector-system' }],
+        items: [
+          { key: 'reading-data' },
+          { key: 'writing-data' },
+          { key: 'operations' },
+          { key: 'subscriptions' },
+          { key: 'reactive-reads' },
+          { key: 'use-storage-subscribe' },
+          { key: 'use-storage-observable' },
+          { key: 'to-observable' },
+          { key: 'selector-system' },
+        ],
       },
       {
         titleKey: 'nav.sections.patterns',

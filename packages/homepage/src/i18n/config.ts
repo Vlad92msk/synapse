@@ -133,7 +133,10 @@ const resources = {
       'nav.sections.data.writing-data': 'Запись данных (set/update)',
       'nav.sections.data.operations': 'remove / has / keys / clear / reset',
       'nav.sections.data.subscriptions': 'Подписки (subscribe)',
-      'nav.sections.data.reactive-reads': 'Реактивное чтение (ререндеры)',
+      'nav.sections.data.reactive-reads': 'Реактивное чтение (обзор)',
+      'nav.sections.data.use-storage-subscribe': 'useStorageSubscribe',
+      'nav.sections.data.use-storage-observable': 'useStorageObservable',
+      'nav.sections.data.to-observable': 'toObservable',
       'nav.sections.data.selector-system': 'Селекторы (createSelector)',
 
       'nav.sections.synapse': 'createSynapse',
@@ -334,7 +337,10 @@ const resources = {
       'nav.sections.data.writing-data': 'Writing data (set/update)',
       'nav.sections.data.operations': 'remove / has / keys / clear / reset',
       'nav.sections.data.subscriptions': 'Subscriptions (subscribe)',
-      'nav.sections.data.reactive-reads': 'Reactive reads (re-renders)',
+      'nav.sections.data.reactive-reads': 'Reactive reads (overview)',
+      'nav.sections.data.use-storage-subscribe': 'useStorageSubscribe',
+      'nav.sections.data.use-storage-observable': 'useStorageObservable',
+      'nav.sections.data.to-observable': 'toObservable',
       'nav.sections.data.selector-system': 'Selectors (createSelector)',
 
       'nav.sections.synapse': 'createSynapse',

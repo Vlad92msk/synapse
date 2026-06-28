@@ -233,10 +233,8 @@
   },
   "reactive-reads": {
     "0": "reactive-reads-controlled-re-renders",
-    "1": "usestoragesubscribe-the-default",
-    "2": "usestorageobservable-the-rxjs-path",
-    "3": "usestorageref-you-control-the-re-renders",
-    "4": "toobservable-outside-react"
+    "1": "which-tool-when",
+    "2": "reading-without-a-re-render-is-not-a-hook"
   },
   "reading-data": {
     "0": "reading-data-getgetstate",
@@ -308,6 +306,25 @@
     "6": "cleanup",
     "7": "three-variants-of-createsynapsectx",
     "8": "ssr-server-rendering-seeded-sync-stores"
+  },
+  "to-observable": {
+    "0": "toobservable",
+    "1": "basic-usage",
+    "2": "in-effects",
+    "3": "custom-equals",
+    "4": "notes"
+  },
+  "use-storage-observable": {
+    "0": "usestorageobservable",
+    "1": "basic-usage",
+    "2": "operators-on-top-of-the-stream",
+    "3": "notes"
+  },
+  "use-storage-subscribe": {
+    "0": "usestoragesubscribe",
+    "1": "basic-usage",
+    "2": "object-and-array-slices-equals",
+    "3": "notes"
   },
   "writing-data": {
     "0": "writing-data-setupdate",
