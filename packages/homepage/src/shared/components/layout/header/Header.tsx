@@ -55,7 +55,7 @@ export const Header = () => {
   }
 
   return (
-    <header className={style.header}>
+    <header className={`${style.header} ${isMenuOpen ? style.headerMenuOpen : ''}`}>
       {isMenuOpen && <div className={style.overlay} onClick={() => toggleMenu(false)} />}
       <div className={style.inner}>
         <div className={style.brand} onClick={() => handleNavClick('/')}>

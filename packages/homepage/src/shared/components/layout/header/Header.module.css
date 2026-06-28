@@ -10,6 +10,13 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
+/* Когда открыто мобильное меню — поднимаем весь stacking-context шапки выше
+   элементов страницы докизов (их сайдбар/оверлей доходят до z-index 1002),
+   иначе overlay (999) и панель (1001) внутри шапки оказываются под ними. */
+.headerMenuOpen {
+  z-index: 1100;
+}
+
 .inner {
   max-width: 1200px;
   margin: 0 auto;
@@ -163,9 +170,21 @@
 
 .overlay {
   position: fixed;
-  inset: 0;
+  /* backdrop-filter у .header делает его containing block'ом для fixed-потомков,
+     поэтому inset:0 растянул бы оверлей лишь на высоту шапки (64px).
+     Задаём размеры в единицах вьюпорта — они не зависят от containing block. */
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
   background: rgba(0, 0, 0, 0.5);
   z-index: 999;
+  /* cursor: pointer обязателен, иначе на iOS Safari тап по div не вызывает onClick */
+  cursor: pointer;
+  /* не даём прокрутке «протекать» на страницу под оверлеем */
+  touch-action: none;
+  overscroll-behavior: contain;
 }
 
 /* Адаптив */
@@ -179,7 +198,8 @@
     top: 0;
     right: -100%;
     width: 280px;
-    height: 100vh;
+    height: 100vh; /* фолбэк для браузеров без dvh */
+    height: 100dvh;
     background: var(--bg-secondary);
     backdrop-filter: blur(20px);
     flex-direction: column;
@@ -187,6 +207,8 @@
     align-items: stretch;
     gap: 8px;
     padding: 90px 24px 30px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     transition: right 0.3s ease;
     border-left: 1px solid var(--border-subtle);
     z-index: 1001;
