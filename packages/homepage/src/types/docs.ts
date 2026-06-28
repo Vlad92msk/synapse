@@ -1,10 +1,10 @@
 // Auto-generated types for structured documentation
-// Generated at: 2026-06-28T11:20:18.448Z
+// Generated at: 2026-06-28T12:26:13.205Z
 // Master locale: en
 
 export type Locale = 'en' | 'ru'
 
-export type DocKey = 'api-client' | 'api-ssr-pokemon' | 'api-use-mutation' | 'api-use-query' | 'architecture' | 'await-synapse' | 'create-synapse-basic' | 'create-synapse-dispatcher' | 'create-synapse-effects' | 'delete-has-keys' | 'dependencies' | 'dispatcher-detailed' | 'event-bus' | 'hook-indexeddb' | 'hook-local-storage' | 'hook-memory' | 'indexeddb-storage' | 'install' | 'local-storage' | 'memory-storage' | 'middlewares' | 'persist-migration' | 'pokemon-advanced' | 'reading-data' | 'selector-system' | 'singleton' | 'ssr-hydration' | 'static-create' | 'storage-factory' | 'subscriptions' | 'synapse-awaiter' | 'synapse-ctx' | 'writing-data'
+export type DocKey = 'api-client' | 'api-ssr-pokemon' | 'api-use-mutation' | 'api-use-query' | 'architecture' | 'await-synapse' | 'create-synapse-basic' | 'create-synapse-dispatcher' | 'create-synapse-effects' | 'delete-has-keys' | 'dependencies' | 'dispatcher-detailed' | 'event-bus' | 'forms' | 'hook-indexeddb' | 'hook-local-storage' | 'hook-memory' | 'indexeddb-storage' | 'install' | 'local-storage' | 'memory-storage' | 'middlewares' | 'persist-migration' | 'pokemon-advanced' | 'reactive-reads' | 'reading-data' | 'selector-system' | 'singleton' | 'ssr-hydration' | 'static-create' | 'storage-factory' | 'subscriptions' | 'synapse-awaiter' | 'synapse-ctx' | 'writing-data'
 
 
 // ✅ ТОЧНЫЕ ТИПЫ ДЛЯ SECTION ID
@@ -22,6 +22,7 @@ export interface DocSectionIds {
   'dependencies': 'cross-module-dependencies' | 'the-real-case-pokemon-settingsstorage' | 'four-patterns-of-cross-module-communication' | 'initialization-order'
   'dispatcher-detailed': 'dispatcher-in-detail' | 'standalone-use' | 'dispatcher-surface' | 'thisaction' | 'thissignal' | 'thisapiactions-callable-group-lifecycle' | 'thiswatcher' | 'reserved-field-names' | 'usage'
   'event-bus': 'createeventbus-event-bus' | 'imports' | 'creating' | 'actionspublish-publishing-an-event' | 'actionssubscribe-subscribing-to-events' | 'actionsgeteventhistory-event-history' | 'actionsgetactivesubscriptions-active-subscriptions' | 'actionsclearevents-clearing-events' | 'destroy' | 'example-pokemon-publishes-other-modules-listen' | 'relation-to-createsynapse-the-bus-as-an-externaldispatcher' | 'see-also'
+  'forms': 'forms-the-recipe-form-state-on-a-synapse-storage' | 'honest-scope-what-this-is-and-isnt' | 'state-shape' | 'writing-a-field' | 'level-1-a-basic-form-memorystorage' | 'level-2-validation-as-a-middleware' | 'level-3-draft-persistence-cross-tab-sync' | 'level-4-ssr-server-rendered-form' | 'submit-flow' | 'dynamic-array-fields-brief' | 'see-also'
   'hook-indexeddb': 'usecreatestorage-indexeddb' | 'usage' | 'when-to-use' | 'when-not-to-use'
   'hook-local-storage': 'usecreatestorage-localstorage' | 'usage' | 'when-to-use' | 'when-not-to-use'
   'hook-memory': 'usecreatestorage-memory' | 'usecreatestorage' | 'reading-state-usestoragesubscribe' | 'when-to-use' | 'when-not-to-use'
@@ -32,6 +33,7 @@ export interface DocSectionIds {
   'middlewares': 'middlewares' | 'configuration' | '1-batching-middleware' | '2-shallowcompare-middleware' | '3-shallowcompare-a-custom-comparator' | '4-combining-middlewares' | '5-broadcastmiddleware-cross-tab-synchronization' | '6-logger-middleware-dev-only' | '7-custom-middleware' | 'types'
   'persist-migration': 'persist-migrations-version-migrate' | 'how-it-works' | 'bumping-the-version-without-migrate' | 'migrate-runs-once' | 'ssr-hydration' | 'types' | 'see-also'
   'pokemon-advanced': 'pokemon-advanced-the-recipe-the-whole-data-layer-on-pokeapi' | 'module-structure' | 'data-flow' | '1-types-and-state-shape-pokemontypests' | '2-apiclient-mappers-pokemonapits' | '3-external-settings-pokemonsettingsts' | '4-selectors-pokemonselectorsts' | '5-dispatcher-pokemondispatcherts' | '6-effects-pokemoneffectsts' | '7-assembly-pokemonsynapsets' | '8-react-pokemonadvancedexampletsx-pokemondemotsx' | 'the-5-state-request-protocol' | 'map-capability-page'
+  'reactive-reads': 'reactive-reads-controlled-re-renders' | 'usestoragesubscribe-the-default' | 'usestorageobservable-the-rxjs-path' | 'usestorageref-you-control-the-re-renders' | 'toobservable-outside-react'
   'reading-data': 'reading-data-getgetstate' | 'getkey-reading-a-single-field' | 'getstate-the-entire-state' | 'getstatesync-synchronous-read-from-cache' | 'haskey-keys-checking-and-listing'
   'selector-system': 'selectors' | '1-the-selectors-class' | '2-thisselect-simple' | '3-thiscombine-combined' | '4-reactive-selector-selector' | '5-useselector-react-hook-current-value' | '6-programmatic-access-to-a-selector'
   'singleton': 'singleton-pattern' | 'enabling-singleton' | 'merge-strategies-mergestrategy' | 'custom-key-singletonkey' | 'singleton-in-react' | 'full-singletonoptions-configuration'
@@ -166,5 +168,5 @@ export interface DocsData {
 
 // Constants
 export const AVAILABLE_LOCALES: Locale[] = ['en', 'ru']
-export const AVAILABLE_DOC_KEYS: DocKey[] = ['api-client', 'api-ssr-pokemon', 'api-use-mutation', 'api-use-query', 'architecture', 'await-synapse', 'create-synapse-basic', 'create-synapse-dispatcher', 'create-synapse-effects', 'delete-has-keys', 'dependencies', 'dispatcher-detailed', 'event-bus', 'hook-indexeddb', 'hook-local-storage', 'hook-memory', 'indexeddb-storage', 'install', 'local-storage', 'memory-storage', 'middlewares', 'persist-migration', 'pokemon-advanced', 'reading-data', 'selector-system', 'singleton', 'ssr-hydration', 'static-create', 'storage-factory', 'subscriptions', 'synapse-awaiter', 'synapse-ctx', 'writing-data']
+export const AVAILABLE_DOC_KEYS: DocKey[] = ['api-client', 'api-ssr-pokemon', 'api-use-mutation', 'api-use-query', 'architecture', 'await-synapse', 'create-synapse-basic', 'create-synapse-dispatcher', 'create-synapse-effects', 'delete-has-keys', 'dependencies', 'dispatcher-detailed', 'event-bus', 'forms', 'hook-indexeddb', 'hook-local-storage', 'hook-memory', 'indexeddb-storage', 'install', 'local-storage', 'memory-storage', 'middlewares', 'persist-migration', 'pokemon-advanced', 'reactive-reads', 'reading-data', 'selector-system', 'singleton', 'ssr-hydration', 'static-create', 'storage-factory', 'subscriptions', 'synapse-awaiter', 'synapse-ctx', 'writing-data']
 export const MASTER_LOCALE: Locale = 'en'

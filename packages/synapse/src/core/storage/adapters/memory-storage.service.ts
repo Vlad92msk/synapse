@@ -1,7 +1,7 @@
 import { SingletonMixin } from '../modules/singleton/mixin.util'
 import { IEventEmitter, ILogger, MemoryStorageConfig, StorageType } from '../storage.interface'
 import { StorageKey, StorageKeyType } from '../utils/storage-key'
-import { getValueByPath, parsePath, setValueByPath } from './path.utils'
+import { getValueByPath, removeValueByPath, setValueByPath } from './path.utils'
 import { SyncBaseStorage } from './sync-base-storage.service'
 
 export class MemoryStorage<T extends Record<string, any>> extends SyncBaseStorage<T> {
@@ -52,13 +52,8 @@ export class MemoryStorage<T extends Record<string, any>> extends SyncBaseStorag
   protected doSet(key: StorageKeyType, value: any): void {
     const state = this.storage.get(this.name) || {}
 
-    if (key instanceof StorageKey && key.isUnparseable()) {
-      state[key.valueOf()] = value
-      this.storage.set(this.name, state)
-      return
-    }
-
-    const newState = setValueByPath({ ...state }, key, value)
+    // setValueByPath иммутабелен → не мутирует state/initialState (хранятся по ссылке).
+    const newState = setValueByPath(state, key, value)
     this.storage.set(this.name, newState)
   }
 
@@ -66,35 +61,21 @@ export class MemoryStorage<T extends Record<string, any>> extends SyncBaseStorag
     const state = this.storage.get(this.name)
     if (!state) return false
 
-    if (key instanceof StorageKey && key.isUnparseable()) {
-      const rawKey = key.valueOf()
-      if (!(rawKey in state)) return false
-      delete state[rawKey]
-      this.storage.set(this.name, state)
-      return true
-    }
+    const { state: newState, removed } = removeValueByPath(state, key)
+    if (!removed) return false
 
-    const pathParts = parsePath(key)
-    const parentPath = pathParts.slice(0, -1).join('.')
-    const lastKey = pathParts[pathParts.length - 1]
-    const parent = parentPath ? getValueByPath(state, parentPath) : state
-
-    if (!parent || !(lastKey in parent)) return false
-
-    delete parent[lastKey]
-    this.storage.set(this.name, state)
+    this.storage.set(this.name, newState)
     return true
   }
 
   protected doUpdate(updates: Array<{ key: StorageKeyType; value: any }>): void {
-    const currentState = this.storage.get(this.name) || {}
-    const newState = { ...currentState }
+    let newState: Record<string, any> = { ...(this.storage.get(this.name) || {}) }
 
     for (const { key, value } of updates) {
       if (key instanceof StorageKey && key.isUnparseable()) {
         newState[key.valueOf()] = value
       } else {
-        setValueByPath(newState, key, value)
+        newState = setValueByPath(newState, key, value)
       }
     }
 

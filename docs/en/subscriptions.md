@@ -73,3 +73,12 @@ function TodoStats({ storage }: { storage: ISyncStorage<TodoState> }) {
   return <div>{filter}: {active} active of {total}</div>
 }
 ```
+
+Pass `equals` to skip re-renders when an object/array slice is referentially unchanged:
+
+```typescript
+const todos = useStorageSubscribe(storage, (s) => s.todos, { equals: (a, b) => a === b })
+```
+
+See **[Reactive reads & controlled re-renders](./reactive-reads.md)** for `useStorageObservable`
+(RxJS path) and `useStorageRef` (read without re-rendering / manual trigger).

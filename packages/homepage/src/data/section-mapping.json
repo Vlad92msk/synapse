@@ -133,6 +133,19 @@
     "10": "relation-to-createsynapse-the-bus-as-an-externaldispatcher",
     "11": "see-also"
   },
+  "forms": {
+    "0": "forms-the-recipe-form-state-on-a-synapse-storage",
+    "1": "honest-scope-what-this-is-and-isnt",
+    "2": "state-shape",
+    "3": "writing-a-field",
+    "4": "level-1-a-basic-form-memorystorage",
+    "5": "level-2-validation-as-a-middleware",
+    "6": "level-3-draft-persistence-cross-tab-sync",
+    "7": "level-4-ssr-server-rendered-form",
+    "8": "submit-flow",
+    "9": "dynamic-array-fields-brief",
+    "10": "see-also"
+  },
   "hook-indexeddb": {
     "0": "usecreatestorage-indexeddb",
     "1": "usage",
@@ -217,6 +230,13 @@
     "10": "8-react-pokemonadvancedexampletsx-pokemondemotsx",
     "11": "the-5-state-request-protocol",
     "12": "map-capability-page"
+  },
+  "reactive-reads": {
+    "0": "reactive-reads-controlled-re-renders",
+    "1": "usestoragesubscribe-the-default",
+    "2": "usestorageobservable-the-rxjs-path",
+    "3": "usestorageref-you-control-the-re-renders",
+    "4": "toobservable-outside-react"
   },
   "reading-data": {
     "0": "reading-data-getgetstate",

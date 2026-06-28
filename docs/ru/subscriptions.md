@@ -73,3 +73,12 @@ function TodoStats({ storage }: { storage: ISyncStorage<TodoState> }) {
   return <div>{filter}: {active} активных из {total}</div>
 }
 ```
+
+Передай `equals`, чтобы не ререндерить, когда объектный/массивный срез не изменился по ссылке:
+
+```typescript
+const todos = useStorageSubscribe(storage, (s) => s.todos, { equals: (a, b) => a === b })
+```
+
+Про `useStorageObservable` (RxJS-путь) и `useStorageRef` (чтение без ререндера / ручной триггер) — см.
+**[Реактивное чтение и управляемые ререндеры](./reactive-reads.md)**.

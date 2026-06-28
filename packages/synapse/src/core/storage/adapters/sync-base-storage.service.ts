@@ -300,7 +300,10 @@ export abstract class SyncBaseStorage<T extends Record<string, any>> extends Sto
 
       this.logger?.debug?.('Notifying subscribers about changes:', { keys: actuallyChangedKeys })
 
-      this._stateCache = { ...currentState, ...finalUpdates } as T
+      // Читаем кэш из стора (как в set()), а не пересобираем из currentState+finalUpdates:
+      // иначе ключи, дописанные middleware во время dispatch (напр. `errors`), терялись бы
+      // в getStateSync() / useStorageSubscribe.
+      this._stateCache = this.getRawState()
 
       this.notifySubscribers(GLOBAL_SUBSCRIPTION_KEY, {
         type: StorageEvents.STORAGE_UPDATE,

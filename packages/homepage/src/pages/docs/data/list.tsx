@@ -15,6 +15,7 @@ import {
   WritingDataPage,
   OperationsPage,
   SubscriptionsPage,
+  ReactiveReadsPage,
   SelectorSystemPage,
   SynapseBasicPage,
   SynapseDispatcherPage,
@@ -34,6 +35,7 @@ import {
   EventBusPage,
   PersistMigrationPage,
   SsrHydrationPage,
+  FormsPage,
 } from '../sections'
 
 export const sectionsList: Record<string, ReactNode> = {
@@ -54,6 +56,7 @@ export const sectionsList: Record<string, ReactNode> = {
   'nav.sections.data.writing-data': <WritingDataPage />,
   'nav.sections.data.operations': <OperationsPage />,
   'nav.sections.data.subscriptions': <SubscriptionsPage />,
+  'nav.sections.data.reactive-reads': <ReactiveReadsPage />,
   'nav.sections.data.selector-system': <SelectorSystemPage />,
   // createSynapse
   'nav.sections.synapse.synapse-basic': <SynapseBasicPage />,
@@ -78,6 +81,8 @@ export const sectionsList: Record<string, ReactNode> = {
   'nav.sections.api-hooks.api-use-query': <ApiUseQueryPage />,
   'nav.sections.api-hooks.api-use-mutation': <ApiUseMutationPage />,
   'nav.sections.api-hooks.api-ssr-pokemon': <ApiSsrPokemonPage />,
-  // Рецепты
+  // Рецепты (State Manager)
+  'nav.sections.state-recipes.forms': <FormsPage />,
+  // Рецепты (BLL)
   'nav.sections.recipes.pokemon-advanced': <PokemonAdvancedPage />,
 }

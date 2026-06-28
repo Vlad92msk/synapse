@@ -8274,6 +8274,1570 @@
         "codeBlocksCount": 11
       }
     },
+    "forms": {
+      "title": "Forms — the recipe: form state on a synapse storage",
+      "sections": [
+        {
+          "id": "forms-the-recipe-form-state-on-a-synapse-storage",
+          "title": "Forms — the recipe: form state on a synapse storage",
+          "level": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Managing forms is the most common application case. This page is a copy-paste recipe: take the\ncode, drop it into your project, and you get your own form management instead of react-hook-form /\nFormik / Final Form — zero dependencies.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 67,
+                      "end": 84
+                    },
+                    {
+                      "start": 216,
+                      "end": 233
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 176,
+                      "end": 191
+                    },
+                    {
+                      "start": 194,
+                      "end": 200
+                    },
+                    {
+                      "start": 203,
+                      "end": 213
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Why do it on a synapse storage at all? Because a storage gives you, by architecture, things a\nform library bolts on from the side:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 68,
+                      "end": 83
+                    }
+                  ],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "SSR + hydration — the form renders on the server with values/errors already filled in, and the\nclient picks it up without a flash (see SSR hydration).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 15
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 135,
+                              "end": 148,
+                              "url": "./ssr-hydration.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Cross-tab sync — syncBroadcastMiddleware syncs the form draft between tabs.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 14
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 17,
+                              "end": 40
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Persist + migrations — LocalStorage / IndexedDB keep the draft between sessions,\nversion + migrate migrate the draft schema (see Persist migrations).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 20
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 23,
+                              "end": 35
+                            },
+                            {
+                              "start": 38,
+                              "end": 47
+                            },
+                            {
+                              "start": 81,
+                              "end": 88
+                            },
+                            {
+                              "start": 91,
+                              "end": 98
+                            }
+                          ],
+                          "links": [
+                            {
+                              "start": 129,
+                              "end": 147,
+                              "url": "./persist-migration.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Validation as a middleware — centralized, reusable, runs on any write to the store\nregardless of the source (see Middlewares).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 26
+                            },
+                            {
+                              "start": 60,
+                              "end": 63
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 113,
+                              "end": 124,
+                              "url": "./middlewares.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The recipe is built as a ladder: copy exactly the level you need.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 157,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "honest-scope-what-this-is-and-isnt",
+          "title": "Honest scope — what this is and isn't",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "This is not \"react-hook-form but better at everything\". What we reproduce vs. do differently:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 8,
+                      "end": 11
+                    }
+                  ],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Covered: form state { values, errors, touched, isValid, isSubmitting, submitCount };\nper-field re-render isolation via useStorageSubscribe; synchronous schema validation as a\nmiddleware; touched / isValid; submit flow; reset().",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 0,
+                      "end": 8
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 20,
+                      "end": 83
+                    },
+                    {
+                      "start": 119,
+                      "end": 138
+                    },
+                    {
+                      "start": 187,
+                      "end": 194
+                    },
+                    {
+                      "start": 197,
+                      "end": 204
+                    },
+                    {
+                      "start": 219,
+                      "end": 226
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Different / not out of the box (on purpose):",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 0,
+                      "end": 44
+                    }
+                  ],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "No field registration à la register('email') for native inputs — we use controlled inputs +\nset/update.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 27,
+                              "end": 44
+                            },
+                            {
+                              "start": 92,
+                              "end": 95
+                            },
+                            {
+                              "start": 96,
+                              "end": 102
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Async validation (server-side checks) is a separate, more involved pattern (via effects/BLL or by\nhand); the base recipe is synchronous.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Array / dynamic fields are shown briefly — they are a complication.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Performance on huge forms is fine thanks to point-wise subscriptions, but measure, don't\nassume.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 74,
+                              "end": 81
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "This is a recipe, not a mini-library: there is no public form API to import — you own the code.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 133,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "state-shape",
+          "title": "State shape",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "type FormErrors<V> = Partial<Record<keyof V & string, string>>\n\ninterface FormState<V extends Record<string, any>> {\n  values: V\n  errors: FormErrors<V>\n  touched: Partial<Record<keyof V & string, boolean>>\n  isValid: boolean\n  isSubmitting: boolean\n  submitCount: number\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "We use a sign-up form as the running example:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "interface SignUp {\n  email: string\n  password: string\n  confirm: string\n}\n\nconst makeInitial = (): FormState<SignUp> => ({\n  values: { email: '', password: '', confirm: '' },\n  errors: {},\n  touched: {},\n  isValid: false,\n  isSubmitting: false,\n  submitCount: 0,\n})",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 9,
+            "codeBlocksCount": 2,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "writing-a-field",
+          "title": "Writing a field",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Write each field by its path. Two tiny helpers keep the call sites tidy:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { ISyncStorage } from 'synapse-storage/core'\n\nfunction setField<V extends Record<string, any>>(storage: ISyncStorage<FormState<V>>, name: keyof V & string, value: V[keyof V]) {\n  storage.set(`values.${name}`, value)\n}\n\nfunction touchField<V extends Record<string, any>>(storage: ISyncStorage<FormState<V>>, name: keyof V & string) {\n  storage.set(`touched.${name}`, true)\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "set writes immutably — it never mutates your initialState, so reset() always restores the\noriginal values — and it updates getStateSync() synchronously, so the SSR snapshot and\nuseStorageSubscribe see fresh errors immediately.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 11,
+                      "end": 20
+                    },
+                    {
+                      "start": 138,
+                      "end": 151
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 3
+                    },
+                    {
+                      "start": 45,
+                      "end": 57
+                    },
+                    {
+                      "start": 62,
+                      "end": 69
+                    },
+                    {
+                      "start": 123,
+                      "end": 137
+                    },
+                    {
+                      "start": 177,
+                      "end": 196
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Re-render isolation does not suffer: a field selector returns a primitive that doesn't change by\nreference for untouched fields, so useStorageSubscribe with equals skips their re-render.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 25,
+                      "end": 28
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 132,
+                      "end": 151
+                    },
+                    {
+                      "start": 157,
+                      "end": 163
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 72,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "level-1-a-basic-form-memorystorage",
+          "title": "Level 1 — a basic form (MemoryStorage)",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "A bare skeleton: controlled inputs, point-wise reads, submit, reset. No validation yet.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "tsx",
+                "code": "import { MemoryStorage, ISyncStorage } from 'synapse-storage/core'\nimport { useStorageSubscribe } from 'synapse-storage/react'\nimport { useMemo, useEffect, useState, FormEvent } from 'react'\n\nfunction useFormStorage() {\n  const [storage] = useState<ISyncStorage<FormState<SignUp>>>(() => new MemoryStorage<FormState<SignUp>>({ name: 'sign-up', initialState: makeInitial() }))\n  const [ready, setReady] = useState(false)\n  useEffect(() => {\n    let alive = true\n    storage.initialize().then(() => alive && setReady(true))\n    return () => {\n      alive = false\n      storage.destroy()\n    }\n  }, [storage])\n  return { storage, ready }\n}\n\n// A single field — re-renders ONLY when its own value/error changes.\nfunction Field({ storage, name, type = 'text' }: { storage: ISyncStorage<FormState<SignUp>>; name: keyof SignUp; type?: string }) {\n  const value = useStorageSubscribe(storage, (s) => s.values[name] ?? '', { equals: Object.is })\n  const error = useStorageSubscribe(storage, (s) => (s.touched[name] ? s.errors[name] : undefined), { equals: Object.is })\n\n  return (\n    <label>\n      <input\n        type={type}\n        value={value as string}\n        onChange={(e) => setField(storage, name, e.target.value)}\n        onBlur={() => touchField(storage, name)}\n      />\n      {error ? <span role=\"alert\">{error}</span> : null}\n    </label>\n  )\n}\n\nexport function SignUpForm() {\n  const { storage, ready } = useFormStorage()\n  if (!ready) return null\n\n  const onSubmit = (e: FormEvent) => {\n    e.preventDefault()\n    const { values } = storage.getState()\n    console.log('submit', values)\n  }\n\n  return (\n    <form onSubmit={onSubmit}>\n      <Field storage={storage} name=\"email\" />\n      <Field storage={storage} name=\"password\" type=\"password\" />\n      <Field storage={storage} name=\"confirm\" type=\"password\" />\n      <button type=\"submit\">Sign up</button>\n      <button type=\"button\" onClick={() => storage.reset()}>Reset</button>\n    </form>\n  )\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The key win is already here: useStorageSubscribe(storage, s => s.values[name], { equals }) subscribes\nthe component to one field — typing in email does not re-render password. More on reads in\nSubscriptions.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 119,
+                      "end": 122
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 29,
+                      "end": 90
+                    },
+                    {
+                      "start": 141,
+                      "end": 146
+                    },
+                    {
+                      "start": 166,
+                      "end": 174
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 193,
+                      "end": 206,
+                      "url": "./subscriptions.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 44,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "level-2-validation-as-a-middleware",
+          "title": "Level 2 — validation as a middleware",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Validation as a middleware is centralized: it runs on every write to the store, no matter who\nwrote it. The schema is a plain function — zero dependencies.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 30,
+                      "end": 41
+                    }
+                  ],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { SyncMiddleware, StorageAction } from 'synapse-storage/core'\n\ntype Validator<V> = (values: V) => FormErrors<V>\n\nconst shallowEqualErrors = (a: Record<string, any>, b: Record<string, any>) => {\n  const ak = Object.keys(a)\n  const bk = Object.keys(b)\n  return ak.length === bk.length && ak.every((k) => a[k] === b[k])\n}\n\n// Validate ONLY when something inside `values.*` changes (guard, see point #2 below).\nconst touchesValues = (action: StorageAction) => {\n  if (action.type === 'set') return String(action.key ?? '').split('.')[0] === 'values'\n  if (action.type === 'update') return (action.metadata?.changedPaths ?? []).some((p: string) => String(p).split('.')[0] === 'values')\n  return false\n}\n\nexport function createFormValidationMiddleware<V extends Record<string, any>>(validate: Validator<V>): SyncMiddleware {\n  return {\n    name: 'form-validation',\n    reducer: (api) => (next) => (action) => {\n      // 1) Write the value FIRST — never block invalid input.\n      const result = next(action)\n      if (!touchesValues(action)) return result\n\n      // 2) Compute errors from the already-written state.\n      const state = api.getState() as FormState<V>\n      const errors = validate(state.values)\n      const isValid = Object.keys(errors).length === 0\n\n      if (shallowEqualErrors(state.errors ?? {}, errors) && state.isValid === isValid) return result\n\n      // 3) Write derived state DIRECTLY (bypassing dispatch) → no recursive validation.\n      api.storage.doSet('errors', errors)\n      api.storage.doSet('isValid', isValid)\n\n      // 4) Notify point-wise subscribers and subscribeToAll / useStorageSubscribe.\n      api.storage.notifySubscribers('errors', errors)\n      api.storage.notifySubscribers('isValid', isValid)\n      api.storage.notifySubscribers('*', { type: 'storage:update', key: ['errors', 'isValid'], value: { errors, isValid }, changedPaths: ['errors', 'isValid'] })\n\n      return result\n    },\n  }\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The schema for the sign-up form:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const validateSignUp: Validator<SignUp> = (v) => {\n  const errors: FormErrors<SignUp> = {}\n  if (!v.email) errors.email = 'Email is required'\n  else if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(v.email)) errors.email = 'Email is invalid'\n  if (v.password.length < 6) errors.password = 'Min 6 characters'\n  if (v.confirm !== v.password) errors.confirm = 'Passwords do not match'\n  return errors\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Wire it into the storage:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const storage = new MemoryStorage<FormState<SignUp>>({\n  name: 'sign-up',\n  initialState: makeInitial(),\n  middlewares: () => [createFormValidationMiddleware(validateSignUp)],\n})",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "That's it — Field from level 1 already reads errors[name], so errors light up live.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 12,
+                      "end": 17
+                    },
+                    {
+                      "start": 45,
+                      "end": 57
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "heading",
+              "data": {
+                "text": "The three gotchas of a validation middleware",
+                "level": 3,
+                "id": "the-three-gotchas-of-a-validation-middleware"
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "These are the traps that make a naive validation middleware misbehave — the recipe above already\nhandles all three:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Don't block writing an invalid value. The input must show what the user typed. So the\nmiddleware runs next(action) first (writes the value), then computes errors. Returning the\nVALUE_NOT_CHANGED sentinel on invalid input would make the field \"stick\".",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 37
+                            },
+                            {
+                              "start": 115,
+                              "end": 120
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 102,
+                              "end": 114
+                            },
+                            {
+                              "start": 177,
+                              "end": 194
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "ordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "No recursion. Writing errors inside the middleware must not re-trigger validation. We solve\nit two ways at once: write errors via api.storage.doSet + notifySubscribers directly\n(bypassing the dispatch chain), and only validate when a values.* key changes\n(touchesValues guard).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 13
+                            },
+                            {
+                              "start": 168,
+                              "end": 176
+                            },
+                            {
+                              "start": 209,
+                              "end": 212
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 22,
+                              "end": 28
+                            },
+                            {
+                              "start": 119,
+                              "end": 125
+                            },
+                            {
+                              "start": 130,
+                              "end": 147
+                            },
+                            {
+                              "start": 150,
+                              "end": 167
+                            },
+                            {
+                              "start": 234,
+                              "end": 242
+                            },
+                            {
+                              "start": 256,
+                              "end": 269
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "ordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "When to validate. Live on every write here, but the UI shows an error only for touched\nfields (see Field). Validate-on-blur or validate-on-submit are variations of the same guard.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 17
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 79,
+                              "end": 86
+                            },
+                            {
+                              "start": 99,
+                              "end": 104
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "ordered"
+                }
+              ]
+            },
+            {
+              "type": "heading",
+              "data": {
+                "text": "Alternative: validation via a selector (derived state)",
+                "level": 3,
+                "id": "alternative-validation-via-a-selector-derived-state"
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "You can compute errors as derived state with a selector instead of a middleware:\nerrors = createSelector(values => validate(values)) (see Selectors).",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 26,
+                      "end": 39
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 81,
+                      "end": 132
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 138,
+                      "end": 147,
+                      "url": "./selector-system.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Selector — simpler, no recursion to worry about. But errors are not part of the persisted /\nshared state, and there is no single point that forces validation on every writer.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 8
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Middleware — pick it when you need centralization, or to persist / share errors as part of\nthe state (e.g. across tabs). This recipe uses the middleware as the primary approach.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 10
+                            },
+                            {
+                              "start": 57,
+                              "end": 72
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 276,
+            "codeBlocksCount": 3,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "level-3-draft-persistence-cross-tab-sync",
+          "title": "Level 3 — draft persistence + cross-tab sync",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Turn the form into a draft that survives reloads and stays in sync across tabs. Swap\nMemoryStorage for LocalStorage and add syncBroadcastMiddleware:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 85,
+                      "end": 98
+                    },
+                    {
+                      "start": 103,
+                      "end": 115
+                    },
+                    {
+                      "start": 124,
+                      "end": 147
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { LocalStorage, syncBroadcastMiddleware } from 'synapse-storage/core'\n\nconst storage = new LocalStorage<FormState<SignUp>>({\n  name: 'sign-up',\n  initialState: makeInitial(),\n  version: 1, // bump when the form shape changes (see persist-migration)\n  middlewares: () => [\n    createFormValidationMiddleware(validateSignUp),\n    syncBroadcastMiddleware({ storageType: 'localStorage', storageName: 'sign-up' }),\n  ],\n})",
+                "meta": null
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Persist — LocalStorage saves the draft automatically; on the next visit the user continues\nwhere they left off.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 7
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 10,
+                              "end": 22
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Cross-tab — syncBroadcastMiddleware broadcasts set/update to other tabs over the\nlocalStorage-sign-up channel; the same draft is mirrored everywhere.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 9
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 12,
+                              "end": 35
+                            },
+                            {
+                              "start": 47,
+                              "end": 50
+                            },
+                            {
+                              "start": 51,
+                              "end": 57
+                            },
+                            {
+                              "start": 81,
+                              "end": 101
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Migrations — if the form shape changes between releases, bump version and add migrate so an\nold draft is converted instead of breaking. See Persist migrations.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 10
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 62,
+                              "end": 69
+                            },
+                            {
+                              "start": 78,
+                              "end": 85
+                            }
+                          ],
+                          "links": [
+                            {
+                              "start": 140,
+                              "end": 158,
+                              "url": "./persist-migration.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "blockquote",
+              "data": {
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "data": {
+                      "text": "Order matters: keep validation before broadcast so other tabs receive an already-validated\nstate.",
+                      "formatting": {
+                        "bold": [
+                          {
+                            "start": 31,
+                            "end": 37
+                          }
+                        ],
+                        "italic": [],
+                        "code": [],
+                        "links": []
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "For drafts you usually don't want to wipe storage on unmount — set clearOnDestroy: false\n(the LocalStorage default) so the draft survives.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 67,
+                      "end": 88
+                    },
+                    {
+                      "start": 94,
+                      "end": 106
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 119,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": true,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "level-4-ssr-server-rendered-form",
+          "title": "Level 4 — SSR (server-rendered form)",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The form can render on the server with values/errors already in place, then hydrate on the client\nwith no flash. The same pattern as SSR hydration: call hydrate(snapshot)\nbefore initialize() so the server snapshot is not overwritten by initialState.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 171,
+                      "end": 177
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 153,
+                      "end": 170
+                    },
+                    {
+                      "start": 178,
+                      "end": 190
+                    },
+                    {
+                      "start": 236,
+                      "end": 248
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 133,
+                      "end": 146,
+                      "url": "./ssr-hydration.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// On the server: build a snapshot (e.g. from a failed POST with field errors) and serialize it.\nconst serverState: FormState<SignUp> = {\n  ...makeInitial(),\n  values: { email: 'taken@example.com', password: '', confirm: '' },\n  errors: { email: 'This email is already registered' },\n  touched: { email: true },\n}\n// → embed JSON.stringify(serverState) into the HTML.",
+                "meta": null
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// On the client: seed the storage from the embedded snapshot BEFORE initialize().\nconst storage = new MemoryStorage<FormState<SignUp>>({\n  name: 'sign-up',\n  initialState: makeInitial(),\n  middlewares: () => [createFormValidationMiddleware(validateSignUp)],\n})\n\nstorage.hydrate(window.__FORM_STATE__) // BEFORE initialize() → initialState won't clobber it\nawait storage.initialize()",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "getStateSync() gives you the snapshot to serialize; hydrate() called after initialize()\nreplaces the state and notifies subscribers. At module level there is dehydrateModule() and the\nReact wrapper createSynapseCtx — reuse the same pattern when the form is part of a larger module.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 69,
+                      "end": 74
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 14
+                    },
+                    {
+                      "start": 52,
+                      "end": 61
+                    },
+                    {
+                      "start": 75,
+                      "end": 87
+                    },
+                    {
+                      "start": 158,
+                      "end": 175
+                    },
+                    {
+                      "start": 198,
+                      "end": 214
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 81,
+            "codeBlocksCount": 2,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "submit-flow",
+          "title": "Submit flow",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "isSubmitting blocks a double submit; on failure you can push server errors into the same errors\nslice:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 12
+                    },
+                    {
+                      "start": 89,
+                      "end": 95
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "async function submit(storage: ISyncStorage<FormState<SignUp>>, send: (values: SignUp) => Promise<void>) {\n  const state = storage.getState()\n  if (state.isSubmitting) return // guard against double submit\n  if (!state.isValid) {\n    // mark everything touched so all errors show\n    storage.set('touched', Object.fromEntries(Object.keys(state.values).map((k) => [k, true])))\n    return\n  }\n\n  storage.update((s) => {\n    s.isSubmitting = true\n    s.submitCount += 1\n  })\n  try {\n    await send(state.values)\n    storage.reset() // success → back to initialState\n  } catch (e: any) {\n    storage.set('errors', { email: e?.message ?? 'Submit failed' })\n  } finally {\n    storage.set('isSubmitting', false)\n  }\n}",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 17,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "dynamic-array-fields-brief",
+          "title": "Dynamic / array fields (brief)",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Arrays live in values like everything else; replace the array by its path on edits:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 15,
+                      "end": 21
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "function addItem(storage: ISyncStorage<FormState<any>>, key: string, item: unknown) {\n  const list = storage.getState().values[key] ?? []\n  storage.set(`values.${key}`, [...list, item])\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Validation stays the same — the middleware re-validates the whole values on each change.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 66,
+                      "end": 72
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 29,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "see-also",
+          "title": "See also",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Middlewares — the middleware API used here",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 11,
+                              "url": "./middlewares.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Subscriptions · Selectors — point-wise reads and the\nselector-based validation alternative",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 13,
+                              "url": "./subscriptions.md",
+                              "title": null
+                            },
+                            {
+                              "start": 16,
+                              "end": 25,
+                              "url": "./selector-system.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Persist migrations — draft persistence + schema migrations",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 18,
+                              "url": "./persist-migration.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "SSR hydration — server-rendered form",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 13,
+                              "url": "./ssr-hydration.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Pokemon Advanced — the reference recipe for a full module",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 16,
+                              "url": "./pokemon-advanced.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 41,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        }
+      ],
+      "features": [],
+      "frontMatter": {},
+      "metadata": {
+        "lastModified": "2026-06-28T12:25:37.362Z",
+        "wordCount": 1932,
+        "readingTime": 10,
+        "sectionsCount": 11,
+        "codeBlocksCount": 12
+      }
+    },
     "hook-indexeddb": {
       "title": "useCreateStorage (indexedDB)",
       "sections": [
@@ -12734,6 +14298,495 @@
         "codeBlocksCount": 14
       }
     },
+    "reactive-reads": {
+      "title": "Reactive reads & controlled re-renders",
+      "sections": [
+        {
+          "id": "reactive-reads-controlled-re-renders",
+          "title": "Reactive reads & controlled re-renders",
+          "level": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The everyday pattern: you mutate a storage with ordinary methods (set/update) and read it\nreactively inside a component. Synapse gives you several hooks for this — the difference between\nthem is how much control you get over re-renders. The examples use the end-to-end todoStorage\n(TodoState = { todos: Todo[]; filter: Filter }).",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 90,
+                      "end": 100
+                    },
+                    {
+                      "start": 195,
+                      "end": 235
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 66,
+                      "end": 69
+                    },
+                    {
+                      "start": 70,
+                      "end": 76
+                    },
+                    {
+                      "start": 269,
+                      "end": 280
+                    },
+                    {
+                      "start": 282,
+                      "end": 327
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "table",
+              "data": {
+                "headers": [
+                  "Hook",
+                  "Re-renders",
+                  "RxJS",
+                  "Use when"
+                ],
+                "rows": [
+                  {
+                    "cells": [
+                      "Hook",
+                      "Re-renders",
+                      "RxJS",
+                      "Use when"
+                    ],
+                    "type": "header"
+                  },
+                  {
+                    "cells": [
+                      "useStorageSubscribe",
+                      "on every change of the selected slice",
+                      "no",
+                      "default reactive read"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "useSelector",
+                      "on every change of the selected slice",
+                      "no",
+                      "reading a SelectorAPI"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "useStorageObservable",
+                      "on every change of the selected slice",
+                      "yes",
+                      "you need RxJS operators"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "useStorageRef",
+                      "only when you decide",
+                      "no",
+                      "you control re-renders yourself"
+                    ],
+                    "type": "data"
+                  }
+                ]
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 104,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": true,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "usestoragesubscribe-the-default",
+          "title": "useStorageSubscribe — the default",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "useSyncExternalStore under the hood (Concurrent-safe), no RxJS. Re-renders when the selected slice\nchanges. For primitive selectors it already de-dupes via Object.is; for object/array slices pass\nequals so an unrelated store change doesn't re-render the component.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 20
+                    },
+                    {
+                      "start": 156,
+                      "end": 165
+                    },
+                    {
+                      "start": 196,
+                      "end": 202
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { useStorageSubscribe } from 'synapse-storage/react'\n\n// primitive slice — de-duped automatically\nconst filter = useStorageSubscribe(todoStorage, (s) => s.filter)\n\n// object/array slice — `equals` keeps a stable snapshot and skips needless re-renders\nconst todos = useStorageSubscribe(todoStorage, (s) => s.todos, {\n  equals: (a, b) => a === b,\n})",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 35,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "usestorageobservable-the-rxjs-path",
+          "title": "useStorageObservable — the RxJS path",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "A memoizing wrapper over toObservable + useObservable. Equivalent to useStorageSubscribe, but\nyou can pipe RxJS operators on top of the state stream. It memoizes the observable by [storage], so\nit does not re-subscribe on every render (the footgun of inlining toObservable(storage) in\nrender).",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 202,
+                      "end": 205
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 25,
+                      "end": 37
+                    },
+                    {
+                      "start": 40,
+                      "end": 53
+                    },
+                    {
+                      "start": 69,
+                      "end": 88
+                    },
+                    {
+                      "start": 180,
+                      "end": 189
+                    },
+                    {
+                      "start": 260,
+                      "end": 281
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { useStorageObservable } from 'synapse-storage/react'\n\n// whole state\nconst state = useStorageObservable(todoStorage)\n\n// a slice — emits only when the slice changes (distinctUntilChanged)\nconst total = useStorageObservable(todoStorage, (s) => s.todos.length)",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 43,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "usestorageref-you-control-the-re-renders",
+          "title": "useStorageRef — you control the re-renders",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Holds the fresh value in a ref (updated on every store change) but does not re-render the\ncomponent automatically. It returns { ref, get, rerender } and hands control to you:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 10,
+                      "end": 15
+                    },
+                    {
+                      "start": 72,
+                      "end": 75
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 27,
+                      "end": 30
+                    },
+                    {
+                      "start": 126,
+                      "end": 148
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { useStorageRef } from 'synapse-storage/react'\n\nfunction TodoCounter() {\n  const { ref, get, rerender } = useStorageRef(todoStorage, (s) => s.todos.length)\n\n  // \"no re-render at all\" — read the latest value on demand inside a handler\n  const logCount = () => console.log('current count:', get())\n\n  // \"re-render when I decide\" — UI reads ref.current, you re-render manually\n  return (\n    <div>\n      <span>{ref.current}</span>\n      <button onClick={logCount}>log</button>\n      <button onClick={rerender}>refresh</button>\n    </div>\n  )\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "\"Re-render conditionally\" — pass shouldRerender(prev, next); the component re-renders only when\nit returns true (the value in ref is already fresh at that point):",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 0,
+                      "end": 25
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 33,
+                      "end": 59
+                    },
+                    {
+                      "start": 107,
+                      "end": 111
+                    },
+                    {
+                      "start": 126,
+                      "end": 129
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// re-render only when crossing the empty/non-empty boundary\nconst { ref } = useStorageRef(todoStorage, (s) => s.todos.length, {\n  shouldRerender: (prev, next) => (prev === 0) !== (next === 0),\n})",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Notes:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "useStorageRef does not use useSyncExternalStore (it can't skip a re-render on the\ncomponent's decision), so it intentionally drops the Concurrent-Mode tearing guarantee — acceptable\nfor the \"I control re-renders\" scenario.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 19,
+                              "end": 22
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 13
+                            },
+                            {
+                              "start": 27,
+                              "end": 47
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "The returned { ref, get, rerender } handle is stable across renders.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 13,
+                              "end": 35
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "The default selector returns the whole state. Pass null as the storage (before init) and get()\nreturns undefined.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 51,
+                              "end": 55
+                            },
+                            {
+                              "start": 89,
+                              "end": 94
+                            },
+                            {
+                              "start": 103,
+                              "end": 112
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 116,
+            "codeBlocksCount": 2,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "toobservable-outside-react",
+          "title": "toObservable — outside React",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "For effects and non-React code, toObservable(storage) turns a storage into an Observable of the\nwhole state. With a selector it emits only the slice, de-duped via distinctUntilChanged (default\nObject.is, or a custom equals):",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 32,
+                      "end": 53
+                    },
+                    {
+                      "start": 78,
+                      "end": 88
+                    },
+                    {
+                      "start": 163,
+                      "end": 183
+                    },
+                    {
+                      "start": 193,
+                      "end": 202
+                    },
+                    {
+                      "start": 216,
+                      "end": 222
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { toObservable } from 'synapse-storage/reactive'\n\nconst state$ = toObservable(todoStorage)                       // Observable<TodoState>\nconst count$ = toObservable(todoStorage, (s) => s.todos.length) // Observable<number>, distinct",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 33,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        }
+      ],
+      "features": [],
+      "frontMatter": {},
+      "metadata": {
+        "lastModified": "2026-06-28T11:38:18.564Z",
+        "wordCount": 596,
+        "readingTime": 3,
+        "sectionsCount": 5,
+        "codeBlocksCount": 5
+      }
+    },
     "reading-data": {
       "title": "Reading data (get/getState)",
       "sections": [
@@ -14789,11 +16842,69 @@
                 "code": "import { useStorageSubscribe } from 'synapse-storage/react'\n\nfunction TodoStats({ storage }: { storage: ISyncStorage<TodoState> }) {\n  // Subscribing to a single field\n  const filter = useStorageSubscribe(storage, (s) => s.filter)\n\n  // Computed value — re-render only when the result changes\n  const total = useStorageSubscribe(storage, (s) => s.todos.length)\n  const active = useStorageSubscribe(storage, (s) => s.todos.filter((t) => !t.done).length)\n\n  return <div>{filter}: {active} active of {total}</div>\n}",
                 "meta": null
               }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Pass equals to skip re-renders when an object/array slice is referentially unchanged:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 5,
+                      "end": 11
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const todos = useStorageSubscribe(storage, (s) => s.todos, { equals: (a, b) => a === b })",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "See Reactive reads & controlled re-renders for useStorageObservable\n(RxJS path) and useStorageRef (read without re-rendering / manual trigger).",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 4,
+                      "end": 42
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 47,
+                      "end": 67
+                    },
+                    {
+                      "start": 84,
+                      "end": 97
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 4,
+                      "end": 42,
+                      "url": "./reactive-reads.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
             }
           ],
           "metadata": {
-            "wordCount": 0,
-            "codeBlocksCount": 1,
+            "wordCount": 30,
+            "codeBlocksCount": 2,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
@@ -14805,11 +16916,11 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-27T08:25:45.589Z",
-        "wordCount": 279,
+        "lastModified": "2026-06-28T11:40:00.416Z",
+        "wordCount": 327,
         "readingTime": 2,
         "sectionsCount": 5,
-        "codeBlocksCount": 4
+        "codeBlocksCount": 5
       }
     },
     "synapse-awaiter": {
@@ -25408,6 +27519,1566 @@
         "codeBlocksCount": 10
       }
     },
+    "forms": {
+      "title": "Формы — рецепт: состояние формы на хранилище synapse",
+      "sections": [
+        {
+          "id": "forms-the-recipe-form-state-on-a-synapse-storage",
+          "title": "Формы — рецепт: состояние формы на хранилище synapse",
+          "level": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Управление формами — самый частый прикладной кейс. Эта страница — копипастный рецепт: берёте\nкод, вставляете к себе и получаете собственное управление формой вместо react-hook-form /\nFormik / Final Form — без зависимостей.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 66,
+                      "end": 84
+                    },
+                    {
+                      "start": 205,
+                      "end": 221
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 165,
+                      "end": 180
+                    },
+                    {
+                      "start": 183,
+                      "end": 189
+                    },
+                    {
+                      "start": 192,
+                      "end": 202
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Зачем вообще делать форму на хранилище synapse? Потому что хранилище даёт по архитектуре то,\nчто form-библиотеки прикручивают сбоку:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 74,
+                      "end": 88
+                    }
+                  ],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "SSR + гидрация — форма рендерится на сервере с уже заполненными значениями/ошибками, а клиент\nподхватывает её без вспышки (см. SSR-гидрация).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 14
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 127,
+                              "end": 139,
+                              "url": "./ssr-hydration.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Синхронизация между вкладками — syncBroadcastMiddleware синхронизирует черновик формы между\nвкладками.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 29
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 32,
+                              "end": 55
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Persist + миграции — LocalStorage / IndexedDB сохраняют черновик между сессиями,\nversion + migrate мигрируют схему черновика (см. Persist-миграции).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 18
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 21,
+                              "end": 33
+                            },
+                            {
+                              "start": 36,
+                              "end": 45
+                            },
+                            {
+                              "start": 81,
+                              "end": 88
+                            },
+                            {
+                              "start": 91,
+                              "end": 98
+                            }
+                          ],
+                          "links": [
+                            {
+                              "start": 130,
+                              "end": 146,
+                              "url": "./persist-migration.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Валидация как middleware — централизованная, переиспользуемая, срабатывает на любую запись\nв стор независимо от источника (см. Middlewares).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 24
+                            },
+                            {
+                              "start": 78,
+                              "end": 83
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 127,
+                              "end": 138,
+                              "url": "./middlewares.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Рецепт построен лесенкой: копируйте ровно тот уровень, который нужен.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 125,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "honest-scope-what-this-is-and-isnt",
+          "title": "Честные границы — что это и что нет",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Это не «react-hook-form, но во всём лучше». Что воспроизводим, а что делаем осознанно иначе:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 4,
+                      "end": 6
+                    }
+                  ],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Закрываем: стейт формы { values, errors, touched, isValid, isSubmitting, submitCount };\nизоляцию ре-рендеров по полю через useStorageSubscribe; синхронную схемную валидацию как\nmiddleware; touched / isValid; submit-flow; reset().",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 0,
+                      "end": 10
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 23,
+                      "end": 86
+                    },
+                    {
+                      "start": 123,
+                      "end": 142
+                    },
+                    {
+                      "start": 189,
+                      "end": 196
+                    },
+                    {
+                      "start": 199,
+                      "end": 206
+                    },
+                    {
+                      "start": 221,
+                      "end": 228
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Иначе / нет из коробки (осознанно):",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 0,
+                      "end": 35
+                    }
+                  ],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Нет field-registration в стиле register('email') под нативные inputs — у нас контролируемые\nинпуты + set/update.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 31,
+                              "end": 48
+                            },
+                            {
+                              "start": 101,
+                              "end": 104
+                            },
+                            {
+                              "start": 105,
+                              "end": 111
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Async-валидация (проверка на сервере) — отдельный, более сложный паттерн (через эффекты/BLL или\nвручную); базовый рецепт — синхронный.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Array / dynamic fields показаны кратко — это уже усложнение.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Производительность на огромных формах ок за счёт точечных подписок, но это надо измерять, а не\nобещать.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 80,
+                              "end": 88
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Это рецепт, а не мини-библиотека: публичного form-API нет — код ваш, правьте под себя.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 119,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "state-shape",
+          "title": "Форма состояния (state shape)",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "type FormErrors<V> = Partial<Record<keyof V & string, string>>\n\ninterface FormState<V extends Record<string, any>> {\n  values: V\n  errors: FormErrors<V>\n  touched: Partial<Record<keyof V & string, boolean>>\n  isValid: boolean\n  isSubmitting: boolean\n  submitCount: number\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "В качестве сквозного примера — форма регистрации:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "interface SignUp {\n  email: string\n  password: string\n  confirm: string\n}\n\nconst makeInitial = (): FormState<SignUp> => ({\n  values: { email: '', password: '', confirm: '' },\n  errors: {},\n  touched: {},\n  isValid: false,\n  isSubmitting: false,\n  submitCount: 0,\n})",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 7,
+            "codeBlocksCount": 2,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "writing-a-field",
+          "title": "Запись поля",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Пишем каждое поле по его пути. Две крошечные обёртки делают вызовы аккуратнее:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { ISyncStorage } from 'synapse-storage/core'\n\nfunction setField<V extends Record<string, any>>(storage: ISyncStorage<FormState<V>>, name: keyof V & string, value: V[keyof V]) {\n  storage.set(`values.${name}`, value)\n}\n\nfunction touchField<V extends Record<string, any>>(storage: ISyncStorage<FormState<V>>, name: keyof V & string) {\n  storage.set(`touched.${name}`, true)\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "set пишет иммутабельно — не мутирует ваш initialState, поэтому reset() всегда возвращает\nисходные значения — и обновляет getStateSync() синхронно, так что SSR-снапшот и\nuseStorageSubscribe видят свежие ошибки сразу.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 10,
+                      "end": 22
+                    },
+                    {
+                      "start": 136,
+                      "end": 145
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 3
+                    },
+                    {
+                      "start": 41,
+                      "end": 53
+                    },
+                    {
+                      "start": 63,
+                      "end": 70
+                    },
+                    {
+                      "start": 121,
+                      "end": 135
+                    },
+                    {
+                      "start": 169,
+                      "end": 188
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Изоляция ре-рендеров при этом не страдает: селектор поля возвращает примитив, который у\nнетронутых полей не меняется по ссылке, поэтому useStorageSubscribe с equals пропускает их\nперерисовку.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 30,
+                      "end": 41
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 136,
+                      "end": 155
+                    },
+                    {
+                      "start": 158,
+                      "end": 164
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 65,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "level-1-a-basic-form-memorystorage",
+          "title": "Уровень 1 — базовая форма (MemoryStorage)",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Голый каркас: контролируемые инпуты, точечное чтение, submit, reset. Пока без валидации.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "tsx",
+                "code": "import { MemoryStorage, ISyncStorage } from 'synapse-storage/core'\nimport { useStorageSubscribe } from 'synapse-storage/react'\nimport { useEffect, useState, FormEvent } from 'react'\n\nfunction useFormStorage() {\n  const [storage] = useState<ISyncStorage<FormState<SignUp>>>(() => new MemoryStorage<FormState<SignUp>>({ name: 'sign-up', initialState: makeInitial() }))\n  const [ready, setReady] = useState(false)\n  useEffect(() => {\n    let alive = true\n    storage.initialize().then(() => alive && setReady(true))\n    return () => {\n      alive = false\n      storage.destroy()\n    }\n  }, [storage])\n  return { storage, ready }\n}\n\n// Одно поле — перерисовывается ТОЛЬКО при изменении своего value/error.\nfunction Field({ storage, name, type = 'text' }: { storage: ISyncStorage<FormState<SignUp>>; name: keyof SignUp; type?: string }) {\n  const value = useStorageSubscribe(storage, (s) => s.values[name] ?? '', { equals: Object.is })\n  const error = useStorageSubscribe(storage, (s) => (s.touched[name] ? s.errors[name] : undefined), { equals: Object.is })\n\n  return (\n    <label>\n      <input\n        type={type}\n        value={value as string}\n        onChange={(e) => setField(storage, name, e.target.value)}\n        onBlur={() => touchField(storage, name)}\n      />\n      {error ? <span role=\"alert\">{error}</span> : null}\n    </label>\n  )\n}\n\nexport function SignUpForm() {\n  const { storage, ready } = useFormStorage()\n  if (!ready) return null\n\n  const onSubmit = (e: FormEvent) => {\n    e.preventDefault()\n    const { values } = storage.getState()\n    console.log('submit', values)\n  }\n\n  return (\n    <form onSubmit={onSubmit}>\n      <Field storage={storage} name=\"email\" />\n      <Field storage={storage} name=\"password\" type=\"password\" />\n      <Field storage={storage} name=\"confirm\" type=\"password\" />\n      <button type=\"submit\">Зарегистрироваться</button>\n      <button type=\"button\" onClick={() => storage.reset()}>Сбросить</button>\n    </form>\n  )\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Главное преимущество уже здесь: useStorageSubscribe(storage, s => s.values[name], { equals })\nподписывает компонент на одно поле — ввод в email не перерисовывает password. Подробнее о\nчтении — в Подписках.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 119,
+                      "end": 123
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 32,
+                      "end": 93
+                    },
+                    {
+                      "start": 138,
+                      "end": 143
+                    },
+                    {
+                      "start": 162,
+                      "end": 170
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 195,
+                      "end": 204,
+                      "url": "./subscriptions.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 40,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "level-2-validation-as-a-middleware",
+          "title": "Уровень 2 — валидация как middleware",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Валидация-middleware централизована: срабатывает на любую запись в стор, кто бы ни писал. Схема —\nобычная функция, без зависимостей.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 21,
+                      "end": 35
+                    }
+                  ],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { SyncMiddleware, StorageAction } from 'synapse-storage/core'\n\ntype Validator<V> = (values: V) => FormErrors<V>\n\nconst shallowEqualErrors = (a: Record<string, any>, b: Record<string, any>) => {\n  const ak = Object.keys(a)\n  const bk = Object.keys(b)\n  return ak.length === bk.length && ak.every((k) => a[k] === b[k])\n}\n\n// Валидируем ТОЛЬКО когда меняется что-то внутри `values.*` (guard, см. пункт №2 ниже).\nconst touchesValues = (action: StorageAction) => {\n  if (action.type === 'set') return String(action.key ?? '').split('.')[0] === 'values'\n  if (action.type === 'update') return (action.metadata?.changedPaths ?? []).some((p: string) => String(p).split('.')[0] === 'values')\n  return false\n}\n\nexport function createFormValidationMiddleware<V extends Record<string, any>>(validate: Validator<V>): SyncMiddleware {\n  return {\n    name: 'form-validation',\n    reducer: (api) => (next) => (action) => {\n      // 1) Сначала пишем значение — НЕ блокируем инвалидный ввод.\n      const result = next(action)\n      if (!touchesValues(action)) return result\n\n      // 2) Считаем ошибки от уже записанного состояния.\n      const state = api.getState() as FormState<V>\n      const errors = validate(state.values)\n      const isValid = Object.keys(errors).length === 0\n\n      if (shallowEqualErrors(state.errors ?? {}, errors) && state.isValid === isValid) return result\n\n      // 3) Пишем производное НАПРЯМУЮ (минуя dispatch) → нет рекурсии валидации.\n      api.storage.doSet('errors', errors)\n      api.storage.doSet('isValid', isValid)\n\n      // 4) Уведомляем точечных подписчиков и subscribeToAll / useStorageSubscribe.\n      api.storage.notifySubscribers('errors', errors)\n      api.storage.notifySubscribers('isValid', isValid)\n      api.storage.notifySubscribers('*', { type: 'storage:update', key: ['errors', 'isValid'], value: { errors, isValid }, changedPaths: ['errors', 'isValid'] })\n\n      return result\n    },\n  }\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Схема для формы регистрации:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const validateSignUp: Validator<SignUp> = (v) => {\n  const errors: FormErrors<SignUp> = {}\n  if (!v.email) errors.email = 'Email обязателен'\n  else if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(v.email)) errors.email = 'Email некорректен'\n  if (v.password.length < 6) errors.password = 'Минимум 6 символов'\n  if (v.confirm !== v.password) errors.confirm = 'Пароли не совпадают'\n  return errors\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Подключаем к хранилищу:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const storage = new MemoryStorage<FormState<SignUp>>({\n  name: 'sign-up',\n  initialState: makeInitial(),\n  middlewares: () => [createFormValidationMiddleware(validateSignUp)],\n})",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Всё — Field из уровня 1 уже читает errors[name], поэтому ошибки загораются вживую.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 6,
+                      "end": 11
+                    },
+                    {
+                      "start": 35,
+                      "end": 47
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "heading",
+              "data": {
+                "text": "Три грабли валидационной middleware",
+                "level": 3,
+                "id": "-middleware"
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Это ловушки, из-за которых наивная валидация-middleware ломается — рецепт выше уже обходит все три:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Не блокировать запись инвалидного значения. Инпут должен показывать то, что напечатал\nпользователь. Поэтому middleware сначала делает next(action) (пишет значение), и только потом\nсчитает ошибки. Если вернуть символ VALUE_NOT_CHANGED на инвалидный ввод — поле «залипнет».",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 43
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 134,
+                              "end": 146
+                            },
+                            {
+                              "start": 216,
+                              "end": 233
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "ordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Никакой рекурсии. Запись errors внутри middleware не должна снова запускать валидацию.\nРешаем сразу двумя способами: пишем errors через api.storage.doSet + notifySubscribers\nнапрямую (минуя dispatch-цепочку) и валидируем только при изменении ключа из values.*\n(guard touchesValues).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 17
+                            },
+                            {
+                              "start": 174,
+                              "end": 182
+                            },
+                            {
+                              "start": 208,
+                              "end": 209
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 25,
+                              "end": 31
+                            },
+                            {
+                              "start": 123,
+                              "end": 129
+                            },
+                            {
+                              "start": 136,
+                              "end": 153
+                            },
+                            {
+                              "start": 156,
+                              "end": 173
+                            },
+                            {
+                              "start": 251,
+                              "end": 259
+                            },
+                            {
+                              "start": 267,
+                              "end": 280
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "ordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Когда валидировать. Здесь — вживую на каждую запись, но UI показывает ошибку только для\ntouched-полей (см. Field). Валидация на blur или на submit — вариации того же guard.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 19
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 88,
+                              "end": 95
+                            },
+                            {
+                              "start": 107,
+                              "end": 112
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "ordered"
+                }
+              ]
+            },
+            {
+              "type": "heading",
+              "data": {
+                "text": "Альтернатива: валидация через селектор (derived state)",
+                "level": 3,
+                "id": "-derived-state"
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Ошибки можно считать как производное состояние селектором, а не middleware:\nerrors = createSelector(values => validate(values)) (см. Селекторы).",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 25,
+                      "end": 46
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 76,
+                      "end": 127
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 133,
+                      "end": 142,
+                      "url": "./selector-system.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Селектор — проще, рекурсии нет в принципе. Но ошибки не часть персистентного / шаренного\nсостояния, и нет единой точки, где валидация навязана всем писателям.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 8
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Middleware — берём, когда нужна централизованность или нужно персистить / шарить ошибки как\nчасть состояния (например, между вкладками). В этом рецепте middleware — основной подход.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 10
+                            },
+                            {
+                              "start": 61,
+                              "end": 80
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 224,
+            "codeBlocksCount": 3,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "level-3-draft-persistence-cross-tab-sync",
+          "title": "Уровень 3 — персист черновика + синхронизация между вкладками",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Превращаем форму в черновик, который переживает перезагрузку и синхронизируется между вкладками.\nМеняем MemoryStorage на LocalStorage и добавляем syncBroadcastMiddleware:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 104,
+                      "end": 117
+                    },
+                    {
+                      "start": 121,
+                      "end": 133
+                    },
+                    {
+                      "start": 146,
+                      "end": 169
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { LocalStorage, syncBroadcastMiddleware } from 'synapse-storage/core'\n\nconst storage = new LocalStorage<FormState<SignUp>>({\n  name: 'sign-up',\n  initialState: makeInitial(),\n  version: 1, // повышайте при изменении формы (см. persist-migration)\n  middlewares: () => [\n    createFormValidationMiddleware(validateSignUp),\n    syncBroadcastMiddleware({ storageType: 'localStorage', storageName: 'sign-up' }),\n  ],\n})",
+                "meta": null
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Persist — LocalStorage сохраняет черновик автоматически; при следующем визите пользователь\nпродолжает с того же места.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 7
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 10,
+                              "end": 22
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Между вкладками — syncBroadcastMiddleware транслирует set/update в другие вкладки по\nканалу localStorage-sign-up; один и тот же черновик отражается везде.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 15
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 18,
+                              "end": 41
+                            },
+                            {
+                              "start": 54,
+                              "end": 57
+                            },
+                            {
+                              "start": 58,
+                              "end": 64
+                            },
+                            {
+                              "start": 92,
+                              "end": 112
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Миграции — если форма меняется между релизами, повышайте version и добавляйте migrate,\nчтобы старый черновик конвертировался, а не ломался. См. Persist-миграции.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 8
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 57,
+                              "end": 64
+                            },
+                            {
+                              "start": 78,
+                              "end": 85
+                            }
+                          ],
+                          "links": [
+                            {
+                              "start": 144,
+                              "end": 160,
+                              "url": "./persist-migration.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "blockquote",
+              "data": {
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "data": {
+                      "text": "Порядок важен: держите валидацию до broadcast, чтобы другие вкладки получали уже\nпровалидированное состояние.",
+                      "formatting": {
+                        "bold": [
+                          {
+                            "start": 33,
+                            "end": 35
+                          }
+                        ],
+                        "italic": [],
+                        "code": [],
+                        "links": []
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Для черновиков обычно не нужно стирать хранилище при размонтировании — поставьте\nclearOnDestroy: false (дефолт LocalStorage), чтобы черновик сохранялся.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 81,
+                      "end": 102
+                    },
+                    {
+                      "start": 111,
+                      "end": 123
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 104,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": true,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "level-4-ssr-server-rendered-form",
+          "title": "Уровень 4 — SSR (форма с серверным рендером)",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Форма может рендериться на сервере с уже заполненными значениями/ошибками и гидрироваться на клиенте\nбез вспышки. Паттерн тот же, что в SSR-гидрации: вызвать hydrate(snapshot)\nдо initialize(), чтобы серверный снапшот не был перезатёрт initialState.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 176,
+                      "end": 178
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 158,
+                      "end": 175
+                    },
+                    {
+                      "start": 179,
+                      "end": 191
+                    },
+                    {
+                      "start": 235,
+                      "end": 247
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 136,
+                      "end": 148,
+                      "url": "./ssr-hydration.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// На сервере: собираем снапшот (например, из неудачного POST с ошибками полей) и сериализуем.\nconst serverState: FormState<SignUp> = {\n  ...makeInitial(),\n  values: { email: 'taken@example.com', password: '', confirm: '' },\n  errors: { email: 'Этот email уже зарегистрирован' },\n  touched: { email: true },\n}\n// → вшиваем JSON.stringify(serverState) в HTML.",
+                "meta": null
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// На клиенте: засеваем хранилище из вшитого снапшота ДО initialize().\nconst storage = new MemoryStorage<FormState<SignUp>>({\n  name: 'sign-up',\n  initialState: makeInitial(),\n  middlewares: () => [createFormValidationMiddleware(validateSignUp)],\n})\n\nstorage.hydrate(window.__FORM_STATE__) // ДО initialize() → initialState не перезатрёт снапшот\nawait storage.initialize()",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "getStateSync() даёт снапшот для сериализации; hydrate(), вызванный после initialize(),\nзаменяет состояние и уведомляет подписчиков. На уровне модуля есть dehydrateModule() и\nReact-обвязка createSynapseCtx — переиспользуйте тот же паттерн, когда форма часть большего модуля.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 67,
+                      "end": 72
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 14
+                    },
+                    {
+                      "start": 46,
+                      "end": 55
+                    },
+                    {
+                      "start": 73,
+                      "end": 85
+                    },
+                    {
+                      "start": 154,
+                      "end": 171
+                    },
+                    {
+                      "start": 188,
+                      "end": 204
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 64,
+            "codeBlocksCount": 2,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "submit-flow",
+          "title": "Submit-flow",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "isSubmitting блокирует повторный сабмит; при ошибке можно положить серверные ошибки в тот же срез\nerrors:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 12
+                    },
+                    {
+                      "start": 98,
+                      "end": 104
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "async function submit(storage: ISyncStorage<FormState<SignUp>>, send: (values: SignUp) => Promise<void>) {\n  const state = storage.getState()\n  if (state.isSubmitting) return // защита от двойного сабмита\n  if (!state.isValid) {\n    // помечаем все поля тронутыми, чтобы показать все ошибки\n    storage.set('touched', Object.fromEntries(Object.keys(state.values).map((k) => [k, true])))\n    return\n  }\n\n  storage.update((s) => {\n    s.isSubmitting = true\n    s.submitCount += 1\n  })\n  try {\n    await send(state.values)\n    storage.reset() // успех → обратно к initialState\n  } catch (e: any) {\n    storage.set('errors', { email: e?.message ?? 'Не удалось отправить' })\n  } finally {\n    storage.set('isSubmitting', false)\n  }\n}",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 15,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "dynamic-array-fields-brief",
+          "title": "Динамические / массивные поля (кратко)",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Массивы живут в values как и всё остальное; при правке заменяйте массив по его пути:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 16,
+                      "end": 22
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "function addItem(storage: ISyncStorage<FormState<any>>, key: string, item: unknown) {\n  const list = storage.getState().values[key] ?? []\n  storage.set(`values.${key}`, [...list, item])\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Валидация не меняется — middleware ревалидирует весь values на каждое изменение.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 53,
+                      "end": 59
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 26,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "see-also",
+          "title": "Смотрите также",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Middlewares — API middleware, который здесь используется",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 11,
+                              "url": "./middlewares.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Подписки · Селекторы — точечное чтение и\nальтернатива-селектор для валидации",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 8,
+                              "url": "./subscriptions.md",
+                              "title": null
+                            },
+                            {
+                              "start": 11,
+                              "end": 20,
+                              "url": "./selector-system.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Persist-миграции — персист черновика + миграции схемы",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 16,
+                              "url": "./persist-migration.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "SSR-гидрация — форма с серверным рендером",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 12,
+                              "url": "./ssr-hydration.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Pokemon Advanced — эталонный рецепт целого модуля",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 16,
+                              "url": "./pokemon-advanced.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 37,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        }
+      ],
+      "features": [],
+      "frontMatter": {},
+      "metadata": {
+        "lastModified": "2026-06-28T12:26:03.569Z",
+        "wordCount": 1761,
+        "readingTime": 9,
+        "sectionsCount": 11,
+        "codeBlocksCount": 12
+      }
+    },
     "hook-indexeddb": {
       "title": "useCreateStorage (indexedDB)",
       "sections": [
@@ -29658,6 +33329,495 @@
         "codeBlocksCount": 13
       }
     },
+    "reactive-reads": {
+      "title": "Реактивное чтение и управляемые ререндеры",
+      "sections": [
+        {
+          "id": "reactive-reads-controlled-re-renders",
+          "title": "Реактивное чтение и управляемые ререндеры",
+          "level": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Повседневный паттерн: меняешь хранилище обычными методами (set/update), а в компоненте читаешь его\nреактивно. Synapse даёт для этого несколько хуков — разница между ними в том, насколько ты\nконтролируешь ререндеры. В примерах используется сквозной todoStorage\n(TodoState = { todos: Todo[]; filter: Filter }).",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 99,
+                      "end": 108
+                    },
+                    {
+                      "start": 177,
+                      "end": 213
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 59,
+                      "end": 62
+                    },
+                    {
+                      "start": 63,
+                      "end": 69
+                    },
+                    {
+                      "start": 248,
+                      "end": 259
+                    },
+                    {
+                      "start": 261,
+                      "end": 306
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "table",
+              "data": {
+                "headers": [
+                  "Хук",
+                  "Ререндеры",
+                  "RxJS",
+                  "Когда использовать"
+                ],
+                "rows": [
+                  {
+                    "cells": [
+                      "Хук",
+                      "Ререндеры",
+                      "RxJS",
+                      "Когда использовать"
+                    ],
+                    "type": "header"
+                  },
+                  {
+                    "cells": [
+                      "useStorageSubscribe",
+                      "на каждое изменение выбранного среза",
+                      "нет",
+                      "реактивное чтение по умолчанию"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "useSelector",
+                      "на каждое изменение выбранного среза",
+                      "нет",
+                      "чтение SelectorAPI"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "useStorageObservable",
+                      "на каждое изменение выбранного среза",
+                      "да",
+                      "нужны RxJS-операторы"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "useStorageRef",
+                      "только когда ты сам решишь",
+                      "нет",
+                      "ты сам контролируешь ререндеры"
+                    ],
+                    "type": "data"
+                  }
+                ]
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 87,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": true,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "usestoragesubscribe-the-default",
+          "title": "useStorageSubscribe — по умолчанию",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Под капотом useSyncExternalStore (Concurrent-safe), без RxJS. Ререндерит при изменении выбранного\nсреза. Для примитивных селекторов дедуплицирует через Object.is; для объектных/массивных срезов\nпередавай equals, чтобы постороннее изменение стора не дёргало компонент.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 12,
+                      "end": 32
+                    },
+                    {
+                      "start": 152,
+                      "end": 161
+                    },
+                    {
+                      "start": 204,
+                      "end": 210
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { useStorageSubscribe } from 'synapse-storage/react'\n\n// примитивный срез — дедупликация автоматом\nconst filter = useStorageSubscribe(todoStorage, (s) => s.filter)\n\n// объектный/массивный срез — `equals` держит стабильный снапшот и гасит лишние ререндеры\nconst todos = useStorageSubscribe(todoStorage, (s) => s.todos, {\n  equals: (a, b) => a === b,\n})",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 29,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "usestorageobservable-the-rxjs-path",
+          "title": "useStorageObservable — RxJS-путь",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Мемоизирующая обёртка над toObservable + useObservable. Эквивалент useStorageSubscribe, но можно\nнавесить RxJS-операторы поверх потока состояния. Мемоизирует observable по [storage], поэтому не\nпереподписывается на каждый рендер (footgun инлайнового toObservable(storage) в рендере).",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 191,
+                      "end": 193
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 26,
+                      "end": 38
+                    },
+                    {
+                      "start": 41,
+                      "end": 54
+                    },
+                    {
+                      "start": 67,
+                      "end": 86
+                    },
+                    {
+                      "start": 172,
+                      "end": 181
+                    },
+                    {
+                      "start": 250,
+                      "end": 271
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { useStorageObservable } from 'synapse-storage/react'\n\n// всё состояние\nconst state = useStorageObservable(todoStorage)\n\n// срез — эмитит только при изменении среза (distinctUntilChanged)\nconst total = useStorageObservable(todoStorage, (s) => s.todos.length)",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 30,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "usestorageref-you-control-the-re-renders",
+          "title": "useStorageRef — ты контролируешь ререндеры",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Держит свежее значение в ref (обновляется на каждое изменение стора), но не ререндерит\nкомпонент автоматически. Возвращает { ref, get, rerender } и отдаёт контроль тебе:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 7,
+                      "end": 13
+                    },
+                    {
+                      "start": 73,
+                      "end": 75
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 25,
+                      "end": 28
+                    },
+                    {
+                      "start": 123,
+                      "end": 145
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { useStorageRef } from 'synapse-storage/react'\n\nfunction TodoCounter() {\n  const { ref, get, rerender } = useStorageRef(todoStorage, (s) => s.todos.length)\n\n  // «вообще без ререндера» — читаем актуальное значение по требованию в обработчике\n  const logCount = () => console.log('текущее значение:', get())\n\n  // «ререндер, когда я сам решу» — UI читает ref.current, ререндеришь вручную\n  return (\n    <div>\n      <span>{ref.current}</span>\n      <button onClick={logCount}>лог</button>\n      <button onClick={rerender}>обновить</button>\n    </div>\n  )\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "«Ререндер по условию» — передай shouldRerender(prev, next); компонент ререндерится только когда\nон вернул true (значение в ref к этому моменту уже свежее):",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 0,
+                      "end": 21
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 32,
+                      "end": 58
+                    },
+                    {
+                      "start": 106,
+                      "end": 110
+                    },
+                    {
+                      "start": 123,
+                      "end": 126
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// ререндерим только при переходе пусто/не-пусто\nconst { ref } = useStorageRef(todoStorage, (s) => s.todos.length, {\n  shouldRerender: (prev, next) => (prev === 0) !== (next === 0),\n})",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Заметки:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "useStorageRef не использует useSyncExternalStore (тот не умеет пропускать ререндер по\nрешению компонента), поэтому осознанно отказывается от tearing-гарантий Concurrent Mode — что\nприемлемо для сценария «я сам контролирую ререндеры».",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 14,
+                              "end": 16
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 13
+                            },
+                            {
+                              "start": 28,
+                              "end": 48
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Возвращаемый { ref, get, rerender } стабилен между рендерами.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 13,
+                              "end": 35
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Селектор по умолчанию возвращает всё состояние. Если передать null вместо стора (до инициализации),\nget() вернёт undefined.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 62,
+                              "end": 66
+                            },
+                            {
+                              "start": 100,
+                              "end": 105
+                            },
+                            {
+                              "start": 113,
+                              "end": 122
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 101,
+            "codeBlocksCount": 2,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "toobservable-outside-react",
+          "title": "toObservable — вне React",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Для эффектов и не-React кода toObservable(storage) превращает хранилище в Observable всего\nсостояния. Со селектором поток эмитит только срез, дедуплицируя через distinctUntilChanged (по\nумолчанию Object.is, либо кастомный equals):",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 29,
+                      "end": 50
+                    },
+                    {
+                      "start": 74,
+                      "end": 84
+                    },
+                    {
+                      "start": 161,
+                      "end": 181
+                    },
+                    {
+                      "start": 196,
+                      "end": 205
+                    },
+                    {
+                      "start": 222,
+                      "end": 228
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { toObservable } from 'synapse-storage/reactive'\n\nconst state$ = toObservable(todoStorage)                       // Observable<TodoState>\nconst count$ = toObservable(todoStorage, (s) => s.todos.length) // Observable<number>, distinct",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 27,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        }
+      ],
+      "features": [],
+      "frontMatter": {},
+      "metadata": {
+        "lastModified": "2026-06-28T11:38:44.116Z",
+        "wordCount": 528,
+        "readingTime": 3,
+        "sectionsCount": 5,
+        "codeBlocksCount": 5
+      }
+    },
     "reading-data": {
       "title": "Чтение данных (get/getState)",
       "sections": [
@@ -31713,11 +35873,69 @@
                 "code": "import { useStorageSubscribe } from 'synapse-storage/react'\n\nfunction TodoStats({ storage }: { storage: ISyncStorage<TodoState> }) {\n  // Подписка на одно поле\n  const filter = useStorageSubscribe(storage, (s) => s.filter)\n\n  // Вычисляемое значение — ре-рендер только при изменении результата\n  const total = useStorageSubscribe(storage, (s) => s.todos.length)\n  const active = useStorageSubscribe(storage, (s) => s.todos.filter((t) => !t.done).length)\n\n  return <div>{filter}: {active} активных из {total}</div>\n}",
                 "meta": null
               }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Передай equals, чтобы не ререндерить, когда объектный/массивный срез не изменился по ссылке:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 8,
+                      "end": 14
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const todos = useStorageSubscribe(storage, (s) => s.todos, { equals: (a, b) => a === b })",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Про useStorageObservable (RxJS-путь) и useStorageRef (чтение без ререндера / ручной триггер) — см.\nРеактивное чтение и управляемые ререндеры.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 99,
+                      "end": 140
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 4,
+                      "end": 24
+                    },
+                    {
+                      "start": 39,
+                      "end": 52
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 99,
+                      "end": 140,
+                      "url": "./reactive-reads.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
             }
           ],
           "metadata": {
-            "wordCount": 0,
-            "codeBlocksCount": 1,
+            "wordCount": 30,
+            "codeBlocksCount": 2,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
@@ -31729,11 +35947,11 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-27T08:15:31.648Z",
-        "wordCount": 250,
+        "lastModified": "2026-06-28T11:40:09.352Z",
+        "wordCount": 298,
         "readingTime": 2,
         "sectionsCount": 5,
-        "codeBlocksCount": 4
+        "codeBlocksCount": 5
       }
     },
     "synapse-awaiter": {

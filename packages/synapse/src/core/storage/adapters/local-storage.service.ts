@@ -92,13 +92,14 @@ export class LocalStorage<T extends Record<string, any>> extends SyncBaseStorage
 
   protected doUpdate(updates: Array<{ key: StorageKeyType; value: any }>): void {
     const storageData = localStorage.getItem(this.name)
-    const state = storageData ? JSON.parse(storageData) : {}
+    let state = storageData ? JSON.parse(storageData) : {}
 
     for (const { key, value } of updates) {
       if (key instanceof StorageKey && key.isUnparseable()) {
         state[key.valueOf()] = value
       } else {
-        setValueByPath(state, key, value)
+        // setValueByPath иммутабелен → переприсваиваем результат.
+        state = setValueByPath(state, key, value)
       }
     }
 

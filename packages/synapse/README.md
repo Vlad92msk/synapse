@@ -154,6 +154,33 @@ const debounced = useObservable(() => selectors.searchQuery.$.pipe(debounceTime(
 useSubscription(() => selectors.lastId.$.pipe(skip(1), tap(scrollToEnd)), [selectors])
 ```
 
+### Reactive reads from a storage (controlled re-renders)
+
+Mutate the store with ordinary methods (`set`/`update`) and read it reactively in a component.
+Pick the hook by how much control over re-renders you need:
+
+```tsx
+import { useStorageSubscribe, useStorageObservable, useStorageRef } from 'synapse-storage/react'
+
+// 1. Always re-render on change (canonical, RxJS-free, Concurrent-safe).
+//    `equals` skips the re-render when the selected slice is unchanged.
+const todos = useStorageSubscribe(storage, (s) => s.todos, { equals: (a, b) => a === b })
+
+// 2. RxJS path — same, but you can pipe operators. Memoizes the observable for you,
+//    so no extra re-subscribes (don't inline `toObservable(storage)` in render).
+const userId = useStorageObservable(storage, (s) => s.user.id)
+
+// 3. You control the re-renders. The ref always holds the fresh value; nothing
+//    re-renders unless you ask.
+const { ref, get, rerender } = useStorageRef(storage, (s) => s.count)
+//   - "no re-render at all":      read get() inside an event handler
+//   - "re-render when I decide":  call rerender()
+//   - "re-render conditionally":  useStorageRef(storage, sel, { shouldRerender: (prev, next) => ... })
+```
+
+For non-React / effect usage, `toObservable(storage, selector?)` turns a storage into an
+`Observable` of the whole state (or a slice with `distinctUntilChanged` when a selector is given).
+
 ### Migration from v4 (functional → class-based)
 
 On v4.x the migration is mechanical and per-file — convert one module, leave the rest on
