@@ -18162,7 +18162,7 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "The RxJS path for \"store → reactive in a component\". Equivalent to\nuseStorageSubscribe, but you can pipe RxJS operators (debounceTime,\nscan, map, …) on top of the state stream. See the Reactive reads overview.\nThe examples use the end-to-end todoStorage (TodoState = { todos: Todo[]; filter: Filter }).",
+                "text": "The RxJS path for \"store → reactive in a component\". Equivalent to\nuseStorageSubscribe, but you can pipe RxJS operators (debounceTime,\nscan, bufferTime, …) on top of the state stream. See the Reactive reads\noverview. The examples use the end-to-end todoStorage (TodoState = { todos: Todo[]; filter: Filter }).",
                 "formatting": {
                   "bold": [],
                   "italic": [],
@@ -18177,15 +18177,15 @@
                     },
                     {
                       "start": 141,
-                      "end": 144
+                      "end": 151
                     },
                     {
-                      "start": 242,
-                      "end": 253
+                      "start": 249,
+                      "end": 260
                     },
                     {
-                      "start": 255,
-                      "end": 300
+                      "start": 262,
+                      "end": 307
                     }
                   ],
                   "links": [
@@ -18196,8 +18196,8 @@
                       "title": null
                     },
                     {
-                      "start": 185,
-                      "end": 199,
+                      "start": 192,
+                      "end": 206,
                       "url": "./reactive-reads.md",
                       "title": null
                     }
@@ -18232,12 +18232,16 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "Internally it's a memoizing wrapper over toObservable + useObservable. The\nobservable is memoized by [storage], so the hook does not re-subscribe on every render. That avoids\nthe footgun of inlining toObservable(storage) in render (a new Observable each render → needless\nre-subscriptions).",
+                "text": "Internally it's a memoizing wrapper over toObservable + useObservable. The\nobservable is memoized by [storage], so the hook does not re-subscribe on every render. That's\nenough when you just need a slice. But you can't attach your own operators through\nuseStorageObservable — for that drop one level down: toObservable (builds the stream) + useObservable\n(subscribes and returns the value to render).",
                 "formatting": {
                   "bold": [
                     {
                       "start": 129,
                       "end": 132
+                    },
+                    {
+                      "start": 213,
+                      "end": 218
                     }
                   ],
                   "italic": [],
@@ -18255,8 +18259,16 @@
                       "end": 110
                     },
                     {
-                      "start": 199,
-                      "end": 220
+                      "start": 253,
+                      "end": 273
+                    },
+                    {
+                      "start": 306,
+                      "end": 318
+                    },
+                    {
+                      "start": 341,
+                      "end": 354
                     }
                   ],
                   "links": [
@@ -18272,7 +18284,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 41,
+            "wordCount": 61,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -18289,30 +18301,31 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "If you need a stateful operator chain (debounceTime, scan), build the stream with toObservable and\nsubscribe via useObservable with a factory — so the subscription is stable and the chain is rebuilt\nonly by deps:",
+                "text": "toObservable(storage, selector) gives an Observable<slice> you can pipe any RxJS operators onto. To\nkeep the subscription stable (instead of recreating it every render), wrap building the stream in a\nfactory and pass it to useObservable — it subscribes in useEffect and returns the latest value.",
                 "formatting": {
-                  "bold": [],
+                  "bold": [
+                    {
+                      "start": 200,
+                      "end": 207
+                    }
+                  ],
                   "italic": [],
                   "code": [
                     {
-                      "start": 39,
-                      "end": 51
+                      "start": 0,
+                      "end": 31
                     },
                     {
-                      "start": 53,
-                      "end": 57
+                      "start": 41,
+                      "end": 58
                     },
                     {
-                      "start": 82,
-                      "end": 94
+                      "start": 223,
+                      "end": 236
                     },
                     {
-                      "start": 113,
-                      "end": 126
-                    },
-                    {
-                      "start": 207,
-                      "end": 211
+                      "start": 256,
+                      "end": 265
                     }
                   ],
                   "links": []
@@ -18322,84 +18335,527 @@
             {
               "type": "code",
               "data": {
-                "language": "typescript",
-                "code": "import { useObservable } from 'synapse-storage/react'\nimport { toObservable } from 'synapse-storage/reactive'\nimport { debounceTime, map } from 'rxjs/operators'\n\nconst debouncedCount = useObservable(\n  () => toObservable(todoStorage, (s) => s.todos.length).pipe(debounceTime(200), map((n) => `${n} todos`)),\n  '0 todos',\n  [todoStorage],\n)",
+                "language": "tsx",
+                "code": "import { useObservable } from 'synapse-storage/react'\nimport { toObservable } from 'synapse-storage/reactive'\nimport { debounceTime, map } from 'rxjs/operators'\n\nfunction TodoBadge() {\n  // todoStorage is a module-level singleton, stable ref → deps can be omitted\n  const label = useObservable(\n    () =>\n      toObservable(todoStorage, (s) => s.todos.length).pipe(\n        debounceTime(200),\n        map((count) => `${count} todos`),\n      ),\n    '0 todos',\n  )\n\n  // label is a plain string, render it as is\n  return <div className=\"badge\">{label}</div>\n}",
                 "meta": null
               }
             },
             {
-              "type": "blockquote",
+              "type": "paragraph",
               "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "useStorageObservable returns a ready value, not an Observable — you can't call .pipe(...) on\nit. If you need operators, build the stream with toObservable (as above). The key thing: don't call\ntoObservable(...) directly in the render body without memoization — that creates a new Observable on\nevery render → re-subscription and a reset of debounceTime/scan state. The factory + deps in\nuseObservable are exactly what keeps the subscription stable.",
-                      "formatting": {
-                        "bold": [
-                          {
-                            "start": 31,
-                            "end": 42
-                          }
-                        ],
-                        "italic": [],
-                        "code": [
-                          {
-                            "start": 0,
-                            "end": 20
-                          },
-                          {
-                            "start": 51,
-                            "end": 61
-                          },
-                          {
-                            "start": 79,
-                            "end": 89
-                          },
-                          {
-                            "start": 142,
-                            "end": 154
-                          },
-                          {
-                            "start": 193,
-                            "end": 210
-                          },
-                          {
-                            "start": 280,
-                            "end": 290
-                          },
-                          {
-                            "start": 340,
-                            "end": 352
-                          },
-                          {
-                            "start": 353,
-                            "end": 357
-                          },
-                          {
-                            "start": 379,
-                            "end": 383
-                          },
-                          {
-                            "start": 387,
-                            "end": 400
-                          }
-                        ],
-                        "links": []
-                      }
+                "text": "useObservable returns a ready value (a string here) you can drop straight into JSX. Until the first\nemit it shows initialValue ('0 todos'). The stream emits the initial value on subscribe, so the badge\ndoesn't flash empty.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 24,
+                      "end": 35
                     }
-                  }
-                ]
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 13
+                    },
+                    {
+                      "start": 114,
+                      "end": 126
+                    },
+                    {
+                      "start": 128,
+                      "end": 137
+                    }
+                  ],
+                  "links": []
+                }
               }
             }
           ],
           "metadata": {
-            "wordCount": 104,
+            "wordCount": 82,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "why-debounce-here",
+          "title": "Why debounce here",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Without operators the badge would recompute on every todos change. With debounceTime(200) — if a\nburst of changes arrives within 200 ms (bulk add, import), the component updates once with the final\nvalue instead of 10 times in a row. That's the point of the RxJS path: smooth the stream before it reaches\nrender.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 47,
+                      "end": 52
+                    },
+                    {
+                      "start": 178,
+                      "end": 182
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 53,
+                      "end": 58
+                    },
+                    {
+                      "start": 72,
+                      "end": 89
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 54,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "about-deps-what-goes-in",
+          "title": "About deps — what goes in",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The third argument of useObservable is the dependency array for re-subscription. Rule of thumb:\neverything the factory closes over that can change goes into deps.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 96,
+                      "end": 161
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 22,
+                      "end": 35
+                    },
+                    {
+                      "start": 157,
+                      "end": 161
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Singleton store (module constant) — stable ref, nothing to re-subscribe to. deps can be\nomitted (the factory default is [], the subscription is built once on mount). [todoStorage] is\nalso correct here, just redundant.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 15
+                            },
+                            {
+                              "start": 88,
+                              "end": 95
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 76,
+                              "end": 80
+                            },
+                            {
+                              "start": 120,
+                              "end": 122
+                            },
+                            {
+                              "start": 166,
+                              "end": 179
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Store from props / context / useCreateStorage — the ref can change. Then [storage] is\nrequired, otherwise the stream stays subscribed to the old instance (stale).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 45
+                            },
+                            {
+                              "start": 86,
+                              "end": 94
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 29,
+                              "end": 45
+                            },
+                            {
+                              "start": 73,
+                              "end": 82
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "The factory closes over external values (a limit prop, a selected userId, etc.) — put them in\ndeps, otherwise the chain won't rebuild when they change and will run with the stale closure.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 39
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 43,
+                              "end": 48
+                            },
+                            {
+                              "start": 66,
+                              "end": 72
+                            },
+                            {
+                              "start": 94,
+                              "end": 98
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "tsx",
+                "code": "// store from props + external limit prop used inside pipe → both in deps\nconst recent = useObservable(\n  () =>\n    toObservable(store, (s) => s.items).pipe(\n      map((items) => items.slice(0, limit)),\n    ),\n  [],\n  [store, limit],\n)",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 118,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "example-debounced-search",
+          "title": "Example: debounced search",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The live input value and the \"heavy\" search result are two different reactive reads. The input value\nmust update instantly (a plain subscription), while filtering should only run once the user stops typing\n(a debounced stream):",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 55,
+                      "end": 68
+                    }
+                  ],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "tsx",
+                "code": "import { useStorageSubscribe, useObservable } from 'synapse-storage/react'\nimport { toObservable } from 'synapse-storage/reactive'\nimport { debounceTime, distinctUntilChanged, map } from 'rxjs/operators'\n\nfunction SearchBox() {\n  // 1) live input value — updates on every keystroke\n  const query = useStorageSubscribe(searchStorage, (s) => s.query)\n\n  // 2) results — recomputed only after the user idles for 300 ms\n  const matches = useObservable<Product[]>(\n    () =>\n      toObservable(searchStorage, (s) => s.query).pipe(\n        map((q) => q.trim().toLowerCase()),\n        debounceTime(300),\n        distinctUntilChanged(),\n        map((q) => (q ? filterProducts(q) : [])),\n      ),\n    [],\n  )\n\n  return (\n    <div>\n      <input\n        value={query}\n        placeholder=\"Search…\"\n        onChange={(e) =>\n          searchStorage.update((s) => {\n            s.query = e.target.value\n          })\n        }\n      />\n      <ul>\n        {matches.map((p) => (\n          <li key={p.id}>{p.title}</li>\n        ))}\n      </ul>\n    </div>\n  )\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The input doesn't lag (the value from useStorageSubscribe is immediate), and filterProducts runs once\nevery 300 ms after a pause instead of on every keystroke.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 38,
+                      "end": 57
+                    },
+                    {
+                      "start": 77,
+                      "end": 91
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 61,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "example-a-notification-aggregator",
+          "title": "Example: a notification aggregator",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The classic case: 10 messages arrive within a couple of seconds — you want to show one notification\n\"10 new messages\", not 10 toasts. That's a side-effect (call toast.show), not a render value, so we use\nuseSubscription instead of useObservable — it subscribes and renders nothing.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 83,
+                      "end": 86
+                    },
+                    {
+                      "start": 273,
+                      "end": 280
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 161,
+                      "end": 171
+                    },
+                    {
+                      "start": 204,
+                      "end": 219
+                    },
+                    {
+                      "start": 231,
+                      "end": 244
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Model: messagesStorage holds { inbox: Message[] }, each new message is pushed into inbox.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 7,
+                      "end": 22
+                    },
+                    {
+                      "start": 29,
+                      "end": 49
+                    },
+                    {
+                      "start": 83,
+                      "end": 88
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "tsx",
+                "code": "import { useSubscription } from 'synapse-storage/react'\nimport { toObservable } from 'synapse-storage/reactive'\nimport { bufferTime, filter, map, pairwise } from 'rxjs/operators'\n\nfunction MessageNotifier() {\n  useSubscription(\n    () =>\n      toObservable(messagesStorage, (s) => s.inbox.length)\n        .pipe(\n          pairwise(),                                        // [was, now]\n          map(([prev, next]) => next - prev),                // how many were added\n          filter((added) => added > 0),                      // arrivals only (not removals)\n          bufferTime(2000),                                  // collect events for 2 seconds\n          filter((batch) => batch.length > 0),               // skip empty windows\n          map((batch) => batch.reduce((sum, n) => sum + n, 0)), // total per window\n        )\n        .subscribe((count) => {\n          toast.show(count === 1 ? 'New message' : `${count} new messages`)\n        }),\n    [],\n  )\n\n  return null\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "How it reads:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "pairwise + map turn \"inbox length\" into \"how many were added this tick\";",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 8
+                            },
+                            {
+                              "start": 11,
+                              "end": 14
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "bufferTime(2000) collects those arrivals in 2-second windows;",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 16
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "per window — one toast.show with the total.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 17,
+                              "end": 27
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "So a burst of 10 messages within 2 seconds yields one toast \"10 new messages\". That's the answer to\n\"can the hook do this\": once you're inside an Observable, the whole RxJS toolbox is available — you just\npick the right entry point (useObservable to render a value, useSubscription to run a side-effect).",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 50,
+                      "end": 53
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 146,
+                      "end": 156
+                    },
+                    {
+                      "start": 233,
+                      "end": 246
+                    },
+                    {
+                      "start": 266,
+                      "end": 281
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 144,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -18416,18 +18872,22 @@
                     {
                       "type": "paragraph",
                       "data": {
-                        "text": "A selector stream already runs through distinctUntilChanged — an extra distinctUntilChanged after\nthe selector is almost always redundant.",
+                        "text": "A toObservable selector stream already runs through distinctUntilChanged — an extra\ndistinctUntilChanged right after the selector is almost always redundant.",
                         "formatting": {
                           "bold": [],
                           "italic": [],
                           "code": [
                             {
-                              "start": 39,
-                              "end": 59
+                              "start": 2,
+                              "end": 14
                             },
                             {
-                              "start": 71,
-                              "end": 91
+                              "start": 52,
+                              "end": 72
+                            },
+                            {
+                              "start": 84,
+                              "end": 104
                             }
                           ],
                           "links": []
@@ -18443,16 +18903,41 @@
                     {
                       "type": "paragraph",
                       "data": {
-                        "text": "Need a reactive read without RxJS? Use useStorageSubscribe.",
+                        "text": "Need a simple reactive read without RxJS? Use useStorageSubscribe.",
                         "formatting": {
                           "bold": [],
                           "italic": [],
                           "code": [],
                           "links": [
                             {
-                              "start": 39,
-                              "end": 58,
+                              "start": 46,
+                              "end": 65,
                               "url": "./use-storage-subscribe.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "A stream outside React (effects, non-React code) — toObservable.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 51,
+                              "end": 63,
+                              "url": "./to-observable.md",
                               "title": null
                             }
                           ]
@@ -18467,7 +18952,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 26,
+            "wordCount": 38,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -18480,11 +18965,11 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-28T14:02:39.003Z",
-        "wordCount": 312,
-        "readingTime": 2,
-        "sectionsCount": 4,
-        "codeBlocksCount": 2
+        "lastModified": "2026-06-28T14:14:13.852Z",
+        "wordCount": 1005,
+        "readingTime": 6,
+        "sectionsCount": 8,
+        "codeBlocksCount": 5
       }
     },
     "use-storage-subscribe": {
@@ -37913,7 +38398,7 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "RxJS-путь «store → реактивно в компоненте». Эквивалент useStorageSubscribe,\nно поверх потока состояния можно навесить RxJS-операторы (debounceTime, scan, map, …). См. обзор\nРеактивное чтение. В примерах — сквозной todoStorage\n(TodoState = { todos: Todo[]; filter: Filter }).",
+                "text": "RxJS-путь «store → реактивно в компоненте». Эквивалент useStorageSubscribe,\nно поверх потока состояния можно навесить RxJS-операторы (debounceTime, scan, bufferTime, …). См.\nобзор Реактивное чтение. В примерах — сквозной todoStorage\n(TodoState = { todos: Todo[]; filter: Filter }).",
                 "formatting": {
                   "bold": [],
                   "italic": [],
@@ -37928,15 +38413,15 @@
                     },
                     {
                       "start": 154,
-                      "end": 157
+                      "end": 164
                     },
                     {
-                      "start": 214,
-                      "end": 225
+                      "start": 221,
+                      "end": 232
                     },
                     {
-                      "start": 227,
-                      "end": 272
+                      "start": 234,
+                      "end": 279
                     }
                   ],
                   "links": [
@@ -37947,8 +38432,8 @@
                       "title": null
                     },
                     {
-                      "start": 173,
-                      "end": 190,
+                      "start": 180,
+                      "end": 197,
                       "url": "./reactive-reads.md",
                       "title": null
                     }
@@ -37983,12 +38468,16 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "Внутри — мемоизирующая обёртка над toObservable + useObservable. Observable\nмемоизируется по [storage], поэтому хук не переподписывается на каждый рендер. Это убирает footgun\nинлайнового toObservable(storage) прямо в рендере (новый Observable каждый рендер → лишние\nпереподписки).",
+                "text": "Внутри — мемоизирующая обёртка над toObservable + useObservable. Observable\nмемоизируется по [storage], поэтому хук не переподписывается на каждый рендер. Этого хватает, когда\nнужен просто срез. Но свой набор операторов через useStorageObservable навесить нельзя — для этого\nспускаемся на уровень ниже: toObservable (строит поток) + useObservable (подписывается и отдаёт\nзначение в рендер).",
                 "formatting": {
                   "bold": [
                     {
                       "start": 116,
                       "end": 118
+                    },
+                    {
+                      "start": 198,
+                      "end": 219
                     }
                   ],
                   "italic": [],
@@ -38006,8 +38495,16 @@
                       "end": 102
                     },
                     {
-                      "start": 187,
-                      "end": 208
+                      "start": 226,
+                      "end": 246
+                    },
+                    {
+                      "start": 303,
+                      "end": 315
+                    },
+                    {
+                      "start": 333,
+                      "end": 346
                     }
                   ],
                   "links": [
@@ -38023,7 +38520,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 34,
+            "wordCount": 51,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -38040,30 +38537,31 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "Если нужна цепочка операторов с состоянием (debounceTime, scan), собери поток через toObservable и\nподпишись useObservable с фабрикой — так подписка стабильна, а цепочка пересобирается только по deps:",
+                "text": "toObservable(storage, selector) даёт Observable<срез>, на который можно навесить любые RxJS-операторы.\nЧтобы подписка была стабильной (а не пересоздавалась каждый рендер), оборачиваем построение потока в\nфабрику и передаём в useObservable — он подпишется в useEffect и вернёт последнее значение.",
                 "formatting": {
-                  "bold": [],
+                  "bold": [
+                    {
+                      "start": 204,
+                      "end": 211
+                    }
+                  ],
                   "italic": [],
                   "code": [
                     {
-                      "start": 44,
-                      "end": 56
+                      "start": 0,
+                      "end": 31
                     },
                     {
-                      "start": 58,
-                      "end": 62
+                      "start": 37,
+                      "end": 53
                     },
                     {
-                      "start": 84,
-                      "end": 96
+                      "start": 225,
+                      "end": 238
                     },
                     {
-                      "start": 109,
-                      "end": 122
-                    },
-                    {
-                      "start": 195,
-                      "end": 199
+                      "start": 257,
+                      "end": 266
                     }
                   ],
                   "links": []
@@ -38073,84 +38571,527 @@
             {
               "type": "code",
               "data": {
-                "language": "typescript",
-                "code": "import { useObservable } from 'synapse-storage/react'\nimport { toObservable } from 'synapse-storage/reactive'\nimport { debounceTime, map } from 'rxjs/operators'\n\nconst debouncedCount = useObservable(\n  () => toObservable(todoStorage, (s) => s.todos.length).pipe(debounceTime(200), map((n) => `${n} задач`)),\n  '0 задач',\n  [todoStorage],\n)",
+                "language": "tsx",
+                "code": "import { useObservable } from 'synapse-storage/react'\nimport { toObservable } from 'synapse-storage/reactive'\nimport { debounceTime, map } from 'rxjs/operators'\n\nfunction TodoBadge() {\n  // todoStorage — модульный синглтон, ссылка стабильна → deps можно опустить\n  const label = useObservable(\n    () =>\n      toObservable(todoStorage, (s) => s.todos.length).pipe(\n        debounceTime(200),\n        map((count) => `${count} задач`),\n      ),\n    '0 задач',\n  )\n\n  // label — обычная строка, рендерим как есть\n  return <div className=\"badge\">{label}</div>\n}",
                 "meta": null
               }
             },
             {
-              "type": "blockquote",
+              "type": "paragraph",
               "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "useStorageObservable возвращает уже готовое значение, а не Observable, — навесить на него\n.pipe(...) нельзя. Если нужны операторы, строй поток через toObservable (как выше). Главное — не\nвызывай toObservable(...) прямо в теле рендера без мемоизации: это создаёт новый Observable на\nкаждый рендер → переподписка и сброс состояния debounceTime/scan. Фабрика + deps в useObservable\nкак раз держат подписку стабильной.",
-                      "formatting": {
-                        "bold": [
-                          {
-                            "start": 36,
-                            "end": 52
-                          }
-                        ],
-                        "italic": [],
-                        "code": [
-                          {
-                            "start": 0,
-                            "end": 20
-                          },
-                          {
-                            "start": 59,
-                            "end": 69
-                          },
-                          {
-                            "start": 90,
-                            "end": 100
-                          },
-                          {
-                            "start": 149,
-                            "end": 161
-                          },
-                          {
-                            "start": 195,
-                            "end": 212
-                          },
-                          {
-                            "start": 268,
-                            "end": 278
-                          },
-                          {
-                            "start": 329,
-                            "end": 341
-                          },
-                          {
-                            "start": 342,
-                            "end": 346
-                          },
-                          {
-                            "start": 358,
-                            "end": 362
-                          },
-                          {
-                            "start": 365,
-                            "end": 378
-                          }
-                        ],
-                        "links": []
-                      }
+                "text": "useObservable возвращает готовое значение (здесь — строку), его сразу можно положить в JSX. До\nпервого эмита показывается initialValue ('0 задач'). Поток сам эмитит начальное значение при подписке,\nтак что бейдж не «мигает» пустотой.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 25,
+                      "end": 41
                     }
-                  }
-                ]
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 13
+                    },
+                    {
+                      "start": 122,
+                      "end": 134
+                    },
+                    {
+                      "start": 136,
+                      "end": 145
+                    }
+                  ],
+                  "links": []
+                }
               }
             }
           ],
           "metadata": {
-            "wordCount": 84,
+            "wordCount": 70,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "why-debounce-here",
+          "title": "Зачем здесь debounce",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Без операторов бейдж бы пересчитывался на каждое изменение todos. С debounceTime(200) — если за\n200 мс прилетела пачка изменений (массовое добавление, импорт), компонент обновится один раз\nфинальным значением, а не 10 раз подряд. Это и есть смысл RxJS-пути: сглаживать поток до того, как он\nдоедет до рендера.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 42,
+                      "end": 48
+                    },
+                    {
+                      "start": 180,
+                      "end": 188
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 59,
+                      "end": 64
+                    },
+                    {
+                      "start": 68,
+                      "end": 85
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 47,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "about-deps-what-goes-in",
+          "title": "Про deps — что туда класть",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Третий аргумент useObservable — массив зависимостей для переподписки. Правило: в deps идёт всё, что\nфабрика замыкает и что может поменяться.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 79,
+                      "end": 139
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 16,
+                      "end": 29
+                    },
+                    {
+                      "start": 81,
+                      "end": 85
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Синглтон-стор (модульная константа) — ссылка стабильна, переподписываться не на что. deps можно\nопустить (для фабрики дефолт — [], подписка строится один раз на маунте). [todoStorage] здесь\nтоже корректно, просто избыточно.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 13
+                            },
+                            {
+                              "start": 96,
+                              "end": 104
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 85,
+                              "end": 89
+                            },
+                            {
+                              "start": 127,
+                              "end": 129
+                            },
+                            {
+                              "start": 170,
+                              "end": 183
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Стор из пропсов / контекста / useCreateStorage — ссылка может смениться. Тогда обязательно\n[storage], иначе поток останется подписан на старый инстанс (stale).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 46
+                            },
+                            {
+                              "start": 79,
+                              "end": 90
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 30,
+                              "end": 46
+                            },
+                            {
+                              "start": 91,
+                              "end": 100
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Фабрика замыкает внешние значения (проп limit, выбранный userId и т.п.) — клади их в deps,\nиначе при их изменении цепочка не пересоберётся и будет работать со старым замыканием.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 33
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 40,
+                              "end": 45
+                            },
+                            {
+                              "start": 57,
+                              "end": 63
+                            },
+                            {
+                              "start": 85,
+                              "end": 89
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "tsx",
+                "code": "// стор из пропсов + внешний проп limit внутри pipe → оба в deps\nconst recent = useObservable(\n  () =>\n    toObservable(store, (s) => s.items).pipe(\n      map((items) => items.slice(0, limit)),\n    ),\n  [],\n  [store, limit],\n)",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 100,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "example-debounced-search",
+          "title": "Пример: debounce-поиск",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Живое значение инпута и «тяжёлый» результат поиска — это два разных реактивных чтения. Значение\nинпута должно обновляться мгновенно (обычная подписка), а фильтрацию хочется запускать только когда юзер\nперестал печатать (дебаунс-поток):",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 57,
+                      "end": 67
+                    }
+                  ],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "tsx",
+                "code": "import { useStorageSubscribe, useObservable } from 'synapse-storage/react'\nimport { toObservable } from 'synapse-storage/reactive'\nimport { debounceTime, distinctUntilChanged, map } from 'rxjs/operators'\n\nfunction SearchBox() {\n  // 1) живое значение инпута — обновляется на каждый символ\n  const query = useStorageSubscribe(searchStorage, (s) => s.query)\n\n  // 2) результаты — пересчитываем только когда юзер замер на 300 мс\n  const matches = useObservable<Product[]>(\n    () =>\n      toObservable(searchStorage, (s) => s.query).pipe(\n        map((q) => q.trim().toLowerCase()),\n        debounceTime(300),\n        distinctUntilChanged(),\n        map((q) => (q ? filterProducts(q) : [])),\n      ),\n    [],\n  )\n\n  return (\n    <div>\n      <input\n        value={query}\n        placeholder=\"Поиск…\"\n        onChange={(e) =>\n          searchStorage.update((s) => {\n            s.query = e.target.value\n          })\n        }\n      />\n      <ul>\n        {matches.map((p) => (\n          <li key={p.id}>{p.title}</li>\n        ))}\n      </ul>\n    </div>\n  )\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Инпут не «тормозит» (значение из useStorageSubscribe идёт сразу), а filterProducts дёргается не на\nкаждый символ, а раз в 300 мс после остановки.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 33,
+                      "end": 52
+                    },
+                    {
+                      "start": 68,
+                      "end": 82
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 52,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "example-a-notification-aggregator",
+          "title": "Пример: агрегатор уведомлений",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Классический кейс: пришло 10 сообщений за пару секунд — хочется показать одно уведомление «10 новых\nсообщений», а не 10 тостов. Это side-effect (вызвать toast.show), а не значение для рендера, поэтому\nберём не useObservable, а useSubscription — он подписывается и ничего не рендерит.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 73,
+                      "end": 77
+                    },
+                    {
+                      "start": 264,
+                      "end": 282
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 153,
+                      "end": 163
+                    },
+                    {
+                      "start": 210,
+                      "end": 223
+                    },
+                    {
+                      "start": 227,
+                      "end": 242
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Модель: messagesStorage хранит { inbox: Message[] }, каждое новое сообщение пушится в inbox.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 8,
+                      "end": 23
+                    },
+                    {
+                      "start": 31,
+                      "end": 51
+                    },
+                    {
+                      "start": 86,
+                      "end": 91
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "tsx",
+                "code": "import { useSubscription } from 'synapse-storage/react'\nimport { toObservable } from 'synapse-storage/reactive'\nimport { bufferTime, filter, map, pairwise } from 'rxjs/operators'\n\nfunction MessageNotifier() {\n  useSubscription(\n    () =>\n      toObservable(messagesStorage, (s) => s.inbox.length)\n        .pipe(\n          pairwise(),                                        // [было, стало]\n          map(([prev, next]) => next - prev),                // сколько добавилось\n          filter((added) => added > 0),                      // только приходы (не удаления)\n          bufferTime(2000),                                  // копим события 2 секунды\n          filter((batch) => batch.length > 0),               // пустые окна пропускаем\n          map((batch) => batch.reduce((sum, n) => sum + n, 0)), // суммарно за окно\n        )\n        .subscribe((count) => {\n          toast.show(count === 1 ? 'Новое сообщение' : `${count} новых сообщений`)\n        }),\n    [],\n  )\n\n  return null\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Как это читается:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "pairwise + map превращают «длину inbox» в «сколько добавилось за тик»;",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 8
+                            },
+                            {
+                              "start": 11,
+                              "end": 14
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "bufferTime(2000) копит эти приходы окнами по 2 секунды;",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 16
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "на каждое окно — один toast.show с суммой.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 22,
+                              "end": 32
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Так бёрст из 10 сообщений за 2 секунды даёт один тост «10 новых сообщений». Это и есть ответ на «а\nспособен ли хук на такое»: как только ты внутри Observable, тебе доступен весь арсенал RxJS — нужно лишь\nвыбрать правильную точку входа (useObservable — отрендерить значение, useSubscription — выполнить\nside-effect).",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 44,
+                      "end": 48
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 147,
+                      "end": 157
+                    },
+                    {
+                      "start": 236,
+                      "end": 249
+                    },
+                    {
+                      "start": 274,
+                      "end": 289
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 135,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -38167,18 +39108,22 @@
                     {
                       "type": "paragraph",
                       "data": {
-                        "text": "Селекторный поток уже прогоняется через distinctUntilChanged — внешний distinctUntilChanged после\nселектора почти всегда избыточен.",
+                        "text": "Селекторный поток toObservable уже прогоняется через distinctUntilChanged — внешний\ndistinctUntilChanged сразу после селектора почти всегда избыточен.",
                         "formatting": {
                           "bold": [],
                           "italic": [],
                           "code": [
                             {
-                              "start": 40,
-                              "end": 60
+                              "start": 18,
+                              "end": 30
                             },
                             {
-                              "start": 71,
-                              "end": 91
+                              "start": 53,
+                              "end": 73
+                            },
+                            {
+                              "start": 84,
+                              "end": 104
                             }
                           ],
                           "links": []
@@ -38194,16 +39139,41 @@
                     {
                       "type": "paragraph",
                       "data": {
-                        "text": "Нужно реактивное чтение без RxJS? Бери useStorageSubscribe.",
+                        "text": "Нужно простое реактивное чтение без RxJS? Бери useStorageSubscribe.",
                         "formatting": {
                           "bold": [],
                           "italic": [],
                           "code": [],
                           "links": [
                             {
-                              "start": 39,
-                              "end": 58,
+                              "start": 47,
+                              "end": 66,
                               "url": "./use-storage-subscribe.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Поток вне React (эффекты, не-React код) — toObservable.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 42,
+                              "end": 54,
+                              "url": "./to-observable.md",
                               "title": null
                             }
                           ]
@@ -38218,7 +39188,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 21,
+            "wordCount": 32,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -38231,11 +39201,11 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-28T14:02:35.958Z",
-        "wordCount": 263,
-        "readingTime": 2,
-        "sectionsCount": 4,
-        "codeBlocksCount": 2
+        "lastModified": "2026-06-28T14:14:13.356Z",
+        "wordCount": 906,
+        "readingTime": 5,
+        "sectionsCount": 8,
+        "codeBlocksCount": 5
       }
     },
     "use-storage-subscribe": {

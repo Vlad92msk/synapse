@@ -318,7 +318,11 @@
     "0": "usestorageobservable",
     "1": "basic-usage",
     "2": "operators-on-top-of-the-stream",
-    "3": "notes"
+    "3": "why-debounce-here",
+    "4": "about-deps-what-goes-in",
+    "5": "example-debounced-search",
+    "6": "example-a-notification-aggregator",
+    "7": "notes"
   },
   "use-storage-subscribe": {
     "0": "usestoragesubscribe",

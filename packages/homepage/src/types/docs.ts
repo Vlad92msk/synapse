@@ -1,5 +1,5 @@
 // Auto-generated types for structured documentation
-// Generated at: 2026-06-28T14:03:00.029Z
+// Generated at: 2026-06-28T14:14:27.326Z
 // Master locale: en
 
 export type Locale = 'en' | 'ru'
@@ -44,7 +44,7 @@ export interface DocSectionIds {
   'synapse-awaiter': 'createsynapseawaiter-framework-independent-awaiter' | 'imports-and-creation' | 'programmatic-surface' | 'ssr-sync-fast-path' | 'usage-in-react-without-the-wrapper'
   'synapse-ctx': 'createsynapsectx' | 'creating-the-context' | 'using-the-hooks-in-child-components' | 'hoc-contextsynapse' | 'usesynapsestate-only-with-effects' | 'reactive-reads-in-a-component' | 'cleanup' | 'three-variants-of-createsynapsectx' | 'ssr-server-rendering-seeded-sync-stores'
   'to-observable': 'toobservable' | 'basic-usage' | 'in-effects' | 'custom-equals' | 'notes'
-  'use-storage-observable': 'usestorageobservable' | 'basic-usage' | 'operators-on-top-of-the-stream' | 'notes'
+  'use-storage-observable': 'usestorageobservable' | 'basic-usage' | 'operators-on-top-of-the-stream' | 'why-debounce-here' | 'about-deps-what-goes-in' | 'example-debounced-search' | 'example-a-notification-aggregator' | 'notes'
   'use-storage-subscribe': 'usestoragesubscribe' | 'basic-usage' | 'object-and-array-slices-equals' | 'notes'
   'writing-data': 'writing-data-setupdate' | 'setkey-value-set-a-value-by-key' | 'updateupdater-change-several-fields-at-once' | 'set-vs-update-when-to-use-which' | 'reset-reset-to-initialstate'
 }
