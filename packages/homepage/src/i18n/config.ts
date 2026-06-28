@@ -161,6 +161,10 @@ const resources = {
 
       'nav.sections.api': 'API-клиент',
       'nav.sections.api.api-client': 'ApiClient',
+      'nav.sections.api-hooks': 'API-хуки (React)',
+      'nav.sections.api-hooks.api-use-query': 'useApiQuery',
+      'nav.sections.api-hooks.api-use-mutation': 'useApiMutation',
+      'nav.sections.api-hooks.api-ssr-pokemon': 'SSR + пагинация (Pokémon)',
 
       'docs.placeholder.title': 'Раздел в разработке',
       'docs.placeholder.description': 'Этот раздел документации еще не готов. Я работаю над его созданием.',
@@ -354,6 +358,10 @@ const resources = {
 
       'nav.sections.api': 'API Client',
       'nav.sections.api.api-client': 'ApiClient',
+      'nav.sections.api-hooks': 'API Hooks (React)',
+      'nav.sections.api-hooks.api-use-query': 'useApiQuery',
+      'nav.sections.api-hooks.api-use-mutation': 'useApiMutation',
+      'nav.sections.api-hooks.api-ssr-pokemon': 'SSR + pagination (Pokémon)',
 
       'docs.placeholder.title': 'Section under development',
       'docs.placeholder.description': "This documentation section is not ready yet. I'm working on creating it.",

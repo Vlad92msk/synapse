@@ -1,3 +1,4 @@
+import { IStorage } from '../core'
 import { EndpointClass } from './components/endpoint'
 import { QueryStorage } from './components/query-storage'
 import { CreateApiClientOptions, ExtractParamsType, ExtractResultType } from './types/api.interface'
@@ -22,6 +23,9 @@ export class ApiClient<EndpointsFn extends (create: CreateEndpoint) => Promise<R
 
   /** Промис текущей инициализации (для дедупликации параллельных вызовов) */
   private _initPromise: Promise<this> | null = null
+
+  /** Снапшот для гидрации, отложенный до завершения init (если hydrate вызван раньше) */
+  private _pendingHydration: Record<string, any> | null = null
 
   private readonly cacheableHeaderKeys: CreateApiClientOptions['cacheableHeaderKeys']
 
@@ -63,7 +67,13 @@ export class ApiClient<EndpointsFn extends (create: CreateEndpoint) => Promise<R
       // 1. Создаем кэшированное хранилище запросов (storage инициализируется внутри QueryStorage)
       this.queryStorage = await new QueryStorage(this.storageExternal, this.globalCacheConfig).initialize()
 
-      // 2. Создаем эндпоинты
+      // 2. Применяем отложенную гидрацию (если hydrate был вызван до init)
+      if (this._pendingHydration) {
+        await this.queryStorage.hydrate(this._pendingHydration)
+        this._pendingHydration = null
+      }
+
+      // 3. Создаем эндпоинты
       await this.initializeEndpoints()
 
       this._initialized = true
@@ -138,6 +148,50 @@ export class ApiClient<EndpointsFn extends (create: CreateEndpoint) => Promise<R
       apiLogger.error(`Ошибка запроса к ${String(endpointName)}`, { error, params })
       throw error
     }
+  }
+
+  /**
+   * Снимок кэша для дегидрации (SSR: сервер → HTML → клиент).
+   *
+   * Возвращает всё состояние кэш-хранилища (записи API с абсолютными `expiresAt`,
+   * поэтому TTL переживает перенос на клиент). Симметрично `dehydrateModule` для
+   * synapse-модулей. Типичный серверный рецепт: `await api.request(...)` для
+   * прогрева → `await api.dehydrate()` → сериализовать в HTML.
+   */
+  public async dehydrate(): Promise<Record<string, any>> {
+    this.ensureInitialized()
+    const storage = this.queryStorage.getStorage()
+    if (!storage) return {}
+    // getState у sync-хранилищ возвращает значение, у async — Promise; await покрывает оба
+    return await storage.getState()
+  }
+
+  /**
+   * Гидрация кэша снапшотом с сервера.
+   *
+   * - Вызванная ДО `init()` — снапшот запоминается и применяется сразу после
+   *   создания хранилища (init не перезатрёт серверное состояние).
+   * - Вызванная ПОСЛЕ `init()` — немедленно заменяет состояние кэша и
+   *   перестраивает индекс тегов.
+   *
+   * После гидрации первый `request()`/`getCachedSync()` с теми же параметрами
+   * попадёт в кэш — на клиенте не будет повторного сетевого запроса.
+   */
+  public async hydrate(state: Record<string, any>): Promise<this> {
+    if (this._initialized) {
+      await this.queryStorage.hydrate(state)
+    } else {
+      this._pendingHydration = state
+    }
+    return this
+  }
+
+  /**
+   * Доступ к экземпляру хранилища кэша (для ручных сценариев SSR/отладки).
+   */
+  public getStorage(): IStorage | null {
+    this.ensureInitialized()
+    return this.queryStorage.getStorage()
   }
 
   public async destroy() {

@@ -549,10 +549,455 @@
                   }
                 ]
               }
+            },
+            {
+              "type": "blockquote",
+              "data": {
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "data": {
+                      "text": "Using React? The ApiClient is standalone (no RxJS/createSynapse required), but\nsynapse-storage/react ships thin hooks over the endpoints so you don't have to wire request() /\nsubscribe() by hand. They live on their own pages: useApiQuery (GET) and\nuseApiMutation (mutations). The sections below document the native\nendpoint/client surface those hooks are built on.",
+                      "formatting": {
+                        "bold": [
+                          {
+                            "start": 0,
+                            "end": 12
+                          },
+                          {
+                            "start": 226,
+                            "end": 237
+                          },
+                          {
+                            "start": 248,
+                            "end": 262
+                          },
+                          {
+                            "start": 308,
+                            "end": 314
+                          }
+                        ],
+                        "italic": [],
+                        "code": [
+                          {
+                            "start": 17,
+                            "end": 26
+                          },
+                          {
+                            "start": 50,
+                            "end": 63
+                          },
+                          {
+                            "start": 79,
+                            "end": 100
+                          },
+                          {
+                            "start": 163,
+                            "end": 172
+                          },
+                          {
+                            "start": 175,
+                            "end": 186
+                          }
+                        ],
+                        "links": [
+                          {
+                            "start": 226,
+                            "end": 237,
+                            "url": "./api-use-query.md",
+                            "title": null
+                          },
+                          {
+                            "start": 248,
+                            "end": 262,
+                            "url": "./api-use-mutation.md",
+                            "title": null
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
             }
           ],
           "metadata": {
-            "wordCount": 32,
+            "wordCount": 84,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": true,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "cache-invalidation-bus-endpointoncacheinvalidate",
+          "title": "Cache invalidation bus: endpoint.onCacheInvalidate()",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "When a mutation succeeds with invalidatesTags, the matching cache entries are removed and an\ninvalidation event is emitted. Endpoints whose tags intersect the invalidated tags get notified —\nthis is what powers useApiQuery's auto-refetch (parity with React Query: after a mutation the active\nqueries \"come alive\" instead of waiting for the TTL).",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 86,
+                      "end": 89
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 30,
+                      "end": 45
+                    },
+                    {
+                      "start": 140,
+                      "end": 144
+                    },
+                    {
+                      "start": 211,
+                      "end": 222
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const endpoints = pokemonApiClient.getEndpoints()\n\n// Re-run something when the endpoint's cache is invalidated\nconst unsub = endpoints.getList.onCacheInvalidate(() => {\n  console.log('List cache invalidated — refetching')\n})\n\n// Triggered, for example, by a mutation that invalidatesTags: ['PokemonList']\nunsub()",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 52,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "synchronous-cache-read-endpointgetcachedsync",
+          "title": "Synchronous cache read: endpoint.getCachedSync()",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "getCachedSync(params) reads a cached result synchronously, without a network request and without an\nasync tick — so a hook can return server data on the very first render (no loading flash after\nhydration). It works only when:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 44,
+                      "end": 57
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 21
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "the storage is synchronous (MemoryStorage / LocalStorage);",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 28,
+                              "end": 41
+                            },
+                            {
+                              "start": 44,
+                              "end": 56
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "the endpoint has no headers that affect the cache key (the key can't be reproduced synchronously\notherwise — headers are prepared async);",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "caching is enabled for the endpoint and the entry is not expired.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "In any other case it returns undefined and the caller falls back to the regular async request().\nuseApiQuery uses this automatically for its initial render.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 29,
+                      "end": 38
+                    },
+                    {
+                      "start": 86,
+                      "end": 95
+                    },
+                    {
+                      "start": 97,
+                      "end": 108
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const cached = endpoints.getDetails.getCachedSync({ id: 25 })\nif (cached?.ok) console.log(cached.data) // instant, from cache",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 103,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "ssr-dehydrate-hydrate",
+          "title": "SSR: dehydrate() / hydrate()",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The client is not limited to the browser — the server path is real. On the server use\nMemoryStorage; on the client any storage will do. Cache timestamps are absolute (expiresAt = now +\nttl), so they survive the server → client transfer, and the tag index is rebuilt on hydration.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 14,
+                      "end": 40
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 86,
+                      "end": 99
+                    },
+                    {
+                      "start": 167,
+                      "end": 188
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// --- server ---\nconst api = new ApiClient({ storage: () => new MemoryStorage({ name: 'api-cache' }), baseQuery, endpoints })\nawait api.init()\nawait api.request('getList', { limit: 12, offset: 0 }) // warm up the cache\nconst dehydrated = await api.dehydrate()                // → serialize into HTML\nawait api.destroy()\n\n// --- client ---\nconst api = new ApiClient({ storage: () => new MemoryStorage({ name: 'api-cache' }), baseQuery, endpoints })\nawait api.hydrate(dehydrated) // BEFORE init → seeds the cache (init won't overwrite it)\nawait api.init()\n// first request('getList', sameParams) hits the cache — no network call",
+                "meta": null
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "dehydrate(): Promise<TCacheState> — a snapshot of the cache (symmetric to dehydrateModule for\nsynapse modules).",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 33
+                            },
+                            {
+                              "start": 74,
+                              "end": 89
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "hydrate(state) — seeds the cache. Called before init() it stashes the snapshot and applies it\nright after the storage is created (so init() won't overwrite the server state); called after\ninit() it replaces the cache state and rebuilds the tag index immediately.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 41,
+                              "end": 47
+                            },
+                            {
+                              "start": 182,
+                              "end": 187
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 14
+                            },
+                            {
+                              "start": 48,
+                              "end": 54
+                            },
+                            {
+                              "start": 133,
+                              "end": 139
+                            },
+                            {
+                              "start": 188,
+                              "end": 194
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "getStorage() — access to the underlying cache storage instance (manual SSR/debugging).",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 12
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "blockquote",
+              "data": {
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "data": {
+                      "text": "Cache-key stability server ↔ client. The cache key includes cacheableHeaderKeys. If the set of\ncache-affecting headers differs between server and client (e.g. auth), the keys diverge and hydration\n\"misses\". For SSR endpoints exclude such headers from the key via excludeCacheableHeaderKeys.",
+                      "formatting": {
+                        "bold": [
+                          {
+                            "start": 0,
+                            "end": 36
+                          }
+                        ],
+                        "italic": [],
+                        "code": [
+                          {
+                            "start": 60,
+                            "end": 79
+                          },
+                          {
+                            "start": 263,
+                            "end": 289
+                          }
+                        ],
+                        "links": []
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 158,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -565,11 +1010,2092 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-27T11:10:50.360Z",
-        "wordCount": 1511,
-        "readingTime": 8,
-        "sectionsCount": 13,
-        "codeBlocksCount": 12
+        "lastModified": "2026-06-28T11:04:21.830Z",
+        "wordCount": 2054,
+        "readingTime": 11,
+        "sectionsCount": 16,
+        "codeBlocksCount": 15
+      }
+    },
+    "api-ssr-pokemon": {
+      "title": "Pokémon SSR — server render + client pagination",
+      "sections": [
+        {
+          "id": "pokmon-ssr-server-render-client-pagination",
+          "title": "Pokémon SSR — server render + client pagination",
+          "level": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "A practical recipe: fetch the first page on the server, ship the cache to the client, render it with no\nloading flash, and let pagination continue on the client from there. Built on the same Pokémon API as\nthe ApiClient and useApiQuery pages.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 30,
+                      "end": 54
+                    },
+                    {
+                      "start": 127,
+                      "end": 160
+                    }
+                  ],
+                  "italic": [],
+                  "code": [],
+                  "links": [
+                    {
+                      "start": 210,
+                      "end": 219,
+                      "url": "./api-client.md",
+                      "title": null
+                    },
+                    {
+                      "start": 224,
+                      "end": 235,
+                      "url": "./api-use-query.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The ApiClient is server-safe: the network layer uses the global fetch (configurable via fetchFn),\nand every window/document/localStorage access is guarded by typeof ... !== 'undefined'. On the\nserver use MemoryStorage; on the client any storage works (a sync one — Memory/LocalStorage — gives\nthe instant first render).",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 4,
+                      "end": 13
+                    },
+                    {
+                      "start": 64,
+                      "end": 69
+                    },
+                    {
+                      "start": 88,
+                      "end": 95
+                    },
+                    {
+                      "start": 108,
+                      "end": 114
+                    },
+                    {
+                      "start": 115,
+                      "end": 123
+                    },
+                    {
+                      "start": 124,
+                      "end": 136
+                    },
+                    {
+                      "start": 158,
+                      "end": 184
+                    },
+                    {
+                      "start": 204,
+                      "end": 217
+                    },
+                    {
+                      "start": 265,
+                      "end": 271
+                    },
+                    {
+                      "start": 272,
+                      "end": 284
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 90,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "the-idea",
+          "title": "The idea",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The cache key is endpoint name + params, so each page (offset) is its own cache entry:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 17,
+                      "end": 39
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 55,
+                      "end": 61
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "offset: 0 was fetched on the server → it's in the cache → the first client render is instant;",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 9
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "offset: 12 was not → cache miss → a normal network request on the client;",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 59,
+                              "end": 72
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 10
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "back to offset: 0 (while the TTL holds) → instant from cache again.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 8,
+                              "end": 17
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 64,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "shared-api-factory",
+          "title": "Shared API factory",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Use a factory (a fresh instance per server request — don't share one client across requests). The\nstorage is itself a factory so each init() gets a clean store.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 6,
+                      "end": 13
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 98,
+                      "end": 105
+                    },
+                    {
+                      "start": 134,
+                      "end": 140
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// pokemon.api.ts\nimport { ApiClient } from 'synapse-storage/api'\nimport { MemoryStorage } from 'synapse-storage/core'\n\ninterface PokemonListApiResponse {\n  count: number\n  next: string | null\n  results: Array<{ name: string; url: string }>\n}\n\nexport function createPokemonApi() {\n  return new ApiClient({\n    storage: () => new MemoryStorage<Record<string, any>>({ name: 'pokemon-api-cache', initialState: {} }),\n    baseQuery: { baseUrl: 'https://pokeapi.co/api/v2', timeout: 10000 },\n    cache: { ttl: 120000 },\n    endpoints: async (create) => ({\n      getList: create<{ limit: number; offset: number }, PokemonListApiResponse>({\n        request: (params) => ({ path: '/pokemon', method: 'GET', query: params }),\n        tags: ['pokemon-list'],\n      }),\n    }),\n  })\n}\n\nexport type PokemonApiEndpoints = ReturnType<ReturnType<typeof createPokemonApi>['getEndpoints']>",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 29,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "server-warm-the-cache-and-dehydrate",
+          "title": "Server: warm the cache and dehydrate",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "tsx",
+                "code": "// server.tsx\nimport { renderToString } from 'react-dom/server'\nimport { createPokemonApi } from './pokemon.api'\nimport { App } from './App'\n\nconst PAGE_SIZE = 12\n\nexport async function renderApp() {\n  const api = createPokemonApi() // per-request instance\n  await api.init()\n\n  // Warm the cache with the first page\n  await api.request('getList', { limit: PAGE_SIZE, offset: 0 })\n\n  // Render: useApiQuery reads the cache synchronously → data lands in the HTML\n  const html = renderToString(<App endpoints={api.getEndpoints()} />)\n\n  // Snapshot the cache for the client\n  const state = await api.dehydrate()\n  await api.destroy()\n\n  return { html, state }\n}\n\n// In your HTML template, inline the snapshot:\n//   <script>window.__POKEMON_API_STATE__ = ${JSON.stringify(state)}</script>",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 0,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "client-hydrate-and-render",
+          "title": "Client: hydrate and render",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "tsx",
+                "code": "// client.tsx\nimport { hydrateRoot } from 'react-dom/client'\nimport { createPokemonApi } from './pokemon.api'\nimport { App } from './App'\n\nasync function bootstrap() {\n  const api = createPokemonApi()\n  await api.hydrate(window.__POKEMON_API_STATE__) // BEFORE init → seeds the cache\n  await api.init()\n\n  hydrateRoot(document.getElementById('root')!, <App endpoints={api.getEndpoints()} />)\n}\n\nbootstrap()",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 0,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "the-component-first-page-from-cache-pagination-on-the-client",
+          "title": "The component: first page from cache, pagination on the client",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "tsx",
+                "code": "// App.tsx\nimport { useState } from 'react'\nimport { useApiQuery } from 'synapse-storage/react'\nimport type { PokemonApiEndpoints } from './pokemon.api'\n\nconst PAGE_SIZE = 12\n\nexport function App({ endpoints }: { endpoints: PokemonApiEndpoints }) {\n  const [offset, setOffset] = useState(0)\n\n  // offset=0 → instant from the hydrated cache (no loading flash).\n  // offset=12 → cache miss → network request on the client.\n  const { data, isLoading, fromCache } = useApiQuery(endpoints.getList, { limit: PAGE_SIZE, offset })\n\n  const items = data?.results ?? []\n  const hasMore = !!data?.next\n\n  return (\n    <div>\n      <ul>{items.map((p) => <li key={p.name}>{p.name}</li>)}</ul>\n\n      {isLoading && <span>Loading…</span>}\n      {fromCache && <small>from cache</small>}\n\n      <button disabled={offset === 0} onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}>Prev</button>\n      <button disabled={!hasMore} onClick={() => setOffset((o) => o + PAGE_SIZE)}>Next</button>\n    </div>\n  )\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The first page renders identically on the server and on the client's first paint (so React hydration\nmatches — no mismatch warning). Clicking Next changes offset, which is a new cache key → the client\nfetches the next page; Prev returns to a page that's still cached → instant.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 142,
+                      "end": 146
+                    },
+                    {
+                      "start": 224,
+                      "end": 228
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 155,
+                      "end": 161
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 49,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "prewarming-several-pages",
+          "title": "Prewarming several pages",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Warm more than one page on the server — they all land in the snapshot:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "await Promise.all([\n  api.request('getList', { limit: PAGE_SIZE, offset: 0 }),\n  api.request('getList', { limit: PAGE_SIZE, offset: PAGE_SIZE }),\n])",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Now offset: 0 and offset: 12 are instant on the client.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 14,
+                      "end": 17
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 4,
+                      "end": 13
+                    },
+                    {
+                      "start": 18,
+                      "end": 28
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 26,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "gotchas",
+          "title": "Gotchas",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "No loading flash needs a sync store on the client. useApiQuery's instant first render uses\ngetCachedSync(), which only works on\nMemoryStorage/LocalStorage. With IndexedDB the data still comes from the cache, but after one\nasync tick (a brief loading).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 50
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 51,
+                              "end": 62
+                            },
+                            {
+                              "start": 91,
+                              "end": 106
+                            },
+                            {
+                              "start": 128,
+                              "end": 141
+                            },
+                            {
+                              "start": 142,
+                              "end": 154
+                            },
+                            {
+                              "start": 161,
+                              "end": 170
+                            },
+                            {
+                              "start": 242,
+                              "end": 249
+                            }
+                          ],
+                          "links": [
+                            {
+                              "start": 91,
+                              "end": 106,
+                              "url": "./api-client.md#synchronous-cache-read-endpointgetcachedsync",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Cache-key stability server ↔ client. The key includes cacheableHeaderKeys. If a cache-affecting\nheader (e.g. auth) differs between server and client, the keys diverge and hydration \"misses\". Exclude\nsuch headers for SSR endpoints via excludeCacheableHeaderKeys.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 36
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 54,
+                              "end": 73
+                            },
+                            {
+                              "start": 234,
+                              "end": 260
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "One instance per request on the server. Never share a single client across requests — use the\nfactory so each request gets its own cache.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 39
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 97,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "nextjs-app-router",
+          "title": "Next.js (App Router)",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Same flow: on the server (a Server Component or route handler) create the api with MemoryStorage, call\nrequest() to warm it, then dehydrate(). Pass the snapshot into a Client Component that calls\nhydrate() before init() and renders the hooks. (dehydrate/hydrate have no React dependency, so\nthey're safe to call from 'server only' code — mirrors dehydrateModule for synapse modules.)",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 206,
+                      "end": 212
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 83,
+                      "end": 96
+                    },
+                    {
+                      "start": 103,
+                      "end": 112
+                    },
+                    {
+                      "start": 130,
+                      "end": 141
+                    },
+                    {
+                      "start": 196,
+                      "end": 205
+                    },
+                    {
+                      "start": 213,
+                      "end": 219
+                    },
+                    {
+                      "start": 244,
+                      "end": 253
+                    },
+                    {
+                      "start": 254,
+                      "end": 261
+                    },
+                    {
+                      "start": 317,
+                      "end": 330
+                    },
+                    {
+                      "start": 346,
+                      "end": 361
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 59,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "see-also",
+          "title": "See also",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "ApiClient — dehydrate()/hydrate(), getCachedSync(), caching and tags.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 12,
+                              "end": 23
+                            },
+                            {
+                              "start": 24,
+                              "end": 33
+                            },
+                            {
+                              "start": 35,
+                              "end": 50
+                            }
+                          ],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 9,
+                              "url": "./api-client.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "useApiQuery — the hook used here.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 11,
+                              "url": "./api-use-query.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "useApiMutation — writes + cache invalidation.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 14,
+                              "url": "./api-use-mutation.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 19,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        }
+      ],
+      "features": [],
+      "frontMatter": {},
+      "metadata": {
+        "lastModified": "2026-06-28T11:18:43.506Z",
+        "wordCount": 891,
+        "readingTime": 5,
+        "sectionsCount": 10,
+        "codeBlocksCount": 5
+      }
+    },
+    "api-use-mutation": {
+      "title": "useApiMutation — React hook for mutations",
+      "sections": [
+        {
+          "id": "useapimutation-react-hook-for-mutations",
+          "title": "useApiMutation — React hook for mutations",
+          "level": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "A React hook over an ApiClient endpoint for writes (POST/PUT/DELETE/PATCH). Unlike\nuseApiQuery, the request does not start automatically — you trigger it with\nmutate/mutateAsync. Mutations aren't cached (by REST method), and their invalidatesTags invalidate\nthe cache — active useApiQuery hooks of neighbouring endpoints refetch on their own via the\ninvalidation bus.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 44,
+                      "end": 50
+                    },
+                    {
+                      "start": 113,
+                      "end": 116
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 21,
+                      "end": 30
+                    },
+                    {
+                      "start": 159,
+                      "end": 165
+                    },
+                    {
+                      "start": 166,
+                      "end": 177
+                    },
+                    {
+                      "start": 231,
+                      "end": 246
+                    },
+                    {
+                      "start": 277,
+                      "end": 288
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 83,
+                      "end": 94,
+                      "url": "./api-use-query.md",
+                      "title": null
+                    },
+                    {
+                      "start": 350,
+                      "end": 366,
+                      "url": "./api-client.md#cache-invalidation-bus-endpointoncacheinvalidate",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 51,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "import",
+          "title": "Import",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { useApiMutation } from 'synapse-storage/react'",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 0,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "usage",
+          "title": "Usage",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const endpoints = pokemonApiClient.getEndpoints()\n\nfunction CreatePokemon() {\n  const { mutate, isLoading, isError, error } = useApiMutation(endpoints.createPokemon)\n\n  return (\n    <form\n      onSubmit={(e) => {\n        e.preventDefault()\n        mutate({ name: 'Pikachu' }) // fire-and-forget\n      }}\n    >\n      <button disabled={isLoading}>Create</button>\n      {isError && <Error message={error?.message} />}\n    </form>\n  )\n}",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 0,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "return-value",
+          "title": "Return value",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "useApiMutation(endpoint, options?) returns:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 34
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "table",
+              "data": {
+                "headers": [
+                  "Field",
+                  "Type",
+                  "Description"
+                ],
+                "rows": [
+                  {
+                    "cells": [
+                      "Field",
+                      "Type",
+                      "Description"
+                    ],
+                    "type": "header"
+                  },
+                  {
+                    "cells": [
+                      "mutate",
+                      "(params) => void",
+                      "Run the mutation; errors are not thrown (read error/isError)"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "mutateAsync",
+                      "(params) => Promise<QueryResult>",
+                      "Run and await; rejects on error"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "data",
+                      "TData | undefined",
+                      "Data of a successful response"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "error",
+                      "Error | undefined",
+                      "Mutation error"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "status",
+                      "'idle' | 'loading' | 'success' | 'error'",
+                      "Current status"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "isLoading",
+                      "boolean",
+                      "status === 'loading'"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "isError",
+                      "boolean",
+                      "status === 'error'"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "isSuccess",
+                      "boolean",
+                      "status === 'success'"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "reset",
+                      "() => void",
+                      "Reset state back to idle"
+                    ],
+                    "type": "data"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "options is QueryOptions (signal, headers, timeout, retry, …).",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 7
+                    },
+                    {
+                      "start": 11,
+                      "end": 23
+                    },
+                    {
+                      "start": 25,
+                      "end": 31
+                    },
+                    {
+                      "start": 33,
+                      "end": 40
+                    },
+                    {
+                      "start": 42,
+                      "end": 49
+                    },
+                    {
+                      "start": 51,
+                      "end": 56
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 86,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": true,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "mutate-vs-mutateasync",
+          "title": "mutate vs mutateAsync",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "mutate(params) — fire-and-forget. The rejection is swallowed (state already reflects the error),\nso you don't need a .catch. Best for simple form submits.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 14
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 14
+                            },
+                            {
+                              "start": 117,
+                              "end": 123
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "mutateAsync(params) — returns the promise and rethrows on error, so you can await and branch\nin flow:",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 19
+                            },
+                            {
+                              "start": 46,
+                              "end": 54
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 19
+                            },
+                            {
+                              "start": 76,
+                              "end": 81
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 40,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "invalidating-related-queries",
+          "title": "Invalidating related queries",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Give the mutation endpoint invalidatesTags; any useApiQuery whose endpoint tags intersect will\nrefetch automatically. No manual cache wiring required.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 27,
+                      "end": 42
+                    },
+                    {
+                      "start": 48,
+                      "end": 59
+                    },
+                    {
+                      "start": 75,
+                      "end": 79
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// endpoint config\ncreatePokemon: create({\n  request: (body) => ({ path: '/pokemon', method: 'POST', body }),\n  invalidatesTags: ['PokemonList'],\n})\n\n// getList endpoint has tags: ['PokemonList']\n// → after a successful createPokemon, an active useApiQuery(getList) refetches",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 19,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "notes",
+          "title": "Notes",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "StrictMode-safe. On unmount the in-flight request is aborted and state updates are skipped.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 16
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Mutations are never written to the cache (only GET is cached), so there's no fromCache here.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 77,
+                              "end": 86
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 29,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "see-also",
+          "title": "See also",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "useApiQuery — the companion hook for reads.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 11,
+                              "url": "./api-use-query.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "ApiClient — caching, tags and the invalidation bus.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 9,
+                              "url": "./api-client.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 15,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        }
+      ],
+      "features": [],
+      "frontMatter": {},
+      "metadata": {
+        "lastModified": "2026-06-28T11:05:24.939Z",
+        "wordCount": 428,
+        "readingTime": 3,
+        "sectionsCount": 8,
+        "codeBlocksCount": 3
+      }
+    },
+    "api-use-query": {
+      "title": "useApiQuery — React hook for GET requests",
+      "sections": [
+        {
+          "id": "useapiquery-react-hook-for-get-requests",
+          "title": "useApiQuery — React hook for GET requests",
+          "level": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "A React Query–style hook over an ApiClient endpoint for reading data (GET). It is a thin layer on\ntop of endpoint.request(params).subscribe(...) — deduplication, the tag cache, retry and abort already\nlive in the endpoint (see ApiClient). The hook adds the React part: subscription,\na stable params key, enabled/refetch, an SSR fast-path (no loading flash) and auto-refetch on cache\ninvalidation.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 56,
+                      "end": 63
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 33,
+                      "end": 42
+                    },
+                    {
+                      "start": 105,
+                      "end": 144
+                    },
+                    {
+                      "start": 304,
+                      "end": 311
+                    },
+                    {
+                      "start": 312,
+                      "end": 319
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 227,
+                      "end": 236,
+                      "url": "./api-client.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The ApiClient is standalone (it depends neither on RxJS/reactive nor on createSynapse), so you can\nuse just synapse-storage/api + synapse-storage/core + these hooks — without the whole state-manager.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 4,
+                      "end": 13
+                    },
+                    {
+                      "start": 56,
+                      "end": 64
+                    },
+                    {
+                      "start": 72,
+                      "end": 85
+                    },
+                    {
+                      "start": 108,
+                      "end": 127
+                    },
+                    {
+                      "start": 130,
+                      "end": 150
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 87,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "import",
+          "title": "Import",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { useApiQuery } from 'synapse-storage/react'",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 0,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "usage",
+          "title": "Usage",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The hook takes an endpoint (from getEndpoints()), so params/data types are inferred from it.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 18,
+                      "end": 26
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 33,
+                      "end": 47
+                    },
+                    {
+                      "start": 53,
+                      "end": 59
+                    },
+                    {
+                      "start": 60,
+                      "end": 64
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const endpoints = pokemonApiClient.getEndpoints()\n\nfunction PokemonCard({ id }: { id: number }) {\n  // GET: starts on mount, re-runs when params change\n  const { data, isLoading, isError, error, refetch, fromCache } = useApiQuery(endpoints.getDetails, { id })\n\n  if (isLoading) return <Spinner />\n  if (isError) return <Error message={error?.message} />\n\n  return (\n    <div>\n      <h3>{data?.name}</h3>\n      {fromCache && <small>from cache</small>}\n      <button onClick={refetch}>Refresh</button>\n    </div>\n  )\n}",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 14,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "return-value",
+          "title": "Return value",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "useApiQuery(endpoint, params, options?) returns:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 39
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "table",
+              "data": {
+                "headers": [
+                  "Field",
+                  "Type",
+                  "Description"
+                ],
+                "rows": [
+                  {
+                    "cells": [
+                      "Field",
+                      "Type",
+                      "Description"
+                    ],
+                    "type": "header"
+                  },
+                  {
+                    "cells": [
+                      "data",
+                      "TData | undefined",
+                      "Response data (or cached data)"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "error",
+                      "Error | undefined",
+                      "Request error"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "status",
+                      "'idle' | 'loading' | 'success' | 'error'",
+                      "Current status"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "isLoading",
+                      "boolean",
+                      "status === 'loading'"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "isError",
+                      "boolean",
+                      "status === 'error'"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "isSuccess",
+                      "boolean",
+                      "status === 'success'"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "fromCache",
+                      "boolean",
+                      "Data came from cache rather than the network"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "refetch",
+                      "() => void",
+                      "Force a re-request"
+                    ],
+                    "type": "data"
+                  }
+                ]
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 64,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": true,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "options",
+          "title": "Options",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Extends QueryOptions (signal, headers, timeout, disableCache, retry, …) plus:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 8,
+                      "end": 20
+                    },
+                    {
+                      "start": 22,
+                      "end": 28
+                    },
+                    {
+                      "start": 30,
+                      "end": 37
+                    },
+                    {
+                      "start": 39,
+                      "end": 46
+                    },
+                    {
+                      "start": 48,
+                      "end": 60
+                    },
+                    {
+                      "start": 62,
+                      "end": 67
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "enabled (default true) — when false, the request is not performed (lazy). Useful when params\naren't ready yet:",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 7
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 7
+                            },
+                            {
+                              "start": 17,
+                              "end": 21
+                            },
+                            {
+                              "start": 30,
+                              "end": 35
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "refetchOnInvalidate (default true) — auto-refetch the active query after its cache tags get\ninvalidated by a mutation (see auto-refetch).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 19
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 19
+                            },
+                            {
+                              "start": 29,
+                              "end": 33
+                            }
+                          ],
+                          "links": [
+                            {
+                              "start": 123,
+                              "end": 135,
+                              "url": "#auto-refetch-on-cache-invalidation",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 46,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "ssr-no-loading-flash-after-hydration",
+          "title": "SSR: no loading flash after hydration",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The lazy initial state reads the cache synchronously via\nendpoint.getCachedSync(). On the server\nuseEffect doesn't run, so the very first (and only) render returns the seeded/cached data; on the client\nthe first render after hydration shows the server data\nimmediately instead of flashing loading.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 39,
+                      "end": 52
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 57,
+                      "end": 81
+                    },
+                    {
+                      "start": 97,
+                      "end": 106
+                    },
+                    {
+                      "start": 289,
+                      "end": 296
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 57,
+                      "end": 81,
+                      "url": "./api-client.md#synchronous-cache-read-endpointgetcachedsync",
+                      "title": null
+                    },
+                    {
+                      "start": 225,
+                      "end": 234,
+                      "url": "./api-client.md#ssr-dehydrate-hydrate",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "This works only for synchronous storages (MemoryStorage/LocalStorage) and endpoints without\ncache-affecting headers. Otherwise the hook falls back to the regular async path.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 42,
+                      "end": 55
+                    },
+                    {
+                      "start": 56,
+                      "end": 68
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 66,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "auto-refetch-on-cache-invalidation",
+          "title": "Auto-refetch on cache invalidation",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "When a mutation succeeds with invalidatesTags, the matching cache entries are removed and an\ninvalidation event is emitted. An active useApiQuery whose endpoint tags intersect the invalidated\ntags re-runs automatically (parity with React Query — the query \"comes alive\" instead of waiting for\nthe TTL). Under the hood this uses\nendpoint.onCacheInvalidate(). Turn\nit off with refetchOnInvalidate: false.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 197,
+                      "end": 218
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 30,
+                      "end": 45
+                    },
+                    {
+                      "start": 134,
+                      "end": 145
+                    },
+                    {
+                      "start": 161,
+                      "end": 165
+                    },
+                    {
+                      "start": 328,
+                      "end": 356
+                    },
+                    {
+                      "start": 375,
+                      "end": 401
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 328,
+                      "end": 356,
+                      "url": "./api-client.md#cache-invalidation-bus-endpointoncacheinvalidate",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// getList endpoint: tags: ['PokemonList']\nconst list = useApiQuery(endpoints.getList, { limit: 12 })\n\n// elsewhere — a mutation with invalidatesTags: ['PokemonList']\n// → `list` refetches on its own",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 57,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "notes",
+          "title": "Notes",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Stable params key. Params are serialized with sorted keys, so a fresh { id: 1 } object on every\nrender does not cause an infinite re-request.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 18
+                            },
+                            {
+                              "start": 108,
+                              "end": 111
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 70,
+                              "end": 79
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "StrictMode-safe. The effect aborts the in-flight request on cleanup.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 16
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "params identity doesn't matter. You can pass an inline object literal — only the serialized key\ndrives re-fetching.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 31
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 6
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 53,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "see-also",
+          "title": "See also",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "ApiClient — the native client, endpoints, caching and SSR.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 9,
+                              "url": "./api-client.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "useApiMutation — the companion hook for writes.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 14,
+                              "url": "./api-use-mutation.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 16,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        }
+      ],
+      "features": [],
+      "frontMatter": {},
+      "metadata": {
+        "lastModified": "2026-06-28T11:10:15.228Z",
+        "wordCount": 606,
+        "readingTime": 4,
+        "sectionsCount": 9,
+        "codeBlocksCount": 3
       }
     },
     "architecture": {
@@ -15169,10 +17695,455 @@
                   }
                 ]
               }
+            },
+            {
+              "type": "blockquote",
+              "data": {
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "data": {
+                      "text": "Используете React? ApiClient самодостаточен (RxJS/createSynapse не нужны), но в\nsynapse-storage/react есть тонкие хуки поверх эндпоинтов — чтобы не собирать request() /\nsubscribe() руками. Они вынесены на отдельные страницы: useApiQuery (GET) и\nuseApiMutation (мутации). Разделы ниже описывают нативную поверхность\nэндпоинта/клиента, на которой построены эти хуки.",
+                      "formatting": {
+                        "bold": [
+                          {
+                            "start": 0,
+                            "end": 18
+                          },
+                          {
+                            "start": 225,
+                            "end": 236
+                          },
+                          {
+                            "start": 245,
+                            "end": 259
+                          },
+                          {
+                            "start": 294,
+                            "end": 302
+                          }
+                        ],
+                        "italic": [],
+                        "code": [
+                          {
+                            "start": 19,
+                            "end": 28
+                          },
+                          {
+                            "start": 50,
+                            "end": 63
+                          },
+                          {
+                            "start": 80,
+                            "end": 101
+                          },
+                          {
+                            "start": 157,
+                            "end": 166
+                          },
+                          {
+                            "start": 169,
+                            "end": 180
+                          }
+                        ],
+                        "links": [
+                          {
+                            "start": 225,
+                            "end": 236,
+                            "url": "./api-use-query.md",
+                            "title": null
+                          },
+                          {
+                            "start": 245,
+                            "end": 259,
+                            "url": "./api-use-mutation.md",
+                            "title": null
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
             }
           ],
           "metadata": {
-            "wordCount": 26,
+            "wordCount": 70,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": true,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "cache-invalidation-bus-endpointoncacheinvalidate",
+          "title": "Шина инвалидации кэша: endpoint.onCacheInvalidate()",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Когда мутация успешно отрабатывает с invalidatesTags, соответствующие записи кэша удаляются и\nэмитится событие инвалидации. Эндпоинты, чьи tags пересекаются с инвалидированными, получают\nуведомление — именно на этом построен авто-рефетч useApiQuery (паритет с React Query: после мутации\nактивные запросы «оживают», а не ждут истечения TTL).",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 92,
+                      "end": 93
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 37,
+                      "end": 52
+                    },
+                    {
+                      "start": 139,
+                      "end": 143
+                    },
+                    {
+                      "start": 237,
+                      "end": 248
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const endpoints = pokemonApiClient.getEndpoints()\n\n// Сделать что-то при инвалидации кэша эндпоинта\nconst unsub = endpoints.getList.onCacheInvalidate(() => {\n  console.log('Кэш списка инвалидирован — рефетчим')\n})\n\n// Срабатывает, например, на мутации с invalidatesTags: ['PokemonList']\nunsub()",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 43,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "synchronous-cache-read-endpointgetcachedsync",
+          "title": "Синхронное чтение кэша: endpoint.getCachedSync()",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "getCachedSync(params) читает результат из кэша синхронно, без сетевого запроса и без async-тика —\nпоэтому хук может вернуть серверные данные уже на первом рендере (без вспышки loading после гидрации).\nРаботает только когда:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 47,
+                      "end": 56
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 21
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "хранилище синхронное (MemoryStorage / LocalStorage);",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 22,
+                              "end": 35
+                            },
+                            {
+                              "start": 38,
+                              "end": 50
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "у эндпоинта нет заголовков, влияющих на ключ кэша (иначе ключ нельзя воспроизвести синхронно —\nзаголовки готовятся асинхронно);",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "кэширование для эндпоинта включено и запись не протухла.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "В остальных случаях возвращает undefined, и вызывающий откатывается на обычный async-request().\nuseApiQuery использует это автоматически для первого рендера.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 31,
+                      "end": 40
+                    },
+                    {
+                      "start": 85,
+                      "end": 94
+                    },
+                    {
+                      "start": 96,
+                      "end": 107
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const cached = endpoints.getDetails.getCachedSync({ id: 25 })\nif (cached?.ok) console.log(cached.data) // мгновенно, из кэша",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 79,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "ssr-dehydrate-hydrate",
+          "title": "SSR: dehydrate() / hydrate()",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Клиент не ограничен браузером — серверный путь реален. На сервере используйте MemoryStorage, на\nклиенте — любой стор. Метки времени кэша абсолютные (expiresAt = now + ttl), поэтому переживают перенос\nсервер → клиент, а индекс тегов перестраивается при гидрации.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 7,
+                      "end": 29
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 78,
+                      "end": 91
+                    },
+                    {
+                      "start": 149,
+                      "end": 170
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// --- server ---\nconst api = new ApiClient({ storage: () => new MemoryStorage({ name: 'api-cache' }), baseQuery, endpoints })\nawait api.init()\nawait api.request('getList', { limit: 12, offset: 0 }) // прогрев кэша\nconst dehydrated = await api.dehydrate()                // → сериализовать в HTML\nawait api.destroy()\n\n// --- client ---\nconst api = new ApiClient({ storage: () => new MemoryStorage({ name: 'api-cache' }), baseQuery, endpoints })\nawait api.hydrate(dehydrated) // ДО init → засевает кэш (init не перезатрёт)\nawait api.init()\n// первый request('getList', sameParams) попадёт в кэш — без сетевого запроса",
+                "meta": null
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "dehydrate(): Promise<TCacheState> — снимок кэша (симметрия с dehydrateModule для синапс-модулей).",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 33
+                            },
+                            {
+                              "start": 61,
+                              "end": 76
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "hydrate(state) — засев кэша. Вызванная до init(), запоминает снапшот и применяет его сразу\nпосле создания хранилища (чтобы init() не перезатёр серверное состояние); вызванная после\ninit(), немедленно заменяет состояние кэша и перестраивает индекс тегов.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 39,
+                              "end": 41
+                            },
+                            {
+                              "start": 175,
+                              "end": 180
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 14
+                            },
+                            {
+                              "start": 42,
+                              "end": 48
+                            },
+                            {
+                              "start": 123,
+                              "end": 129
+                            },
+                            {
+                              "start": 181,
+                              "end": 187
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "getStorage() — доступ к экземпляру кэш-хранилища (ручные сценарии SSR/отладки).",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 12
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "blockquote",
+              "data": {
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "data": {
+                      "text": "Стабильность ключа кэша сервер ↔ клиент. Ключ кэша включает cacheableHeaderKeys. Если набор\nвлияющих на кэш заголовков на сервере и клиенте различается (например, auth), ключи разойдутся и\nгидрация «не попадёт». Для SSR-эндпоинтов исключайте такие заголовки из ключа через\nexcludeCacheableHeaderKeys.",
+                      "formatting": {
+                        "bold": [
+                          {
+                            "start": 0,
+                            "end": 40
+                          }
+                        ],
+                        "italic": [],
+                        "code": [
+                          {
+                            "start": 60,
+                            "end": 79
+                          },
+                          {
+                            "start": 273,
+                            "end": 299
+                          }
+                        ],
+                        "links": []
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 128,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -15185,11 +18156,2092 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-06-27T08:36:33.304Z",
-        "wordCount": 1408,
-        "readingTime": 8,
-        "sectionsCount": 13,
-        "codeBlocksCount": 12
+        "lastModified": "2026-06-28T11:04:43.399Z",
+        "wordCount": 1873,
+        "readingTime": 10,
+        "sectionsCount": 16,
+        "codeBlocksCount": 15
+      }
+    },
+    "api-ssr-pokemon": {
+      "title": "Pokémon SSR — серверный рендер + клиентская пагинация",
+      "sections": [
+        {
+          "id": "pokmon-ssr-server-render-client-pagination",
+          "title": "Pokémon SSR — серверный рендер + клиентская пагинация",
+          "level": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Практический рецепт: запросить первую страницу на сервере, перенести кэш на клиент, отрисовать без\nвспышки loading, а пагинацию продолжить уже на клиенте от этих данных. Построен на том же Pokémon API,\nчто и страницы ApiClient и useApiQuery.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 31,
+                      "end": 57
+                    },
+                    {
+                      "start": 118,
+                      "end": 153
+                    }
+                  ],
+                  "italic": [],
+                  "code": [],
+                  "links": [
+                    {
+                      "start": 217,
+                      "end": 226,
+                      "url": "./api-client.md",
+                      "title": null
+                    },
+                    {
+                      "start": 229,
+                      "end": 240,
+                      "url": "./api-use-query.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "ApiClient server-safe: сетевой слой работает на глобальном fetch (настраивается через fetchFn), а\nвсе обращения к window/document/localStorage спрятаны за typeof ... !== 'undefined'. На сервере\nиспользуйте MemoryStorage; на клиенте подойдёт любой стор (синхронный — Memory/LocalStorage — даёт\nмгновенный первый рендер).",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 9
+                    },
+                    {
+                      "start": 59,
+                      "end": 64
+                    },
+                    {
+                      "start": 86,
+                      "end": 93
+                    },
+                    {
+                      "start": 114,
+                      "end": 120
+                    },
+                    {
+                      "start": 121,
+                      "end": 129
+                    },
+                    {
+                      "start": 130,
+                      "end": 142
+                    },
+                    {
+                      "start": 155,
+                      "end": 181
+                    },
+                    {
+                      "start": 206,
+                      "end": 219
+                    },
+                    {
+                      "start": 266,
+                      "end": 272
+                    },
+                    {
+                      "start": 273,
+                      "end": 285
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 75,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "the-idea",
+          "title": "Идея",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Ключ кэша — это имя эндпоинта + параметры, поэтому каждая страница (offset) — отдельная запись кэша:",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 16,
+                      "end": 41
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 68,
+                      "end": 74
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "offset: 0 запросили на сервере → она в кэше → первый рендер на клиенте мгновенный;",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 9
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "offset: 12 не запрашивали → cache miss → обычный сетевой запрос на клиенте;",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 64,
+                              "end": 74
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 10
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "вернулись к offset: 0 (пока жив TTL) → снова мгновенно из кэша.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 12,
+                              "end": 21
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 56,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "shared-api-factory",
+          "title": "Общая фабрика API",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Используйте фабрику (по свежему инстансу на каждый серверный запрос — нельзя делить один клиент между\nзапросами). storage тоже фабрика, чтобы каждый init() получал чистый стор.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 12,
+                      "end": 19
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 114,
+                      "end": 121
+                    },
+                    {
+                      "start": 149,
+                      "end": 155
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// pokemon.api.ts\nimport { ApiClient } from 'synapse-storage/api'\nimport { MemoryStorage } from 'synapse-storage/core'\n\ninterface PokemonListApiResponse {\n  count: number\n  next: string | null\n  results: Array<{ name: string; url: string }>\n}\n\nexport function createPokemonApi() {\n  return new ApiClient({\n    storage: () => new MemoryStorage<Record<string, any>>({ name: 'pokemon-api-cache', initialState: {} }),\n    baseQuery: { baseUrl: 'https://pokeapi.co/api/v2', timeout: 10000 },\n    cache: { ttl: 120000 },\n    endpoints: async (create) => ({\n      getList: create<{ limit: number; offset: number }, PokemonListApiResponse>({\n        request: (params) => ({ path: '/pokemon', method: 'GET', query: params }),\n        tags: ['pokemon-list'],\n      }),\n    }),\n  })\n}\n\nexport type PokemonApiEndpoints = ReturnType<ReturnType<typeof createPokemonApi>['getEndpoints']>",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 25,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "server-warm-the-cache-and-dehydrate",
+          "title": "Сервер: прогрев кэша и дегидрация",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "tsx",
+                "code": "// server.tsx\nimport { renderToString } from 'react-dom/server'\nimport { createPokemonApi } from './pokemon.api'\nimport { App } from './App'\n\nconst PAGE_SIZE = 12\n\nexport async function renderApp() {\n  const api = createPokemonApi() // инстанс на конкретный запрос\n  await api.init()\n\n  // Прогреваем кэш первой страницей\n  await api.request('getList', { limit: PAGE_SIZE, offset: 0 })\n\n  // Рендер: useApiQuery читает кэш синхронно → данные попадают в HTML\n  const html = renderToString(<App endpoints={api.getEndpoints()} />)\n\n  // Снимок кэша для клиента\n  const state = await api.dehydrate()\n  await api.destroy()\n\n  return { html, state }\n}\n\n// В HTML-шаблоне встройте снапшот:\n//   <script>window.__POKEMON_API_STATE__ = ${JSON.stringify(state)}</script>",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 0,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "client-hydrate-and-render",
+          "title": "Клиент: гидрация и рендер",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "tsx",
+                "code": "// client.tsx\nimport { hydrateRoot } from 'react-dom/client'\nimport { createPokemonApi } from './pokemon.api'\nimport { App } from './App'\n\nasync function bootstrap() {\n  const api = createPokemonApi()\n  await api.hydrate(window.__POKEMON_API_STATE__) // ДО init → засевает кэш\n  await api.init()\n\n  hydrateRoot(document.getElementById('root')!, <App endpoints={api.getEndpoints()} />)\n}\n\nbootstrap()",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 0,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "the-component-first-page-from-cache-pagination-on-the-client",
+          "title": "Компонент: первая страница из кэша, пагинация на клиенте",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "tsx",
+                "code": "// App.tsx\nimport { useState } from 'react'\nimport { useApiQuery } from 'synapse-storage/react'\nimport type { PokemonApiEndpoints } from './pokemon.api'\n\nconst PAGE_SIZE = 12\n\nexport function App({ endpoints }: { endpoints: PokemonApiEndpoints }) {\n  const [offset, setOffset] = useState(0)\n\n  // offset=0 → мгновенно из гидрированного кэша (без вспышки loading).\n  // offset=12 → cache miss → сетевой запрос на клиенте.\n  const { data, isLoading, fromCache } = useApiQuery(endpoints.getList, { limit: PAGE_SIZE, offset })\n\n  const items = data?.results ?? []\n  const hasMore = !!data?.next\n\n  return (\n    <div>\n      <ul>{items.map((p) => <li key={p.name}>{p.name}</li>)}</ul>\n\n      {isLoading && <span>Загрузка…</span>}\n      {fromCache && <small>из кэша</small>}\n\n      <button disabled={offset === 0} onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}>Назад</button>\n      <button disabled={!hasMore} onClick={() => setOffset((o) => o + PAGE_SIZE)}>Дальше</button>\n    </div>\n  )\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Первая страница рендерится одинаково на сервере и на первом клиентском пейнте (поэтому React-гидрация\nсовпадает — без warning о mismatch). Клик Дальше меняет offset — это новый ключ кэша → клиент грузит\nследующую страницу; Назад возвращает к ещё закэшированной странице → мгновенно.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 144,
+                      "end": 150
+                    },
+                    {
+                      "start": 223,
+                      "end": 228
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 158,
+                      "end": 164
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 41,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "prewarming-several-pages",
+          "title": "Прогрев нескольких страниц",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Прогрейте на сервере не одну страницу — все попадут в снапшот:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "await Promise.all([\n  api.request('getList', { limit: PAGE_SIZE, offset: 0 }),\n  api.request('getList', { limit: PAGE_SIZE, offset: PAGE_SIZE }),\n])",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Теперь offset: 0 и offset: 12 мгновенные на клиенте.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 17,
+                      "end": 18
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 7,
+                      "end": 16
+                    },
+                    {
+                      "start": 19,
+                      "end": 29
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 20,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "gotchas",
+          "title": "Подводные камни",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Без вспышки loading нужен sync-стор на клиенте. Мгновенный первый рендер useApiQuery использует\ngetCachedSync(), а он работает только\nна MemoryStorage/LocalStorage. С IndexedDB данные тоже придут из кэша, но через один async-тик\n(короткий loading).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 47
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 73,
+                              "end": 84
+                            },
+                            {
+                              "start": 96,
+                              "end": 111
+                            },
+                            {
+                              "start": 137,
+                              "end": 150
+                            },
+                            {
+                              "start": 151,
+                              "end": 163
+                            },
+                            {
+                              "start": 167,
+                              "end": 176
+                            },
+                            {
+                              "start": 239,
+                              "end": 246
+                            }
+                          ],
+                          "links": [
+                            {
+                              "start": 96,
+                              "end": 111,
+                              "url": "./api-client.md#synchronous-cache-read-endpointgetcachedsync",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Стабильность ключа сервер ↔ клиент. Ключ включает cacheableHeaderKeys. Если влияющий на кэш\nзаголовок (например, auth) на сервере и клиенте различается, ключи разойдутся и гидрация «не попадёт».\nИсключайте такие заголовки для SSR-эндпоинтов через excludeCacheableHeaderKeys.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 35
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 50,
+                              "end": 69
+                            },
+                            {
+                              "start": 247,
+                              "end": 273
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Один инстанс на запрос на сервере. Никогда не делите один клиент между запросами — используйте\nфабрику, чтобы у каждого запроса был свой кэш.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 34
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 88,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "nextjs-app-router",
+          "title": "Next.js (App Router)",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Логика та же: на сервере (Server Component или route handler) создаёте api с MemoryStorage, вызываете\nrequest() для прогрева, затем dehydrate(). Снапшот прокидываете в Client Component, который вызывает\nhydrate() до init() и рендерит хуки. (dehydrate/hydrate не зависят от React, поэтому их можно\nзвать из 'server only'-кода — по аналогии с dehydrateModule для синапс-модулей.)",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 213,
+                      "end": 215
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 77,
+                      "end": 90
+                    },
+                    {
+                      "start": 102,
+                      "end": 111
+                    },
+                    {
+                      "start": 132,
+                      "end": 143
+                    },
+                    {
+                      "start": 203,
+                      "end": 212
+                    },
+                    {
+                      "start": 216,
+                      "end": 222
+                    },
+                    {
+                      "start": 241,
+                      "end": 250
+                    },
+                    {
+                      "start": 251,
+                      "end": 258
+                    },
+                    {
+                      "start": 306,
+                      "end": 319
+                    },
+                    {
+                      "start": 341,
+                      "end": 356
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 52,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "see-also",
+          "title": "Смотрите также",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "ApiClient — dehydrate()/hydrate(), getCachedSync(), кэширование и теги.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 12,
+                              "end": 23
+                            },
+                            {
+                              "start": 24,
+                              "end": 33
+                            },
+                            {
+                              "start": 35,
+                              "end": 50
+                            }
+                          ],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 9,
+                              "url": "./api-client.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "useApiQuery — хук, который здесь используется.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 11,
+                              "url": "./api-use-query.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "useApiMutation — запись + инвалидация кэша.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 14,
+                              "url": "./api-use-mutation.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 19,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        }
+      ],
+      "features": [],
+      "frontMatter": {},
+      "metadata": {
+        "lastModified": "2026-06-28T11:19:19.271Z",
+        "wordCount": 820,
+        "readingTime": 5,
+        "sectionsCount": 10,
+        "codeBlocksCount": 5
+      }
+    },
+    "api-use-mutation": {
+      "title": "useApiMutation — React-хук для мутаций",
+      "sections": [
+        {
+          "id": "useapimutation-react-hook-for-mutations",
+          "title": "useApiMutation — React-хук для мутаций",
+          "level": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "React-хук поверх эндпоинта ApiClient для записи (POST/PUT/DELETE/PATCH). В отличие от\nuseApiQuery, запрос не стартует автоматически — его запускают mutate/\nmutateAsync. Мутации не кэшируются (по REST-методу), а их invalidatesTags инвалидируют кэш — активные\nuseApiQuery соседних эндпоинтов рефетчатся сами через\nшину инвалидации.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 41,
+                      "end": 47
+                    },
+                    {
+                      "start": 106,
+                      "end": 108
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 27,
+                      "end": 36
+                    },
+                    {
+                      "start": 148,
+                      "end": 154
+                    },
+                    {
+                      "start": 156,
+                      "end": 167
+                    },
+                    {
+                      "start": 214,
+                      "end": 229
+                    },
+                    {
+                      "start": 258,
+                      "end": 269
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 86,
+                      "end": 97,
+                      "url": "./api-use-query.md",
+                      "title": null
+                    },
+                    {
+                      "start": 312,
+                      "end": 328,
+                      "url": "./api-client.md#cache-invalidation-bus-endpointoncacheinvalidate",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 40,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "import",
+          "title": "Импорт",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { useApiMutation } from 'synapse-storage/react'",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 0,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "usage",
+          "title": "Использование",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const endpoints = pokemonApiClient.getEndpoints()\n\nfunction CreatePokemon() {\n  const { mutate, isLoading, isError, error } = useApiMutation(endpoints.createPokemon)\n\n  return (\n    <form\n      onSubmit={(e) => {\n        e.preventDefault()\n        mutate({ name: 'Pikachu' }) // fire-and-forget\n      }}\n    >\n      <button disabled={isLoading}>Создать</button>\n      {isError && <Error message={error?.message} />}\n    </form>\n  )\n}",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 0,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "return-value",
+          "title": "Возвращаемое значение",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "useApiMutation(endpoint, options?) возвращает:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 34
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "table",
+              "data": {
+                "headers": [
+                  "Поле",
+                  "Тип",
+                  "Описание"
+                ],
+                "rows": [
+                  {
+                    "cells": [
+                      "Поле",
+                      "Тип",
+                      "Описание"
+                    ],
+                    "type": "header"
+                  },
+                  {
+                    "cells": [
+                      "mutate",
+                      "(params) => void",
+                      "Запустить мутацию; ошибки не пробрасываются (смотри error/isError)"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "mutateAsync",
+                      "(params) => Promise<QueryResult>",
+                      "Запустить и дождаться; реджектится на ошибке"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "data",
+                      "TData | undefined",
+                      "Данные успешного ответа"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "error",
+                      "Error | undefined",
+                      "Ошибка мутации"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "status",
+                      "'idle' | 'loading' | 'success' | 'error'",
+                      "Текущий статус"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "isLoading",
+                      "boolean",
+                      "status === 'loading'"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "isError",
+                      "boolean",
+                      "status === 'error'"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "isSuccess",
+                      "boolean",
+                      "status === 'success'"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "reset",
+                      "() => void",
+                      "Сбросить состояние к idle"
+                    ],
+                    "type": "data"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "options — это QueryOptions (signal, headers, timeout, retry, …).",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 7
+                    },
+                    {
+                      "start": 14,
+                      "end": 26
+                    },
+                    {
+                      "start": 28,
+                      "end": 34
+                    },
+                    {
+                      "start": 36,
+                      "end": 43
+                    },
+                    {
+                      "start": 45,
+                      "end": 52
+                    },
+                    {
+                      "start": 54,
+                      "end": 59
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 82,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": true,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "mutate-vs-mutateasync",
+          "title": "mutate vs mutateAsync",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "mutate(params) — fire-and-forget. Reject проглатывается (состояние уже отражает ошибку), поэтому\n.catch не нужен. Подходит для простых сабмитов формы.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 14
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 14
+                            },
+                            {
+                              "start": 97,
+                              "end": 103
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "mutateAsync(params) — возвращает промис и пробрасывает ошибку, поэтому можно await и ветвить\nлогику:",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 19
+                            },
+                            {
+                              "start": 42,
+                              "end": 54
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 19
+                            },
+                            {
+                              "start": 77,
+                              "end": 82
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 31,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "invalidating-related-queries",
+          "title": "Инвалидация связанных запросов",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Задайте эндпоинту мутации invalidatesTags; любой useApiQuery, чьи tags эндпоинта пересекаются,\nрефетчится автоматически. Ручная возня с кэшем не нужна.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 26,
+                      "end": 41
+                    },
+                    {
+                      "start": 49,
+                      "end": 60
+                    },
+                    {
+                      "start": 66,
+                      "end": 70
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// конфиг эндпоинта\ncreatePokemon: create({\n  request: (body) => ({ path: '/pokemon', method: 'POST', body }),\n  invalidatesTags: ['PokemonList'],\n})\n\n// у эндпоинта getList tags: ['PokemonList']\n// → после успешного createPokemon активный useApiQuery(getList) рефетчится",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 18,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "notes",
+          "title": "Заметки",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Безопасно в StrictMode. При размонтировании in-flight запрос отменяется, обновления состояния\nпропускаются.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 23
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Мутации никогда не пишутся в кэш (кэшируется только GET), поэтому здесь нет fromCache.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 76,
+                              "end": 85
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 24,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "see-also",
+          "title": "Смотрите также",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "useApiQuery — парный хук для чтения.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 11,
+                              "url": "./api-use-query.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "ApiClient — кэширование, теги и шина инвалидации.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 9,
+                              "url": "./api-client.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 13,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        }
+      ],
+      "features": [],
+      "frontMatter": {},
+      "metadata": {
+        "lastModified": "2026-06-28T11:06:10.283Z",
+        "wordCount": 393,
+        "readingTime": 2,
+        "sectionsCount": 8,
+        "codeBlocksCount": 3
+      }
+    },
+    "api-use-query": {
+      "title": "useApiQuery — React-хук для GET-запросов",
+      "sections": [
+        {
+          "id": "useapiquery-react-hook-for-get-requests",
+          "title": "useApiQuery — React-хук для GET-запросов",
+          "level": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Хук в стиле React Query поверх эндпоинта ApiClient для чтения данных (GET). Это тонкий слой над\nendpoint.request(params).subscribe(...) — дедупликация, кэш по тегам, retry и отмена уже есть в\nэндпоинте (см. ApiClient). Хук добавляет React-слой: подписку, стабильный ключ\nпараметров, enabled/refetch, SSR-fast-path (без вспышки loading) и авто-рефетч при инвалидации кэша.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 55,
+                      "end": 61
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 41,
+                      "end": 50
+                    },
+                    {
+                      "start": 96,
+                      "end": 135
+                    },
+                    {
+                      "start": 283,
+                      "end": 290
+                    },
+                    {
+                      "start": 291,
+                      "end": 298
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 207,
+                      "end": 216,
+                      "url": "./api-client.md",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "ApiClient самодостаточен (не зависит ни от RxJS/reactive, ни от createSynapse), поэтому можно взять\nтолько synapse-storage/api + synapse-storage/core + эти хуки — без всего state-manager.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 9
+                    },
+                    {
+                      "start": 48,
+                      "end": 56
+                    },
+                    {
+                      "start": 64,
+                      "end": 77
+                    },
+                    {
+                      "start": 107,
+                      "end": 126
+                    },
+                    {
+                      "start": 129,
+                      "end": 149
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 72,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "import",
+          "title": "Импорт",
+          "level": 2,
+          "content": [
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "import { useApiQuery } from 'synapse-storage/react'",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 0,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "usage",
+          "title": "Использование",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Хук принимает эндпоинт (из getEndpoints()), поэтому типы params/data выводятся из него.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 14,
+                      "end": 22
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 27,
+                      "end": 41
+                    },
+                    {
+                      "start": 57,
+                      "end": 63
+                    },
+                    {
+                      "start": 64,
+                      "end": 68
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "const endpoints = pokemonApiClient.getEndpoints()\n\nfunction PokemonCard({ id }: { id: number }) {\n  // GET: стартует при маунте, пере-запрашивается при смене params\n  const { data, isLoading, isError, error, refetch, fromCache } = useApiQuery(endpoints.getDetails, { id })\n\n  if (isLoading) return <Spinner />\n  if (isError) return <Error message={error?.message} />\n\n  return (\n    <div>\n      <h3>{data?.name}</h3>\n      {fromCache && <small>из кэша</small>}\n      <button onClick={refetch}>Обновить</button>\n    </div>\n  )\n}",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 11,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "return-value",
+          "title": "Возвращаемое значение",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "useApiQuery(endpoint, params, options?) возвращает:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 39
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "table",
+              "data": {
+                "headers": [
+                  "Поле",
+                  "Тип",
+                  "Описание"
+                ],
+                "rows": [
+                  {
+                    "cells": [
+                      "Поле",
+                      "Тип",
+                      "Описание"
+                    ],
+                    "type": "header"
+                  },
+                  {
+                    "cells": [
+                      "data",
+                      "TData | undefined",
+                      "Данные ответа (или из кэша)"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "error",
+                      "Error | undefined",
+                      "Ошибка запроса"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "status",
+                      "'idle' | 'loading' | 'success' | 'error'",
+                      "Текущий статус"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "isLoading",
+                      "boolean",
+                      "status === 'loading'"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "isError",
+                      "boolean",
+                      "status === 'error'"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "isSuccess",
+                      "boolean",
+                      "status === 'success'"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "fromCache",
+                      "boolean",
+                      "Данные пришли из кэша, а не из сети"
+                    ],
+                    "type": "data"
+                  },
+                  {
+                    "cells": [
+                      "refetch",
+                      "() => void",
+                      "Принудительный пере-запрос"
+                    ],
+                    "type": "data"
+                  }
+                ]
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 63,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": true,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "options",
+          "title": "Опции",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Расширяют QueryOptions (signal, headers, timeout, disableCache, retry, …) плюс:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 10,
+                      "end": 22
+                    },
+                    {
+                      "start": 24,
+                      "end": 30
+                    },
+                    {
+                      "start": 32,
+                      "end": 39
+                    },
+                    {
+                      "start": 41,
+                      "end": 48
+                    },
+                    {
+                      "start": 50,
+                      "end": 62
+                    },
+                    {
+                      "start": 64,
+                      "end": 69
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "enabled (по умолчанию true) — при false запрос не выполняется (lazy). Удобно, когда параметры\nещё не готовы:",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 7
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 7
+                            },
+                            {
+                              "start": 22,
+                              "end": 26
+                            },
+                            {
+                              "start": 34,
+                              "end": 39
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "refetchOnInvalidate (по умолчанию true) — авто-рефетч активного запроса после инвалидации его\nтегов кэша мутацией (см. авто-рефетч).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 19
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 19
+                            },
+                            {
+                              "start": 34,
+                              "end": 38
+                            }
+                          ],
+                          "links": [
+                            {
+                              "start": 119,
+                              "end": 130,
+                              "url": "#auto-refetch-on-cache-invalidation",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 42,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "ssr-no-loading-flash-after-hydration",
+          "title": "SSR: без вспышки loading после гидрации",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Ленивое начальное состояние читает кэш синхронно через\nendpoint.getCachedSync(). На сервере\nuseEffect не выполняется, поэтому первый (и единственный) рендер отдаёт засеянные/кэшированные данные;\nна клиенте первый рендер после гидрации сразу показывает\nсерверные данные, а не вспышку loading.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 39,
+                      "end": 48
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 55,
+                      "end": 79
+                    },
+                    {
+                      "start": 92,
+                      "end": 101
+                    },
+                    {
+                      "start": 283,
+                      "end": 290
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 55,
+                      "end": 79,
+                      "url": "./api-client.md#synchronous-cache-read-endpointgetcachedsync",
+                      "title": null
+                    },
+                    {
+                      "start": 226,
+                      "end": 234,
+                      "url": "./api-client.md#ssr-dehydrate-hydrate",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Работает только для синхронных хранилищ (MemoryStorage/LocalStorage) и эндпоинтов без влияющих на\nключ кэша заголовков. Иначе хук откатывается на обычный async-путь.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 41,
+                      "end": 54
+                    },
+                    {
+                      "start": 55,
+                      "end": 67
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 55,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "auto-refetch-on-cache-invalidation",
+          "title": "Авто-рефетч при инвалидации кэша",
+          "level": 2,
+          "content": [
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Когда мутация успешно отрабатывает с invalidatesTags, соответствующие записи кэша удаляются и эмитится\nсобытие инвалидации. Активный useApiQuery, чьи tags эндпоинта пересекаются с инвалидированными,\nпере-запрашивается автоматически (паритет с React Query — запрос «оживает», а не ждёт истечения TTL).\nПод капотом используется\nendpoint.onCacheInvalidate().\nОтключается через refetchOnInvalidate: false.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 199,
+                      "end": 231
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 37,
+                      "end": 52
+                    },
+                    {
+                      "start": 133,
+                      "end": 144
+                    },
+                    {
+                      "start": 150,
+                      "end": 154
+                    },
+                    {
+                      "start": 326,
+                      "end": 354
+                    },
+                    {
+                      "start": 374,
+                      "end": 400
+                    }
+                  ],
+                  "links": [
+                    {
+                      "start": 326,
+                      "end": 354,
+                      "url": "./api-client.md#cache-invalidation-bus-endpointoncacheinvalidate",
+                      "title": null
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "// эндпоинт getList: tags: ['PokemonList']\nconst list = useApiQuery(endpoints.getList, { limit: 12 })\n\n// где-то ещё — мутация с invalidatesTags: ['PokemonList']\n// → `list` рефетчится сам",
+                "meta": null
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 44,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "notes",
+          "title": "Заметки",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Стабильный ключ params. Параметры сериализуются с сортировкой ключей, поэтому новый объект\n{ id: 1 } на каждый рендер не вызывает бесконечный пере-запрос.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 23
+                            },
+                            {
+                              "start": 118,
+                              "end": 120
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 91,
+                              "end": 100
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Безопасно в StrictMode. Эффект отменяет in-flight запрос при очистке.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 23
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Идентичность params не важна. Можно передавать inline-объект — пере-запрос определяется только\nсериализованным ключом.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 29
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 13,
+                              "end": 19
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 44,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "see-also",
+          "title": "Смотрите также",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "ApiClient — нативный клиент, эндпоинты, кэширование и SSR.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 9,
+                              "url": "./api-client.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "useApiMutation — парный хук для записи.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [],
+                          "links": [
+                            {
+                              "start": 0,
+                              "end": 14,
+                              "url": "./api-use-mutation.md",
+                              "title": null
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            }
+          ],
+          "metadata": {
+            "wordCount": 14,
+            "codeBlocksCount": 0,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        }
+      ],
+      "features": [],
+      "frontMatter": {},
+      "metadata": {
+        "lastModified": "2026-06-28T11:10:15.229Z",
+        "wordCount": 544,
+        "readingTime": 3,
+        "sectionsCount": 9,
+        "codeBlocksCount": 3
       }
     },
     "architecture": {

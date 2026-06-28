@@ -12,7 +12,43 @@
     "9": "waitwithcallbacks-callbacks-per-status",
     "10": "abort-aborting-a-request",
     "11": "subscribe-subscribing-to-the-endpoint-state",
-    "12": "lifecycle"
+    "12": "lifecycle",
+    "13": "cache-invalidation-bus-endpointoncacheinvalidate",
+    "14": "synchronous-cache-read-endpointgetcachedsync",
+    "15": "ssr-dehydrate-hydrate"
+  },
+  "api-ssr-pokemon": {
+    "0": "pokmon-ssr-server-render-client-pagination",
+    "1": "the-idea",
+    "2": "shared-api-factory",
+    "3": "server-warm-the-cache-and-dehydrate",
+    "4": "client-hydrate-and-render",
+    "5": "the-component-first-page-from-cache-pagination-on-the-client",
+    "6": "prewarming-several-pages",
+    "7": "gotchas",
+    "8": "nextjs-app-router",
+    "9": "see-also"
+  },
+  "api-use-mutation": {
+    "0": "useapimutation-react-hook-for-mutations",
+    "1": "import",
+    "2": "usage",
+    "3": "return-value",
+    "4": "mutate-vs-mutateasync",
+    "5": "invalidating-related-queries",
+    "6": "notes",
+    "7": "see-also"
+  },
+  "api-use-query": {
+    "0": "useapiquery-react-hook-for-get-requests",
+    "1": "import",
+    "2": "usage",
+    "3": "return-value",
+    "4": "options",
+    "5": "ssr-no-loading-flash-after-hydration",
+    "6": "auto-refetch-on-cache-invalidation",
+    "7": "notes",
+    "8": "see-also"
   },
   "architecture": {
     "0": "two-layers-state-manager-and-business-logic-layer",

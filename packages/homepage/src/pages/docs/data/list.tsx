@@ -27,6 +27,9 @@ import {
   MiddlewaresPage,
   SingletonPage,
   ApiClientPage,
+  ApiUseQueryPage,
+  ApiUseMutationPage,
+  ApiSsrPokemonPage,
   SynapseAwaiterPage,
   EventBusPage,
   PersistMigrationPage,
@@ -71,6 +74,10 @@ export const sectionsList: Record<string, ReactNode> = {
   'nav.sections.utils.event-bus': <EventBusPage />,
   // API Client
   'nav.sections.api.api-client': <ApiClientPage />,
+  // API хуки
+  'nav.sections.api-hooks.api-use-query': <ApiUseQueryPage />,
+  'nav.sections.api-hooks.api-use-mutation': <ApiUseMutationPage />,
+  'nav.sections.api-hooks.api-ssr-pokemon': <ApiSsrPokemonPage />,
   // Рецепты
   'nav.sections.recipes.pokemon-advanced': <PokemonAdvancedPage />,
 }

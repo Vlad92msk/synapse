@@ -62,7 +62,10 @@ export const DOC_NAV: NavPillar[] = [
   },
   {
     pillarKey: 'nav.pillars.api',
-    groups: [{ titleKey: 'nav.sections.api', items: [{ key: 'api-client' }] }],
+    groups: [
+      { titleKey: 'nav.sections.api', items: [{ key: 'api-client' }] },
+      { titleKey: 'nav.sections.api-hooks', items: [{ key: 'api-use-query' }, { key: 'api-use-mutation' }, { key: 'api-ssr-pokemon' }] },
+    ],
   },
 ]
 

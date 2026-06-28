@@ -407,6 +407,47 @@ export class EndpointClass<RequestParams extends Record<string, any>, RequestRes
     this.endpointSubscribers.forEach((cb) => cb(endpointState))
   }
 
+  /**
+   * Синхронное чтение результата из кэша (fast-path для SSR-гидрации).
+   *
+   * Возвращает закэшированный результат БЕЗ сетевого запроса и без async-тика,
+   * поэтому хук может отдать серверные данные уже на первом рендере (без вспышки
+   * loading после гидрации). Работает только когда:
+   *  - хранилище синхронное (Memory/LocalStorage);
+   *  - у эндпоинта нет заголовков, влияющих на ключ кэша (`cacheableHeaders`) —
+   *    иначе ключ нельзя воспроизвести синхронно (заголовки готовятся async);
+   *  - кэширование для эндпоинта включено и запись не протухла.
+   *
+   * Во всех остальных случаях возвращает `undefined` — вызывающий откатывается
+   * на обычный async-`request()`.
+   */
+  public getCachedSync(params: RequestParams): QueryResult<RequestResponse, Error> | undefined {
+    // Ключ кэша зависит от заголовков, а они готовятся асинхронно — синхронно
+    // воспроизвести ключ нельзя. Поддерживаем fast-path только без таких заголовков.
+    if (this.cacheableHeaders.length > 0) return undefined
+    if (!this.queryStorage.shouldCache(this.configCurrentEndpoint, undefined, 'GET')) return undefined
+
+    const [cacheKey] = this.queryStorage.createCacheKey(this.name, { ...params })
+    const cached = this.queryStorage.getCachedResultSync<QueryResult<RequestResponse, Error>>(cacheKey)
+    if (!cached) return undefined
+
+    return { ...cached, fromCache: true }
+  }
+
+  /**
+   * Подписка на инвалидацию кэша, затрагивающую этот эндпоинт. Колбэк вызывается,
+   * когда инвалидируется любой из тегов эндпоинта (`meta.tags`) — например, после
+   * мутации соседнего эндпоинта с `invalidatesTags`. Используется хуком `useApiQuery`
+   * для авто-рефетча (паритет с поведением React Query).
+   */
+  public onCacheInvalidate(listener: VoidFunction): Unsubscribe {
+    return this.queryStorage.onCacheInvalidate((invalidatedTags) => {
+      if (this.meta.tags.some((tag) => invalidatedTags.includes(tag))) {
+        listener()
+      }
+    })
+  }
+
   public subscribe(cb: (state: EndpointState) => void): Unsubscribe {
     this.endpointSubscribers.add(cb)
 

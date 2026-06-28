@@ -41,10 +41,15 @@ export interface EndpointState {
 }
 
 /**
+ * Статус выполнения запроса
+ */
+export type RequestStatus = 'idle' | 'loading' | 'success' | 'error'
+
+/**
  * Состояние самого запроса
  */
 export interface RequestState<ResponseData = any, RequestParams extends Record<string, any> = any, E = Error> {
-  status: 'loading' | 'success' | 'error' | 'idle'
+  status: RequestStatus
   data?: ResponseData
   error?: E
   headers: Record<string, any> | Headers
@@ -113,6 +118,14 @@ export interface Endpoint<RequestParams extends Record<string, any> = any, Respo
   request: (params: RequestParams, options?: QueryOptions) => RequestResponseModify<ResponseData>
   /** Подписаться на изменения состояния эндпоинта (в основном для сбора статистики) */
   subscribe: (callback: (state: EndpointState) => void) => Unsubscribe
+  /**
+   * Синхронно прочитать результат из кэша без сетевого запроса (fast-path для SSR).
+   * Возвращает `undefined`, если кэш недоступен синхронно (async-хранилище,
+   * заголовки в ключе кэша, отключённый кэш или протухшая запись).
+   */
+  getCachedSync: (params: RequestParams) => QueryResult<ResponseData, Error> | undefined
+  /** Подписка на инвалидацию кэша по тегам эндпоинта (для авто-рефетча хуков) */
+  onCacheInvalidate: (listener: VoidFunction) => Unsubscribe
   /** Сбросить состояние */
   reset: () => Promise<void>
   /** Метаданные эндпоинта */

@@ -2,7 +2,7 @@ import { handleCleanupError, handleOperationError } from '../../_utils/error-han
 import { IStorage, StorageKeyType } from '../../core'
 import { CacheConfig, CreateApiClientOptions, StorageOption } from '../types/api.interface'
 import { EndpointConfig } from '../types/endpoint.interface'
-import { QueryOptions } from '../types/query.interface'
+import { QueryOptions, Unsubscribe } from '../types/query.interface'
 import { CacheEntry, CacheUtils } from '../utils/cache.util'
 
 /**
@@ -17,6 +17,9 @@ export class QueryStorage {
 
   /** Индекс тегов: tag → Set<cacheKey> для быстрой инвалидации */
   private tagIndex = new Map<string, Set<string>>()
+
+  /** Подписчики на событие инвалидации кэша (шина для авто-рефетча хуков) */
+  private invalidateListeners = new Set<(tags: string[]) => void>()
 
   /** Настройки кэша по умолчанию */
   private defaultCacheOptions: Exclude<CacheConfig, boolean> = {
@@ -98,6 +101,52 @@ export class QueryStorage {
    */
   public getStorage(): IStorage | null {
     return this.storage
+  }
+
+  /**
+   * Является ли текущее хранилище синхронным (Memory/LocalStorage).
+   * Только для таких хранилищ доступно синхронное чтение кэша ({@link getCachedResultSync}).
+   */
+  public isSyncStorage(): boolean {
+    return !!this.storage && this.storage.type !== 'indexedDB'
+  }
+
+  /**
+   * Подписка на событие инвалидации кэша. Колбэк получает список тегов, которые
+   * были инвалидированы (через мутацию с `invalidatesTags` или ручную инвалидацию).
+   * Используется хуками для авто-рефетча активных запросов после мутаций.
+   */
+  public onCacheInvalidate(listener: (tags: string[]) => void): Unsubscribe {
+    this.invalidateListeners.add(listener)
+    return () => this.invalidateListeners.delete(listener)
+  }
+
+  /** Уведомляет подписчиков шины об инвалидации указанных тегов */
+  private emitCacheInvalidate(tags: string[]): void {
+    if (!tags.length || !this.invalidateListeners.size) return
+    this.invalidateListeners.forEach((listener) => listener(tags))
+  }
+
+  /**
+   * Синхронное чтение результата из кэша (fast-path для SSR-гидрации).
+   * Работает только на синхронных хранилищах (Memory/LocalStorage) — читает из
+   * снапшота `getStateSync()` без async-тика, поэтому данные доступны уже на
+   * первом рендере и не возникает «вспышки» loading. Для async-хранилищ
+   * (IndexedDB) и протухших записей возвращает `undefined`.
+   *
+   * В отличие от {@link getCachedResult}, НЕ мутирует метаданные и не удаляет
+   * протухшие записи (чистое чтение, безопасно вызывать во время рендера).
+   */
+  public getCachedResultSync<T>(cacheKey: StorageKeyType): T | undefined {
+    if (!this.storage || !this.isSyncStorage()) return undefined
+
+    const state = this.storage.getStateSync() as Record<string, CacheEntry<T> | undefined>
+    const cachedEntry = state[String(cacheKey)]
+    if (!cachedEntry?.metadata) return undefined
+
+    if (CacheUtils.isExpired(cachedEntry.metadata)) return undefined
+
+    return cachedEntry.data
   }
 
   /**
@@ -252,6 +301,9 @@ export class QueryStorage {
 
     // Удаляем записи из хранилища
     await Promise.all([...keysToRemove].map((key) => this.storage!.remove(key)))
+
+    // Уведомляем шину — активные подписчики (хуки) сделают рефетч
+    this.emitCacheInvalidate(tags)
   }
 
   /**
@@ -268,6 +320,11 @@ export class QueryStorage {
     }
 
     await this.storage.remove(cacheKey)
+
+    // Уведомляем шину тегами удалённой записи
+    if (cachedEntry?.metadata?.tags?.length) {
+      this.emitCacheInvalidate(cachedEntry.metadata.tags)
+    }
   }
 
   /**
@@ -301,6 +358,9 @@ export class QueryStorage {
     // Очищаем индекс тегов
     this.tagIndex.clear()
 
+    // Очищаем подписчиков шины инвалидации
+    this.invalidateListeners.clear()
+
     // Очищаем хранилище
     if (this.storage) {
       await this.storage.destroy()
@@ -310,6 +370,19 @@ export class QueryStorage {
     // Сбрасываем состояние инициализации
     this._initialized = false
     this._initPromise = null
+  }
+
+  /**
+   * Гидрация кэша снапшотом (SSR/server-state). Заменяет состояние хранилища и
+   * перестраивает индекс тегов, чтобы инвалидация по тегам работала сразу после
+   * переноса с сервера. Абсолютные `expiresAt` в метаданных переживают перенос,
+   * поэтому TTL продолжает считаться корректно.
+   */
+  public async hydrate(state: Record<string, any>): Promise<void> {
+    if (!this.storage) throw new Error('Хранилище не инициализировано')
+
+    await this.storage.hydrate(state)
+    await this.rebuildTagIndex()
   }
 
   /**

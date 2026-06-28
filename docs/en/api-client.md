@@ -372,3 +372,79 @@ await pokemonApiClient.destroy()
 > **Where this comes together:** `pokemonApiClient` is created in `pokemon.api.ts`, initialized in the
 > factory's async prologue (`pokemon.synapse.ts`), and its endpoints are passed into `PokemonEffects`.
 > The full assembly is on the [Pokemon example](./pokemon-advanced.md) page.
+
+> **Using React?** The `ApiClient` is standalone (no RxJS/`createSynapse` required), but
+> `synapse-storage/react` ships thin hooks over the endpoints so you don't have to wire `request()` /
+> `subscribe()` by hand. They live on their own pages: **[useApiQuery](./api-use-query.md)** (GET) and
+> **[useApiMutation](./api-use-mutation.md)** (mutations). The sections below document the **native**
+> endpoint/client surface those hooks are built on.
+
+## Cache invalidation bus: `endpoint.onCacheInvalidate()`
+
+When a mutation succeeds with `invalidatesTags`, the matching cache entries are removed **and** an
+invalidation event is emitted. Endpoints whose `tags` intersect the invalidated tags get notified —
+this is what powers `useApiQuery`'s auto-refetch (parity with React Query: after a mutation the active
+queries "come alive" instead of waiting for the TTL).
+
+```typescript
+const endpoints = pokemonApiClient.getEndpoints()
+
+// Re-run something when the endpoint's cache is invalidated
+const unsub = endpoints.getList.onCacheInvalidate(() => {
+  console.log('List cache invalidated — refetching')
+})
+
+// Triggered, for example, by a mutation that invalidatesTags: ['PokemonList']
+unsub()
+```
+
+## Synchronous cache read: `endpoint.getCachedSync()`
+
+`getCachedSync(params)` reads a cached result **synchronously**, without a network request and without an
+async tick — so a hook can return server data on the very first render (no loading flash after
+hydration). It works only when:
+
+- the storage is synchronous (`MemoryStorage` / `LocalStorage`);
+- the endpoint has no headers that affect the cache key (the key can't be reproduced synchronously
+  otherwise — headers are prepared async);
+- caching is enabled for the endpoint and the entry is not expired.
+
+In any other case it returns `undefined` and the caller falls back to the regular async `request()`.
+`useApiQuery` uses this automatically for its initial render.
+
+```typescript
+const cached = endpoints.getDetails.getCachedSync({ id: 25 })
+if (cached?.ok) console.log(cached.data) // instant, from cache
+```
+
+## SSR: `dehydrate()` / `hydrate()`
+
+The client is **not limited to the browser** — the server path is real. On the server use
+`MemoryStorage`; on the client any storage will do. Cache timestamps are absolute (`expiresAt = now +
+ttl`), so they survive the server → client transfer, and the tag index is rebuilt on hydration.
+
+```typescript
+// --- server ---
+const api = new ApiClient({ storage: () => new MemoryStorage({ name: 'api-cache' }), baseQuery, endpoints })
+await api.init()
+await api.request('getList', { limit: 12, offset: 0 }) // warm up the cache
+const dehydrated = await api.dehydrate()                // → serialize into HTML
+await api.destroy()
+
+// --- client ---
+const api = new ApiClient({ storage: () => new MemoryStorage({ name: 'api-cache' }), baseQuery, endpoints })
+await api.hydrate(dehydrated) // BEFORE init → seeds the cache (init won't overwrite it)
+await api.init()
+// first request('getList', sameParams) hits the cache — no network call
+```
+
+- `dehydrate(): Promise<TCacheState>` — a snapshot of the cache (symmetric to `dehydrateModule` for
+  synapse modules).
+- `hydrate(state)` — seeds the cache. Called **before** `init()` it stashes the snapshot and applies it
+  right after the storage is created (so `init()` won't overwrite the server state); called **after**
+  `init()` it replaces the cache state and rebuilds the tag index immediately.
+- `getStorage()` — access to the underlying cache storage instance (manual SSR/debugging).
+
+> **Cache-key stability server ↔ client.** The cache key includes `cacheableHeaderKeys`. If the set of
+> cache-affecting headers differs between server and client (e.g. auth), the keys diverge and hydration
+> "misses". For SSR endpoints exclude such headers from the key via `excludeCacheableHeaderKeys`.

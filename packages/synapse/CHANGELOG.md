@@ -1,5 +1,39 @@
 # Changelog
 
+## [5.1.0] - 2026-06-28
+
+### ApiClient: React-хуки, SSR-гидрация, синхронный кэш и шина инвалидации
+
+`ApiClient` самодостаточен (не зависит ни от RxJS/`reactive`, ни от `createSynapse`) — теперь его можно
+использовать как standalone API-клиент с хуками и SSR, взяв только `synapse-storage/api` +
+`synapse-storage/core` (+ `synapse-storage/react` для хуков).
+
+- **`useApiQuery(endpoint, params, options?)`** (экспорт из `synapse-storage/react`) — хук для GET-запросов
+  в стиле React Query поверх эндпоинта. Тонкая обёртка над `endpoint.request(params).subscribe(...)`:
+  дедупликация, кэш по тегам, retry и отмена уже в эндпоинте. Возвращает `data`/`error`/`status` +
+  `isLoading`/`isError`/`isSuccess`/`fromCache`/`refetch`. Опции `enabled` (lazy) и `refetchOnInvalidate`
+  (авто-рефетч после инвалидации). Стабильная сериализация `params` (сортировка ключей) — новый объект
+  на каждый рендер не вызывает бесконечный ре-запрос; на cleanup эффект отменяет in-flight запрос
+  (безопасно в StrictMode).
+- **`useApiMutation(endpoint, options?)`** — хук для мутаций (POST/PUT/DELETE/PATCH): `mutate`
+  (fire-and-forget) / `mutateAsync` (awaitable, реджектится на ошибке) + `data`/`error`/`status`/флаги/
+  `reset`. Запрос стартует только по вызову; `invalidatesTags` мутации инвалидируют кэш и через шину
+  оживляют активные `useApiQuery`.
+- **`ApiClient.dehydrate()` / `ApiClient.hydrate(state)` / `ApiClient.getStorage()`** — удобный SSR-API,
+  симметричный `dehydrateModule`. `dehydrate()` — снимок кэша (абсолютные `expiresAt` переживают перенос
+  сервер → клиент). `hydrate()` до `init()` засевает кэш (init не перезатрёт), после `init()` — заменяет
+  состояние и перестраивает индекс тегов.
+- **`Endpoint.getCachedSync(params)`** — синхронное чтение результата из кэша (fast-path для SSR):
+  отдаёт данные без сетевого запроса и без async-тика на синхронных хранилищах (Memory/LocalStorage),
+  убирая «вспышку» loading после гидрации. Возвращает `undefined`, если кэш недоступен синхронно
+  (async-хранилище, заголовки в ключе кэша, отключённый кэш, протухшая запись). `useApiQuery` использует
+  это автоматически на первом рендере.
+- **`Endpoint.onCacheInvalidate(listener)` + шина инвалидации в `QueryStorage`** — событие об инвалидации
+  кэша по тегам. После мутации с `invalidatesTags` уведомляются эндпоинты с пересекающимися `tags` —
+  основа авто-рефетча активных хуков (паритет с React Query).
+
+Изменения аддитивны и обратно совместимы: публичные сигнатуры существующих методов не менялись.
+
 ## [5.0.3] - 2026-06-18
 
 ### `mutationMap` — оператор обработки мутаций (запись)

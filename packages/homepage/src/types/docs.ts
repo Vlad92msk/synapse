@@ -1,15 +1,18 @@
 // Auto-generated types for structured documentation
-// Generated at: 2026-06-28T08:19:57.425Z
+// Generated at: 2026-06-28T11:20:18.448Z
 // Master locale: en
 
 export type Locale = 'en' | 'ru'
 
-export type DocKey = 'api-client' | 'architecture' | 'await-synapse' | 'create-synapse-basic' | 'create-synapse-dispatcher' | 'create-synapse-effects' | 'delete-has-keys' | 'dependencies' | 'dispatcher-detailed' | 'event-bus' | 'hook-indexeddb' | 'hook-local-storage' | 'hook-memory' | 'indexeddb-storage' | 'install' | 'local-storage' | 'memory-storage' | 'middlewares' | 'persist-migration' | 'pokemon-advanced' | 'reading-data' | 'selector-system' | 'singleton' | 'ssr-hydration' | 'static-create' | 'storage-factory' | 'subscriptions' | 'synapse-awaiter' | 'synapse-ctx' | 'writing-data'
+export type DocKey = 'api-client' | 'api-ssr-pokemon' | 'api-use-mutation' | 'api-use-query' | 'architecture' | 'await-synapse' | 'create-synapse-basic' | 'create-synapse-dispatcher' | 'create-synapse-effects' | 'delete-has-keys' | 'dependencies' | 'dispatcher-detailed' | 'event-bus' | 'hook-indexeddb' | 'hook-local-storage' | 'hook-memory' | 'indexeddb-storage' | 'install' | 'local-storage' | 'memory-storage' | 'middlewares' | 'persist-migration' | 'pokemon-advanced' | 'reading-data' | 'selector-system' | 'singleton' | 'ssr-hydration' | 'static-create' | 'storage-factory' | 'subscriptions' | 'synapse-awaiter' | 'synapse-ctx' | 'writing-data'
 
 
 // ✅ ТОЧНЫЕ ТИПЫ ДЛЯ SECTION ID
 export interface DocSectionIds {
-  'api-client': 'apiclient-http-client-with-caching' | 'imports' | 'creating-the-apiclient-pokemonapits' | 'response-mappers' | 'request-performing-a-request' | 'queryoptions-request-options' | 'requestdefinition-describing-an-endpoints-request' | 'caching-and-tags' | 'getendpoints-direct-access-to-the-endpoints' | 'waitwithcallbacks-callbacks-per-status' | 'abort-aborting-a-request' | 'subscribe-subscribing-to-the-endpoint-state' | 'lifecycle'
+  'api-client': 'apiclient-http-client-with-caching' | 'imports' | 'creating-the-apiclient-pokemonapits' | 'response-mappers' | 'request-performing-a-request' | 'queryoptions-request-options' | 'requestdefinition-describing-an-endpoints-request' | 'caching-and-tags' | 'getendpoints-direct-access-to-the-endpoints' | 'waitwithcallbacks-callbacks-per-status' | 'abort-aborting-a-request' | 'subscribe-subscribing-to-the-endpoint-state' | 'lifecycle' | 'cache-invalidation-bus-endpointoncacheinvalidate' | 'synchronous-cache-read-endpointgetcachedsync' | 'ssr-dehydrate-hydrate'
+  'api-ssr-pokemon': 'pokmon-ssr-server-render-client-pagination' | 'the-idea' | 'shared-api-factory' | 'server-warm-the-cache-and-dehydrate' | 'client-hydrate-and-render' | 'the-component-first-page-from-cache-pagination-on-the-client' | 'prewarming-several-pages' | 'gotchas' | 'nextjs-app-router' | 'see-also'
+  'api-use-mutation': 'useapimutation-react-hook-for-mutations' | 'import' | 'usage' | 'return-value' | 'mutate-vs-mutateasync' | 'invalidating-related-queries' | 'notes' | 'see-also'
+  'api-use-query': 'useapiquery-react-hook-for-get-requests' | 'import' | 'usage' | 'return-value' | 'options' | 'ssr-no-loading-flash-after-hydration' | 'auto-refetch-on-cache-invalidation' | 'notes' | 'see-also'
   'architecture': 'two-layers-state-manager-and-business-logic-layer' | 'layer-1-state-manager-where-the-state-lives' | 'layer-2-business-logic-layer-how-logic-manages-the-state' | 'why-this-separation-matters'
   'await-synapse': 'awaitsynapse' | 'creating' | 'withsynapseready-hoc-how-the-demo-module-is-lifted' | 'usesynapseready-hook' | 'programmatic-api' | 'relation-to-createsynapseawaiter'
   'create-synapse-basic': 'createsynapse-basic' | 'storage-and-state-pokemonstorets' | 'selectors-pokemonselectorsts' | 'assembly-createsynapsefactory' | 'the-return-value' | 'usage-in-react' | 'async-initialization-in-the-factory'
@@ -163,5 +166,5 @@ export interface DocsData {
 
 // Constants
 export const AVAILABLE_LOCALES: Locale[] = ['en', 'ru']
-export const AVAILABLE_DOC_KEYS: DocKey[] = ['api-client', 'architecture', 'await-synapse', 'create-synapse-basic', 'create-synapse-dispatcher', 'create-synapse-effects', 'delete-has-keys', 'dependencies', 'dispatcher-detailed', 'event-bus', 'hook-indexeddb', 'hook-local-storage', 'hook-memory', 'indexeddb-storage', 'install', 'local-storage', 'memory-storage', 'middlewares', 'persist-migration', 'pokemon-advanced', 'reading-data', 'selector-system', 'singleton', 'ssr-hydration', 'static-create', 'storage-factory', 'subscriptions', 'synapse-awaiter', 'synapse-ctx', 'writing-data']
+export const AVAILABLE_DOC_KEYS: DocKey[] = ['api-client', 'api-ssr-pokemon', 'api-use-mutation', 'api-use-query', 'architecture', 'await-synapse', 'create-synapse-basic', 'create-synapse-dispatcher', 'create-synapse-effects', 'delete-has-keys', 'dependencies', 'dispatcher-detailed', 'event-bus', 'hook-indexeddb', 'hook-local-storage', 'hook-memory', 'indexeddb-storage', 'install', 'local-storage', 'memory-storage', 'middlewares', 'persist-migration', 'pokemon-advanced', 'reading-data', 'selector-system', 'singleton', 'ssr-hydration', 'static-create', 'storage-factory', 'subscriptions', 'synapse-awaiter', 'synapse-ctx', 'writing-data']
 export const MASTER_LOCALE: Locale = 'en'

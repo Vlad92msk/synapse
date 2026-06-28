@@ -373,3 +373,79 @@ await pokemonApiClient.destroy()
 > инициализируется в async-прологе фабрики (`pokemon.synapse.ts`), а его эндпоинты
 > прокидываются в `PokemonEffects`. Полная сборка — на странице
 > [Pokemon пример](./pokemon-advanced.md).
+
+> **Используете React?** `ApiClient` самодостаточен (RxJS/`createSynapse` не нужны), но в
+> `synapse-storage/react` есть тонкие хуки поверх эндпоинтов — чтобы не собирать `request()` /
+> `subscribe()` руками. Они вынесены на отдельные страницы: **[useApiQuery](./api-use-query.md)** (GET) и
+> **[useApiMutation](./api-use-mutation.md)** (мутации). Разделы ниже описывают **нативную** поверхность
+> эндпоинта/клиента, на которой построены эти хуки.
+
+## Шина инвалидации кэша: `endpoint.onCacheInvalidate()`
+
+Когда мутация успешно отрабатывает с `invalidatesTags`, соответствующие записи кэша удаляются **и**
+эмитится событие инвалидации. Эндпоинты, чьи `tags` пересекаются с инвалидированными, получают
+уведомление — именно на этом построен авто-рефетч `useApiQuery` (паритет с React Query: после мутации
+активные запросы «оживают», а не ждут истечения TTL).
+
+```typescript
+const endpoints = pokemonApiClient.getEndpoints()
+
+// Сделать что-то при инвалидации кэша эндпоинта
+const unsub = endpoints.getList.onCacheInvalidate(() => {
+  console.log('Кэш списка инвалидирован — рефетчим')
+})
+
+// Срабатывает, например, на мутации с invalidatesTags: ['PokemonList']
+unsub()
+```
+
+## Синхронное чтение кэша: `endpoint.getCachedSync()`
+
+`getCachedSync(params)` читает результат из кэша **синхронно**, без сетевого запроса и без async-тика —
+поэтому хук может вернуть серверные данные уже на первом рендере (без вспышки loading после гидрации).
+Работает только когда:
+
+- хранилище синхронное (`MemoryStorage` / `LocalStorage`);
+- у эндпоинта нет заголовков, влияющих на ключ кэша (иначе ключ нельзя воспроизвести синхронно —
+  заголовки готовятся асинхронно);
+- кэширование для эндпоинта включено и запись не протухла.
+
+В остальных случаях возвращает `undefined`, и вызывающий откатывается на обычный async-`request()`.
+`useApiQuery` использует это автоматически для первого рендера.
+
+```typescript
+const cached = endpoints.getDetails.getCachedSync({ id: 25 })
+if (cached?.ok) console.log(cached.data) // мгновенно, из кэша
+```
+
+## SSR: `dehydrate()` / `hydrate()`
+
+Клиент **не ограничен браузером** — серверный путь реален. На сервере используйте `MemoryStorage`, на
+клиенте — любой стор. Метки времени кэша абсолютные (`expiresAt = now + ttl`), поэтому переживают перенос
+сервер → клиент, а индекс тегов перестраивается при гидрации.
+
+```typescript
+// --- server ---
+const api = new ApiClient({ storage: () => new MemoryStorage({ name: 'api-cache' }), baseQuery, endpoints })
+await api.init()
+await api.request('getList', { limit: 12, offset: 0 }) // прогрев кэша
+const dehydrated = await api.dehydrate()                // → сериализовать в HTML
+await api.destroy()
+
+// --- client ---
+const api = new ApiClient({ storage: () => new MemoryStorage({ name: 'api-cache' }), baseQuery, endpoints })
+await api.hydrate(dehydrated) // ДО init → засевает кэш (init не перезатрёт)
+await api.init()
+// первый request('getList', sameParams) попадёт в кэш — без сетевого запроса
+```
+
+- `dehydrate(): Promise<TCacheState>` — снимок кэша (симметрия с `dehydrateModule` для синапс-модулей).
+- `hydrate(state)` — засев кэша. Вызванная **до** `init()`, запоминает снапшот и применяет его сразу
+  после создания хранилища (чтобы `init()` не перезатёр серверное состояние); вызванная **после**
+  `init()`, немедленно заменяет состояние кэша и перестраивает индекс тегов.
+- `getStorage()` — доступ к экземпляру кэш-хранилища (ручные сценарии SSR/отладки).
+
+> **Стабильность ключа кэша сервер ↔ клиент.** Ключ кэша включает `cacheableHeaderKeys`. Если набор
+> влияющих на кэш заголовков на сервере и клиенте различается (например, auth), ключи разойдутся и
+> гидрация «не попадёт». Для SSR-эндпоинтов исключайте такие заголовки из ключа через
+> `excludeCacheableHeaderKeys`.
