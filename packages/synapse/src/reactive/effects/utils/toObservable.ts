@@ -39,11 +39,17 @@ export function toObservable<T extends Record<string, any>, R>(storage: IStorage
     return () => unsubscribe()
   })
 
+  // refCount: true — критично против утечки: при падении числа подписчиков до нуля
+  // shareReplay отписывается от `base`, снимая регистрацию `storage.subscribeToAll`.
+  // С дефолтным `shareReplay(1)` (refCount: false) источник остаётся подписан навсегда,
+  // и каждый смонтированный поток копит слушателей на сторе до его destroy().
+  // Безопасно: `base` синхронно эмитит текущее состояние (getStateSync) при каждой
+  // новой подписке, так что поздний подписчик сразу получает актуальное значение.
   if (!selector) {
-    return base.pipe(shareReplay(1))
+    return base.pipe(shareReplay({ bufferSize: 1, refCount: true }))
   }
 
-  return base.pipe(map(selector), distinctUntilChanged(equals), shareReplay(1))
+  return base.pipe(map(selector), distinctUntilChanged(equals), shareReplay({ bufferSize: 1, refCount: true }))
 }
 
 /**

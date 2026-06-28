@@ -11,8 +11,10 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { MemoryStorage } from '../../core/storage/adapters/memory-storage.service'
 import { toObservable } from '../../reactive/effects/utils/toObservable'
+import { useObservable } from '../hooks/useObservable'
 import { useStorageObservable } from '../hooks/useStorageObservable'
 import { useStorageSubscribe } from '../hooks/useStorageSubscribe'
+import { useSubscription } from '../hooks/useSubscription'
 
 interface State extends Record<string, any> {
   count: number
@@ -218,6 +220,74 @@ describe('toObservable с селектором', () => {
     })
 
     expect(await collected).toEqual([0, 3])
+    await storage.destroy()
+  })
+})
+
+// ── Память: нет утечки subscribeToAll ─────────────────────────────────────────
+// Регрессия на shareReplay({ refCount: true }) в toObservable. С дефолтным
+// shareReplay(1) (refCount: false) источник остаётся подписан навсегда, и каждый
+// смонтированный поток копит слушателей на сторе — эти тесты ловят откат фикса.
+describe('memory: subscribeToAll не течёт', () => {
+  // суммарное число живых подписчиков по всем ключам стора
+  const listenerCount = (storage: any): number => {
+    const subs = storage.subscribers as Map<string, Set<unknown>>
+    return [...subs.values()].reduce((n, set) => n + set.size, 0)
+  }
+
+  it('toObservable: прямая отписка снимает слушателя', async () => {
+    const storage = await makeStorage({ count: 0 })
+    const before = listenerCount(storage)
+
+    const sub = toObservable(storage, (s) => s.count).subscribe(() => {})
+    expect(listenerCount(storage)).toBe(before + 1)
+
+    sub.unsubscribe()
+    expect(listenerCount(storage)).toBe(before)
+
+    await storage.destroy()
+  })
+
+  it('useObservable: повторные mount/unmount не копят слушателей', async () => {
+    const storage = await makeStorage({ count: 0 })
+    const before = listenerCount(storage)
+
+    for (let i = 0; i < 5; i++) {
+      const { unmount } = renderHook(() => useObservable(() => toObservable(storage, (s) => s.count), 0, [storage]))
+      // на маунте подписка активна
+      expect(listenerCount(storage)).toBe(before + 1)
+      unmount()
+      // на unmount — снята, без накопления к следующей итерации
+      expect(listenerCount(storage)).toBe(before)
+    }
+
+    await storage.destroy()
+  })
+
+  it('useSubscription: повторные mount/unmount не копят слушателей', async () => {
+    const storage = await makeStorage({ count: 0 })
+    const before = listenerCount(storage)
+
+    for (let i = 0; i < 5; i++) {
+      const { unmount } = renderHook(() => useSubscription(() => toObservable(storage, (s) => s.count).subscribe(() => {}), [storage]))
+      expect(listenerCount(storage)).toBe(before + 1)
+      unmount()
+      expect(listenerCount(storage)).toBe(before)
+    }
+
+    await storage.destroy()
+  })
+
+  it('useStorageObservable: mount/unmount не оставляет слушателя', async () => {
+    const storage = await makeStorage({ count: 0 })
+    const before = listenerCount(storage)
+
+    const { unmount } = renderHook(() => useStorageObservable(storage, (s) => s.count))
+    expect(listenerCount(storage)).toBe(before + 1)
+
+    unmount()
+    expect(listenerCount(storage)).toBe(before)
+
     await storage.destroy()
   })
 })
