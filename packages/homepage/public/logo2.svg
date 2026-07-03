@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="orangeGradient" x1="30" y1="30" x2="160" y2="170" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF9B3E" />
+      <stop offset="100%" stop-color="#E85D19" />
+    </linearGradient>
+    <mask id="connectorCut">
+      <rect width="200" height="200" fill="white" />
+      <line x1="60" y1="100" x2="140" y2="45" stroke="black" stroke-width="10" />
+      <line x1="60" y1="100" x2="140" y2="155" stroke="black" stroke-width="10" />
+    </mask>
+  </defs>
+
+  <g mask="url(#connectorCut)">
+    <circle cx="60" cy="100" r="26" stroke="url(#orangeGradient)" stroke-width="14" fill="none" />
+    <circle cx="140" cy="45" r="14" stroke="url(#orangeGradient)" stroke-width="8" fill="none" />
+    <circle cx="140" cy="155" r="14" stroke="url(#orangeGradient)" stroke-width="8" fill="none" />
+  </g>
+
+  <line x1="92.1" y1="77.9" x2="120.2" y2="58.6" stroke="url(#orangeGradient)" stroke-width="6" stroke-linecap="round" />
+  <line x1="92.1" y1="122.1" x2="120.2" y2="141.4" stroke="url(#orangeGradient)" stroke-width="6" stroke-linecap="round" />
+</svg>

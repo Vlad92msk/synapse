@@ -1,0 +1,65 @@
+.logo {
+  display: block;
+}
+
+/* Motion 1: the whole mark gently sways clockwise and back. */
+.animated {
+  transform-origin: center;
+  animation: logoSway 9s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Motion 2: the two "petals" drift slightly, out of phase with each other. */
+.animated .node2,
+.animated .node3 {
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.animated .node2 {
+  animation: logoFloatTop 4s ease-in-out infinite;
+}
+
+.animated .node3 {
+  animation: logoFloatBottom 4.6s ease-in-out infinite;
+}
+
+@keyframes logoSway {
+  0%,
+  100% {
+    transform: rotate(-3.5deg);
+  }
+  50% {
+    transform: rotate(3.5deg);
+  }
+}
+
+@keyframes logoFloatTop {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(3px, -2.5px);
+  }
+}
+
+@keyframes logoFloatBottom {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(3px, 2.5px);
+  }
+}
+
+/* Respect users who prefer no motion. */
+@media (prefers-reduced-motion: reduce) {
+  .animated,
+  .animated .node2,
+  .animated .node3 {
+    animation: none;
+  }
+}

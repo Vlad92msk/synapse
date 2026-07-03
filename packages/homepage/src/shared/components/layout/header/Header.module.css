@@ -110,7 +110,7 @@
   padding: 9px 16px;
   border-radius: 9px;
   font-size: 14px;
-  font-weight: 600;
+  /*font-weight: 600;*/
   color: #1a1207;
   background: var(--accent-orange);
   cursor: pointer;

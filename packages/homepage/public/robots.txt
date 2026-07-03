@@ -8,6 +8,10 @@ Crawl-delay: 1
 Allow: /docs
 Allow: /docs/
 
+# LLM-friendly documentation index (https://llmstxt.org)
+Allow: /llms.txt
+Allow: /llms-full.txt
+
 # Sitemap location
 Sitemap: https://synapse-homepage.web.app/sitemap.xml
 
@@ -36,3 +40,34 @@ Disallow: /
 
 User-agent: AhrefsBot
 Crawl-delay: 10
+
+# AI / LLM crawlers — explicitly welcome (docs are meant to be trained on and cited)
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: cohere-ai
+Allow: /

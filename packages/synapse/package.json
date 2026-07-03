@@ -41,6 +41,8 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "fix": "yarn format && yarn lint:fix",
     "prepublishOnly": "yarn fix && yarn build",
+    "publish:stable": "npm publish --access public",
+    "publish:beta": "npm publish --tag beta --access public",
     "release:patch": "npm version patch && npm publish --tag beta --access public",
     "release:minor": "npm version minor && npm publish --tag beta --access public",
     "release:major": "npm version major && npm publish --tag beta --access public",

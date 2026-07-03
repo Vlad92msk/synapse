@@ -4,9 +4,9 @@
   "description": "Framework-agnostic state management toolkit with API client, storage adapters, and reactive capabilities",
   "icons": [
     {
-      "src": "logo.webp",
-      "type": "image/webp",
-      "sizes": "362x371"
+      "src": "logo2.png",
+      "type": "image/png",
+      "sizes": "512x512"
     }
   ],
   "start_url": "/",
@@ -27,8 +27,8 @@
       "url": "/docs",
       "icons": [
         {
-          "src": "logo.webp",
-          "sizes": "362x371"
+          "src": "logo2.png",
+          "sizes": "512x512"
         }
       ]
     },
@@ -39,8 +39,8 @@
       "url": "/docs#description",
       "icons": [
         {
-          "src": "logo.webp",
-          "sizes": "362x371"
+          "src": "logo2.png",
+          "sizes": "512x512"
         }
       ]
     },
@@ -51,8 +51,8 @@
       "url": "/docs#create-storages",
       "icons": [
         {
-          "src": "logo.webp",
-          "sizes": "362x371"
+          "src": "logo2.png",
+          "sizes": "512x512"
         }
       ]
     }

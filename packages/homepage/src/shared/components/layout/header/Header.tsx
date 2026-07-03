@@ -1,22 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useDocumentation } from '@shared/hooks/useDocumentation'
+import { Logo } from '@shared/components/ui/logo/Logo'
 
 import { LanguageSwitcher } from '../language-switcher/LanguageSwitcher'
 
 import style from './Header.module.css'
 
 const GITHUB_URL = 'https://github.com/Vlad92msk/synapse'
-
-const LogoMark = () => (
-  <svg viewBox="0 0 32 32" width="26" height="26" fill="none" style={{ flex: 'none' }}>
-    <path d="M16 16 L7 8 M16 16 L25 9 M16 16 L21 25" stroke="var(--text-muted)" strokeWidth="1.5" />
-    <circle cx="16" cy="16" r="4.6" fill="var(--accent-orange)" />
-    <circle cx="7" cy="8" r="2.4" fill="var(--text-secondary)" />
-    <circle cx="25" cy="9" r="2.4" fill="var(--text-secondary)" />
-    <circle cx="21" cy="25" r="2.4" fill="var(--text-secondary)" />
-  </svg>
-)
 
 export const Header = () => {
   const { t } = useDocumentation()
@@ -59,7 +50,7 @@ export const Header = () => {
       {isMenuOpen && <div className={style.overlay} onClick={() => toggleMenu(false)} />}
       <div className={style.inner}>
         <div className={style.brand} onClick={() => handleNavClick('/')}>
-          <LogoMark />
+          <Logo size={26} />
           <span className={style.brandName}>Synapse</span>
           <span className={style.version}>v{__APP_VERSION__}</span>
         </div>
