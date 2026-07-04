@@ -1,4 +1,4 @@
-<!-- source: docs/en/create-synapse-basic.md · canonical: https://synapse-homepage.web.app/docs#synapse-basic · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/create-synapse-basic.md · canonical: https://synapse-homepage.web.app/docs/synapse-basic · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # createSynapse (basic)
 

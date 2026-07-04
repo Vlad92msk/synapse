@@ -1,4 +1,4 @@
-<!-- source: docs/en/event-bus.md · canonical: https://synapse-homepage.web.app/docs#event-bus · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/event-bus.md · canonical: https://synapse-homepage.web.app/docs/event-bus · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # createEventBus — Event Bus
 

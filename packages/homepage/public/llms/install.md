@@ -1,4 +1,4 @@
-<!-- source: docs/en/install.md · canonical: https://synapse-homepage.web.app/docs#install · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/install.md · canonical: https://synapse-homepage.web.app/docs/install · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # Install
 

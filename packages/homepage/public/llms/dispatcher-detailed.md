@@ -1,4 +1,4 @@
-<!-- source: docs/en/dispatcher-detailed.md · canonical: https://synapse-homepage.web.app/docs#dispatcher-detail · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/dispatcher-detailed.md · canonical: https://synapse-homepage.web.app/docs/dispatcher-detail · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # Dispatcher (in detail)
 

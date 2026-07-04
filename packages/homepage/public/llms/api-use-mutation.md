@@ -1,4 +1,4 @@
-<!-- source: docs/en/api-use-mutation.md · canonical: https://synapse-homepage.web.app/docs#api-use-mutation · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/api-use-mutation.md · canonical: https://synapse-homepage.web.app/docs/api-use-mutation · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # useApiMutation — React hook for mutations
 

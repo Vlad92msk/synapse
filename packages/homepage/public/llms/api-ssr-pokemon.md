@@ -1,4 +1,4 @@
-<!-- source: docs/en/api-ssr-pokemon.md · canonical: https://synapse-homepage.web.app/docs#api-ssr-pokemon · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/api-ssr-pokemon.md · canonical: https://synapse-homepage.web.app/docs/api-ssr-pokemon · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # Pokémon SSR — server render + client pagination
 

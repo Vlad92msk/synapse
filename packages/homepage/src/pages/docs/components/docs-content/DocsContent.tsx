@@ -46,7 +46,7 @@ export const DocsContent = (props: DocsContentProps) => {
               <h2>{t('docs.placeholder.title')}</h2>
               <p>{t('docs.placeholder.description')}</p>
               <div className={style.placeholderActions}>
-                <button onClick={() => navigate('/docs#description')} className={style.placeholderButton}>
+                <button onClick={() => navigate('/docs/architecture')} className={style.placeholderButton}>
                   {t('docs.placeholder.backToStart')}
                 </button>
               </div>

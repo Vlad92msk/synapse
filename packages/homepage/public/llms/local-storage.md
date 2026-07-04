@@ -1,4 +1,4 @@
-<!-- source: docs/en/local-storage.md · canonical: https://synapse-homepage.web.app/docs#local · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/local-storage.md · canonical: https://synapse-homepage.web.app/docs/local · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # LocalStorage
 

@@ -1,4 +1,4 @@
-<!-- source: docs/en/architecture.md · canonical: https://synapse-homepage.web.app/docs#architecture · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/architecture.md · canonical: https://synapse-homepage.web.app/docs/architecture · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # Two layers: State Manager and Business Logic Layer
 

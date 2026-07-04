@@ -56,7 +56,8 @@ const resources = {
 
       // Features (сквозные особенности)
       'homepage.features.frameworkAgnostic.title': 'Не привязан к фреймворку',
-      'homepage.features.frameworkAgnostic.description': 'Ядро на чистом TypeScript: работает с любым фреймворком или вообще без него. rxjs и react — опциональные peer-зависимости.',
+      'homepage.features.frameworkAgnostic.description':
+        'Ядро на чистом TypeScript: работает с любым фреймворком или вообще без него. rxjs и react — опциональные peer-зависимости.',
 
       'homepage.features.typescript.title': 'TypeScript-first',
       'homepage.features.typescript.description': 'Строгая типизация и автокомплит сквозь действия, селекторы и эффекты. Типы выводятся, а не дублируются вручную.',
@@ -91,8 +92,7 @@ const resources = {
 
       'homepage.architecture.eyebrow': 'Архитектура',
       'homepage.architecture.heading': 'Два слоя',
-      'homepage.architecture.intro':
-        'State Manager отвечает за то, где лежит состояние, а Business Logic Layer — за то, как им управляет логика. Берёте только нужный слой.',
+      'homepage.architecture.intro': 'State Manager отвечает за то, где лежит состояние, а Business Logic Layer — за то, как им управляет логика. Берёте только нужный слой.',
       'homepage.architecture.layer1': 'Слой 1',
       'homepage.architecture.layer1Name': 'State Manager',
       'homepage.architecture.layer1Desc': 'где лежит состояние',
@@ -243,7 +243,8 @@ const resources = {
 
       'homepage.pillars.bll.name': 'Business Logic Layer',
       'homepage.pillars.bll.when': 'You need a full solution',
-      'homepage.pillars.bll.tagline': 'A business logic layer on top of storage: actions, effects and module assembly. Shaped like NestJS services, but without a heavy DI container.',
+      'homepage.pillars.bll.tagline':
+        'A business logic layer on top of storage: actions, effects and module assembly. Shaped like NestJS services, but without a heavy DI container.',
       'homepage.pillars.bll.point1': 'Dispatcher — actions and store updates',
       'homepage.pillars.bll.point2': 'Effects on RxJS, Redux-Observable / NgRx Effects style',
       'homepage.pillars.bll.point3': 'createSynapse — module assembly and wiring synapses together',
@@ -416,9 +417,12 @@ const resources = {
   },
 }
 
+// SSR-safe: во время пререндера (Node) нет localStorage — берём язык по умолчанию.
+const initialLng = (typeof localStorage !== 'undefined' && localStorage.getItem('preferred-locale')) || 'en'
+
 i18n.use(initReactI18next).init({
   resources,
-  lng: localStorage.getItem('preferred-locale') || 'en',
+  lng: initialLng,
   react: {
     useSuspense: false,
   },
@@ -433,8 +437,10 @@ i18n.use(initReactI18next).init({
   returnNull: false,
 })
 
-// Обновляем lang атрибут при каждой смене языка
+// Обновляем lang атрибут при каждой смене языка.
+// SSR-safe: на сервере (пререндер) document нет — обновляем только в браузере.
 i18n.on('languageChanged', (lng) => {
+  if (typeof document === 'undefined') return
   document.documentElement.lang = lng
 
   // Обновляем мета-теги

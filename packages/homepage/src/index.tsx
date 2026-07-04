@@ -1,17 +1,16 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-
-import App from './App'
-import reportWebVitals from './reportWebVitals'
+import { ViteReactSSG } from 'vite-react-ssg'
 
 import '@shared/styles/index.scss'
+
+import { routes } from './App'
+import reportWebVitals from './reportWebVitals'
+
 import './index.css'
 
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)
-
-reportWebVitals()
+// vite-react-ssg: на билде рендерит каждый роут из `routes` в статический HTML
+// (SSG), а в браузере — гидрирует. Тот же URL читаем и ботами (готовый HTML),
+// и людьми (полноценный SPA после гидрации).
+export const createRoot = ViteReactSSG({ routes }, ({ isClient }) => {
+  // web-vitals работают только в браузере — на сервере пропускаем.
+  if (isClient) reportWebVitals()
+})

@@ -1,4 +1,4 @@
-<!-- source: docs/en/api-client.md · canonical: https://synapse-homepage.web.app/docs#api-client · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/api-client.md · canonical: https://synapse-homepage.web.app/docs/api-client · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # ApiClient — HTTP Client with Caching
 

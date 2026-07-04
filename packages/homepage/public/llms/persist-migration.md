@@ -1,4 +1,4 @@
-<!-- source: docs/en/persist-migration.md · canonical: https://synapse-homepage.web.app/docs#persist-migration · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/persist-migration.md · canonical: https://synapse-homepage.web.app/docs/persist-migration · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # Persist migrations (version + migrate)
 

@@ -2,6 +2,8 @@
   "hosting": {
     "public": "build",
     "predeploy": ["yarn --cwd \"$PROJECT_DIR\" build"],
+    "cleanUrls": true,
+    "trailingSlash": false,
     "ignore": [
       "firebase.json",
       "**/.*",

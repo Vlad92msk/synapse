@@ -1,4 +1,4 @@
-<!-- source: docs/en/singleton.md · canonical: https://synapse-homepage.web.app/docs#singleton · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/singleton.md · canonical: https://synapse-homepage.web.app/docs/singleton · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # Singleton Pattern
 

@@ -1,4 +1,4 @@
-<!-- source: docs/en/reactive-reads.md · canonical: https://synapse-homepage.web.app/docs#reactive-reads · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/reactive-reads.md · canonical: https://synapse-homepage.web.app/docs/reactive-reads · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # Reactive reads & controlled re-renders
 

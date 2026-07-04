@@ -1,4 +1,4 @@
-<!-- source: docs/en/hook-memory.md · canonical: https://synapse-homepage.web.app/docs#hook-memory · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/hook-memory.md · canonical: https://synapse-homepage.web.app/docs/hook-memory · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # useCreateStorage (memory)
 

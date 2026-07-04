@@ -1,4 +1,4 @@
-import { Button } from '@shared/components/ui/button/Button'
+import { Link } from 'react-router-dom'
 import { useDocumentation } from '@shared/hooks'
 
 import { DOC_NAV } from './data/list'
@@ -41,9 +41,18 @@ export const DocsSidebar = (props: DocsSidebarProps) => {
 
                     return (
                       <li key={item.key} className={style.sectionItem}>
-                        <Button onClick={() => onSectionChange(item.key)} className={`${style.navButton} ${isActive ? style.active : ''}`} aria-current={isActive ? 'page' : undefined}>
+                        {/* Настоящая ссылка <a href="/docs/<key>">: пререндеренный HTML
+                            становится обходимым — агент/краулер попадает на любой раздел
+                            и переходит к остальным по ссылкам. onSectionChange лишь
+                            закрывает мобильный сайдбар; навигацию делает сам Link. */}
+                        <Link
+                          to={`/docs/${item.key}`}
+                          onClick={() => onSectionChange(item.key)}
+                          className={`${style.navButton} ${isActive ? style.active : ''}`}
+                          aria-current={isActive ? 'page' : undefined}
+                        >
                           {t(fullKey)}
-                        </Button>
+                        </Link>
                       </li>
                     )
                   })}

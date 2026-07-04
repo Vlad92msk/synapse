@@ -56,7 +56,7 @@ const GROUPS: Record<string, { pillar: keyof typeof PILLARS; label: string }> = 
 }
 
 interface Entry {
-    shortKey: string // хэш в URL: /docs#<shortKey>
+    shortKey: string // путь раздела: /docs/<shortKey>
     group: string
     fullKey: string
     component: string
@@ -182,7 +182,7 @@ function writePerDoc(entries: Entry[]): void {
         const { content } = matter(fs.readFileSync(e.file, 'utf8'))
         const body = stripNav(content).trim()
         const header =
-            `<!-- source: docs/en/${e.docKey}.md · canonical: ${SITE}/docs#${e.shortKey} · ` +
+            `<!-- source: docs/en/${e.docKey}.md · canonical: ${SITE}/docs/${e.shortKey} · ` +
             `part of ${SITE}/llms-full.txt -->\n\n`
         fs.writeFileSync(path.join(PER_DOC_DIR, `${e.docKey}.md`), header + body + '\n')
     }
@@ -284,7 +284,7 @@ function writeFull(entries: Entry[]): void {
     for (const e of entries) {
         const { content } = matter(fs.readFileSync(e.file, 'utf8'))
         const body = stripNav(content).trim()
-        parts.push(`<!-- source: docs/en/${e.docKey}.md · url: ${SITE}/docs#${e.shortKey} -->`)
+        parts.push(`<!-- source: docs/en/${e.docKey}.md · url: ${SITE}/docs/${e.shortKey} -->`)
         parts.push(body)
         parts.push('')
         parts.push('---')

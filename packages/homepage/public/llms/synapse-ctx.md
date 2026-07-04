@@ -1,4 +1,4 @@
-<!-- source: docs/en/synapse-ctx.md · canonical: https://synapse-homepage.web.app/docs#synapse-ctx · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/synapse-ctx.md · canonical: https://synapse-homepage.web.app/docs/synapse-ctx · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # createSynapseCtx
 

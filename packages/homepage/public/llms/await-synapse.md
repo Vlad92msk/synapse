@@ -1,4 +1,4 @@
-<!-- source: docs/en/await-synapse.md · canonical: https://synapse-homepage.web.app/docs#await-synapse · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/await-synapse.md · canonical: https://synapse-homepage.web.app/docs/await-synapse · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # awaitSynapse
 

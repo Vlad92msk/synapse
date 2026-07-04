@@ -1,4 +1,4 @@
-<!-- source: docs/en/create-synapse-effects.md · canonical: https://synapse-homepage.web.app/docs#synapse-effects · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/create-synapse-effects.md · canonical: https://synapse-homepage.web.app/docs/synapse-effects · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # createSynapse (effects)
 

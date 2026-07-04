@@ -1,4 +1,4 @@
-<!-- source: docs/en/delete-has-keys.md · canonical: https://synapse-homepage.web.app/docs#operations · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/delete-has-keys.md · canonical: https://synapse-homepage.web.app/docs/operations · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # remove / has / keys / clear / reset
 

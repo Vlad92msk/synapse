@@ -1,4 +1,4 @@
-<!-- source: docs/en/synapse-awaiter.md · canonical: https://synapse-homepage.web.app/docs#synapse-awaiter · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/synapse-awaiter.md · canonical: https://synapse-homepage.web.app/docs/synapse-awaiter · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # createSynapseAwaiter — framework-independent awaiter
 

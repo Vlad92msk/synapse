@@ -1,4 +1,4 @@
-<!-- source: docs/en/create-synapse-dispatcher.md · canonical: https://synapse-homepage.web.app/docs#synapse-dispatcher · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/create-synapse-dispatcher.md · canonical: https://synapse-homepage.web.app/docs/synapse-dispatcher · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # createSynapse (dispatcher)
 

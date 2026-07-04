@@ -1,7 +1,8 @@
 import { CSSProperties, ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useDocumentation } from '@shared/hooks/useDocumentation'
 import { Logo } from '@shared/components/ui/logo/Logo'
+import { useDocumentation } from '@shared/hooks/useDocumentation'
+import { Head } from 'vite-react-ssg'
 
 import { FEATURES } from './data/features'
 import { PILLARS } from './data/pillars'
@@ -142,181 +143,186 @@ export const HomePage = () => {
   const { t } = useDocumentation()
   const navigate = useNavigate()
 
-  const goDocs = (hash: string) => navigate(`/docs#${hash}`)
+  const goDocs = (key: string) => navigate(`/docs/${key}`)
 
   return (
-    <div className={style.homepage}>
-      {/* ─── Hero ─────────────────────────────────────────────────────────── */}
-      <section className={style.hero}>
-        <div className={style.heroOrb} aria-hidden="true" />
-        <div className={style.heroMark} aria-hidden="true">
-          <Logo size="100%" animated />
-        </div>
-        <div className={style.container}>
-          <div className={style.heroInner}>
-            <div className={style.badge}>
-              <span className={style.badgeDot} />
-              {t('homepage.hero.badge')}
-            </div>
-            <h1 className={style.heroTitle}>
-              {t('homepage.hero.heading')}
-              <br />
-              <span className={style.heroTitleMuted}>{t('homepage.hero.headingAccent')}</span>
-            </h1>
-            <p className={style.heroSubtitle}>{t('homepage.hero.subtitle')}</p>
-            <div className={style.heroActions}>
-              <button type="button" className={style.btnPrimary} onClick={() => goDocs('architecture')}>
-                {t('homepage.hero.readDocs')}
-                <ArrowRight />
-              </button>
-              <a className={style.btnGhost} href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
-                <GithubIcon size={17} />
-                GitHub
-              </a>
-            </div>
-            <div className={style.heroTags}>
-              <span className={style.tag}>{t('homepage.hero.tag1')}</span>
-              <span className={style.tag}>{t('homepage.hero.tag2')}</span>
-              <span className={style.tag}>{t('homepage.hero.tag3')}</span>
-            </div>
+    <>
+      <Head>
+        <title>Synapse Storage — State Management Toolkit | TypeScript</title>
+      </Head>
+      <div className={style.homepage}>
+        {/* ─── Hero ─────────────────────────────────────────────────────────── */}
+        <section className={style.hero}>
+          <div className={style.heroOrb} aria-hidden="true" />
+          <div className={style.heroMark} aria-hidden="true">
+            <Logo size="100%" animated />
           </div>
-        </div>
-      </section>
-
-      {/* ─── Три блока (pillars) ──────────────────────────────────────────── */}
-      <section className={style.section}>
-        <div className={style.container}>
-          <div className={style.eyebrow}>{t('homepage.pillars.eyebrow')}</div>
-          <h2 className={style.sectionTitle}>{t('homepage.pillars.heading')}</h2>
-        </div>
-        <div className={style.fanScroll}>
-          <div className={style.fanRow}>
-            {PILLARS.map((pillar, i) => {
-              const fan = PILLARS_FAN[i % PILLARS_FAN.length]
-              return (
-                <article key={pillar.key} className={`${style.fanCard} ${style.pillarCard} ${fan.highlight ? style.fanHighlight : ''}`} style={fanStyle(fan)}>
-                  <div className={style.cardIcon}>{PILLAR_ICONS[pillar.key]}</div>
-                  <div className={style.cardWhen}>{t(`${pillar.key}.when`)}</div>
-                  <h3 className={style.cardTitle}>{t(`${pillar.key}.name`)}</h3>
-                  <p className={style.cardText}>{t(`${pillar.key}.tagline`)}</p>
-                  <ul className={style.cardList}>
-                    {Array.from({ length: pillar.points }).map((_, p) => (
-                      <li key={p}>
-                        <span className={style.checkIcon}>
-                          <Check />
-                        </span>
-                        {t(`${pillar.key}.point${p + 1}`)}
-                      </li>
-                    ))}
-                  </ul>
-                  <div className={style.cardFooter}>
-                    <code className={style.cardImport}>{pillar.importPath.replace(/^import .*from '/, '').replace(/'$/, '')}</code>
-                    <button type="button" className={style.cardLink} onClick={() => goDocs(pillar.docHash)}>
-                      {t('homepage.pillars.section')}
-                      <ArrowRight />
-                    </button>
-                  </div>
-                </article>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Почему Synapse (features) ────────────────────────────────────── */}
-      <section className={style.section}>
-        <div className={style.container}>
-          <div className={style.eyebrow}>{t('homepage.features.eyebrow')}</div>
-          <h2 className={style.sectionTitle}>{t('homepage.features.heading')}</h2>
-        </div>
-        <div className={style.fanScroll}>
-          <div className={style.fanRow}>
-            {FEATURES.map((feature, i) => {
-              const fan = FEATURES_FAN[i % FEATURES_FAN.length]
-              return (
-                <div key={feature.key} className={`${style.fanCard} ${style.featureCard} ${fan.highlight ? style.fanHighlight : ''}`} style={fanStyle(fan)}>
-                  <div className={style.featureIcon}>{FEATURE_ICONS[feature.key]}</div>
-                  <h4 className={style.featureTitle}>{t(`${feature.key}.title`)}</h4>
-                  <p className={style.featureText}>{t(`${feature.key}.description`)}</p>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Архитектура ──────────────────────────────────────────────────── */}
-      <section className={style.containerSection}>
-        <div className={style.archPanel}>
-          <div className={style.eyebrow}>{t('homepage.architecture.eyebrow')}</div>
-          <h2 className={style.panelTitle}>{t('homepage.architecture.heading')}</h2>
-          <p className={style.panelText}>{t('homepage.architecture.intro')}</p>
-          <div className={style.archGrid}>
-            {(['layer1', 'layer2'] as const).map((layer) => (
-              <div key={layer} className={style.archCard}>
-                <div className={style.archHead}>
-                  <span className={style.archBadge}>{t(`homepage.architecture.${layer}`)}</span>
-                  <span className={style.archName}>{t(`homepage.architecture.${layer}Name`)}</span>
-                </div>
-                <p className={style.archDesc}>{t(`homepage.architecture.${layer}Desc`)}</p>
-                <div className={style.archTags}>
-                  {ARCHITECTURE_TAGS[layer].map((tag) => (
-                    <span key={tag} className={style.archTag}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+          <div className={style.container}>
+            <div className={style.heroInner}>
+              <div className={style.badge}>
+                <span className={style.badgeDot} />
+                {t('homepage.hero.badge')}
               </div>
-            ))}
-          </div>
-          <div className={style.archMore}>
-            <button type="button" className={style.linkArrow} onClick={() => goDocs('architecture')}>
-              {t('homepage.architecture.more')}
-              <ArrowRight />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── CTA ──────────────────────────────────────────────────────────── */}
-      <section className={style.containerSection}>
-        <div className={style.ctaPanel}>
-          <div className={style.ctaOrb} aria-hidden="true" />
-          <div className={style.ctaInner}>
-            <h2 className={style.ctaTitle}>{t('homepage.cta.heading')}</h2>
-            <p className={style.ctaText}>{t('homepage.cta.text')}</p>
-            <div className={style.ctaActions}>
-              <button type="button" className={style.btnPrimary} onClick={() => goDocs('install')}>
-                {t('homepage.cta.install')}
-                <ArrowRight />
-              </button>
-              <a className={style.btnGhost} href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
-                GitHub
-              </a>
+              <h1 className={style.heroTitle}>
+                {t('homepage.hero.heading')}
+                <br />
+                <span className={style.heroTitleMuted}>{t('homepage.hero.headingAccent')}</span>
+              </h1>
+              <p className={style.heroSubtitle}>{t('homepage.hero.subtitle')}</p>
+              <div className={style.heroActions}>
+                <button type="button" className={style.btnPrimary} onClick={() => goDocs('architecture')}>
+                  {t('homepage.hero.readDocs')}
+                  <ArrowRight />
+                </button>
+                <a className={style.btnGhost} href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+                  <GithubIcon size={17} />
+                  GitHub
+                </a>
+              </div>
+              <div className={style.heroTags}>
+                <span className={style.tag}>{t('homepage.hero.tag1')}</span>
+                <span className={style.tag}>{t('homepage.hero.tag2')}</span>
+                <span className={style.tag}>{t('homepage.hero.tag3')}</span>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ─── Footer ───────────────────────────────────────────────────────── */}
-      <footer className={style.footer}>
-        <div className={style.footerInner}>
-          <Logo size={22} />
-          <span className={style.footerBrand}>Synapse</span>
-          <div className={style.footerLinks}>
-            <button type="button" className={style.footerLink} onClick={() => goDocs('architecture')}>
-              {t('nav.docs')}
-            </button>
-            <a className={style.footerLink} href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
-              GitHub
-            </a>
-            <a className={style.footerLink} href={NPM_URL} target="_blank" rel="noopener noreferrer">
-              npm
-            </a>
+        {/* ─── Три блока (pillars) ──────────────────────────────────────────── */}
+        <section className={style.section}>
+          <div className={style.container}>
+            <div className={style.eyebrow}>{t('homepage.pillars.eyebrow')}</div>
+            <h2 className={style.sectionTitle}>{t('homepage.pillars.heading')}</h2>
           </div>
-          <span className={style.footerCopy}>MIT © 2026 synapse-storage</span>
-        </div>
-      </footer>
-    </div>
+          <div className={style.fanScroll}>
+            <div className={style.fanRow}>
+              {PILLARS.map((pillar, i) => {
+                const fan = PILLARS_FAN[i % PILLARS_FAN.length]
+                return (
+                  <article key={pillar.key} className={`${style.fanCard} ${style.pillarCard} ${fan.highlight ? style.fanHighlight : ''}`} style={fanStyle(fan)}>
+                    <div className={style.cardIcon}>{PILLAR_ICONS[pillar.key]}</div>
+                    <div className={style.cardWhen}>{t(`${pillar.key}.when`)}</div>
+                    <h3 className={style.cardTitle}>{t(`${pillar.key}.name`)}</h3>
+                    <p className={style.cardText}>{t(`${pillar.key}.tagline`)}</p>
+                    <ul className={style.cardList}>
+                      {Array.from({ length: pillar.points }).map((_, p) => (
+                        <li key={p}>
+                          <span className={style.checkIcon}>
+                            <Check />
+                          </span>
+                          {t(`${pillar.key}.point${p + 1}`)}
+                        </li>
+                      ))}
+                    </ul>
+                    <div className={style.cardFooter}>
+                      <code className={style.cardImport}>{pillar.importPath.replace(/^import .*from '/, '').replace(/'$/, '')}</code>
+                      <button type="button" className={style.cardLink} onClick={() => goDocs(pillar.docHash)}>
+                        {t('homepage.pillars.section')}
+                        <ArrowRight />
+                      </button>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Почему Synapse (features) ────────────────────────────────────── */}
+        <section className={style.section}>
+          <div className={style.container}>
+            <div className={style.eyebrow}>{t('homepage.features.eyebrow')}</div>
+            <h2 className={style.sectionTitle}>{t('homepage.features.heading')}</h2>
+          </div>
+          <div className={style.fanScroll}>
+            <div className={style.fanRow}>
+              {FEATURES.map((feature, i) => {
+                const fan = FEATURES_FAN[i % FEATURES_FAN.length]
+                return (
+                  <div key={feature.key} className={`${style.fanCard} ${style.featureCard} ${fan.highlight ? style.fanHighlight : ''}`} style={fanStyle(fan)}>
+                    <div className={style.featureIcon}>{FEATURE_ICONS[feature.key]}</div>
+                    <h4 className={style.featureTitle}>{t(`${feature.key}.title`)}</h4>
+                    <p className={style.featureText}>{t(`${feature.key}.description`)}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Архитектура ──────────────────────────────────────────────────── */}
+        <section className={style.containerSection}>
+          <div className={style.archPanel}>
+            <div className={style.eyebrow}>{t('homepage.architecture.eyebrow')}</div>
+            <h2 className={style.panelTitle}>{t('homepage.architecture.heading')}</h2>
+            <p className={style.panelText}>{t('homepage.architecture.intro')}</p>
+            <div className={style.archGrid}>
+              {(['layer1', 'layer2'] as const).map((layer) => (
+                <div key={layer} className={style.archCard}>
+                  <div className={style.archHead}>
+                    <span className={style.archBadge}>{t(`homepage.architecture.${layer}`)}</span>
+                    <span className={style.archName}>{t(`homepage.architecture.${layer}Name`)}</span>
+                  </div>
+                  <p className={style.archDesc}>{t(`homepage.architecture.${layer}Desc`)}</p>
+                  <div className={style.archTags}>
+                    {ARCHITECTURE_TAGS[layer].map((tag) => (
+                      <span key={tag} className={style.archTag}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className={style.archMore}>
+              <button type="button" className={style.linkArrow} onClick={() => goDocs('architecture')}>
+                {t('homepage.architecture.more')}
+                <ArrowRight />
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── CTA ──────────────────────────────────────────────────────────── */}
+        <section className={style.containerSection}>
+          <div className={style.ctaPanel}>
+            <div className={style.ctaOrb} aria-hidden="true" />
+            <div className={style.ctaInner}>
+              <h2 className={style.ctaTitle}>{t('homepage.cta.heading')}</h2>
+              <p className={style.ctaText}>{t('homepage.cta.text')}</p>
+              <div className={style.ctaActions}>
+                <button type="button" className={style.btnPrimary} onClick={() => goDocs('install')}>
+                  {t('homepage.cta.install')}
+                  <ArrowRight />
+                </button>
+                <a className={style.btnGhost} href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+                  GitHub
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Footer ───────────────────────────────────────────────────────── */}
+        <footer className={style.footer}>
+          <div className={style.footerInner}>
+            <Logo size={22} />
+            <span className={style.footerBrand}>Synapse</span>
+            <div className={style.footerLinks}>
+              <button type="button" className={style.footerLink} onClick={() => goDocs('architecture')}>
+                {t('nav.docs')}
+              </button>
+              <a className={style.footerLink} href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+                GitHub
+              </a>
+              <a className={style.footerLink} href={NPM_URL} target="_blank" rel="noopener noreferrer">
+                npm
+              </a>
+            </div>
+            <span className={style.footerCopy}>MIT © 2026 synapse-storage</span>
+          </div>
+        </footer>
+      </div>
+    </>
   )
 }

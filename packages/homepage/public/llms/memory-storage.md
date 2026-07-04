@@ -1,4 +1,4 @@
-<!-- source: docs/en/memory-storage.md · canonical: https://synapse-homepage.web.app/docs#memory · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/memory-storage.md · canonical: https://synapse-homepage.web.app/docs/memory · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # MemoryStorage
 

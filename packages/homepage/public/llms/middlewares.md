@@ -1,4 +1,4 @@
-<!-- source: docs/en/middlewares.md · canonical: https://synapse-homepage.web.app/docs#middlewares · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/middlewares.md · canonical: https://synapse-homepage.web.app/docs/middlewares · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # Middlewares
 

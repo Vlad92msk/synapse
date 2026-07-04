@@ -1,4 +1,4 @@
-<!-- source: docs/en/ssr-hydration.md · canonical: https://synapse-homepage.web.app/docs#ssr-hydration · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/ssr-hydration.md · canonical: https://synapse-homepage.web.app/docs/ssr-hydration · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # SSR hydration (hydrate)
 

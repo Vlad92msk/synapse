@@ -1,4 +1,4 @@
-<!-- source: docs/en/use-storage-observable.md · canonical: https://synapse-homepage.web.app/docs#use-storage-observable · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/use-storage-observable.md · canonical: https://synapse-homepage.web.app/docs/use-storage-observable · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # useStorageObservable
 

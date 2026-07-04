@@ -1,4 +1,4 @@
-<!-- source: docs/en/storage-factory.md · canonical: https://synapse-homepage.web.app/docs#factory · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/storage-factory.md · canonical: https://synapse-homepage.web.app/docs/factory · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # StorageFactory
 

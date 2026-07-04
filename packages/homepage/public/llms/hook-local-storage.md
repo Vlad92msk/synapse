@@ -1,4 +1,4 @@
-<!-- source: docs/en/hook-local-storage.md · canonical: https://synapse-homepage.web.app/docs#hook-local · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/hook-local-storage.md · canonical: https://synapse-homepage.web.app/docs/hook-local · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # useCreateStorage (localStorage)
 

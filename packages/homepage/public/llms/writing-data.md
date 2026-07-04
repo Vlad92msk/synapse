@@ -1,4 +1,4 @@
-<!-- source: docs/en/writing-data.md · canonical: https://synapse-homepage.web.app/docs#writing-data · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/writing-data.md · canonical: https://synapse-homepage.web.app/docs/writing-data · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # Writing data (set/update)
 

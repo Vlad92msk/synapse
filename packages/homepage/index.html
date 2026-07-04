@@ -4,8 +4,9 @@
   <meta charset="utf-8" />
   <meta name="google-site-verification" content="ai5pyab9BCqqHeoCPFK4wP8k5wquJltkGARQlEMl41k" />
 
-  <!-- Основные мета-теги для SEO -->
-  <title>Synapse Storage - State Management Toolkit | TypeScript</title>
+  <!-- Основные мета-теги для SEO. Заголовок страницы задаётся per-page через компонент
+       Head (vite-react-ssg): у каждого раздела /docs/<key> свой, у главной — свой.
+       Статический заголовок здесь намеренно не держим, иначе в пререндере вышло бы два. -->
   <meta name="description" content="Powerful TypeScript state management toolkit with API client, storage adapters, and reactive capabilities. Framework-agnostic solution for React, Vue, Angular, and vanilla JS." />
   <meta name="keywords" content="state management, typescript, react, vue, angular, api client, storage, reactive programming, javascript library, synapse storage, framework agnostic, universal state manager" />
   <meta name="author" content="Vlad Firsov" />
@@ -59,8 +60,14 @@
   <link rel="alternate" hreflang="en" href="https://synapse-homepage.web.app/" />
   <link rel="alternate" hreflang="x-default" href="https://synapse-homepage.web.app/" />
 
-  <!-- Canonical URL -->
-  <link rel="canonical" href="https://synapse-homepage.web.app/" />
+  <!-- Canonical URL задаётся per-page через <Head> (см. DocsPage). Раньше здесь был
+       жёсткий canonical на "/", из-за чего КАЖДАЯ страница объявляла главную своим
+       каноном — SEO-баг. Для главной страницы (нет своего Head) canonical опущен →
+       поисковик по умолчанию считает страницу собственным каноном. -->
+
+  <!-- Machine-readable docs для AI-агентов и краулеров (стандарт llmstxt.org):
+       индекс /llms.txt объявлен выше; здесь — полная документация одним файлом. -->
+  <link rel="alternate" type="text/plain" title="LLM docs (full)" href="/llms-full.txt" />
 
   <!-- Self-hosted шрифты: preload критичных (видимых в первом экране) файлов,
        чтобы они качались с высоким приоритетом параллельно и были готовы к

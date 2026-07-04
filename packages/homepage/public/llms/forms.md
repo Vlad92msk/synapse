@@ -1,4 +1,4 @@
-<!-- source: docs/en/forms.md · canonical: https://synapse-homepage.web.app/docs#forms · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/forms.md · canonical: https://synapse-homepage.web.app/docs/forms · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # Forms — the recipe: form state on a synapse storage
 

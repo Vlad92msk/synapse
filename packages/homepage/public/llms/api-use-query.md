@@ -1,4 +1,4 @@
-<!-- source: docs/en/api-use-query.md · canonical: https://synapse-homepage.web.app/docs#api-use-query · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/api-use-query.md · canonical: https://synapse-homepage.web.app/docs/api-use-query · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # useApiQuery — React hook for GET requests
 

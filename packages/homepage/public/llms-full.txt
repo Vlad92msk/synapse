@@ -4,7 +4,7 @@ Source: https://synapse-homepage.web.app/docs · npm: synapse-storage · Generat
 
 ---
 
-<!-- source: docs/en/architecture.md · url: https://synapse-homepage.web.app/docs#architecture -->
+<!-- source: docs/en/architecture.md · url: https://synapse-homepage.web.app/docs/architecture -->
 # Two layers: State Manager and Business Logic Layer
 
 
@@ -138,7 +138,7 @@ export const postsSynapse = createSynapse(async () => {
 
 ---
 
-<!-- source: docs/en/install.md · url: https://synapse-homepage.web.app/docs#install -->
+<!-- source: docs/en/install.md · url: https://synapse-homepage.web.app/docs/install -->
 # Install
 
 The core pulls in no extra dependencies. `rxjs` and `react` are only needed if you use the
@@ -164,7 +164,7 @@ npm install react
 
 ---
 
-<!-- source: docs/en/memory-storage.md · url: https://synapse-homepage.web.app/docs#memory -->
+<!-- source: docs/en/memory-storage.md · url: https://synapse-homepage.web.app/docs/memory -->
 # MemoryStorage
 
 
@@ -258,7 +258,7 @@ await todoStorage.destroy()       // destruction (for memory, clears the data)
 
 ---
 
-<!-- source: docs/en/local-storage.md · url: https://synapse-homepage.web.app/docs#local -->
+<!-- source: docs/en/local-storage.md · url: https://synapse-homepage.web.app/docs/local -->
 # LocalStorage
 
 
@@ -324,7 +324,7 @@ Server state can be seeded via [`hydrate(state)`](./ssr-hydration.md).
 
 ---
 
-<!-- source: docs/en/indexeddb-storage.md · url: https://synapse-homepage.web.app/docs#indexeddb -->
+<!-- source: docs/en/indexeddb-storage.md · url: https://synapse-homepage.web.app/docs/indexeddb -->
 # IndexedDBStorage
 
 
@@ -408,7 +408,7 @@ IndexedDB is persistent, so it supports schema migration via `version` + `migrat
 
 ---
 
-<!-- source: docs/en/storage-factory.md · url: https://synapse-homepage.web.app/docs#factory -->
+<!-- source: docs/en/storage-factory.md · url: https://synapse-homepage.web.app/docs/factory -->
 # StorageFactory
 
 
@@ -486,7 +486,7 @@ Reading, writing, and subscriptions — see the "Working with data" section.
 
 ---
 
-<!-- source: docs/en/hook-memory.md · url: https://synapse-homepage.web.app/docs#hook-memory -->
+<!-- source: docs/en/hook-memory.md · url: https://synapse-homepage.web.app/docs/hook-memory -->
 # useCreateStorage (memory)
 
 
@@ -552,7 +552,7 @@ const activeCount = useStorageSubscribe(storage, (s) => s.todos.filter((t) => !t
 
 ---
 
-<!-- source: docs/en/hook-local-storage.md · url: https://synapse-homepage.web.app/docs#hook-local -->
+<!-- source: docs/en/hook-local-storage.md · url: https://synapse-homepage.web.app/docs/hook-local -->
 # useCreateStorage (localStorage)
 
 
@@ -595,7 +595,7 @@ More on subscriptions and operations — the "Working with data" section.
 
 ---
 
-<!-- source: docs/en/hook-indexeddb.md · url: https://synapse-homepage.web.app/docs#hook-idb -->
+<!-- source: docs/en/hook-indexeddb.md · url: https://synapse-homepage.web.app/docs/hook-idb -->
 # useCreateStorage (indexedDB)
 
 
@@ -647,7 +647,7 @@ More on asynchronous operations — the "Working with data" section.
 
 ---
 
-<!-- source: docs/en/static-create.md · url: https://synapse-homepage.web.app/docs#static -->
+<!-- source: docs/en/static-create.md · url: https://synapse-homepage.web.app/docs/static -->
 # Static .create()
 
 
@@ -695,7 +695,7 @@ await Promise.all([
 
 ---
 
-<!-- source: docs/en/reading-data.md · url: https://synapse-homepage.web.app/docs#reading-data -->
+<!-- source: docs/en/reading-data.md · url: https://synapse-homepage.web.app/docs/reading-data -->
 # Reading data (get/getState)
 
 
@@ -777,7 +777,7 @@ await todoStorage.keys()         // ['todos', 'filter']
 
 ---
 
-<!-- source: docs/en/writing-data.md · url: https://synapse-homepage.web.app/docs#writing-data -->
+<!-- source: docs/en/writing-data.md · url: https://synapse-homepage.web.app/docs/writing-data -->
 # Writing data (set/update)
 
 
@@ -864,7 +864,7 @@ await todoStorage.reset()
 
 ---
 
-<!-- source: docs/en/delete-has-keys.md · url: https://synapse-homepage.web.app/docs#operations -->
+<!-- source: docs/en/delete-has-keys.md · url: https://synapse-homepage.web.app/docs/operations -->
 # remove / has / keys / clear / reset
 
 
@@ -963,7 +963,7 @@ todoStorage.keys()       // ['todos', 'filter']
 
 ---
 
-<!-- source: docs/en/subscriptions.md · url: https://synapse-homepage.web.app/docs#subscriptions -->
+<!-- source: docs/en/subscriptions.md · url: https://synapse-homepage.web.app/docs/subscriptions -->
 # Subscriptions (subscribe)
 
 
@@ -1050,7 +1050,7 @@ See **[Reactive reads & controlled re-renders](./reactive-reads.md)** for `useSt
 
 ---
 
-<!-- source: docs/en/reactive-reads.md · url: https://synapse-homepage.web.app/docs#reactive-reads -->
+<!-- source: docs/en/reactive-reads.md · url: https://synapse-homepage.web.app/docs/reactive-reads -->
 # Reactive reads & controlled re-renders
 
 
@@ -1091,7 +1091,7 @@ the API: all three scenarios are covered by the tools above.
 
 ---
 
-<!-- source: docs/en/use-storage-subscribe.md · url: https://synapse-homepage.web.app/docs#use-storage-subscribe -->
+<!-- source: docs/en/use-storage-subscribe.md · url: https://synapse-homepage.web.app/docs/use-storage-subscribe -->
 # useStorageSubscribe
 
 
@@ -1139,7 +1139,7 @@ no re-render.
 
 ---
 
-<!-- source: docs/en/use-storage-observable.md · url: https://synapse-homepage.web.app/docs#use-storage-observable -->
+<!-- source: docs/en/use-storage-observable.md · url: https://synapse-homepage.web.app/docs/use-storage-observable -->
 # useStorageObservable
 
 
@@ -1334,7 +1334,7 @@ pick the right entry point (`useObservable` to render a value, `useSubscription`
 
 ---
 
-<!-- source: docs/en/to-observable.md · url: https://synapse-homepage.web.app/docs#to-observable -->
+<!-- source: docs/en/to-observable.md · url: https://synapse-homepage.web.app/docs/to-observable -->
 # toObservable
 
 
@@ -1438,7 +1438,7 @@ createEffectConfig: () => ({
 
 ---
 
-<!-- source: docs/en/use-subscription.md · url: https://synapse-homepage.web.app/docs#use-subscription -->
+<!-- source: docs/en/use-subscription.md · url: https://synapse-homepage.web.app/docs/use-subscription -->
 # useSubscription
 
 
@@ -1545,7 +1545,7 @@ unsubscribes from the store. So sprinkling `useSubscription`/`useObservable` acr
 
 ---
 
-<!-- source: docs/en/selector-system.md · url: https://synapse-homepage.web.app/docs#selector-system -->
+<!-- source: docs/en/selector-system.md · url: https://synapse-homepage.web.app/docs/selector-system -->
 # Selectors
 
 
@@ -1771,7 +1771,7 @@ unsub2()
 
 ---
 
-<!-- source: docs/en/create-synapse-basic.md · url: https://synapse-homepage.web.app/docs#synapse-basic -->
+<!-- source: docs/en/create-synapse-basic.md · url: https://synapse-homepage.web.app/docs/synapse-basic -->
 # createSynapse (basic)
 
 
@@ -1940,7 +1940,7 @@ const pokemonSynapse = createSynapse(async () => {
 
 ---
 
-<!-- source: docs/en/create-synapse-dispatcher.md · url: https://synapse-homepage.web.app/docs#synapse-dispatcher -->
+<!-- source: docs/en/create-synapse-dispatcher.md · url: https://synapse-homepage.web.app/docs/synapse-dispatcher -->
 # createSynapse (dispatcher)
 
 
@@ -2118,7 +2118,7 @@ More — [createSynapseCtx](./synapse-ctx.md). How intents turn into real API ca
 
 ---
 
-<!-- source: docs/en/create-synapse-effects.md · url: https://synapse-homepage.web.app/docs#synapse-effects -->
+<!-- source: docs/en/create-synapse-effects.md · url: https://synapse-homepage.web.app/docs/synapse-effects -->
 # createSynapse (effects)
 
 
@@ -2441,7 +2441,7 @@ The full module — [Pokemon (recipe)](./pokemon-advanced.md).
 
 ---
 
-<!-- source: docs/en/dispatcher-detailed.md · url: https://synapse-homepage.web.app/docs#dispatcher-detail -->
+<!-- source: docs/en/dispatcher-detailed.md · url: https://synapse-homepage.web.app/docs/dispatcher-detail -->
 # Dispatcher (in detail)
 
 
@@ -2648,7 +2648,7 @@ dispatcher.destroy()
 
 ---
 
-<!-- source: docs/en/dependencies.md · url: https://synapse-homepage.web.app/docs#dependencies -->
+<!-- source: docs/en/dependencies.md · url: https://synapse-homepage.web.app/docs/dependencies -->
 # Cross-module dependencies
 
 
@@ -2806,7 +2806,7 @@ and [awaitSynapse](./await-synapse.md). The full module — [Pokemon (recipe)](.
 
 ---
 
-<!-- source: docs/en/synapse-ctx.md · url: https://synapse-homepage.web.app/docs#synapse-ctx -->
+<!-- source: docs/en/synapse-ctx.md · url: https://synapse-homepage.web.app/docs/synapse-ctx -->
 # createSynapseCtx
 
 
@@ -3053,7 +3053,7 @@ The full pokemon module — [Pokemon (recipe)](./pokemon-advanced.md).
 
 ---
 
-<!-- source: docs/en/await-synapse.md · url: https://synapse-homepage.web.app/docs#await-synapse -->
+<!-- source: docs/en/await-synapse.md · url: https://synapse-homepage.web.app/docs/await-synapse -->
 # awaitSynapse
 
 
@@ -3187,7 +3187,7 @@ More on the framework-independent variant and the SSR sync-fast-path — on the
 
 ---
 
-<!-- source: docs/en/ssr-hydration.md · url: https://synapse-homepage.web.app/docs#ssr-hydration -->
+<!-- source: docs/en/ssr-hydration.md · url: https://synapse-homepage.web.app/docs/ssr-hydration -->
 # SSR hydration (hydrate)
 
 
@@ -3291,7 +3291,7 @@ interface IAsyncStorage<T> {
 
 ---
 
-<!-- source: docs/en/middlewares.md · url: https://synapse-homepage.web.app/docs#middlewares -->
+<!-- source: docs/en/middlewares.md · url: https://synapse-homepage.web.app/docs/middlewares -->
 # Middlewares
 
 
@@ -3651,7 +3651,7 @@ interface SyncDefaultMiddlewares {
 
 ---
 
-<!-- source: docs/en/singleton.md · url: https://synapse-homepage.web.app/docs#singleton -->
+<!-- source: docs/en/singleton.md · url: https://synapse-homepage.web.app/docs/singleton -->
 # Singleton Pattern
 
 
@@ -3798,7 +3798,7 @@ enum ConfigMergeStrategy {
 
 ---
 
-<!-- source: docs/en/persist-migration.md · url: https://synapse-homepage.web.app/docs#persist-migration -->
+<!-- source: docs/en/persist-migration.md · url: https://synapse-homepage.web.app/docs/persist-migration -->
 # Persist migrations (version + migrate)
 
 
@@ -3905,7 +3905,7 @@ interface BaseStorageConfig<T> {
 
 ---
 
-<!-- source: docs/en/synapse-awaiter.md · url: https://synapse-homepage.web.app/docs#synapse-awaiter -->
+<!-- source: docs/en/synapse-awaiter.md · url: https://synapse-homepage.web.app/docs/synapse-awaiter -->
 # createSynapseAwaiter — framework-independent awaiter
 
 
@@ -4021,7 +4021,7 @@ The full module walkthrough — in the [pokemon-advanced recipe](./pokemon-advan
 
 ---
 
-<!-- source: docs/en/event-bus.md · url: https://synapse-homepage.web.app/docs#event-bus -->
+<!-- source: docs/en/event-bus.md · url: https://synapse-homepage.web.app/docs/event-bus -->
 # createEventBus — Event Bus
 
 
@@ -4282,7 +4282,7 @@ const mySynapse = createSynapse(() => ({
 
 ---
 
-<!-- source: docs/en/api-client.md · url: https://synapse-homepage.web.app/docs#api-client -->
+<!-- source: docs/en/api-client.md · url: https://synapse-homepage.web.app/docs/api-client -->
 # ApiClient — HTTP Client with Caching
 
 
@@ -4735,7 +4735,7 @@ await api.init()
 
 ---
 
-<!-- source: docs/en/api-use-query.md · url: https://synapse-homepage.web.app/docs#api-use-query -->
+<!-- source: docs/en/api-use-query.md · url: https://synapse-homepage.web.app/docs/api-use-query -->
 # useApiQuery — React hook for GET requests
 
 
@@ -4851,7 +4851,7 @@ const list = useApiQuery(endpoints.getList, { limit: 12 })
 
 ---
 
-<!-- source: docs/en/api-use-mutation.md · url: https://synapse-homepage.web.app/docs#api-use-mutation -->
+<!-- source: docs/en/api-use-mutation.md · url: https://synapse-homepage.web.app/docs/api-use-mutation -->
 # useApiMutation — React hook for mutations
 
 
@@ -4955,7 +4955,7 @@ createPokemon: create({
 
 ---
 
-<!-- source: docs/en/api-ssr-pokemon.md · url: https://synapse-homepage.web.app/docs#api-ssr-pokemon -->
+<!-- source: docs/en/api-ssr-pokemon.md · url: https://synapse-homepage.web.app/docs/api-ssr-pokemon -->
 # Pokémon SSR — server render + client pagination
 
 
@@ -5137,7 +5137,7 @@ they're safe to call from `'server only'` code — mirrors `dehydrateModule` for
 
 ---
 
-<!-- source: docs/en/forms.md · url: https://synapse-homepage.web.app/docs#forms -->
+<!-- source: docs/en/forms.md · url: https://synapse-homepage.web.app/docs/forms -->
 # Forms — the recipe: form state on a synapse storage
 
 
@@ -5525,7 +5525,7 @@ Validation stays the same — the middleware re-validates the whole `values` on 
 
 ---
 
-<!-- source: docs/en/pokemon-advanced.md · url: https://synapse-homepage.web.app/docs#pokemon-advanced -->
+<!-- source: docs/en/pokemon-advanced.md · url: https://synapse-homepage.web.app/docs/pokemon-advanced -->
 # Pokemon Advanced — the recipe: the whole data layer on PokeAPI
 
 

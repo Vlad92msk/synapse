@@ -1,14 +1,22 @@
 import { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useDocumentation } from '@shared/hooks'
+import { Head } from 'vite-react-ssg'
 
 import { DocsContent, DocsSidebar, sectionsList } from './components'
 import { SECTION_LIST } from './components/docs-sidebar/data/list'
 
 import style from './DocsPage.module.css'
 
+const SITE = 'https://synapse-homepage.web.app'
+
+const DEFAULT_SECTION = 'architecture'
+
 export const DocsPage = () => {
   const navigate = useNavigate()
   const location = useLocation()
+  const { section: sectionParam } = useParams()
+  const { t } = useDocumentation()
 
   // Функция для получения полного ключа из короткого
   const getFullKeyFromShort = (shortKey: string): string => {
@@ -26,21 +34,10 @@ export const DocsPage = () => {
     return SECTION_LIST.some((section) => section.items.some((item) => item.key === shortKey))
   }
 
-  // Получаем секцию из URL или хэша
-  const getInitialSection = (): string => {
-    // Сначала проверяем хэш
-    if (location.hash) {
-      const hashSection = location.hash.substring(1)
-      if (isValidSection(hashSection)) {
-        return hashSection
-      }
-    }
+  // Источник правды — path-параметр /docs/<section>. Так секция известна серверу
+  // на этапе пререндера, и в статический HTML попадает именно нужный раздел.
+  const activeSection = sectionParam && isValidSection(sectionParam) ? sectionParam : DEFAULT_SECTION
 
-    // По умолчанию — вводная страница «Архитектура»
-    return 'architecture'
-  }
-
-  const [activeSection, setActiveSection] = useState(getInitialSection())
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
@@ -57,24 +54,22 @@ export const DocsPage = () => {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
+  // Совместимость со старыми ссылками /docs#<section> и канонизация /docs → /docs/<section>.
   useEffect(() => {
-    const newSection = getInitialSection()
-    setActiveSection(newSection)
-  }, [location.hash])
-
-  // Устанавливаем роут по умолчанию при первой загрузке
-  useEffect(() => {
-    if (location.pathname === '/docs' && !location.hash) {
-      navigate('/docs#architecture', { replace: true })
+    if (location.hash) {
+      const hashSection = location.hash.substring(1)
+      if (isValidSection(hashSection)) {
+        navigate(`/docs/${hashSection}`, { replace: true })
+        return
+      }
     }
-  }, [location.pathname, location.hash, navigate])
+    if (!sectionParam) {
+      navigate(`/docs/${DEFAULT_SECTION}`, { replace: true })
+    }
+  }, [location.hash, sectionParam, navigate])
 
-  // Обработка изменения секции
-  const handleSectionChange = (section: string) => {
-    setActiveSection(section)
-    // Обновляем URL с хэшем
-    navigate(`/docs#${section}`, { replace: true })
-
+  // Навигацию делает сам <Link> в сайдбаре; здесь только закрываем мобильный сайдбар.
+  const handleSectionChange = () => {
     if (isMobile) {
       setIsSidebarOpen(false)
     }
@@ -90,21 +85,30 @@ export const DocsPage = () => {
   const fullKey = getFullKeyFromShort(activeSection)
   const currentSection = sectionsList[fullKey]
 
+  const sectionTitle = fullKey ? t(fullKey) : 'Documentation'
+
   return (
-    <div className={style.docs}>
-      <button className={`${style.sidebarToggle} ${isSidebarOpen ? style.hidden : ''}`} onClick={() => setIsSidebarOpen(true)}>
-        <span className={style.hamburger}>
-          <span></span>
-          <span></span>
-          <span></span>
-        </span>
-      </button>
+    <>
+      <Head>
+        {/* Per-section title + canonical попадают в статический HTML пререндера. */}
+        <title>{`${sectionTitle} · Synapse Storage`}</title>
+        <link rel="canonical" href={`${SITE}/docs/${activeSection}`} />
+      </Head>
+      <div className={style.docs}>
+        <button className={`${style.sidebarToggle} ${isSidebarOpen ? style.hidden : ''}`} onClick={() => setIsSidebarOpen(true)}>
+          <span className={style.hamburger}>
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+        </button>
 
-      {isMobile && isSidebarOpen && <div className={style.overlay} onClick={handleOverlayClick} />}
+        {isMobile && isSidebarOpen && <div className={style.overlay} onClick={handleOverlayClick} />}
 
-      <DocsSidebar activeSection={activeSection} onSectionChange={handleSectionChange} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isMobile={isMobile} />
+        <DocsSidebar activeSection={activeSection} onSectionChange={handleSectionChange} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isMobile={isMobile} />
 
-      <DocsContent section={currentSection} sectionKey={fullKey} isSidebarOpen={isSidebarOpen} isMobile={isMobile} />
-    </div>
+        <DocsContent section={currentSection} sectionKey={fullKey} isSidebarOpen={isSidebarOpen} isMobile={isMobile} />
+      </div>
+    </>
   )
 }

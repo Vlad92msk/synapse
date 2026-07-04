@@ -1,4 +1,4 @@
-<!-- source: docs/en/use-subscription.md · canonical: https://synapse-homepage.web.app/docs#use-subscription · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/use-subscription.md · canonical: https://synapse-homepage.web.app/docs/use-subscription · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # useSubscription
 

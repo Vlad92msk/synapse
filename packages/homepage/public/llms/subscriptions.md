@@ -1,4 +1,4 @@
-<!-- source: docs/en/subscriptions.md · canonical: https://synapse-homepage.web.app/docs#subscriptions · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/subscriptions.md · canonical: https://synapse-homepage.web.app/docs/subscriptions · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # Subscriptions (subscribe)
 

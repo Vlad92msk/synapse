@@ -1,4 +1,4 @@
-<!-- source: docs/en/reading-data.md · canonical: https://synapse-homepage.web.app/docs#reading-data · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/reading-data.md · canonical: https://synapse-homepage.web.app/docs/reading-data · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # Reading data (get/getState)
 

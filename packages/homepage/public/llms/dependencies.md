@@ -1,4 +1,4 @@
-<!-- source: docs/en/dependencies.md · canonical: https://synapse-homepage.web.app/docs#dependencies · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/dependencies.md · canonical: https://synapse-homepage.web.app/docs/dependencies · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # Cross-module dependencies
 

@@ -1,4 +1,4 @@
-<!-- source: docs/en/indexeddb-storage.md · canonical: https://synapse-homepage.web.app/docs#indexeddb · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/indexeddb-storage.md · canonical: https://synapse-homepage.web.app/docs/indexeddb · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # IndexedDBStorage
 

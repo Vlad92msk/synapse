@@ -1,4 +1,4 @@
-<!-- source: docs/en/selector-system.md · canonical: https://synapse-homepage.web.app/docs#selector-system · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/selector-system.md · canonical: https://synapse-homepage.web.app/docs/selector-system · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # Selectors
 

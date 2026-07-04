@@ -1,4 +1,4 @@
-<!-- source: docs/en/use-storage-subscribe.md · canonical: https://synapse-homepage.web.app/docs#use-storage-subscribe · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/use-storage-subscribe.md · canonical: https://synapse-homepage.web.app/docs/use-storage-subscribe · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # useStorageSubscribe
 

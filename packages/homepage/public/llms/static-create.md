@@ -1,4 +1,4 @@
-<!-- source: docs/en/static-create.md · canonical: https://synapse-homepage.web.app/docs#static · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/static-create.md · canonical: https://synapse-homepage.web.app/docs/static · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # Static .create()
 

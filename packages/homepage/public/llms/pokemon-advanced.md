@@ -1,4 +1,4 @@
-<!-- source: docs/en/pokemon-advanced.md · canonical: https://synapse-homepage.web.app/docs#pokemon-advanced · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/pokemon-advanced.md · canonical: https://synapse-homepage.web.app/docs/pokemon-advanced · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # Pokemon Advanced — the recipe: the whole data layer on PokeAPI
 

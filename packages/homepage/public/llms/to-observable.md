@@ -1,4 +1,4 @@
-<!-- source: docs/en/to-observable.md · canonical: https://synapse-homepage.web.app/docs#to-observable · part of https://synapse-homepage.web.app/llms-full.txt -->
+<!-- source: docs/en/to-observable.md · canonical: https://synapse-homepage.web.app/docs/to-observable · part of https://synapse-homepage.web.app/llms-full.txt -->
 
 # toObservable
 
