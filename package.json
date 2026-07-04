@@ -10,14 +10,21 @@
     "test": "yarn workspace synapse-storage test",
     "test:watch": "yarn workspace synapse-storage test:watch",
     "test:coverage": "yarn workspace synapse-storage test:coverage",
+    "lint": "yarn workspace synapse-storage lint",
+    "lint:fix": "yarn workspace synapse-storage lint:fix",
+    "fix": "yarn workspace synapse-storage fix",
     "dev:examples": "yarn workspace examples dev",
     "build:examples": "yarn workspace examples build",
     "dev:homepage": "yarn workspace synapse-homepage dev",
     "build:homepage": "yarn workspace synapse-homepage build",
     "homepage:docs": "yarn workspace synapse-homepage docs:generate",
-    "lint": "yarn workspace synapse-storage lint",
-    "lint:fix": "yarn workspace synapse-storage lint:fix",
-    "fix": "yarn workspace synapse-storage fix"
+    "deploy:homepage": "yarn workspace synapse-homepage deploy",
+    "release:patch": "yarn workspace synapse-storage release:patch",
+    "release:minor": "yarn workspace synapse-storage release:minor",
+    "release:major": "yarn workspace synapse-storage release:major",
+    "release:patch:stable": "yarn workspace synapse-storage release:patch:stable",
+    "release:minor:stable": "yarn workspace synapse-storage release:minor:stable",
+    "release:major:stable": "yarn workspace synapse-storage release:major:stable"
   },
   "devDependencies": {
     "@testing-library/dom": "^10"

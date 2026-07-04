@@ -31,6 +31,7 @@
     "dev": "yarn docs:generate && yarn docs:llms && vite",
     "build": "yarn docs:generate && yarn docs:llms && vite-react-ssg build && yarn docs:check-prerender",
     "docs:check-prerender": "tsx scripts/docs/check-prerender.ts",
+    "deploy": "firebase deploy --only hosting",
     "preview": "vite preview",
     "test": "vitest",
     "docs:generate": "tsx scripts/docs/generate-docs.ts",
