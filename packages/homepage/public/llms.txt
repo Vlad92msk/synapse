@@ -5,8 +5,14 @@
 - Homepage: https://synapse-homepage.web.app
 - Docs: https://synapse-homepage.web.app/docs
 - npm: https://www.npmjs.com/package/synapse-storage
+- GitHub: https://github.com/Vlad92msk/synapse
 - Full documentation as one file: https://synapse-homepage.web.app/llms-full.txt
 - Note: each link below is a standalone documentation page (statically pre-rendered HTML, readable without JavaScript). Load only the sections you need — the single-file /llms-full.txt is large (~200 KB) and some fetchers truncate it. A raw-markdown copy of each page is also available at /llms/<key>.md.
+
+Dig deeper (machine-readable, no JS):
+- Latest version & package metadata (JSON): https://registry.npmjs.org/synapse-storage
+- Source README (raw markdown): https://raw.githubusercontent.com/Vlad92msk/synapse/master/packages/synapse/README.md
+- Full source code: https://github.com/Vlad92msk/synapse (browse raw files via raw.githubusercontent.com)
 
 ## Overview
 

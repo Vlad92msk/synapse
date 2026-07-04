@@ -17,6 +17,13 @@ import matter from 'gray-matter'
  */
 
 const SITE = 'https://synapse-homepage.web.app'
+const GITHUB = 'https://github.com/Vlad92msk/synapse'
+// Машиночитаемые эндпоинты для «копнуть глубже», когда доки не покрывают вопрос:
+// registry отдаёт чистый JSON (версия/зависимости), raw-README — сырой markdown
+// (веб-морды npmjs.com/github.com JS-тяжёлые, агент через web_fetch видит мало).
+const NPM_REGISTRY = 'https://registry.npmjs.org/synapse-storage'
+const RAW_README =
+    'https://raw.githubusercontent.com/Vlad92msk/synapse/master/packages/synapse/README.md'
 const HOMEPAGE_ROOT = path.resolve(process.cwd())
 const DOCS_DIR = path.resolve(HOMEPAGE_ROOT, '..', '..', 'docs', 'en')
 const SECTIONS_DIR = path.join(HOMEPAGE_ROOT, 'src', 'pages', 'docs', 'sections')
@@ -241,6 +248,7 @@ function writeIndex(entries: Entry[]): void {
     lines.push('- Homepage: ' + SITE)
     lines.push('- Docs: ' + SITE + '/docs')
     lines.push('- npm: https://www.npmjs.com/package/synapse-storage')
+    lines.push('- GitHub: ' + GITHUB)
     lines.push('- Full documentation as one file: ' + SITE + '/llms-full.txt')
     lines.push(
         '- Note: each link below is a standalone documentation page (statically pre-rendered HTML, ' +
@@ -248,6 +256,11 @@ function writeIndex(entries: Entry[]): void {
             '/llms-full.txt is large (~200 KB) and some fetchers truncate it. ' +
             'A raw-markdown copy of each page is also available at /llms/<key>.md.',
     )
+    lines.push('')
+    lines.push('Dig deeper (machine-readable, no JS):')
+    lines.push('- Latest version & package metadata (JSON): ' + NPM_REGISTRY)
+    lines.push('- Source README (raw markdown): ' + RAW_README)
+    lines.push('- Full source code: ' + GITHUB + ' (browse raw files via raw.githubusercontent.com)')
     lines.push('')
 
     // Группируем по столпам в заданном порядке.
