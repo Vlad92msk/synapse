@@ -22,6 +22,15 @@ const DOCS_DIR = path.resolve(HOMEPAGE_ROOT, '..', '..', 'docs', 'en')
 const SECTIONS_DIR = path.join(HOMEPAGE_ROOT, 'src', 'pages', 'docs', 'sections')
 const DATA_LIST = path.join(HOMEPAGE_ROOT, 'src', 'pages', 'docs', 'data', 'list.tsx')
 const OUT_DIR = path.join(HOMEPAGE_ROOT, 'public')
+// Каждый раздел дополнительно кладём отдельным raw-markdown файлом сюда:
+// /llms/<docKey>.md. Это позволяет AI-агенту подгружать только нужный раздел,
+// а не весь llms-full.txt (который читающие фетч-инструменты часто режут по
+// фиксированному байтовому лимиту ~128 KB — см. llms.txt/README).
+const PER_DOC_DIR = path.join(OUT_DIR, 'llms')
+
+// Md-файлы из docs/en, которые намеренно НЕ входят в навигацию сайта и потому
+// не попадают в llms. Пусто = «каждый .md обязан быть где-то в навигации».
+const IGNORED_DOCS = new Set<string>()
 
 // Человекочитаемые названия «столпов» и групп навигации (i18n-ключи → English).
 const PILLARS: Record<string, { order: number; label: string }> = {
@@ -127,18 +136,19 @@ function build(): void {
     const nav = readNavOrder()
 
     const entries: Entry[] = []
+    const problems: string[] = []
     for (const { fullKey, component } of nav) {
         const parts = fullKey.split('.') // nav.sections.<group>.<shortKey>
         const group = parts[2]
         const shortKey = parts.slice(3).join('.')
         const docKey = compToDoc[component]
         if (!docKey) {
-            console.warn(`⚠️  Нет docKey для компонента ${component} (${fullKey})`)
+            problems.push(`Нет docKey для компонента ${component} (${fullKey}) — раздел выпадет из llms`)
             continue
         }
         const file = path.join(DOCS_DIR, `${docKey}.md`)
         if (!fs.existsSync(file)) {
-            console.warn(`⚠️  Файл документации не найден: ${docKey}.md`)
+            problems.push(`Файл документации не найден: ${docKey}.md (${fullKey})`)
             continue
         }
         const { data, content } = matter(fs.readFileSync(file, 'utf8'))
@@ -151,10 +161,68 @@ function build(): void {
 
     writeIndex(entries)
     writeFull(entries)
+    writePerDoc(entries)
+    assertComplete(entries, problems)
 
     console.log(`\n✅ Сгенерировано ${entries.length} записей`)
     console.log(`   📄 ${path.join(OUT_DIR, 'llms.txt')}`)
     console.log(`   📄 ${path.join(OUT_DIR, 'llms-full.txt')}`)
+    console.log(`   📁 ${PER_DOC_DIR}/ (${entries.length} raw-markdown разделов)`)
+}
+
+/**
+ * Пишет каждый раздел отдельным raw-markdown файлом в /llms/<docKey>.md.
+ * Директорию пересоздаём с нуля, чтобы удалённые разделы не оставляли за собой
+ * устаревшие файлы.
+ */
+function writePerDoc(entries: Entry[]): void {
+    fs.rmSync(PER_DOC_DIR, { recursive: true, force: true })
+    fs.mkdirSync(PER_DOC_DIR, { recursive: true })
+    for (const e of entries) {
+        const { content } = matter(fs.readFileSync(e.file, 'utf8'))
+        const body = stripNav(content).trim()
+        const header =
+            `<!-- source: docs/en/${e.docKey}.md · canonical: ${SITE}/docs#${e.shortKey} · ` +
+            `part of ${SITE}/llms-full.txt -->\n\n`
+        fs.writeFileSync(path.join(PER_DOC_DIR, `${e.docKey}.md`), header + body + '\n')
+    }
+}
+
+/**
+ * Страховка от «тихого» выпадения раздела (ровно тот баг, из-за которого агенты
+ * не видели ApiClient): падаем, если
+ *   1) какой-то пункт навигации не разрешился в существующий .md;
+ *   2) число секций в llms-full.txt разошлось с числом записей;
+ *   3) в docs/en есть .md, не попавший ни в один раздел навигации (orphan).
+ */
+function assertComplete(entries: Entry[], problems: string[]): void {
+    const errors = [...problems]
+
+    // (2) Кол-во секций в реально записанном llms-full.txt.
+    const full = fs.readFileSync(path.join(OUT_DIR, 'llms-full.txt'), 'utf8')
+    const sectionCount = (full.match(/^<!-- source: docs\/en\//gm) ?? []).length
+    if (sectionCount !== entries.length) {
+        errors.push(`Секций в llms-full.txt: ${sectionCount}, а записей: ${entries.length} — рассинхрон`)
+    }
+
+    // (3) Orphan-файлы: .md есть на диске, но нигде в навигации.
+    const used = new Set(entries.map((e) => e.docKey))
+    const orphans = fs
+        .readdirSync(DOCS_DIR)
+        .filter((f) => f.endsWith('.md'))
+        .map((f) => f.replace(/\.md$/, ''))
+        .filter((key) => !used.has(key) && !IGNORED_DOCS.has(key))
+    for (const key of orphans) {
+        errors.push(`docs/en/${key}.md не привязан ни к одному разделу навигации — не попадёт в llms`)
+    }
+
+    if (errors.length) {
+        console.error('\n❌ Проверка llms не пройдена:')
+        for (const e of errors) console.error(`   • ${e}`)
+        console.error('\nЛибо привяжите раздел в src/pages/docs/data/list.tsx + sections/*.tsx,')
+        console.error('либо добавьте docKey в IGNORED_DOCS (scripts/docs/generate-llms.ts).')
+        process.exit(1)
+    }
 }
 
 /** Компактный индекс llms.txt. */
@@ -171,9 +239,14 @@ function writeIndex(entries: Entry[]): void {
     )
     lines.push('')
     lines.push('- Homepage: ' + SITE)
-    lines.push('- Docs: ' + SITE + '/docs')
+    lines.push('- Docs (human, SPA): ' + SITE + '/docs')
     lines.push('- npm: https://www.npmjs.com/package/synapse-storage')
     lines.push('- Full documentation as one file: ' + SITE + '/llms-full.txt')
+    lines.push(
+        '- Note: each link below is a standalone raw-markdown section under /llms/. ' +
+            'Prefer loading only the sections you need — the single-file /llms-full.txt is large ' +
+            '(~200 KB) and some fetchers truncate it.',
+    )
     lines.push('')
 
     // Группируем по столпам в заданном порядке.
@@ -189,7 +262,7 @@ function writeIndex(entries: Entry[]): void {
         lines.push(`## ${PILLARS[pillar]?.label ?? pillar}`)
         lines.push('')
         for (const e of byPillar.get(pillar)!) {
-            const url = `${SITE}/docs#${e.shortKey}`
+            const url = `${SITE}/llms/${e.docKey}.md`
             lines.push(`- [${e.title}](${url})${e.summary ? `: ${e.summary}` : ''}`)
         }
         lines.push('')

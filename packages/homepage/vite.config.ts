@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs'
-import { defineConfig } from 'vite'
+import { defineConfig, type PluginOption } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
@@ -9,7 +9,7 @@ const synapseVersion = JSON.parse(readFileSync(path.resolve(__dirname, '../synap
 
 export default defineConfig({
   publicDir: 'public',
-  plugins: [react()],
+  plugins: [react()] as unknown as PluginOption[],
   define: {
     __APP_VERSION__: JSON.stringify(synapseVersion),
   },

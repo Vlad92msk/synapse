@@ -1,0 +1,9 @@
+{
+  // Тайп-чек только для node-скриптов сборки доков (scripts/docs/*).
+  // Наследует базовый tsconfig (esModuleInterop, target ES2022 и т.д.), но
+  // ограничивает include, чтобы docs:validate не тянул весь src.
+  // Важно: НЕЛЬЗЯ передавать файлы позиционно в `tsc <files>` — тогда tsconfig
+  // игнорируется и всплывают ложные ошибки esModuleInterop/target.
+  "extends": "./tsconfig.json",
+  "include": ["scripts"]
+}

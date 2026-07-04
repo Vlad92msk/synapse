@@ -36,7 +36,7 @@
     "docs:llms": "tsx scripts/docs/generate-llms.ts",
     "docs:watch": "tsx watch scripts/docs/generate-docs.ts",
     "og": "node scripts/build-og.mjs",
-    "docs:validate": "tsc --noEmit scripts/docs/*.ts",
+    "docs:validate": "tsc --noEmit -p tsconfig.scripts.json",
     "fix": "yarn format && yarn lint:fix",
     "check": "yarn format:check && yarn lint && yarn type-check",
     "lint": "eslint src --ext .ts,.tsx,.js,.jsx",
