@@ -31,13 +31,13 @@
   --text-disabled: #57534e;
 
   /* Акцентные цвета.
-     Основной акцент приложения — ОРАНЖЕВЫЙ. Семантический алиас --accent-blue
+     Основной акцент приложения — ОРАНЖЕВЫЙ. Семантический алиас --accent-orange
      (его потребляют кнопки primary, фокус-рамки, ссылки, табы и т.п.) указывает на
      оранжевый тон — так весь акцент меняется в одной точке. Чат-пузырь (--bubble-me)
      остаётся отдельным синим: это намеренно «спокойный» цвет действия, не акцент. */
-  --accent-blue: hsl(25 95% 53%);
-  --accent-blue-hover: hsl(25 95% 48%);
-  --accent-blue-subtle: hsl(25 95% 53% / 0.1);
+  --accent-orange: hsl(25 95% 53%);
+  --accent-orange-hover: hsl(25 95% 48%);
+  --accent-orange-subtle: hsl(25 95% 53% / 0.1);
 
   --accent-green: hsl(142deg 100% 50%);
   --accent-green-hover: hsl(142 76% 32%);
@@ -77,13 +77,13 @@
   /* Специфичные переменные для форм */
   --input-bg: var(--bg-tertiary);
   --input-border: var(--border-color);
-  --input-border-focus: var(--accent-blue);
+  --input-border-focus: var(--accent-orange);
   --input-text: var(--text-primary);
   --input-placeholder: var(--text-muted);
 
   /* Переменные для кнопок */
-  --button-primary-bg: var(--accent-blue);
-  --button-primary-bg-hover: var(--accent-blue-hover);
+  --button-primary-bg: var(--accent-orange);
+  --button-primary-bg-hover: var(--accent-orange-hover);
   --button-primary-text: #ffffff;
 
   --button-secondary-bg: var(--bg-elevated);

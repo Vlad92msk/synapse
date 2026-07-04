@@ -1,0 +1,46 @@
+<svg width="1200" height="600" viewBox="0 0 1200 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Social preview (Open Graph / Twitter). Rasterized to public/og.png by build-og.mjs. -->
+  <defs>
+    <linearGradient id="og-accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF9B3E"/>
+      <stop offset="100%" stop-color="#E85D19"/>
+    </linearGradient>
+    <linearGradient id="mark-grad" x1="30" y1="30" x2="160" y2="170" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF9B3E"/>
+      <stop offset="100%" stop-color="#E85D19"/>
+    </linearGradient>
+    <mask id="mark-cut">
+      <rect width="200" height="200" fill="white"/>
+      <line x1="60" y1="100" x2="140" y2="45" stroke="black" stroke-width="10"/>
+      <line x1="60" y1="100" x2="140" y2="155" stroke="black" stroke-width="10"/>
+    </mask>
+  </defs>
+
+  <rect width="1200" height="600" fill="#1C1C1B"/>
+
+  <!-- Connector mark (same as public/logo2.svg), large, no card -->
+  <svg x="10" y="35" width="560" height="560" viewBox="0 0 200 200">
+    <g mask="url(#mark-cut)">
+      <circle cx="60" cy="100" r="26" stroke="url(#mark-grad)" stroke-width="14" fill="none"/>
+      <circle cx="140" cy="45" r="14" stroke="url(#mark-grad)" stroke-width="8" fill="none"/>
+      <circle cx="140" cy="155" r="14" stroke="url(#mark-grad)" stroke-width="8" fill="none"/>
+    </g>
+    <line x1="92.1" y1="77.9" x2="120.2" y2="58.6" stroke="url(#mark-grad)" stroke-width="6" stroke-linecap="round"/>
+    <line x1="92.1" y1="122.1" x2="120.2" y2="141.4" stroke="url(#mark-grad)" stroke-width="6" stroke-linecap="round"/>
+  </svg>
+
+  <!-- Wordmark + three-layer tenets -->
+  <g font-family="Menlo, ui-monospace, monospace">
+    <text x="552" y="286" font-size="118" font-weight="700" fill="#C4BFB2">Synapse</text>
+    <rect x="556" y="322" width="210" height="7" rx="3.5" fill="url(#og-accent)"/>
+
+    <g font-size="33" fill="#ADA89B">
+      <circle cx="554" cy="381" r="7" fill="#FF8A34"/>
+      <text x="588" y="392">State Manager</text>
+      <circle cx="554" cy="433" r="7" fill="#FF8A34"/>
+      <text x="588" y="444">Business Logic Layer</text>
+      <circle cx="554" cy="485" r="7" fill="#FF8A34"/>
+      <text x="588" y="496">API Client</text>
+    </g>
+  </g>
+</svg>

@@ -35,6 +35,7 @@
     "docs:generate": "tsx scripts/docs/generate-docs.ts",
     "docs:llms": "tsx scripts/docs/generate-llms.ts",
     "docs:watch": "tsx watch scripts/docs/generate-docs.ts",
+    "og": "node scripts/build-og.mjs",
     "docs:validate": "tsc --noEmit scripts/docs/*.ts",
     "fix": "yarn format && yarn lint:fix",
     "check": "yarn format:check && yarn lint && yarn type-check",
@@ -62,6 +63,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.27.0",
+    "@resvg/resvg-js": "^2.6.2",
     "@types/node": "^24.0.0",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.6",
