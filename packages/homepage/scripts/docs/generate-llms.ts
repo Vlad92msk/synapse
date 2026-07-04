@@ -239,13 +239,14 @@ function writeIndex(entries: Entry[]): void {
     )
     lines.push('')
     lines.push('- Homepage: ' + SITE)
-    lines.push('- Docs (human, SPA): ' + SITE + '/docs')
+    lines.push('- Docs: ' + SITE + '/docs')
     lines.push('- npm: https://www.npmjs.com/package/synapse-storage')
     lines.push('- Full documentation as one file: ' + SITE + '/llms-full.txt')
     lines.push(
-        '- Note: each link below is a standalone raw-markdown section under /llms/. ' +
-            'Prefer loading only the sections you need — the single-file /llms-full.txt is large ' +
-            '(~200 KB) and some fetchers truncate it.',
+        '- Note: each link below is a standalone documentation page (statically pre-rendered HTML, ' +
+            'readable without JavaScript). Load only the sections you need — the single-file ' +
+            '/llms-full.txt is large (~200 KB) and some fetchers truncate it. ' +
+            'A raw-markdown copy of each page is also available at /llms/<key>.md.',
     )
     lines.push('')
 
@@ -262,7 +263,7 @@ function writeIndex(entries: Entry[]): void {
         lines.push(`## ${PILLARS[pillar]?.label ?? pillar}`)
         lines.push('')
         for (const e of byPillar.get(pillar)!) {
-            const url = `${SITE}/llms/${e.docKey}.md`
+            const url = `${SITE}/docs/${e.shortKey}`
             lines.push(`- [${e.title}](${url})${e.summary ? `: ${e.summary}` : ''}`)
         }
         lines.push('')
