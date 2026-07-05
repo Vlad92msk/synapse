@@ -41,7 +41,11 @@ export class StorageFactory {
    * намеренно: `WorkerCacheStorage` не создаётся лениво фабрикой (нужны воркер-опции),
    * поэтому `create({ type: 'worker' })` не должен типизироваться, а не падать в рантайме (R5).
    */
-  static create<T extends Record<string, any>>(config: UniversalStorageConfig<T> & { type: Exclude<StorageType, 'worker'> }, eventEmitter?: IEventEmitter, logger?: ILogger): IStorage<T>
+  static create<T extends Record<string, any>>(
+    config: UniversalStorageConfig<T> & { type: Exclude<StorageType, 'worker'> },
+    eventEmitter?: IEventEmitter,
+    logger?: ILogger,
+  ): IStorage<T>
 
   // ─── Реализация ─────────────────────────────────────────────────────────────
 

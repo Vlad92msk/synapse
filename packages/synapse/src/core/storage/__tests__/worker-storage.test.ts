@@ -229,7 +229,7 @@ describe('WorkerCacheStorage — structured clone', () => {
     const storage = makeWorker(nextChannel())
     await storage.initialize()
 
-    const bad = typeof Headers !== 'undefined' ? new Headers({ 'x-test': '1' }) : (() => {})
+    const bad = typeof Headers !== 'undefined' ? new Headers({ 'x-test': '1' }) : () => {}
     await expect(storage.set('resp', bad as any)).rejects.toThrow(/clone/i)
 
     // Стор не испорчен — предыдущего значения нет, состояние читается.

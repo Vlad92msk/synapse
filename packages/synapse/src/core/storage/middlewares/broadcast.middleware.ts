@@ -1,5 +1,5 @@
-import { StorageAction } from '../utils/middleware-module'
 import { SyncBroadcastChannel } from '../utils/broadcast.util'
+import { StorageAction } from '../utils/middleware-module'
 import { createSharedStateMiddleware } from './shared-state.factory'
 
 /**

@@ -1,14 +1,6 @@
 import { handleCallbackError, logError } from '../../../_utils/error-handling.util'
 import { StorageEvents, StorageType } from '../storage.interface'
-import {
-  Middleware,
-  MiddlewareAPI,
-  NextFunction,
-  StorageAction,
-  SyncMiddleware,
-  SyncMiddlewareAPI,
-  SyncNextFunction,
-} from '../utils/middleware-module'
+import { Middleware, MiddlewareAPI, NextFunction, StorageAction, SyncMiddleware, SyncMiddlewareAPI, SyncNextFunction } from '../utils/middleware-module'
 
 /**
  * Общая часть кросс-табных мидлвар (`broadcast`/`shared-worker` и их sync-аналогов).

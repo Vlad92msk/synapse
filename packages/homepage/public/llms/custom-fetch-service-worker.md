@@ -8,9 +8,6 @@ network strategies per URL: precache, offline routing, cache-first / network-fir
 stale-while-revalidate. It sits **below** `ApiClient`, which never knows it exists — and its
 `baseQuery.fetchFn` is **not** touched.
 
-> **The library needs no extending for this.** This is not a synapse feature — it is the standard
-> platform ServiceWorker, owned by your app. `ApiClient` works out of the box on top of it.
-
 ## When you need it
 
 Reach for your own SW when you need real control over the **network layer**, not just an in-tab

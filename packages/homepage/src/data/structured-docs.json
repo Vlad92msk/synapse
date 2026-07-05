@@ -7939,44 +7939,15 @@
                   "links": []
                 }
               }
-            },
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "The library needs no extending for this. This is not a synapse feature — it is the standard\nplatform ServiceWorker, owned by your app. ApiClient works out of the box on top of it.",
-                      "formatting": {
-                        "bold": [
-                          {
-                            "start": 0,
-                            "end": 40
-                          }
-                        ],
-                        "italic": [],
-                        "code": [
-                          {
-                            "start": 135,
-                            "end": 144
-                          }
-                        ],
-                        "links": []
-                      }
-                    }
-                  }
-                ]
-              }
             }
           ],
           "metadata": {
-            "wordCount": 72,
+            "wordCount": 38,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -8661,8 +8632,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-07-05T12:32:52.886Z",
-        "wordCount": 748,
+        "lastModified": "2026-07-05T13:19:04.202Z",
+        "wordCount": 712,
         "readingTime": 4,
         "sectionsCount": 8,
         "codeBlocksCount": 2
@@ -29206,7 +29177,7 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "Запрос в приложении на synapse может быть отвечен из трёх независимых слоёв, стоящих друг над\nдругом. Это не конкурирующие стратегии — каждый слой решает свою задачу, знает разное и включается независимо. Эта страница объясняет весь стек один раз, чтобы остальные доки (ApiClient, WorkerCacheStorage, рецепты ServiceWorker и fetchFn) могли сосредоточиться каждая на своём слое.",
+                "text": "Запрос в приложении на synapse может быть отвечен из трёх независимых слоёв, стоящих друг над\nдругом. Это не конкурирующие стратегии — каждый слой решает свою задачу, знает разное и включается\nнезависимо. Эта страница объясняет весь стек один раз, чтобы остальные доки\n(ApiClient, WorkerCacheStorage, рецепты\nServiceWorker и fetchFn) могли\nсосредоточиться каждая на своём слое.",
                 "formatting": {
                   "bold": [
                     {
@@ -33104,44 +33075,15 @@
                   "links": []
                 }
               }
-            },
-            {
-              "type": "blockquote",
-              "data": {
-                "content": [
-                  {
-                    "type": "paragraph",
-                    "data": {
-                      "text": "Библиотеку для этого расширять не нужно. Это не фича synapse — это штатный платформенный\nServiceWorker, которым владеет ваше приложение. ApiClient работает поверх него из коробки.",
-                      "formatting": {
-                        "bold": [
-                          {
-                            "start": 0,
-                            "end": 40
-                          }
-                        ],
-                        "italic": [],
-                        "code": [
-                          {
-                            "start": 137,
-                            "end": 146
-                          }
-                        ],
-                        "links": []
-                      }
-                    }
-                  }
-                ]
-              }
             }
           ],
           "metadata": {
-            "wordCount": 64,
+            "wordCount": 39,
             "codeBlocksCount": 0,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
-            "hasBlockquotes": true,
+            "hasBlockquotes": false,
             "hasTasks": false
           }
         },
@@ -33410,7 +33352,7 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "SW — это написанный руками статический ассет (отдаётся из public/custom-sw.js), который вы пишете и поддерживаете сами — synapse его за вас не генерирует. Precache на install, stale-while-revalidate по URL, офлайн-фолбэк:",
+                "text": "SW — это написанный руками статический ассет (отдаётся из public/custom-sw.js), который вы пишете и\nподдерживаете сами — synapse его за вас не генерирует. Precache на install, stale-while-revalidate по URL,\nофлайн-фолбэк:",
                 "formatting": {
                   "bold": [],
                   "italic": [],
@@ -33826,8 +33768,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-07-05T12:33:02.383Z",
-        "wordCount": 689,
+        "lastModified": "2026-07-05T13:18:55.276Z",
+        "wordCount": 662,
         "readingTime": 4,
         "sectionsCount": 8,
         "codeBlocksCount": 2
