@@ -19,6 +19,9 @@ import { GLOBAL_SUBSCRIPTION_KEY, PathSelector, StorageCore } from './storage-co
 export abstract class AsyncBaseStorage<T extends Record<string, any>> extends StorageCore<T> implements IAsyncStorage<T> {
   abstract readonly type: StorageType
 
+  /** Async-хранилище: синхронное чтение кэша недоступно. */
+  readonly isSync = false
+
   private middlewareModule: AsyncMiddlewareModule
   private initializedMiddlewares: Middleware[] | null = null
   private selectorPathCache = new WeakMap<PathSelector<any, any>, string>()
@@ -74,6 +77,17 @@ export abstract class AsyncBaseStorage<T extends Record<string, any>> extends St
 
     await this.doDestroy()
 
+    await this.cleanupMiddlewares()
+  }
+
+  /**
+   * Прогоняет `cleanup()` по всем инициализированным мидлварам (закрывает их каналы/
+   * таймеры) и сбрасывает список. Вынесено отдельно, чтобы переопределения
+   * performCleanup, СОЗНАТЕЛЬНО пропускающие doClear() (WorkerCacheStorage,
+   * IndexedDBStorage — персистентные/разделяемые данные), всё равно освобождали
+   * ресурсы мидлвар и не текли после destroy() (R8).
+   */
+  protected async cleanupMiddlewares(): Promise<void> {
     if (this.initializedMiddlewares) {
       await Promise.all(
         this.initializedMiddlewares.map(async (middleware) => {
@@ -162,7 +176,7 @@ export abstract class AsyncBaseStorage<T extends Record<string, any>> extends St
 
   // ─── Internal state access ──────────────────────────────────────────────────
 
-  private async getRawState(): Promise<T> {
+  protected async getRawState(): Promise<T> {
     try {
       const value = await this.doGet('')
       return value || {}

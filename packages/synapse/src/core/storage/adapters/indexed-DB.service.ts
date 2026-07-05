@@ -765,9 +765,12 @@ export class IndexedDBStorage<T extends Record<string, any>> extends AsyncBaseSt
   /**
    * Override performCleanup: persistent storage should NOT clear data on destroy.
    * Only clean up middleware and runtime resources, not persisted data.
+   * Прогоняем cleanup мидлвар (иначе их каналы/таймеры текут после destroy — R8),
+   * но сознательно пропускаем doClear() — данные переживают lifecycle компонента.
    */
   protected async performCleanup(): Promise<void> {
     await this.doDestroy()
+    await this.cleanupMiddlewares()
   }
 
   protected async doDestroy(): Promise<void> {

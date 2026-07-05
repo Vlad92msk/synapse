@@ -4,7 +4,7 @@ export * from './storage.interface'
 
 // Экспортируем публичные middleware
 export type { BatchingMiddlewareOptions, LoggerMiddlewareOptions, ShallowCompareMiddlewareOptions } from './middlewares'
-export { broadcastMiddleware, loggerMiddleware, syncBroadcastMiddleware, syncLoggerMiddleware } from './middlewares'
+export { broadcastMiddleware, loggerMiddleware, sharedWorkerMiddleware, syncBroadcastMiddleware, syncLoggerMiddleware, syncSharedWorkerMiddleware } from './middlewares'
 
 // Экспортируем публичные адаптеры
 export { AsyncBaseStorage } from './adapters/async-base-storage.service'
@@ -13,6 +13,7 @@ export { LocalStorage } from './adapters/local-storage.service'
 export { MemoryStorage } from './adapters/memory-storage.service'
 export { StorageCore } from './adapters/storage-core'
 export { SyncBaseStorage } from './adapters/sync-base-storage.service'
+export { WorkerCacheStorage } from './adapters/worker-storage.service'
 
 // Экспортируем утилиты, которые нужны в публичном API
 export {

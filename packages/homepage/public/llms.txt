@@ -18,12 +18,15 @@ Dig deeper (machine-readable, no JS):
 
 - [Two layers: State Manager and Business Logic Layer](https://synapse-homepage.web.app/docs/architecture): Synapse is not "yet another state manager".
 - [Install](https://synapse-homepage.web.app/docs/install): The core pulls in no extra dependencies. rxjs and react are only needed if you use the
+- [Custom fetch-intercepting ServiceWorker](https://synapse-homepage.web.app/docs/custom-fetch-service-worker): An app-owned ServiceWorker (Workbox-style) that transparently intercepts fetch and applies
+- [Custom baseQuery.fetchFn](https://synapse-homepage.web.app/docs/custom-fetch-fn): ApiClient accepts a custom transport through baseQuery.fetchFn?: typeof fetch.
 
 ## State Manager (core)
 
 - [MemoryStorage](https://synapse-homepage.web.app/docs/memory): In-memory storage. Data lives only while the page is open. Synchronous API.
 - [LocalStorage](https://synapse-homepage.web.app/docs/local): Data is stored in the browser's localStorage and survives page reloads.
 - [IndexedDBStorage](https://synapse-homepage.web.app/docs/indexeddb): Data is stored in IndexedDB and survives reloads.
+- [WorkerCacheStorage](https://synapse-homepage.web.app/docs/worker-cache): WorkerCacheStorage is an asynchronous storage (extends AsyncBaseStorage, type: 'worker')
 - [StorageFactory](https://synapse-homepage.web.app/docs/factory): A factory for creating storages — an alternative to calling new MemoryStorage() / new LocalStorage() /
 - [useCreateStorage (memory)](https://synapse-homepage.web.app/docs/hook-memory): A React hook that creates and initializes a storage right inside a component and destroys it on
 - [useCreateStorage (localStorage)](https://synapse-homepage.web.app/docs/hook-local): The same useCreateStorage, only with type: 'localStorage' — data survives a
@@ -40,6 +43,7 @@ Dig deeper (machine-readable, no JS):
 - [useSubscription](https://synapse-homepage.web.app/docs/use-subscription): An imperative side-effect subscription from a component: subscribe to an Observable and do something
 - [Selectors](https://synapse-homepage.web.app/docs/selector-system): Selectors extract and compute data from a storage.
 - [Middlewares](https://synapse-homepage.web.app/docs/middlewares): Middlewares intercept storage operations (set, get, update, delete, clear) and can modify, filter, or group them.
+- [SharedWorkerMiddleware](https://synapse-homepage.web.app/docs/shared-worker): sharedWorkerMiddleware / syncSharedWorkerMiddleware synchronize storage state between tabs
 - [Singleton Pattern](https://synapse-homepage.web.app/docs/singleton): Reusing storage instances by name. Useful for shared state and when a storage is created in several places (React components, modules).
 - [Persist migrations (version + migrate)](https://synapse-homepage.web.app/docs/persist-migration): When the shape of initialState changes between releases, a persistent storage
 - [Forms — the recipe: form state on a synapse storage](https://synapse-homepage.web.app/docs/forms): Managing forms is the most common application case.
@@ -60,6 +64,7 @@ Dig deeper (machine-readable, no JS):
 
 ## API Client
 
+- [Caching layers](https://synapse-homepage.web.app/docs/cache-layers): A request in a synapse app can be answered from three independent layers, stacked on top of each
 - [ApiClient — HTTP Client with Caching](https://synapse-homepage.web.app/docs/api-client): A typed HTTP client: endpoints, tag-based caching, request-state subscriptions, abort.
 - [useApiQuery — React hook for GET requests](https://synapse-homepage.web.app/docs/api-use-query): A React Query–style hook over an ApiClient endpoint for reading data (GET).
 - [useApiMutation — React hook for mutations](https://synapse-homepage.web.app/docs/api-use-mutation): A React hook over an ApiClient endpoint for writes (POST/PUT/DELETE/PATCH).

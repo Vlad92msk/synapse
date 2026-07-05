@@ -75,6 +75,25 @@ export interface IStorageBase<T extends Record<string, any> = any> {
   /** Тип хранилища */
   readonly type: StorageType
 
+  /**
+   * Синхронное ли это хранилище (Memory/LocalStorage → `true`, IndexedDB и воркер-адаптеры → `false`).
+   *
+   * Явный флаг вместо проверки `type`: кастомные адаптеры (напр. `WorkerCacheStorage`)
+   * не обязаны иметь известный `type`, но могут честно сообщить про sync/async,
+   * иначе sync-fast-path (`getStateSync`) полезет туда, где его нет.
+   *
+   * ОПЦИОНАЛЬНЫЙ: внешние кастомные адаптеры, скомпилированные против прежней minor-версии,
+   * не обязаны его объявлять. Когда флаг не задан, потребитель (напр. `QueryStorage`)
+   * откатывается на эвристику по `type` (см. `isSyncStorage()`).
+   */
+  readonly isSync?: boolean
+
+  /**
+   * (Опц.) Возможности хранилища — для будущих оптимизаций и выбора бэкенда.
+   * Не влияет на текущую логику; адаптеры могут не заполнять.
+   */
+  readonly capabilities?: StorageCapabilities
+
   // ─── Lifecycle ─────────────────────────────────────────────────────────────
 
   /** Инициализация хранилища (всегда async — загрузка данных, миграции и т.д.) */
@@ -165,7 +184,28 @@ export type IStorage<T extends Record<string, any> = any> = ISyncStorage<T> | IA
 
 // ─── Config Types ──────────────────────────────────────────────────────────────
 
-export type StorageType = 'memory' | 'localStorage' | 'indexedDB'
+/**
+ * Тип хранилища — ЗАКРЫТЫЙ union реальных адаптеров. Закрыт намеренно: открытый
+ * `(string & {})` пропускал опечатки (`'localstorage'`) и делал типобезопасным
+ * `StorageFactory.create({ type: 'worker' })`, который в рантайме бросал (фабрика не
+ * умеет лениво поднимать воркер). `'worker'` включён, чтобы `WorkerCacheStorage.type`
+ * присваивался; фабрика при этом принимает только те 3 типа, что реально создаёт
+ * (см. {@link StorageFactory.create}).
+ */
+export type StorageType = 'memory' | 'localStorage' | 'indexedDB' | 'worker'
+
+/**
+ * Возможности хранилища (все опциональны). Пока информативные — задел под выбор
+ * бэкенда и оптимизации; текущая логика на них не завязана.
+ */
+export interface StorageCapabilities {
+  /** Данные разделяются между вкладками/контекстами (SharedWorker и т.п.). */
+  shared?: boolean
+  /** Данные переживают сессию (IndexedDB и другие персистентные адаптеры). */
+  offline?: boolean
+  /** Поддерживает синхронное чтение/запись. */
+  sync?: boolean
+}
 
 // --- Default middleware helpers ---
 
@@ -283,6 +323,29 @@ export type LocalStorageConfig<T extends Record<string, any> = Record<string, an
 
 export interface IndexedDBStorageConfig<T extends Record<string, any> = Record<string, any>> extends AsyncStorageConfig<T> {
   options: IndexedDBConfig
+}
+
+/**
+ * Опции воркер-хранилища ({@link WorkerCacheStorage}) — ЖИВОЙ кэш поверх SharedWorker,
+ * разделяемый между вкладками (при недоступности SharedWorker — прозрачный in-process
+ * фолбэк без кросс-табного шеринга).
+ */
+export interface WorkerStorageOptions {
+  /** Имя канала стора. По умолчанию — `config.name`. Одинаковый channelName → общий кэш. */
+  channelName?: string
+  /** Кастомный URL воркера (напр. собранный build-time воркер вместо inline blob). */
+  workerUrl?: string | URL
+  /**
+   * Таймаут одной RPC-операции к стору воркера, мс. По умолчанию 1000. Увеличьте, если
+   * начальный `getAll` большого кэша на слабом устройстве не укладывается в дефолт и
+   * `initialize()` падает по таймауту.
+   */
+  requestTimeoutMs?: number
+}
+
+/** Конфигурация для воркер-хранилища ({@link WorkerCacheStorage}). */
+export interface WorkerStorageConfig<T extends Record<string, any> = Record<string, any>> extends AsyncStorageConfig<T> {
+  options?: WorkerStorageOptions
 }
 
 /** Для универсальных методов (factory) — конфиг с явным типом */

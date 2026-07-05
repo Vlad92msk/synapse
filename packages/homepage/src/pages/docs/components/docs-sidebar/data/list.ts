@@ -27,7 +27,7 @@ export const DOC_NAV: NavPillar[] = [
     groups: [
       {
         titleKey: 'nav.sections.create',
-        items: [{ key: 'memory' }, { key: 'local' }, { key: 'indexeddb' }, { key: 'factory' }, { key: 'hook-memory' }, { key: 'hook-local' }, { key: 'hook-idb' }, { key: 'static' }],
+        items: [{ key: 'memory' }, { key: 'local' }, { key: 'indexeddb' }, { key: 'worker-cache' }, { key: 'factory' }, { key: 'hook-memory' }, { key: 'hook-local' }, { key: 'hook-idb' }, { key: 'static' }],
       },
       {
         titleKey: 'nav.sections.data',
@@ -46,7 +46,7 @@ export const DOC_NAV: NavPillar[] = [
       },
       {
         titleKey: 'nav.sections.patterns',
-        items: [{ key: 'middlewares' }, { key: 'singleton' }, { key: 'persist-migration' }],
+        items: [{ key: 'middlewares' }, { key: 'shared-worker' }, { key: 'singleton' }, { key: 'persist-migration' }],
       },
       {
         titleKey: 'nav.sections.state-recipes',
@@ -78,8 +78,9 @@ export const DOC_NAV: NavPillar[] = [
   {
     pillarKey: 'nav.pillars.api',
     groups: [
-      { titleKey: 'nav.sections.api', items: [{ key: 'api-client' }] },
+      { titleKey: 'nav.sections.api', items: [{ key: 'cache-layers' }, { key: 'api-client' }] },
       { titleKey: 'nav.sections.api-hooks', items: [{ key: 'api-use-query' }, { key: 'api-use-mutation' }, { key: 'api-ssr-pokemon' }] },
+      { titleKey: 'nav.sections.network', items: [{ key: 'custom-fetch-service-worker' }, { key: 'custom-fetch-fn' }] },
     ],
   },
 ]

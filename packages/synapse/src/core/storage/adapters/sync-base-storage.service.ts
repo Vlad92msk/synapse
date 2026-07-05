@@ -20,6 +20,9 @@ import { GLOBAL_SUBSCRIPTION_KEY, PathSelector, StorageCore } from './storage-co
 export abstract class SyncBaseStorage<T extends Record<string, any>> extends StorageCore<T> implements ISyncStorage<T> {
   abstract readonly type: StorageType
 
+  /** Sync-хранилище: доступно синхронное чтение кэша (getStateSync). */
+  readonly isSync = true
+
   private middlewareModule: SyncMiddlewareModule
   private initializedMiddlewares: SyncMiddleware[] | null = null
   private selectorPathCache = new WeakMap<PathSelector<any, any>, string>()

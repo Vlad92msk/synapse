@@ -6,6 +6,7 @@ import {
   MemoryStoragePage,
   LocalStoragePage,
   IndexedDBStoragePage,
+  WorkerCacheStoragePage,
   StorageFactoryPage,
   HookMemoryPage,
   HookLocalStoragePage,
@@ -30,11 +31,15 @@ import {
   SynapseCtxPage,
   AwaitSynapsePage,
   MiddlewaresPage,
+  SharedWorkerMiddlewarePage,
   SingletonPage,
+  CacheLayersPage,
   ApiClientPage,
   ApiUseQueryPage,
   ApiUseMutationPage,
   ApiSsrPokemonPage,
+  CustomFetchServiceWorkerPage,
+  CustomFetchFnPage,
   SynapseAwaiterPage,
   EventBusPage,
   PersistMigrationPage,
@@ -50,6 +55,7 @@ export const sectionsList: Record<string, ReactNode> = {
   'nav.sections.create.memory': <MemoryStoragePage />,
   'nav.sections.create.local': <LocalStoragePage />,
   'nav.sections.create.indexeddb': <IndexedDBStoragePage />,
+  'nav.sections.create.worker-cache': <WorkerCacheStoragePage />,
   'nav.sections.create.factory': <StorageFactoryPage />,
   'nav.sections.create.hook-memory': <HookMemoryPage />,
   'nav.sections.create.hook-local': <HookLocalStoragePage />,
@@ -78,17 +84,22 @@ export const sectionsList: Record<string, ReactNode> = {
   'nav.sections.react.ssr-hydration': <SsrHydrationPage />,
   // Паттерны
   'nav.sections.patterns.middlewares': <MiddlewaresPage />,
+  'nav.sections.patterns.shared-worker': <SharedWorkerMiddlewarePage />,
   'nav.sections.patterns.singleton': <SingletonPage />,
   'nav.sections.patterns.persist-migration': <PersistMigrationPage />,
   // Утилиты
   'nav.sections.utils.synapse-awaiter': <SynapseAwaiterPage />,
   'nav.sections.utils.event-bus': <EventBusPage />,
   // API Client
+  'nav.sections.api.cache-layers': <CacheLayersPage />,
   'nav.sections.api.api-client': <ApiClientPage />,
   // API хуки
   'nav.sections.api-hooks.api-use-query': <ApiUseQueryPage />,
   'nav.sections.api-hooks.api-use-mutation': <ApiUseMutationPage />,
   'nav.sections.api-hooks.api-ssr-pokemon': <ApiSsrPokemonPage />,
+  // Сеть / fetch
+  'nav.sections.network.custom-fetch-service-worker': <CustomFetchServiceWorkerPage />,
+  'nav.sections.network.custom-fetch-fn': <CustomFetchFnPage />,
   // Рецепты (State Manager)
   'nav.sections.state-recipes.forms': <FormsPage />,
   // Рецепты (BLL)

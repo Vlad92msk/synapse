@@ -22,6 +22,13 @@ export abstract class StorageCore<T extends Record<string, any>> implements ISto
   name: string
   abstract readonly type: StorageType
 
+  /**
+   * Синхронное ли хранилище — задаётся в SyncBaseStorage/AsyncBaseStorage.
+   * Опциональный (не abstract): внешние кастомные адаптеры, наследующие StorageCore
+   * и скомпилированные против прежней minor-версии, не обязаны его объявлять (R4).
+   */
+  readonly isSync?: boolean
+
   private _initStatus: StorageInitStatus = { status: StorageStatus.IDLE }
   private _isDestroyed = false
   private statusSubscribers = new Set<(status: StorageInitStatus) => void>()

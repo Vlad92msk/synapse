@@ -10,6 +10,7 @@ import {
   ISyncStorage,
   LocalStorageConfig,
   MemoryStorageConfig,
+  StorageType,
   UniversalStorageConfig,
 } from '../storage.interface'
 
@@ -34,7 +35,13 @@ export class StorageFactory {
 
   static create<T extends Record<string, any>>(config: UniversalStorageConfig<T> & { type: 'indexedDB' }, eventEmitter?: IEventEmitter, logger?: ILogger): IAsyncStorage<T>
 
-  static create<T extends Record<string, any>>(config: UniversalStorageConfig<T>, eventEmitter?: IEventEmitter, logger?: ILogger): IStorage<T>
+  /**
+   * Общая перегрузка для динамического `type`. Принимает ТОЛЬКО типы, которые фабрика
+   * реально создаёт (`memory`/`localStorage`/`indexedDB`). `'worker'` сюда НЕ входит
+   * намеренно: `WorkerCacheStorage` не создаётся лениво фабрикой (нужны воркер-опции),
+   * поэтому `create({ type: 'worker' })` не должен типизироваться, а не падать в рантайме (R5).
+   */
+  static create<T extends Record<string, any>>(config: UniversalStorageConfig<T> & { type: Exclude<StorageType, 'worker'> }, eventEmitter?: IEventEmitter, logger?: ILogger): IStorage<T>
 
   // ─── Реализация ─────────────────────────────────────────────────────────────
 

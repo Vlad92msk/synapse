@@ -20,8 +20,13 @@ import { SynapseCtxSsrExample } from './examples/SynapseCtxSsrExample'
 import { SynapseAwaiterExample } from './examples/SynapseAwaiterExample'
 import { EventBusExample } from './examples/EventBusExample'
 import { MiddlewaresExample } from './examples/MiddlewaresExample'
+import { SharedWorkerMiddlewareExample } from './examples/SharedWorkerMiddlewareExample'
+import { SharedWorkerFallbackExample } from './examples/SharedWorkerFallbackExample'
 import { SingletonExample } from './examples/SingletonExample'
 import { ApiClientExample } from './examples/ApiClientExample'
+import { WorkerCacheStorageExample } from './examples/WorkerCacheStorageExample'
+import { CustomFetchServiceWorkerExample } from './examples/CustomFetchServiceWorkerExample'
+import { CustomFetchFnExample } from './examples/CustomFetchFnExample'
 import { PokemonAdvancedExample } from './examples/pokemon-advanced'
 
 const groupLabels: Record<string, string> = {
@@ -30,6 +35,7 @@ const groupLabels: Record<string, string> = {
   synapse: 'createSynapse',
   react: 'React',
   patterns: 'Паттерны',
+  network: 'Сеть / fetch',
   utils: 'Утилиты',
 }
 
@@ -38,6 +44,7 @@ const examples = [
   { id: 'memory', label: 'MemoryStorage (new)', component: MemoryStorageExample, group: 'create' },
   { id: 'local', label: 'LocalStorage (new)', component: LocalStorageExample, group: 'create' },
   { id: 'indexeddb', label: 'IndexedDBStorage (new)', component: IndexedDBExample, group: 'create' },
+  { id: 'worker-cache', label: 'WorkerCacheStorage', component: WorkerCacheStorageExample, group: 'create' },
   { id: 'factory', label: 'StorageFactory', component: FactoryExample, group: 'create' },
   { id: 'hook-memory', label: 'useCreateStorage (memory)', component: HookExample, group: 'create' },
   { id: 'hook-local', label: 'useCreateStorage (localStorage)', component: HookLocalStorageExample, group: 'create' },
@@ -59,7 +66,12 @@ const examples = [
   { id: 'synapse-ctx-ssr', label: 'createSynapseCtx (SSR)', component: SynapseCtxSsrExample, group: 'react' },
   // Паттерны
   { id: 'middlewares', label: 'Middlewares', component: MiddlewaresExample, group: 'patterns' },
+  { id: 'shared-worker-mw', label: 'sharedWorkerMiddleware (media player)', component: SharedWorkerMiddlewareExample, group: 'patterns' },
+  { id: 'shared-worker-fallback', label: 'SharedWorker fallback', component: SharedWorkerFallbackExample, group: 'patterns' },
   { id: 'singleton', label: 'Singleton pattern', component: SingletonExample, group: 'patterns' },
+  // Сеть / fetch
+  { id: 'custom-fetch-sw', label: 'Свой fetch-ServiceWorker', component: CustomFetchServiceWorkerExample, group: 'network' },
+  { id: 'custom-fetch-fn', label: 'Кастомный fetchFn (baseQuery)', component: CustomFetchFnExample, group: 'network' },
   // Утилиты
   { id: 'api-client', label: 'ApiClient', component: ApiClientExample, group: 'utils' },
   { id: 'synapse-awaiter', label: 'createSynapseAwaiter', component: SynapseAwaiterExample, group: 'utils' },

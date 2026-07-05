@@ -64,6 +64,16 @@
     "4": "programmatic-api",
     "5": "relation-to-createsynapseawaiter"
   },
+  "cache-layers": {
+    "0": "caching-layers",
+    "1": "the-request-path",
+    "2": "layer-1-application-cache-storage",
+    "3": "layer-2-transport-basequeryfetchfn",
+    "4": "layer-3-network-your-serviceworker-cache-api",
+    "5": "other-libraries-do-the-same",
+    "6": "choosing-a-setup",
+    "7": "devtools-network-cheat-sheet"
+  },
   "create-synapse-basic": {
     "0": "createsynapse-basic",
     "1": "storage-and-state-pokemonstorets",
@@ -92,6 +102,25 @@
     "5": "handling-requests-validatemap-reads-mutationmap-writes",
     "6": "assembly",
     "7": "return-value"
+  },
+  "custom-fetch-fn": {
+    "0": "custom-basequeryfetchfn",
+    "1": "when-it-makes-sense",
+    "2": "configuration",
+    "3": "auth-retry-example",
+    "4": "cache-and-tags-work-on-top",
+    "5": "no-library-extension-needed",
+    "6": "when-to-use"
+  },
+  "custom-fetch-service-worker": {
+    "0": "custom-fetch-intercepting-serviceworker",
+    "1": "when-you-need-it",
+    "2": "how-it-works",
+    "3": "registering-the-serviceworker",
+    "4": "the-serviceworker-script",
+    "5": "how-it-differs-from-workercachestorage",
+    "6": "network-behavior",
+    "7": "when-to-use"
   },
   "delete-has-keys": {
     "0": "remove-has-keys-clear-reset",
@@ -252,6 +281,15 @@
     "5": "5-useselector-react-hook-current-value",
     "6": "6-programmatic-access-to-a-selector"
   },
+  "shared-worker-middleware": {
+    "0": "sharedworkermiddleware",
+    "1": "which-one-to-import",
+    "2": "what-gets-synchronized",
+    "3": "n-stores-over-one-sharedworker",
+    "4": "fallback-and-ssr",
+    "5": "when-to-use-which",
+    "6": "types"
+  },
   "singleton": {
     "0": "singleton-pattern",
     "1": "enabling-singleton",
@@ -339,6 +377,15 @@
     "4": "example-a-notification-aggregator",
     "5": "about-deps",
     "6": "teardown-and-memory"
+  },
+  "worker-cache-storage": {
+    "0": "workercachestorage",
+    "1": "creating",
+    "2": "live-cross-tab-cache",
+    "3": "tag-invalidation-api-cache",
+    "4": "pitfalls-and-limitations",
+    "5": "when-to-use",
+    "6": "types"
   },
   "writing-data": {
     "0": "writing-data-setupdate",

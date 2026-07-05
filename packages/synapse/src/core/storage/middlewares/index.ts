@@ -1,5 +1,6 @@
 // Async middlewares (existing)
 export { broadcastMiddleware } from './broadcast.middleware'
+export { sharedWorkerMiddleware } from './shared-worker.middleware'
 export type { BatchingMiddlewareOptions } from './storage-batching.middleware'
 export type { LoggerMiddlewareOptions } from './storage-logger.middleware'
 export { loggerMiddleware } from './storage-logger.middleware'
@@ -7,6 +8,7 @@ export type { ShallowCompareMiddlewareOptions } from './storage-shallow-compare.
 
 // Sync middlewares
 export { syncBroadcastMiddleware } from './sync-broadcast.middleware'
+export { syncSharedWorkerMiddleware } from './sync-shared-worker.middleware'
 export type { SyncBatchingMiddlewareOptions } from './sync-storage-batching.middleware'
 export { syncBatchingMiddleware } from './sync-storage-batching.middleware'
 export { syncLoggerMiddleware } from './sync-storage-logger.middleware'

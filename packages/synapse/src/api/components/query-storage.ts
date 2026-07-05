@@ -108,7 +108,10 @@ export class QueryStorage {
    * Только для таких хранилищ доступно синхронное чтение кэша ({@link getCachedResultSync}).
    */
   public isSyncStorage(): boolean {
-    return !!this.storage && this.storage.type !== 'indexedDB'
+    if (!this.storage) return false
+    // Явный флаг — источник истины. Когда его нет (внешний адаптер со старой minor-версии),
+    // откатываемся на эвристику по type: неизвестное считаем sync, кроме известных async-типов.
+    return this.storage.isSync ?? (this.storage.type !== 'indexedDB' && this.storage.type !== 'worker')
   }
 
   /**

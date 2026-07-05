@@ -5,6 +5,9 @@
 
 A typed HTTP client: endpoints, tag-based caching, request-state subscriptions, abort.
 
+> **New to the caching stack?** Start with [Caching layers](./cache-layers.md) — where the client's
+> cache sits relative to a ServiceWorker and `fetchFn`, and when to use which.
+
 This page is built around the **real `pokemon.api.ts` file** from the
 [`pokemon-advanced`](./pokemon-advanced.md) example. The same `pokemonApiClient` is later used in the
 effects (see [Effects](./create-synapse-effects.md)) — it's the first brick of the data layer.

@@ -1,5 +1,47 @@
 # Changelog
 
+## [5.3.0] - 2026-07-05
+
+### Воркеры: межвкладочная синхронизация и живой кэш внутри воркера
+
+Новый транспорт и новое хранилище поверх SharedWorker. Изменения аддитивны.
+
+- **`sharedWorkerMiddleware` / `syncSharedWorkerMiddleware`** (экспорт из `synapse-storage/core`) —
+  межвкладочная синхронизация состояния через **SharedWorker**. Прямое зеркало
+  `broadcastMiddleware` / `syncBroadcastMiddleware`: та же сигнатура `({ storageType, storageName })`,
+  та же семантика (для `MemoryStorage` — полная синхронизация данных через `requestSync`, для
+  `LocalStorage`/`IndexedDB` — только уведомление подписчиков). Отличие — транспорт:
+  N сторов **мультиплексируются через ОДИН** SharedWorker, изолируясь по каналу
+  `${storageType}-${storageName}`. Если SharedWorker недоступен — прозрачный фолбэк на
+  `BroadcastChannel`; в SSR — no-op.
+- **`WorkerCacheStorage`** (`extends AsyncBaseStorage`, `type: 'worker'`, экспорт из
+  `synapse-storage/core`) — асинхронное хранилище, данные которого живут в **SharedWorker**.
+  Зеркалит семантику ключей/путей `MemoryStorage` «ключ-в-ключ»: **живой** in-memory кэш внутри
+  SharedWorker, общий между вкладками origin-а (`capabilities: { shared: true }`). Поздно
+  подключившаяся вкладка всегда получает свежий снапшот из воркера. Без SharedWorker — in-process
+  фолбэк (SSR-safe, но без межвкладочного шеринга). Значения должны быть structured-clone-совместимы.
+  Опции — `{ channelName?, workerUrl? }`. Индекс тегов для API-кэша (`QueryStorage`) не передаётся
+  через порт, а **пересобирается при подключении** через `rebuildTagIndex`.
+  - Это **живой** кэш, а не офлайн-слой: он не ходит в сеть и не переживает закрытую сессию. Для
+    настоящего офлайна / контроля fetch — отдельные рецепты (свой fetch-перехватывающий
+    ServiceWorker и кастомный `baseQuery.fetchFn`), а не это хранилище.
+- **Тесты** (`core/storage/__tests__/shared-worker-middleware.test.ts`,
+  `core/storage/__tests__/worker-storage.test.ts`): межвкладочная синхронизация, фолбэк на
+  `BroadcastChannel`, сериализация значений и пересборка индекса тегов.
+
+### Правки ядра
+
+- **`StorageType` — закрытый union `'memory' | 'localStorage' | 'indexedDB' | 'worker'`** (добавлен
+  `'worker'`). Открытый `(string & {})` убран: опечатки типа `'localstorage'` больше не компилируются,
+  а `StorageFactory.create`/`useCreateStorage` типово не принимают `'worker'` (он создаётся напрямую
+  через `WorkerCacheStorage`, а не фабрикой) — тип и рантайм консистентны.
+- **`QueryStorage.isSyncStorage()` теперь читает опциональный флаг `isSync`** (с фолбэком на старую
+  эвристику `type !== 'indexedDB' && type !== 'worker'`, когда флаг не задан). Раньше любой не-`indexedDB` тип считался
+  синхронным — с появлением асинхронного `type: 'worker'` это было бы неверно. `isSync` — именно
+  **опциональное дополнение** к `StorageInterface`: существующие кастомные адаптеры, не выставляющие
+  флаг, продолжают компилироваться и попадают на прежнюю эвристику. Встроенные хранилища выставляют
+  `isSync` соответственно своей природе — поэтому это честный minor, а не breaking change.
+
 ## [5.2.1] - 2026-06-28
 
 ### Исправления записи в sync-хранилища (найдено при работе над рецептом форм)

@@ -11,10 +11,6 @@ interface BroadcastMessage<T = unknown> {
 type MessageHandler<T> = (message: BroadcastMessage<T>) => void | Promise<void>
 type SyncRequestHandler<T> = () => T | Promise<T>
 
-interface SyncBroadcastChannelOptions {
-  debug?: boolean
-}
-
 export class SyncBroadcastChannel<T = unknown> {
   private channel: BroadcastChannel
 
@@ -23,8 +19,6 @@ export class SyncBroadcastChannel<T = unknown> {
   private messageHandlers: Set<MessageHandler<T>>
 
   private syncHandler?: SyncRequestHandler<T>
-
-  private debug: boolean
 
   private syncTimeoutMs = 1000
 
@@ -37,21 +31,14 @@ export class SyncBroadcastChannel<T = unknown> {
     }
   >
 
-  constructor(channelName: string, options: SyncBroadcastChannelOptions = {}) {
+  constructor(channelName: string) {
     this.channel = new BroadcastChannel(channelName)
     this.tabId = crypto.randomUUID()
     this.messageHandlers = new Set()
-    this.debug = options.debug ?? false
     this.pendingSyncRequests = new Map()
 
     this.channel.onmessage = this.handleMessage.bind(this)
     this.channel.onmessageerror = this.handleError.bind(this)
-  }
-
-  private log(...args: any[]) {
-    if (this.debug) {
-      loggerConsole.log(`[SyncBroadcastChannel][${this.tabId}]`, ...args)
-    }
   }
 
   private error(...args: any[]) {

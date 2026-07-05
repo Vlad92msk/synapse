@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { handleCleanupError } from '../../_utils/error-handling.util'
-import { IAsyncStorage, IEventEmitter, ILogger, IStorage, ISyncStorage, StorageFactory, StorageInitStatus, StorageStatus, UniversalStorageConfig } from '../../core'
+import { IAsyncStorage, IEventEmitter, ILogger, IStorage, ISyncStorage, StorageFactory, StorageInitStatus, StorageStatus, StorageType, UniversalStorageConfig } from '../../core'
 
 export interface UseSynapseStorageOptions {
   /**
@@ -58,7 +58,7 @@ export function useCreateStorage<T extends Record<string, any>>(
 ): UseSynapseStorageReturn<IAsyncStorage<T>>
 
 export function useCreateStorage<T extends Record<string, any>>(
-  config: UniversalStorageConfig<T>,
+  config: UniversalStorageConfig<T> & { type: Exclude<StorageType, 'worker'> },
   options?: UseSynapseStorageOptions,
   eventEmitter?: IEventEmitter,
   logger?: ILogger,
@@ -67,7 +67,7 @@ export function useCreateStorage<T extends Record<string, any>>(
 // ─── Реализация ─────────────────────────────────────────────────────────────
 
 export function useCreateStorage<T extends Record<string, any>>(
-  config: UniversalStorageConfig<T>,
+  config: UniversalStorageConfig<T> & { type: Exclude<StorageType, 'worker'> },
   options: UseSynapseStorageOptions = {},
   eventEmitter?: IEventEmitter,
   logger?: ILogger,

@@ -122,6 +122,7 @@ const resources = {
       'nav.sections.create.memory': 'MemoryStorage (new)',
       'nav.sections.create.local': 'LocalStorage (new)',
       'nav.sections.create.indexeddb': 'IndexedDBStorage (new)',
+      'nav.sections.create.worker-cache': 'WorkerCacheStorage (new)',
       'nav.sections.create.factory': 'StorageFactory',
       'nav.sections.create.hook-memory': 'useCreateStorage (memory)',
       'nav.sections.create.hook-local': 'useCreateStorage (localStorage)',
@@ -154,6 +155,7 @@ const resources = {
 
       'nav.sections.patterns': 'Паттерны',
       'nav.sections.patterns.middlewares': 'Middlewares',
+      'nav.sections.patterns.shared-worker': 'sharedWorkerMiddleware',
       'nav.sections.patterns.singleton': 'Singleton pattern',
       'nav.sections.patterns.persist-migration': 'Persist-миграции',
 
@@ -168,11 +170,16 @@ const resources = {
       'nav.sections.recipes.pokemon-advanced': 'Pokemon Pokedex (advanced)',
 
       'nav.sections.api': 'API-клиент',
+      'nav.sections.api.cache-layers': 'Слои кэширования',
       'nav.sections.api.api-client': 'ApiClient',
       'nav.sections.api-hooks': 'API-хуки (React)',
       'nav.sections.api-hooks.api-use-query': 'useApiQuery',
       'nav.sections.api-hooks.api-use-mutation': 'useApiMutation',
       'nav.sections.api-hooks.api-ssr-pokemon': 'SSR + пагинация (Pokémon)',
+
+      'nav.sections.network': 'Сеть / fetch',
+      'nav.sections.network.custom-fetch-service-worker': 'Свой fetch-ServiceWorker',
+      'nav.sections.network.custom-fetch-fn': 'Кастомный fetchFn (baseQuery)',
 
       'docs.placeholder.title': 'Раздел в разработке',
       'docs.placeholder.description': 'Этот раздел документации еще не готов. Я работаю над его созданием.',
@@ -328,6 +335,7 @@ const resources = {
       'nav.sections.create.memory': 'MemoryStorage (new)',
       'nav.sections.create.local': 'LocalStorage (new)',
       'nav.sections.create.indexeddb': 'IndexedDBStorage (new)',
+      'nav.sections.create.worker-cache': 'WorkerCacheStorage (new)',
       'nav.sections.create.factory': 'StorageFactory',
       'nav.sections.create.hook-memory': 'useCreateStorage (memory)',
       'nav.sections.create.hook-local': 'useCreateStorage (localStorage)',
@@ -360,6 +368,7 @@ const resources = {
 
       'nav.sections.patterns': 'Patterns',
       'nav.sections.patterns.middlewares': 'Middlewares',
+      'nav.sections.patterns.shared-worker': 'sharedWorkerMiddleware',
       'nav.sections.patterns.singleton': 'Singleton pattern',
       'nav.sections.patterns.persist-migration': 'Persist migrations',
 
@@ -374,11 +383,16 @@ const resources = {
       'nav.sections.recipes.pokemon-advanced': 'Pokemon Pokedex (advanced)',
 
       'nav.sections.api': 'API Client',
+      'nav.sections.api.cache-layers': 'Caching layers',
       'nav.sections.api.api-client': 'ApiClient',
       'nav.sections.api-hooks': 'API Hooks (React)',
       'nav.sections.api-hooks.api-use-query': 'useApiQuery',
       'nav.sections.api-hooks.api-use-mutation': 'useApiMutation',
       'nav.sections.api-hooks.api-ssr-pokemon': 'SSR + pagination (Pokémon)',
+
+      'nav.sections.network': 'Network / fetch',
+      'nav.sections.network.custom-fetch-service-worker': 'Custom fetch ServiceWorker',
+      'nav.sections.network.custom-fetch-fn': 'Custom fetchFn (baseQuery)',
 
       'docs.placeholder.title': 'Section under development',
       'docs.placeholder.description': "This documentation section is not ready yet. I'm working on creating it.",

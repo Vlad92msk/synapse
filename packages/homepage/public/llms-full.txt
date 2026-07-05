@@ -1,6 +1,6 @@
 # Synapse Storage — full documentation
 
-Source: https://synapse-homepage.web.app/docs · npm: synapse-storage · Generated: 2026-07-04
+Source: https://synapse-homepage.web.app/docs · npm: synapse-storage · Generated: 2026-07-05
 
 ---
 
@@ -405,6 +405,132 @@ IndexedDB is persistent, so it supports schema migration via `version` + `migrat
 (the version is stored as a reserved record in the same store and isn't visible in
 `getState()`/`keys()`) — see [Persist migrations](./persist-migration.md). Server state is seeded via
 [`hydrate(state)`](./ssr-hydration.md) (for IndexedDB — `await storage.hydrate(...)`).
+
+---
+
+<!-- source: docs/en/worker-cache-storage.md · url: https://synapse-homepage.web.app/docs/worker-cache -->
+# WorkerCacheStorage
+
+
+`WorkerCacheStorage` is an **asynchronous** storage (`extends AsyncBaseStorage`, `type: 'worker'`)
+whose data lives inside a **SharedWorker** instead of the tab. It mirrors the key/path semantics of
+[MemoryStorage](./memory-storage.md) key-for-key — the difference is **where** the `Map` lives: in a
+**live** in-memory cache inside a SharedWorker, shared across every tab of the origin. Think
+"MemoryStorage that other tabs can see too".
+
+## Creating
+
+```typescript
+import { WorkerCacheStorage } from 'synapse-storage/core'
+
+// Live cross-tab cache held inside a SharedWorker
+const storage = new WorkerCacheStorage<TodoState>({
+  name: 'todo-worker',
+  initialState: initialTodoState,
+  options: {}, // channelName defaults to config.name
+})
+await storage.initialize()
+
+// Or via the static .create()
+const storage = WorkerCacheStorage.create<TodoState>({
+  name: 'todo-worker',
+  initialState: initialTodoState,
+})
+```
+
+The API is identical to any other async storage — `await set/get/update/delete`, `getStateSync()`,
+subscriptions. See [Reading](./reading-data.md), [Writing](./writing-data.md),
+[remove/has/keys](./delete-has-keys.md), [Subscriptions](./subscriptions.md).
+
+Stores that share the same `channelName` (defaults to `name`) share the same cache — that is how
+two tabs, or an [API `QueryStorage`](./api-client.md) and its consumer, land on the same data.
+
+## Live cross-tab cache
+
+```typescript
+const storage = new WorkerCacheStorage<TodoState>({
+  name: 'live-cache',
+  initialState: initialTodoState,
+  options: { channelName: 'live-cache' },
+})
+await storage.initialize()
+
+// Written in one tab, immediately visible to another tab reading the same channelName.
+await storage.set('filter', 'active')
+```
+
+- Capabilities: `{ shared: true }`.
+- The cache is **live**: it holds the current state and is shared between tabs, exactly like a
+  MemoryStorage that lives in the SharedWorker. A tab that joins late always receives a fresh
+  snapshot from the worker.
+- If SharedWorker is unavailable (SSR / tests), the transport falls back to an in-process `Map` —
+  the round-trip is identical, but **without** cross-tab sharing (only a real SharedWorker gives
+  that).
+
+> **Need offline or fetch control?** `WorkerCacheStorage` is a **live cross-tab cache**, not an
+> offline layer — it never touches the network and does not survive a fully closed session. For
+> real offline / network control, use a separate recipe instead of this storage:
+>
+> - [Custom fetch-intercepting ServiceWorker](./custom-fetch-service-worker.md) — your own `sw.js`
+>   transparently intercepts `fetch` (precache, offline routing, cache-first / network-first /
+>   stale-while-revalidate). It lives **below** `ApiClient` and is unrelated to its storage.
+> - [Custom `baseQuery.fetchFn`](./custom-fetch-fn.md) — replace **how** the client performs a
+>   request (auth-retry, metrics, axios, or a Web Worker transport) while the cache/tags layer keeps
+>   working on top unchanged.
+
+## Tag invalidation (API cache)
+
+When `WorkerCacheStorage` backs an API [`QueryStorage`](./api-client.md), the tag index is **not**
+part of the shared payload — it is **rebuilt on connect** via `rebuildTagIndex`. A second consumer
+attaching to the same `channelName` scans the existing entries and reconstructs its tag → keys map,
+so tag-based invalidation keeps working across tabs / instances without shipping the index through
+the port.
+
+## Pitfalls and limitations
+
+1. **This is a live cache, not persistence.** The state lives in the SharedWorker's memory. It is
+   shared across open tabs and survives a tab reload while the worker stays alive, but it is **not**
+   an offline / session-surviving store. For that, see the recipes linked above.
+2. **Values must be structured-clone-able.** Everything that crosses the worker port is subject to
+   the structured-clone algorithm — functions, `Symbol`, `Blob`/`Response`/`Headers` and cyclic
+   structures cannot cross the port. Store plain, clone-compatible data only.
+3. **The tag index is rebuilt, not transferred.** As above, `rebuildTagIndex` reconstructs the API
+   tag index on connect rather than sending it through the port — expect a rebuild pass when a new
+   consumer attaches.
+4. **SharedWorker fallback is silent-but-degraded.** Without SharedWorker support the transport uses
+   an in-process `Map`: the API is identical but there is no cross-tab sharing.
+5. **A broken custom `workerUrl` does not auto-fall-back.** `new SharedWorker(url)` succeeds even if
+   the script 404s or has the wrong MIME type — the failure surfaces asynchronously, after the
+   transport already committed to worker mode. There is no mid-flight fallback: operations then reject
+   by timeout. The channel logs an actionable warning; make sure a custom `workerUrl` is served
+   same-origin as `application/javascript`. Omit `workerUrl` to use the safe inline blob.
+6. **Large initial `getAll` may hit the RPC timeout.** Each store RPC has a `requestTimeoutMs` budget
+   (default 1000ms). Priming a very large cache on a slow device can exceed it and fail `initialize()`
+   — raise `options.requestTimeoutMs` in that case.
+
+## When to use
+
+- **Live cross-tab cache** (shared state across tabs held in a worker) → `WorkerCacheStorage`.
+- **Offline / network control** (data available without a network, fetch interception) → not this
+  storage; see [custom fetch-intercepting ServiceWorker](./custom-fetch-service-worker.md) or a
+  [custom `fetchFn`](./custom-fetch-fn.md).
+- Just cross-tab **notifications** on an existing store → you don't need this at all; use
+  [`sharedWorkerMiddleware`](./shared-worker-middleware.md) / `broadcastMiddleware`.
+
+## Types
+
+```typescript
+import { WorkerCacheStorage } from 'synapse-storage/core'
+import type { WorkerStorageConfig, WorkerStorageOptions } from 'synapse-storage/core'
+
+interface WorkerStorageOptions {
+  channelName?: string       // default: config.name — same channelName ⇒ shared cache
+  workerUrl?: string | URL   // custom SharedWorker script (else inline blob)
+  requestTimeoutMs?: number  // per-RPC timeout, default 1000 — raise for large initial getAll
+}
+
+// WorkerStorageConfig<T> extends AsyncStorageConfig<T> with options?: WorkerStorageOptions
+```
 
 ---
 
@@ -3651,6 +3777,118 @@ interface SyncDefaultMiddlewares {
 
 ---
 
+<!-- source: docs/en/shared-worker-middleware.md · url: https://synapse-homepage.web.app/docs/shared-worker -->
+# SharedWorkerMiddleware
+
+
+`sharedWorkerMiddleware` / `syncSharedWorkerMiddleware` synchronize storage state between tabs
+through a **SharedWorker**. It is a direct mirror of [`broadcastMiddleware`](./middlewares.md):
+same role, same signature — only the transport differs. Where `broadcastMiddleware` uses a
+`BroadcastChannel`, `sharedWorkerMiddleware` routes messages through a single SharedWorker shared
+by every tab of the origin.
+
+Like all middlewares, it is wired up at store creation time in the `middlewares` field.
+
+## Which one to import
+
+There are two factories with an identical signature:
+
+- **`syncSharedWorkerMiddleware`** — for synchronous storages (`MemoryStorage`, `LocalStorage`).
+- **`sharedWorkerMiddleware`** — for the asynchronous `IndexedDBStorage` (and `WorkerCacheStorage`).
+
+```typescript
+import { MemoryStorage, syncSharedWorkerMiddleware } from 'synapse-storage/core'
+
+const storage = new MemoryStorage<TodoState>({
+  name: 'shared-worker-demo',
+  initialState: { todos: [], filter: 'all' },
+  middlewares: () => [
+    syncSharedWorkerMiddleware({
+      storageName: 'shared-worker-demo',
+      storageType: 'memory',
+    }),
+  ],
+})
+await storage.initialize()
+
+// Changes are synchronized between tabs
+storage.update((s) => { s.todos.push({ id: 't1', title: 'From another tab', done: false }) })
+```
+
+The signature is the same `{ storageType, storageName }` as `broadcastMiddleware` — swapping one
+for the other is a one-line change.
+
+## What gets synchronized
+
+The behaviour matches `broadcastMiddleware` exactly:
+
+- **MemoryStorage** — full data synchronization. A newly opened tab requests the current state
+  from the worker (`requestSync`) and seeds itself, then stays in sync on every write.
+- **LocalStorage / IndexedDB** — only a subscriber notification. The data itself is already shared
+  by the browser storage engine; the middleware just tells the subscribers of other tabs to
+  re-read.
+
+## N stores over ONE SharedWorker
+
+The key difference from `broadcastMiddleware` is transport multiplexing. Each store gets its own
+logical channel named `${storageType}-${storageName}`, but **all** channels are multiplexed over a
+**single** SharedWorker instance per origin. Ten stores in a tab do not spawn ten workers — they
+share one, and messages are demultiplexed by channel name.
+
+```typescript
+// Both stores below travel through the SAME SharedWorker,
+// isolated by their channel: 'memory-todos' vs 'memory-settings'.
+const todos = new MemoryStorage<TodoState>({
+  name: 'todos',
+  initialState: { todos: [], filter: 'all' },
+  middlewares: () => [syncSharedWorkerMiddleware({ storageType: 'memory', storageName: 'todos' })],
+})
+
+const settings = new MemoryStorage<SettingsState>({
+  name: 'settings',
+  initialState: { theme: 'light' },
+  middlewares: () => [syncSharedWorkerMiddleware({ storageType: 'memory', storageName: 'settings' })],
+})
+```
+
+> The channel name is `${storageType}-${storageName}`. Two stores with the same
+> `storageType` + `storageName` share one channel — keep the pair unique per logical store.
+
+## Fallback and SSR
+
+- **No SharedWorker?** The transport transparently falls back to a `BroadcastChannel`, so
+  cross-tab sync keeps working in browsers/contexts without SharedWorker support.
+- **SSR / no browser APIs?** The middleware is a no-op — there is no window, no other tab to sync
+  with, and store creation does not throw.
+
+## When to use which
+
+- **`broadcastMiddleware`** — the simple default. One `BroadcastChannel` per store, no worker.
+  Fine for a handful of stores.
+- **`sharedWorkerMiddleware`** — when you sync **many** stores and want them multiplexed over a
+  single SharedWorker instead of many independent channels, or when you already run a SharedWorker
+  and want to reuse it. Cross-tab semantics are identical.
+
+For a **live shared cache** (not just notifications) held inside the worker itself, see
+[WorkerCacheStorage](./worker-cache-storage.md).
+
+## Types
+
+```typescript
+import type { Middleware, SyncMiddleware } from 'synapse-storage/core'
+
+// Both factories take the same props:
+interface SharedWorkerMiddlewareProps {
+  storageType: StorageType   // 'memory' | 'localStorage' | 'indexedDB' | string
+  storageName: string        // used together with storageType as the channel key
+}
+
+// syncSharedWorkerMiddleware(props): SyncMiddleware   — Memory / LocalStorage
+// sharedWorkerMiddleware(props):     Middleware       — IndexedDB (async)
+```
+
+---
+
 <!-- source: docs/en/singleton.md · url: https://synapse-homepage.web.app/docs/singleton -->
 # Singleton Pattern
 
@@ -4282,11 +4520,149 @@ const mySynapse = createSynapse(() => ({
 
 ---
 
+<!-- source: docs/en/cache-layers.md · url: https://synapse-homepage.web.app/docs/cache-layers -->
+# Caching layers
+
+
+A request in a synapse app can be answered from **three independent layers**, stacked on top of each
+other. They are not competing strategies — each layer solves a different problem, knows different
+things, and you enable them independently. This page explains the stack once, so the individual docs
+([ApiClient](./api-client.md), [WorkerCacheStorage](./worker-cache-storage.md), the
+[ServiceWorker](./custom-fetch-service-worker.md) and [fetchFn](./custom-fetch-fn.md) recipes) can
+stay focused on their own layer.
+
+```
+your component / effect
+        │
+        ▼
+┌───────────────────────────────────────────────┐
+│ 1. APPLICATION CACHE — ApiClient + storage    │  knows YOUR domain: endpoints, tags, ttl
+│    (Memory / LocalStorage / IndexedDB /       │  hit ⇒ no fetch() at all, no Network row
+│     WorkerCacheStorage)                       │
+└───────────────────────────────────────────────┘
+        │ cache miss → client calls fetch()
+        ▼
+┌───────────────────────────────────────────────┐
+│ 2. TRANSPORT — baseQuery.fetchFn              │  HOW the request is performed
+│    (auth-retry, metrics, axios, worker)       │  not a cache — the seam between layers
+└───────────────────────────────────────────────┘
+        │
+        ▼
+┌───────────────────────────────────────────────┐
+│ 3. NETWORK LAYER — your ServiceWorker         │  knows URLs and HTTP: offline, precache,
+│    + Cache API (below it: browser HTTP cache) │  strategies; Network row "(ServiceWorker)"
+└───────────────────────────────────────────────┘
+        │
+        ▼
+      network
+```
+
+## The request path
+
+What actually happens when a hook or an endpoint fires a query:
+
+1. **`ApiClient` checks its own cache** in `storage` (by cache key, ttl, tags). On a valid hit the
+   response is served from the storage — `fetch()` is **never called**, layers 2–3 never see the
+   request, and DevTools → Network shows **no row at all**.
+2. On a miss the client performs the request through the **transport** — the built-in `fetch`, or
+   your `baseQuery.fetchFn` if you provided one.
+3. That `fetch()` call is what a **ServiceWorker** can intercept: it answers from its Cache API,
+   goes to the network, or synthesizes an offline fallback. Below it sits the regular browser HTTP
+   cache.
+4. The response travels back up: the SW returns it to `fetch`, the client stores it in its
+   application cache (if caching is enabled for that endpoint) and resolves your query.
+
+Two consequences worth internalizing:
+
+- The layers **shadow** each other top-down: a layer-1 hit means the lower layers do nothing.
+- Invalidation lives **per layer**: `invalidatesTags` cleans layer 1 only; an SW cache honors its
+  own strategy (stale-while-revalidate etc.) and knows nothing about your tags.
+
+## Layer 1 — application cache (storage)
+
+This is `ApiClient`'s own cache, kept in whatever storage you give it. It stores **parsed data** and
+understands **your API's semantics**, which is why it can do things no lower layer can:
+
+- **Tag invalidation** — a mutation with `invalidatesTags: ['notes']` drops every cached query
+  tagged `notes` and auto-refetches the active ones. An SW can't do this: it sees opaque URL→bytes.
+- **Reactivity** — hooks re-render from cache updates and subscriptions.
+- **Sync fast-path** — on sync storages (`MemoryStorage`, `LocalStorage`) a cached result is
+  readable synchronously on the very first render (no loading flash), important for SSR hydration.
+- **Caching is opt-in and GET-only** — with no `cache` config nothing is cached; mutations are never
+  cached.
+
+The storage you pick decides the cache's *scope and lifetime*:
+
+| Storage | Scope | Survives reload | Sync fast-path |
+|---|---|---|---|
+| `MemoryStorage` | one tab | no | yes |
+| `LocalStorage` | per tab, data shared via disk | yes | yes |
+| `IndexedDBStorage` | per tab, data shared via disk | yes | no |
+| `WorkerCacheStorage` | **live, all tabs at once** | while any tab lives | no |
+
+`WorkerCacheStorage` is still layer 1 — it just moves the cache's `Map` into a SharedWorker so all
+tabs share one live cache (one tab fetches, every tab hits cache).
+
+## Layer 2 — transport (baseQuery.fetchFn)
+
+Not a cache — the **seam** between the layers: it replaces *how* the client performs a request once
+layer 1 missed. Auth-retry, metrics/tracing, an axios instance, a `postMessage` bridge to a Worker.
+Layer 1 keeps working unchanged on top of it, and whatever the transport ultimately `fetch`es is
+still interceptable by layer 3. See the [Custom `baseQuery.fetchFn`](./custom-fetch-fn.md) recipe.
+
+## Layer 3 — network (your ServiceWorker + Cache API)
+
+An app-owned `sw.js` registered next to (not inside) the library. It intercepts the platform
+`fetch` and implements **network policy**: precache of the shell, offline fallbacks, per-URL
+strategies (cache-first / network-first / stale-while-revalidate). It knows URLs and HTTP — not your
+endpoints or tags — and also covers requests your code didn't make (images, fonts). Because it sits
+below `fetch`, every request it serves still shows in Network, tagged `(ServiceWorker)`. See the
+[Custom fetch-intercepting ServiceWorker](./custom-fetch-service-worker.md) recipe.
+
+Below the SW there is a fourth, free layer you don't manage: the browser HTTP cache
+(`Cache-Control` headers → `(from disk cache)` rows).
+
+## Other libraries do the same
+
+This split is the standard architecture of the web, not a synapse invention. TanStack Query, SWR,
+RTK Query and Apollo all keep their own application-level cache and none of them delegates it to a
+ServiceWorker; Workbox exists precisely as the layer-3 tool, and a typical PWA runs an app cache
+**plus** Workbox side by side. The browser adds the HTTP cache underneath all of them. Layered
+caching with different knowledge at each layer is the norm.
+
+## Choosing a setup
+
+- **Data-driven SPA (default)** — layer 1 only: `cache` config + tags on the `ApiClient`. No SW.
+- **The same, shared across tabs** — layer 1 with `WorkerCacheStorage` as the client's storage.
+- **PWA / offline** — layer 1 for data semantics **plus** your own SW (layer 3) for offline and
+  precache. The layers don't conflict: a layer-1 hit just never reaches the SW.
+- **"Cache only in the ServiceWorker"** — perfectly valid: leave `ApiClient` caching off (it's
+  opt-in) and let your SW own caching. You keep endpoint typing and request state, but give up
+  tag invalidation, auto-refetch after mutations and the sync fast-path — every hit is a full
+  `fetch` round-trip through the SW.
+- **Auth / metrics / custom transport** — layer 2 (`fetchFn`), orthogonal to all of the above.
+
+## DevTools Network cheat-sheet
+
+The Network tab tells you which layer answered:
+
+| What you see | Who answered |
+|---|---|
+| no row at all | layer 1 — application cache (incl. `WorkerCacheStorage`) |
+| row tagged `(ServiceWorker)` | layer 3 — your SW (from its Cache API or network) |
+| row `(from disk cache)` / `(memory cache)` | browser HTTP cache |
+| plain row with timing | real network |
+
+---
+
 <!-- source: docs/en/api-client.md · url: https://synapse-homepage.web.app/docs/api-client -->
 # ApiClient — HTTP Client with Caching
 
 
 A typed HTTP client: endpoints, tag-based caching, request-state subscriptions, abort.
+
+> **New to the caching stack?** Start with [Caching layers](./cache-layers.md) — where the client's
+> cache sits relative to a ServiceWorker and `fetchFn`, and when to use which.
 
 This page is built around the **real `pokemon.api.ts` file** from the
 [`pokemon-advanced`](./pokemon-advanced.md) example. The same `pokemonApiClient` is later used in the
@@ -5134,6 +5510,264 @@ they're safe to call from `'server only'` code — mirrors `dehydrateModule` for
 - [ApiClient](./api-client.md) — `dehydrate()`/`hydrate()`, `getCachedSync()`, caching and tags.
 - [useApiQuery](./api-use-query.md) — the hook used here.
 - [useApiMutation](./api-use-mutation.md) — writes + cache invalidation.
+
+---
+
+<!-- source: docs/en/custom-fetch-service-worker.md · url: https://synapse-homepage.web.app/docs/custom-fetch-service-worker -->
+# Custom fetch-intercepting ServiceWorker
+
+
+An **app-owned ServiceWorker** (Workbox-style) that transparently intercepts `fetch` and applies
+network strategies per URL: precache, offline routing, cache-first / network-first /
+stale-while-revalidate. It sits **below** `ApiClient`, which never knows it exists — and its
+`baseQuery.fetchFn` is **not** touched.
+
+> **The library needs no extending for this.** This is not a synapse feature — it is the standard
+> platform ServiceWorker, owned by your app. `ApiClient` works out of the box on top of it.
+
+## When you need it
+
+Reach for your own SW when you need real control over the **network layer**, not just an in-tab
+cache:
+
+- **Precache** the app shell / static assets so the app boots with no network.
+- **Offline routing** — serve a cached response (or a synthesized fallback) when the network is gone.
+- **Per-URL strategies** — cache-first for immutable assets, network-first for fresh data,
+  stale-while-revalidate for the rest.
+
+If instead you only need a **live cross-tab cache**, that is [`WorkerCacheStorage`](./worker-cache-storage.md).
+If you need to change **how** a request is performed (auth-retry, metrics, axios, worker transport),
+that is a [custom `baseQuery.fetchFn`](./custom-fetch-fn.md).
+
+## How it works
+
+The SW is a separate script registered by the app. Once it controls the page, the browser routes
+**every** `fetch` (including the ones `ApiClient` makes internally) through the SW's `fetch` handler.
+Because interception happens **below** `fetch`, the request still reaches the network layer — so it
+still shows up in DevTools → Network, tagged `(ServiceWorker)`.
+
+`ApiClient` stays completely ordinary: plain storage, plain `baseQuery`, no custom `fetchFn`. The SW
+and the client are two independent layers.
+
+## Registering the ServiceWorker
+
+```typescript
+import { ApiClient } from 'synapse-storage/api'
+import { MemoryStorage } from 'synapse-storage/core'
+
+// A totally normal client — it does NOT know a ServiceWorker exists.
+const apiClient = new ApiClient({
+  storage: new MemoryStorage({ name: 'api-cache', initialState: {} }),
+  baseQuery: { baseUrl: 'https://pokeapi.co/api/v2', timeout: 10000 },
+  endpoints: async (create) => ({
+    getPokemon: create({
+      request: ({ id }) => ({ path: `/pokemon/${id}`, method: 'GET' }),
+      cache: true,
+    }),
+  }),
+})
+
+// Register the app-owned SW separately. This is the ONLY wiring it needs.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/custom-sw.js')
+}
+```
+
+## The ServiceWorker script
+
+The SW is a hand-written static asset (served from `public/custom-sw.js`) that you author and own —
+synapse does not generate it for you. Precache on install, stale-while-revalidate per URL, offline fallback:
+
+```javascript
+const CACHE = 'custom-fetch-demo-v1'
+const PRECACHE_URLS = ['/', '/index.html']
+const SWR_HOST = 'pokeapi.co'
+
+self.addEventListener('install', (event) => {
+  self.skipWaiting()
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE_URLS).catch(() => undefined)))
+})
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim())
+})
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return
+  const url = new URL(event.request.url)
+  if (url.hostname === SWR_HOST) event.respondWith(staleWhileRevalidate(event.request))
+})
+
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(CACHE)
+  const cached = await cache.match(request)
+  const network = fetch(request)
+    .then((res) => {
+      if (res && res.ok) cache.put(request, res.clone())
+      return res
+    })
+    .catch(() => null)
+  if (cached) return cached // serve stale, revalidate in background
+  return (await network) ?? offlineFallback(request)
+}
+```
+
+> **Tip.** `skipWaiting()` + `clients.claim()` let the SW start controlling open tabs immediately.
+> Without them, a freshly registered SW only controls the page after the next reload.
+
+## How it differs from WorkerCacheStorage
+
+They solve **different** problems and act at **different** layers:
+
+- [`WorkerCacheStorage`](./worker-cache-storage.md) is a **storage backend** for `ApiClient`. On a
+  cache hit the client short-circuits **above** `fetch` — the request never happens, so there is
+  **no** Network row at all. It is a live cross-tab cache, not an offline layer.
+- The custom SW is a **network interceptor**. It sits **below** `fetch`, so the request still shows
+  up in Network (tagged `(ServiceWorker)`), and it can serve responses fully offline.
+
+> **Warning.** The SW is unrelated to `ApiClient.storage`. The storage is the client's in-tab
+> cache/tag layer; the SW is a platform-level network interceptor. Configuring one does not affect
+> the other.
+
+## Network behavior
+
+Where a response comes from is directly observable in DevTools → Network:
+
+| Source                                   | Network row                 |
+| ---------------------------------------- | --------------------------- |
+| `WorkerCacheStorage` cache hit           | **no row** (fetch skipped)  |
+| App-owned SW cache / offline hit         | row tagged `(ServiceWorker)`|
+| Browser HTTP cache (`Cache-Control`)     | row tagged `(from disk cache)` |
+| Cold network fetch                       | normal row                  |
+
+## When to use
+
+- **Offline / network control** (precache, offline routing, per-URL strategies) → your own SW, as
+  here. No library changes.
+- **Live cross-tab cache** (shared state held in a worker) → [`WorkerCacheStorage`](./worker-cache-storage.md).
+- **Replace the transport** (auth-retry, metrics, axios, worker) → [custom `baseQuery.fetchFn`](./custom-fetch-fn.md).
+
+---
+
+<!-- source: docs/en/custom-fetch-fn.md · url: https://synapse-homepage.web.app/docs/custom-fetch-fn -->
+# Custom baseQuery.fetchFn
+
+
+`ApiClient` accepts a custom transport through `baseQuery.fetchFn?: typeof fetch`. It replaces **how**
+the client performs a request — an axios wrapper, an auth-retry, a metrics probe, or a `postMessage`
+bridge to a Web Worker for heavy parsing. This is the **transport**, not a ServiceWorker interception
+(for that, see [Custom fetch-intercepting ServiceWorker](./custom-fetch-service-worker.md)).
+
+> **The library does NOT need extending.** `fetchFn` is a built-in field of `baseQuery`. You never
+> touch the library source — you pass your own function and the client uses it verbatim.
+
+## When it makes sense
+
+- **Auth-retry** — attach an `Authorization` header and do a single silent `refresh → retry` when the
+  server answers `401`, so the rest of the app never sees the expiry.
+- **Metrics / tracing** — time every request, inject a trace id, report failures.
+- **axios (or any client)** — reuse an existing axios instance, interceptors and all, by adapting its
+  response back into a standard `Response`.
+- **Worker transport** — offload `fetch` + heavy parsing to a `Worker` via `postMessage` and return a
+  ready `Response`, keeping the main thread free.
+
+## Configuration
+
+```typescript
+import { ApiClient } from 'synapse-storage/api'
+import { MemoryStorage } from 'synapse-storage/core'
+
+// A custom fetchFn matches the `typeof fetch` signature exactly.
+const customFetch: typeof fetch = async (input, init) => {
+  // ...do whatever the transport needs, then return a Response
+  return fetch(input, init)
+}
+
+const client = new ApiClient({
+  storage: new MemoryStorage({ name: 'api-cache', initialState: {} }),
+  baseQuery: {
+    baseUrl: 'https://api.example.com',
+    fetchFn: customFetch, // ← replaces the transport; everything else is unchanged
+  },
+  cache: { ttl: 60_000 },
+  endpoints: async (create) => ({
+    getNotes: create({ request: () => ({ path: '/notes', method: 'GET' }), tags: ['notes'] }),
+  }),
+})
+```
+
+`fetchFn` must satisfy `typeof fetch`: `(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>`.
+The client calls it with the fully-built URL and `RequestInit` (method, headers, serialized body,
+`signal`, `credentials`), and reads the returned `Response` exactly as it would a native one.
+
+## Auth-retry example
+
+A `fetchFn` that adds a bearer token and does exactly one silent refresh-then-retry on `401`:
+
+```typescript
+let sessionToken = getToken()
+
+const customFetch: typeof fetch = async (input, init) => {
+  const send = (token: string) => {
+    const headers = new Headers(init?.headers)
+    headers.set('Authorization', `Bearer ${token}`)
+    return fetch(input, { ...init, headers })
+  }
+
+  let res = await send(sessionToken)
+  if (res.status === 401) {
+    // The ApiClient above never sees the 401 — it only gets the retried result.
+    sessionToken = await refreshToken()
+    res = await send(sessionToken)
+  }
+  return res
+}
+```
+
+The `401` handling lives entirely in the transport. The `ApiClient` — its endpoints, cache and tags —
+is oblivious to the retry: it hands off a request and gets back a successful `Response`.
+
+## Cache and tags work on top
+
+The custom transport sits **below** the cache/tags layer, so caching, TTL, tags and tag-invalidation
+keep working with no changes:
+
+```typescript
+endpoints: async (create) => ({
+  // GET — cached and tagged
+  getNotes: create({ request: () => ({ path: '/notes', method: 'GET' }), cache: true, tags: ['notes'] }),
+  // POST — invalidates the tag on success
+  addNote: create({
+    request: (body) => ({ path: '/notes', method: 'POST', body }),
+    cache: false,
+    invalidatesTags: ['notes'],
+  }),
+})
+
+await client.request('getNotes', {})   // → runs through customFetch
+await client.request('getNotes', {})   // → served from cache, customFetch is NOT called
+await client.request('addNote', { title: 'x' }) // → invalidates 'notes'
+await client.request('getNotes', {})   // → refetches through customFetch again
+```
+
+> **The cache short-circuits above the transport.** A cache hit never reaches `fetchFn` — there is no
+> transport call at all. `fetchFn` only runs on a cache miss or an invalidated tag.
+
+## No library extension needed
+
+Both fetch-control axes are available without patching `synapse-storage`:
+
+- **Transport swap** (this page) → `baseQuery.fetchFn`, built in.
+- **Transparent `fetch` interception** → your own [ServiceWorker](./custom-fetch-service-worker.md),
+  which lives below the client and is unrelated to its storage.
+
+## When to use
+
+- Need to change **how** a request is sent (auth, retries, metrics, axios, worker) → `fetchFn`.
+- Need to intercept `fetch` transparently for precache / offline / URL strategies → a
+  [custom ServiceWorker](./custom-fetch-service-worker.md), not `fetchFn`.
+- Need a live cross-tab response cache → [`WorkerCacheStorage`](./worker-cache-storage.md), a storage
+  backend, unrelated to the transport.
 
 ---
 
