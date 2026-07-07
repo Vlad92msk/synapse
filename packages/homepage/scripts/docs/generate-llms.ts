@@ -178,7 +178,11 @@ function build(): void {
 }
 
 /**
- * Пишет каждый раздел отдельным raw-markdown файлом в /llms/<docKey>.md.
+ * Пишет каждый раздел отдельным raw-markdown файлом в /llms/<shortKey>.md.
+ * Имя файла — это ключ РОУТА (`/docs/<shortKey>`), а НЕ имя md-файла (`docKey`):
+ * агент выводит адрес raw-markdown из URL страницы (`/docs/x` → `/llms/x.md`), а
+ * `docKey` может отличаться (`synapse-basic` → `create-synapse-basic.md`) — тогда
+ * `/llms/<shortKey>.md` не находился и firebase отдавал SPA-каркас вместо markdown.
  * Директорию пересоздаём с нуля, чтобы удалённые разделы не оставляли за собой
  * устаревшие файлы.
  */
@@ -191,7 +195,7 @@ function writePerDoc(entries: Entry[]): void {
         const header =
             `<!-- source: docs/en/${e.docKey}.md · canonical: ${SITE}/docs/${e.shortKey} · ` +
             `part of ${SITE}/llms-full.txt -->\n\n`
-        fs.writeFileSync(path.join(PER_DOC_DIR, `${e.docKey}.md`), header + body + '\n')
+        fs.writeFileSync(path.join(PER_DOC_DIR, `${e.shortKey}.md`), header + body + '\n')
     }
 }
 
@@ -221,6 +225,25 @@ function assertComplete(entries: Entry[], problems: string[]): void {
         .filter((key) => !used.has(key) && !IGNORED_DOCS.has(key))
     for (const key of orphans) {
         errors.push(`docs/en/${key}.md не привязан ни к одному разделу навигации — не попадёт в llms`)
+    }
+
+    // (4) На каждый роут /docs/<shortKey> есть ровно один /llms/<shortKey>.md.
+    // shortKey — это URL страницы, поэтому обязан быть уникален (иначе коллизия роутов)
+    // и совпадать с именем raw-markdown, иначе /llms/<key>.md снова уедет в SPA-каркас.
+    const seen = new Map<string, string>()
+    for (const e of entries) {
+        const prev = seen.get(e.shortKey)
+        if (prev) errors.push(`Коллизия shortKey '${e.shortKey}': ${prev} и ${e.docKey} пишутся в один /llms/${e.shortKey}.md`)
+        seen.set(e.shortKey, e.docKey)
+    }
+    const perDoc = fs.existsSync(PER_DOC_DIR)
+        ? fs.readdirSync(PER_DOC_DIR).filter((f) => f.endsWith('.md')).map((f) => f.replace(/\.md$/, ''))
+        : []
+    for (const key of perDoc) {
+        if (!seen.has(key)) errors.push(`/llms/${key}.md лишний — нет роута /docs/${key}`)
+    }
+    for (const shortKey of seen.keys()) {
+        if (!perDoc.includes(shortKey)) errors.push(`/llms/${shortKey}.md не сгенерирован для роута /docs/${shortKey}`)
     }
 
     if (errors.length) {

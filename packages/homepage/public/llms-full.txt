@@ -1,6 +1,6 @@
 # Synapse Storage — full documentation
 
-Source: https://synapse-homepage.web.app/docs · npm: synapse-storage · Generated: 2026-07-05
+Source: https://synapse-homepage.web.app/docs · npm: synapse-storage · Generated: 2026-07-07
 
 ---
 
