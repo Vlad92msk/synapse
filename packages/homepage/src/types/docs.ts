@@ -1,5 +1,5 @@
 // Auto-generated types for structured documentation
-// Generated at: 2026-07-07T16:52:12.574Z
+// Generated at: 2026-07-25T17:28:22.151Z
 // Master locale: en
 
 export type Locale = 'en' | 'ru'
@@ -46,7 +46,7 @@ export interface DocSectionIds {
   'storage-factory': 'storagefactory' | 'typed-methods' | 'universal-create' | 'when-to-use' | 'when-not-to-use'
   'subscriptions': 'subscriptions-subscribe' | '1-subscribekey-callback' | '2-subscribeselector-callback' | '3-subscribetoallcallback' | '4-usestoragesubscribe-react-hook'
   'synapse-awaiter': 'createsynapseawaiter-framework-independent-awaiter' | 'imports-and-creation' | 'programmatic-surface' | 'ssr-sync-fast-path' | 'usage-in-react-without-the-wrapper'
-  'synapse-ctx': 'createsynapsectx' | 'creating-the-context' | 'using-the-hooks-in-child-components' | 'hoc-contextsynapse' | 'usesynapsestate-only-with-effects' | 'reactive-reads-in-a-component' | 'cleanup' | 'three-variants-of-createsynapsectx' | 'ssr-server-rendering-seeded-sync-stores'
+  'synapse-ctx': 'createsynapsectx' | 'creating-the-context' | 'using-the-hooks-in-child-components' | 'hoc-contextsynapse' | 'usesynapsestate-only-with-effects' | 'reactive-reads-in-a-component' | 'cleanup' | 'three-variants-of-createsynapsectx' | 'ssr-server-rendering-seeded-sync-stores' | 'ssr-data-less-background-providers-ssrshell'
   'to-observable': 'toobservable' | 'signature' | 'selector-a-slice-instead-of-the-whole-state' | 'equals-how-slices-are-compared' | 'in-effects' | 'notes'
   'use-storage-observable': 'usestorageobservable' | 'basic-usage' | 'operators-on-top-of-the-stream' | 'why-debounce-here' | 'about-deps-what-goes-in' | 'example-debounced-search' | 'example-a-notification-aggregator' | 'notes'
   'use-storage-subscribe': 'usestoragesubscribe' | 'basic-usage' | 'object-and-array-slices-equals' | 'notes'

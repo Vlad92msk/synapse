@@ -343,7 +343,8 @@
     "5": "reactive-reads-in-a-component",
     "6": "cleanup",
     "7": "three-variants-of-createsynapsectx",
-    "8": "ssr-server-rendering-seeded-sync-stores"
+    "8": "ssr-server-rendering-seeded-sync-stores",
+    "9": "ssr-data-less-background-providers-ssrshell"
   },
   "to-observable": {
     "0": "toobservable",

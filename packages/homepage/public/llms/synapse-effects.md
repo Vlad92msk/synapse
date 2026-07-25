@@ -114,6 +114,19 @@ The recipe's `ctx` is `{ dispatcher, external }`:
 
 Optional teardown — `override onDestroy()` (close sockets, unsubscribe from an external source).
 
+> **`static nonEffectFields`** (since 5.4.0). The dev "forgotten effect" check scans every function-valued
+> field of the instance and warns about those not wrapped in `this.effect`. Constructor-injected function
+> dependencies (getters/factories, e.g. `resolveSocket: () => Socket`) are not effects and would otherwise
+> trigger a false warning. Mark them:
+>
+> ```typescript
+> class PresenceEffects extends Effects<PresenceState, PresenceDispatcher> {
+>   static override nonEffectFields = ['resolveSocket']
+>   constructor(private resolveSocket: () => PresenceSocketService) { super() }
+>   readonly connection = this.effect(/* … */)
+> }
+> ```
+
 ## ofType / ofTypes
 
 ```typescript

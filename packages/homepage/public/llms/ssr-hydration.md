@@ -82,6 +82,12 @@ It is usually more convenient to work at the module level:
 synchronously seeds the store on the client through the `dehydratedState` prop — solving the same
 task for the whole module rather than a bare storage.
 
+For a provider that has **no** server data but still must not block SSR (a "background" shell over a
+large subtree — presence, relations, a media-player), there is no snapshot to hydrate. Use
+[`ssrShell`](./synapse-ctx.md#ssr--data-less-background-providers-ssrshell) instead: the module builds a
+synchronous empty store from `initialState` on the server so its `children` reach the HTML, then upgrades
+to the real async store on the client.
+
 ## Types
 
 ```typescript
