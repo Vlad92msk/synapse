@@ -1,5 +1,76 @@
 # Changelog
 
+## [5.4.0] - 2026-07-25
+
+### SSR для «фоновых» context-провайдеров: синхронная SSR-оболочка
+
+Раньше `createSynapseCtx` умел серверно рендерить только стор, которому пришли серверные данные
+(`dehydratedState` — путь posts/pokemon). «Фоновые» провайдеры — те, что оборачивают большое
+поддерево (шелл приложения), но своих серверных данных не имеют (presence, relations, media-player) —
+на сервере упирались в гейт `loadingComponent` и **срезали весь HTML ниже себя**, включая
+корректно засеянную ленту двумя уровнями глубже. Первопричина: фабрика модуля целиком async
+(`await getCoreSynapse()`), поэтому `initialState` появляется только после `await`, а React SSR
+рендерит синхронно. Изменения аддитивны — существующие синапсы работают без правок.
+
+- **`createSynapse(factory, { ssrShell })`** (новый второй аргумент, экспорт типов
+  `CreateSynapseOptions` / `SynapseShellConfig` из `synapse-storage/utils`) — синхронная фабрика
+  «SSR-оболочки»: подмножество конфига `{ storage, dispatcher?, selectors? }` **без** `effects` и
+  `dependencies`. Даёт модулю способ синхронно подняться из `initialState` в обход async-фабрики и её
+  зависимостей. Требует синхронного хранилища (`MemoryStorage`/`LocalStorage`).
+  ```ts
+  export const presenceSynapse = createSynapse(
+    async () => { const core = await getCoreSynapse(); return { storage, dependencies: [core], dispatcher, selectors, effects } },
+    { ssrShell: () => {
+        const storage = new MemoryStorage({ name: 'presence', initialState })
+        return { storage, selectors: new PresenceSelectors(storage), dispatcher: new PresenceDispatcher(storage) }
+      } },
+  )
+  ```
+- **`SynapseModule.buildSyncShell()`** — синхронно строит стор из `ssrShell` (без `await`, без
+  зависимостей и эффектов). Новый инстанс на каждый вызов (per-request изоляция на сервере;
+  throwaway на первый кадр гидрации на клиенте) — не мемоизируется. `undefined`, если `ssrShell` не
+  задана. `fork()` переносит `ssrShell`.
+- **`ISyncStorage.initializeSync(): this`** — синхронная инициализация sync-хранилища (доводит до
+  `READY` в один тик, без `await`). Async-хранилища (IndexedDB/worker) её не имеют → понятная ошибка.
+- **`createSynapseCtx(module, { ssr: true })` теперь работает для фоновых провайдеров.** При `ssr: true`
+  и НЕ готовом синхронно сторе Provider строит SSR-оболочку и рендерит `children` сразу → поддерево
+  попадает в серверный HTML и совпадает с первым кадром гидрации. Полный стор (с зависимостями и
+  эффектами) достраивается на клиенте, после чего контекст бесшовно переключается на него.
+  - **Флаг `ssr` больше не «мёртвый».** Раньше гейт рендера его не читал (использовался только в
+    `dehydrate`), и `{ ssr: true }` без `dehydratedState` всё равно давал `loadingComponent`. JSDoc
+    опции переписан честно. Без `ssrShell` флаг — no-op (прежнее поведение).
+  - **Request-изоляция и никакой клиентской машинерии на сервере.** На сервере оболочка строится, не
+    трогая общий `clientAwaiter` — async-фабрика/эффекты/WS/IndexedDB на сервер не едут, cross-request
+    bleed невозможен by design (пустой `initialState` константен). Оболочка уничтожается при свапе на
+    реальный стор.
+
+### DX: ложный effect-варнинг на инъектированные функции-поля
+
+- **`Effects.nonEffectFields` (static)** — опт-аут для dev-проверки «забытых эффектов». Авто-детект
+  сканирует все функциональные поля инстанса и ворнил на конструкторно-инъектированные
+  функции-зависимости (геттеры/фабрики, напр. `resolveSocket: () => Socket`), не обёрнутые в
+  `this.effect`. Теперь такие поля можно пометить:
+  ```ts
+  class PresenceEffects extends Effects<PresenceState, PresenceDispatcher> {
+    static override nonEffectFields = ['resolveSocket']
+    constructor(private resolveSocket: () => PresenceSocketService) { super() }
+    connection = this.effect(...)
+  }
+  ```
+  Регистрация эффектов не менялась (она и так 100% по внутреннему маркеру `this.effect`) — правится
+  только dev-lint.
+
+### Тесты
+
+- `utils/createSynapse/__tests__/ssr-shell.test.ts` — `initializeSync` (sync READY / идемпотентность /
+  ошибка на async), `buildSyncShell` (sync READY из `ssrShell`, изоляция инстансов, `fork`, ошибки).
+- `react/__tests__/ssr-shell.server.test.tsx` — фоновый провайдер над async-стором рендерит `children`
+  в серверный HTML (не `loadingComponent`), no-op без `ssrShell`, нет request bleed.
+- `react/__tests__/ssr-shell.client.test.tsx` — первый кадр гидрации === серверный (нет hydration
+  mismatch), апгрейд оболочка→реальный стор, живой стор после апгрейда.
+- `reactive/effects/__tests__/effects.base.test.ts` — `nonEffectFields` подавляет ложный варнинг,
+  забытый эффект по-прежнему ворнит.
+
 ## [5.3.0] - 2026-07-05
 
 ### Воркеры: межвкладочная синхронизация и живой кэш внутри воркера

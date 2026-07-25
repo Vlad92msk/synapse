@@ -1,46 +1,63 @@
 import { StorageStatus } from '../core'
 import type { SynapseModule } from './createSynapse/index'
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Четыре уровня, которые тут крутятся (держать раздельно, иначе всё путается):
+//
+//   1. Module (handle)  — ленивая обёртка над фабрикой. Ещё НЕ стор. Умеет .ready()/.fork().
+//                         `externalSynapseModule` — синглтон (живёт всю жизнь процесса, общий на
+//                         всех); `synapseModule` — форк этого синглтона (новый handle под ОДИН запрос).
+//   2. Synapse (instance) — собранный живой стор: { storage, dispatcher, selectors, state$ }.
+//                         Результат `handle.ready()`. `synapse` — instance форка; `mainSynapse` —
+//                         instance синглтона (общий на всех).
+//   3. Storage          — контейнер состояния внутри instance: кэш, подписчики, middleware.
+//   4. State (snapshot) — плоский объект данных типа TState. Результат `storage.getStateSync()`.
+//                         Именно он уходит по сети пропом `dehydratedState`.
+//
+// Дегидрация = вынуть уровень 4 (голые данные) из живого стора, отбросив машинерию уровней 2–3,
+// чтобы данные пережили JSON и уехали клиенту.
+// ─────────────────────────────────────────────────────────────────────────────
+
 export interface DehydrateModuleOptions<TState extends Record<string, any>> {
-  // Серверные данные под запрос. Накладываются поверх initialState форка shallow-мерджем
-  // верхнего уровня, поэтому можно передавать только изменённые поля. Вложенные объекты
-  // заменяются целиком: правишь подполе api.x — передавай весь api.
+  // Серверные данные под запрос
   state?: Partial<TState>
-  // Прогреть основной handle снапшотом для синхронного SSR-рендера. Только для синхронно
-  // готовых (READY) сторов (Memory/LocalStorage); у async-сторов (IndexedDB) синхронного
-  // серверного рендера нет — прогрев пропускается.
+  // Подготовить синглтон к синхронному SSR-рендеру: собрать его и залить snapshot. Только для
+  // синхронно готовых (READY) сторов (Memory/LocalStorage); у async-сторов (IndexedDB)
+  // синхронного серверного рендера нет — шаг пропускается.
   ssr?: boolean
 }
 
-// Server-safe дегидрация модуля: сериализуемый снапшот стора для пропа dehydratedState.
-// В отличие от замыкания dehydrate из createSynapseCtx — без React-зависимостей, импортируется
-// в серверный (RSC / 'server only') модуль.
+// Server-safe дегидрация модуля: снимает сериализуемый снапшот состояния (уровень 4) для пропа
+// dehydratedState. В отличие от замыкания dehydrate из createSynapseCtx — без React-зависимостей,
+// импортируется в серверный (RSC / 'server only') модуль.
 export const dehydrateModule = async <TState extends Record<string, any>, TDispatcher, TSelectors>(
-  synapseModule: SynapseModule<TState, TDispatcher, TSelectors>,
+  externalSynapseModule: SynapseModule<TState, TDispatcher, TSelectors>,
   options?: DehydrateModuleOptions<TState>,
 ): Promise<TState> => {
   const { state, ssr = false } = options ?? {}
 
-  // Per-request форк: собственный стор, не пересекается с другими запросами.
-  // ready({ withEffects: false }) — собираем стор для снапшота БЕЗ запуска эффектов: на
-  // сервере они не нужны и потенциально вредны (см. ready()/buildSynapse withEffects).
-  const fork = synapseModule.fork()
-  const forked = await fork.ready({ withEffects: false })
-  // hydrate заменяет состояние целиком, поэтому мерджим поверх текущего, иначе частичный
-  // state занулил бы непереданные поля. await покрывает и async-сторы (IndexedDB), иначе
-  // getStateSync() снял бы снапшот до завершения гидрации.
-  if (state) await forked.storage.hydrate({ ...forked.storage.getStateSync(), ...state })
-  const snapshot = forked.storage.getStateSync()
-  await fork.destroy()
+  // Форк: изоляция под запрос
+  // fork() берёт ту же фабрику и делает НОВЫЙ независимый handle (уровень 1)
+  const synapseModule = externalSynapseModule.fork()
+
+  // Создаем экземпляр Synapse (без модуля эффектов)
+  const synapse = await synapseModule.ready({ withEffects: false })
+
+  // Мердж initialState форка + серверные данные
+  if (state) await synapse.storage.hydrate({ ...synapse.storage.getStateSync(), ...state })
+
+  // Достаем смерженный объект из хранилища
+  const snapshot = synapse.storage.getStateSync()
+
+  // Уничтожаем synapseModule
+  await synapseModule.destroy()
 
   if (ssr) {
-    // Прогрев main handle тоже через ready({ withEffects: false }): серверу нужны только
-    // READY-storage + state для resolveSyncReady → getStoreIfReady → seedHydration. Эффекты
-    // не стартуем — main handle при ssr живёт между запросами и не destroy-ится, его эффекты
-    // «висели» бы навсегда.
-    const main = await synapseModule.ready({ withEffects: false })
-    if (main.storage.initStatus.status === StorageStatus.READY) {
-      await main.storage.hydrate(snapshot)
+    // Задача - не передать куда-то данные, а сделать externalSynapseModule готовым к рендеру (чтобы не было спиннера) в Provider
+    const mainSynapse = await externalSynapseModule.ready({ withEffects: false })
+    // READY — только у синхронных сторов; у async (IndexedDB) синхронного SSR нет, шаг пропускается.
+    if (mainSynapse.storage.initStatus.status === StorageStatus.READY) {
+      await mainSynapse.storage.hydrate(snapshot)
     }
   }
 

@@ -11,10 +11,18 @@ const ERROR_CONTEXT_INIT = 'Ошибка при инициализации ко�
 interface SimplifiedOptions {
   loadingComponent?: React.ReactNode
   /**
-   * Включает серверный рендер засеянных sync-сторов (Memory/LocalStorage). При `ssr: true`
-   * и синхронно-готовом сторе Provider рендерит children сразу (без `loadingComponent`),
-   * что даёт контент в серверном HTML и совпадающий первый кадр при гидрации.
-   * Для async-сторов (IndexedDB) поведение прежнее — гейт `loadingComponent`.
+   * Включает синхронный серверный рендер `children` для «фоновых» провайдеров без
+   * серверных данных (presence/relations/media-player).
+   *
+   * При `ssr: true` и НЕ готовом синхронно сторе Provider строит **SSR-оболочку** из
+   * `initialState` (см. `createSynapse(module, { ssrShell })`) и рендерит `children` сразу —
+   * так поддерево попадает в серверный HTML и совпадает с первым кадром гидрации. Полный
+   * стор (с зависимостями и эффектами) достраивается на клиенте, после чего контекст
+   * бесшовно переключается на него.
+   *
+   * Требует, чтобы у модуля была задана `ssrShell`-фабрика. Без неё флаг — no-op (гейт
+   * `loadingComponent`, прежнее поведение). Для синхронно-готового стора (posts после
+   * `dehydrate`, клиентская гидрация) флаг не нужен — children рендерятся и так.
    */
   ssr?: boolean
 }
@@ -29,10 +37,10 @@ export function createSynapseCtx<TState extends Record<string, any>, TDispatcher
 
   const SynapseContext = createContext<ReadySynapse | null>(null)
 
-  // ── Awaiter ───────────────────────────────────────────────────────────────
-  // Клиент сохраняет прежнюю синглтон-семантику: один awaiter на handle (общий стор,
-  // фабрика стартует один раз при первом mount). На сервере синглтон уровня модуля
-  // запрещён (request bleed), поэтому там awaiter живёт per-render-tree и не шарится.
+  // clientAwaiter — общий на всё приложение доступ к стору на клиенте. Стор строится один раз
+  // (лениво, при первом mount), и все компоненты работают с ним через этот awaiter.
+  // На сервере так нельзя: один стор на всех → данные одного запроса утекут в другой (request
+  // bleed). Поэтому там стор берётся отдельный на каждый рендер — не отсюда, а из resolveAwaiter.
   let clientAwaiter: SynapseAwaiter<ReadySynapse> | null = null
 
   const getClientAwaiter = () => {
@@ -64,9 +72,8 @@ export function createSynapseCtx<TState extends Record<string, any>, TDispatcher
     return context.state$
   }
 
-  // Серверный помощник: тонкая обёртка над server-safe dehydrateModule (вся логика там).
-  // initialState — серверные данные под запрос, не статический initialState модуля; ssr — из
-  // опций контекста.
+  // Фича для КЛАССИЧЕСКОГО SSR (Vite/Remix/Express + renderToString)
+  // В Next App Router (RSC) не применяем - там ручной вызов dehydrateModule(module, { ssr })
   const dehydrate = (opts?: { initialState?: Partial<TState> }): Promise<TState> => dehydrateModule(synapseModule, { state: opts?.initialState, ssr })
 
   /**
@@ -94,26 +101,71 @@ export function createSynapseCtx<TState extends Record<string, any>, TDispatcher
         }
       }
 
+      // SSR-оболочка: синхронный «пустой» стор из initialState, построенный БЕЗ async-фабрики,
+      // зависимостей и эффектов (см. synapseModule.buildSyncShell / createSynapse ssrShell).
+      // Строится один раз на инстанс провайдера, живёт до появления реального стора.
+      const shellStoreRef = useRef<ReadySynapse | null>(null)
+      const canBuildShell = ssr && typeof synapseModule.buildSyncShell === 'function'
+      const buildShellIfNeeded = (): ReadySynapse | undefined => {
+        if (!canBuildShell) return undefined
+        // Идемпотентно: guard от повторной сборки (в т.ч. двойной вызов инициализатора useState в StrictMode).
+        if (!shellStoreRef.current) shellStoreRef.current = synapseModule.buildSyncShell() ?? null
+        return shellStoreRef.current ?? undefined
+      }
+
       const [synapseStore, setSynapseStore] = useState<ReadySynapse | undefined>(() => {
+        // Сервер + ssr-оболочка (без dehydratedState): НЕ трогаем общий clientAwaiter — иначе
+        // async-фабрика/эффекты поедут на сервер, а module-синглтон рискует cross-request bleed.
+        // Сразу отдаём синхронную оболочку → children попадают в HTML.
+        if (canBuildShell && dehydratedState === undefined && typeof window === 'undefined') {
+          const shell = buildShellIfNeeded()
+          if (shell) return shell
+        }
+
         const store = resolveAwaiter().getStoreIfReady()
-        seedHydration(store)
-        return store
+        if (store) {
+          seedHydration(store)
+          return store
+        }
+        // Стор не готов синхронно (async-стор / клиентский старт). При ssr+ssrShell отдаём
+        // оболочку, чтобы первый кадр (сервер и гидрация) рендерил children с initialState.
+        return buildShellIfNeeded()
       })
-      const [error, setError] = useState<Error | null>(() => resolveAwaiter().getError())
+      const [error, setError] = useState<Error | null>(() => {
+        // Тот же серверный guard: не поднимаем clientAwaiter на сервере ради оболочки.
+        if (canBuildShell && dehydratedState === undefined && typeof window === 'undefined') return null
+        return resolveAwaiter().getError()
+      })
 
       useEffect(() => {
         // На сервере эффект не исполняется — подписки/догрузка стартуют только на клиенте.
         const instance = resolveAwaiter()
-        const current = instance.getStoreIfReady()
-        seedHydration(current)
-        setSynapseStore(current)
-        setError(instance.getError())
 
-        const unsubscribeReady = instance.onReady((store) => {
+        // Переключение с SSR-оболочки на реальный стор. Оболочку уничтожаем ТОЛЬКО здесь
+        // (при свапе), а не в cleanup: иначе двойной прогон эффекта в StrictMode разрушил бы
+        // ещё отрендеренную оболочку. На реальном размонтировании оболочка осиротеет и будет
+        // собрана GC (в ней нет внешних подписок — это чистый Memory-стор без эффектов).
+        const adoptRealStore = (store: ReadySynapse) => {
           seedHydration(store)
           setSynapseStore(store)
           setError(null)
-        })
+          const shell = shellStoreRef.current
+          if (shell && shell !== store) {
+            shellStoreRef.current = null
+            void shell.destroy()
+          }
+        }
+
+        const current = instance.getStoreIfReady()
+        if (current) {
+          // Реальный стор уже готов синхронно — свапаемся сразу (без мигания оболочки).
+          adoptRealStore(current)
+        } else {
+          setError(instance.getError())
+          // Оболочка (если есть) уже показана из useState — держим её до onReady.
+        }
+
+        const unsubscribeReady = instance.onReady(adoptRealStore)
         const unsubscribeError = instance.onError((err) => {
           setSynapseStore(undefined)
           setError(err)
@@ -127,9 +179,9 @@ export function createSynapseCtx<TState extends Record<string, any>, TDispatcher
 
       if (error) return <div>{`${ERROR_CONTEXT_INIT} ${error.message}`}</div>
 
-      // SSR-гейт: при ssr и синхронно-готовом сторе (сервер после dehydrate / клиентская
-      // гидрация) synapseStore уже есть → рендерим children. Иначе — прежний гейт загрузки
-      // (async-сторы и обычный клиентский старт).
+      // Гейт рендера. synapseStore есть, когда: стор готов синхронно (сервер после dehydrate /
+      // клиентская гидрация), ЛИБО построена SSR-оболочка (ssr + ssrShell). Иначе — прежний
+      // гейт загрузки (async-сторы без ssrShell, обычный клиентский старт).
       if (!synapseStore) return <>{loadingComponent}</>
 
       return (

@@ -134,6 +134,12 @@ export interface IStorageBase<T extends Record<string, any> = any> {
  * Все операции чтения/записи выполняются синхронно.
  */
 export interface ISyncStorage<T extends Record<string, any> = any> extends IStorageBase<T> {
+  /**
+   * Синхронная инициализация: доводит хранилище до `READY` без `await` (в отличие от
+   * async `initialize()`). Доступна только на sync-хранилищах (Memory/LocalStorage).
+   * Нужна для SSR — синхронной сборки «пустого» стора из `initialState` на сервере.
+   */
+  initializeSync(): this
   get<R>(key: StorageKeyType): R | undefined
   set<R>(key: StorageKeyType, value: R): void
   update(updater: (state: T) => void): void

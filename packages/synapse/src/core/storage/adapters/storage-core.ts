@@ -199,6 +199,43 @@ export abstract class StorageCore<T extends Record<string, any>> implements ISto
    */
   protected abstract performInitialize(): Promise<void>
 
+  /**
+   * Синхронный аналог {@link performInitialize} — реализуется только синхронными
+   * хранилищами (Memory/LocalStorage, см. {@link SyncBaseStorage}). Async-хранилища
+   * (IndexedDB/worker) его НЕ объявляют → {@link initializeSync} у них бросит.
+   */
+  protected performInitializeSync?(): void
+
+  /**
+   * Синхронная инициализация: доводит хранилище до `READY` в пределах одного тика, без
+   * `await`. Нужна для SSR — синхронного построения «пустого» стора из `initialState`
+   * (см. `createSynapse` → `buildSyncShell`). Доступна только на sync-хранилищах;
+   * у async-хранилищ бросает понятную ошибку.
+   */
+  public initializeSync(): this {
+    if (this._initStatus.status === StorageStatus.READY) return this
+    if (typeof this.performInitializeSync !== 'function') {
+      throw new Error(`Storage "${this.name}" не поддерживает синхронную инициализацию (initializeSync доступен только на sync-хранилищах, напр. MemoryStorage).`)
+    }
+
+    // Allow re-initialization after destroy (симметрично initialize()).
+    this._isDestroyed = false
+
+    this.updateInitStatus({ status: StorageStatus.LOADING, error: undefined })
+
+    try {
+      this.performInitializeSync()
+      this.updateInitStatus({ status: StorageStatus.READY, error: undefined })
+      return this
+    } catch (error) {
+      this.updateInitStatus({
+        status: StorageStatus.ERROR,
+        error: error instanceof Error ? error : new Error(String(error)),
+      })
+      throw error
+    }
+  }
+
   public async destroy(): Promise<void> {
     if (this._isDestroyed) return
     this._isDestroyed = true

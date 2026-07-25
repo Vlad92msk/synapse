@@ -238,4 +238,96 @@ hydrateRoot(container, <PokedexWithContext dehydratedState={dehydrated} />)
 - **Обратная совместимость.** Без `ssr` и без `dehydratedState` поведение прежнее (ленивый старт +
   `loadingComponent`); сигнатуры хуков не менялись.
 
+## SSR — «фоновые» провайдеры без серверных данных (`ssrShell`)
+
+> Доступно с **5.4.0**.
+
+Секция выше серверно рендерит стор, которому **пришли серверные данные** (`dehydratedState`). Но часть
+провайдеров оборачивает большое поддерево (шелл приложения), а **своих серверных данных не имеет** —
+presence, relations, media-player. Их стор строится **async-фабрикой** (`await getCoreSynapse()`, сокет,
+…), поэтому синхронно на сервере он никогда не готов. Без помощи такой провайдер упирается в гейт
+`loadingComponent` на сервере и рендерит пустоту — **срезая всё поддерево под собой**, включая корректно
+засеянную ленту двумя уровнями глубже.
+
+`ssrShell` даёт модулю способ синхронно построить **«пустой» стор из `initialState`** — в обход
+async-фабрики, её зависимостей и эффектов — чтобы провайдер отрендерил `children` на сервере. Полный стор
+(с зависимостями и эффектами) достраивается на клиенте, после чего контекст бесшовно переключается на него.
+
+### Объявление оболочки
+
+`createSynapse` принимает опциональный второй аргумент. Фабрика оболочки **синхронна** и возвращает
+подмножество конфига — `{ storage, dispatcher?, selectors? }`, **без** `effects`/`dependencies`. Её
+`storage` должен быть синхронным (`MemoryStorage`/`LocalStorage`).
+
+```ts
+import { createSynapse } from 'synapse-storage/utils'
+import { MemoryStorage } from 'synapse-storage/core'
+
+export const presenceSynapse = createSynapse(
+  // async-фабрика — реальный стор (deps + effects), только клиент
+  async () => {
+    const core = await getCoreSynapse()
+    const storage = new MemoryStorage<PresenceState>({ name: 'presence', initialState })
+    return {
+      storage,
+      dependencies: [core],
+      dispatcher: new PresenceDispatcher(storage),
+      selectors: new PresenceSelectors(storage),
+      effects: new PresenceEffects(/* … */),
+    }
+  },
+  // синхронная SSR-оболочка — без deps и effects; рендерит children с initialState на сервере
+  {
+    ssrShell: () => {
+      const storage = new MemoryStorage<PresenceState>({ name: 'presence', initialState })
+      return { storage, selectors: new PresenceSelectors(storage), dispatcher: new PresenceDispatcher(storage) }
+    },
+  },
+)
+```
+
+> **Как избежать дублирования.** Оболочка повторяет только синхронную часть (storage + selectors +
+> dispatcher). Вынеси хелпер `buildSyncCore()` и зови его из фабрики и из оболочки — будет единый источник.
+
+### Провайдер
+
+Включи `ssr: true` — на месте вызова больше ничего не меняется. Фоновый провайдер обычно просто прокидывает
+детей:
+
+```tsx
+export const { contextSynapse: withPresence } =
+  createSynapseCtx(presenceSynapse, { ssr: true, loadingComponent: null })
+
+export const PresenceProvider = withPresence(({ children }) => <>{children}</>)
+```
+
+На сервере `PresenceProvider` теперь рендерит `children` (всё поддерево доходит до HTML); на клиенте
+первый кадр рендерит ту же пустую оболочку (совпадает с сервером — нет hydration mismatch), затем
+апгрейдится до реального стора.
+
+### Как это работает
+
+- **Сервер.** При `ssr: true` и НЕ готовом сторе Provider строит оболочку (`module.buildSyncShell()`) и
+  рендерит `children`. Он **не трогает** общий client awaiter на сервере — поэтому async-фабрика / эффекты
+  / WebSocket там не запускаются, а module-синглтон не может протечь между запросами. Пустой `initialState`
+  константен → **request-изоляция бесплатно**.
+- **Клиентская гидрация.** Первый кадр строит ту же оболочку (пустое состояние) → идентично серверу → нет
+  mismatch. Затем в `useEffect` собирается реальный async-стор; по готовности контекст переключается на
+  него, а оболочка уничтожается.
+- **Флаг `ssr` больше не «мёртвый».** Раньше гейт рендера его вообще не читал (использовался только в
+  `dehydrate`), поэтому `{ ssr: true }` без `dehydratedState` всё равно показывал `loadingComponent`.
+  Теперь `ssr: true` включает путь оболочки. Без `ssrShell` флаг — no-op (прежний гейт `loadingComponent`),
+  обратная совместимость сохранена.
+
+### `dehydrate` vs `ssrShell`
+
+| Ситуация | Что использовать |
+|---|---|
+| У стора **есть** серверные данные (лента, первая страница) | `dehydrate` / `dehydrateModule` + проп `dehydratedState` (секция выше) |
+| У провайдера серверных данных **нет**, но он не должен блокировать SSR (шелл приложения) | `ssrShell` + `{ ssr: true }` |
+| Только клиент, без SSR | ни то, ни другое — дефолтный ленивый гейт `loadingComponent` |
+
+Они компонуются: страница может засеять ленту через `dehydratedState`, а шелл `presence` двумя уровнями
+выше — использовать `ssrShell`; без оболочки гейт всё равно вырезал бы засеянную ленту из HTML.
+
 Весь модуль pokemon целиком — [Pokemon (рецепт)](./pokemon-advanced.md).

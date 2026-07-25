@@ -49,7 +49,7 @@ export const counter = createSynapse(async () => {
 - **Immer-like Updates** — mutate state directly inside `update()` callbacks
 - **API Client** — HTTP client with tag-based caching and invalidation
 - **Persist Migrations** — `version` + `migrate(oldState, oldVersion)` for localStorage/IndexedDB
-- **SSR Hydration** — `storage.hydrate(state)` to seed server-rendered state
+- **SSR Hydration** — `storage.hydrate(state)` to seed server-rendered state; `createSynapseCtx({ ssr: true })` for seeded stores, `ssrShell` to server-render data-less "background" providers
 - **React Integration** — hooks on `useSyncExternalStore` (Concurrent Mode safe)
 - **RxJS Effects** — dispatchers, effects, and watchers (Redux-Observable style)
 - **Middleware** — extensible sync/async pipelines (batching, shallowCompare, logger, broadcast)

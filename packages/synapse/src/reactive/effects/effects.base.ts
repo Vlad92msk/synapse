@@ -59,6 +59,23 @@ export type EffectRecipe<TState, TDispatcher, TExternalDispatchers> = (
  * присваиваются ПОСЛЕ инициализаторов полей derived-класса.
  */
 export abstract class Effects<TState extends Record<string, any>, TDispatcher, TExternalDispatchers extends Record<string, Dispatcher<any>> = Record<string, never>> {
+  /**
+   * Опт-аут для dev-проверки «забытых эффектов»: имена полей-функций, которые НЕ являются
+   * эффектами (конструкторно-инъектированные зависимости — геттеры/фабрики, напр.
+   * `resolveSocket: () => Socket`). Такие поля — не рецепты `this.effect(...)`, и без этого
+   * списка `getEffects()` ложно ворнил бы на них.
+   *
+   * @example
+   * ```ts
+   * class PresenceEffects extends Effects<PresenceState, PresenceDispatcher> {
+   *   static override nonEffectFields = ['resolveSocket']
+   *   constructor(private resolveSocket: () => PresenceSocketService) { super() }
+   *   connection = this.effect(...)
+   * }
+   * ```
+   */
+  static nonEffectFields: string[] = []
+
   /** Реестр module-совместимых эффектов в порядке объявления полей. */
   readonly #effects: Effect[] = []
 
@@ -99,11 +116,15 @@ export abstract class Effects<TState extends Record<string, any>, TDispatcher, T
     // Имена полей-рецептов идут в порядке объявления — ровно как и #effects (каждый
     // this.effect() пушит в #effects и помечает свой fn). Зипуем их, чтобы EffectsModule
     // мог назвать упавший эффект по имени поля, а не по индексу.
+    // Опт-аут подкласса: конструкторно-инъектированные функции-зависимости, помеченные
+    // `static nonEffectFields`, не считаем «забытыми эффектами».
+    const ignoredNames = new Set([...RESERVED_NAMES, ...((this.constructor as typeof Effects).nonEffectFields ?? [])])
+
     const recipeNames: string[] = []
     for (const [name, value] of Object.entries(this)) {
       if (typeof value === 'function' && (value as { [EFFECT_MARKER]?: true })[EFFECT_MARKER]) {
         recipeNames.push(name)
-      } else if (process.env.NODE_ENV !== 'production' && typeof value === 'function' && !RESERVED_NAMES.has(name)) {
+      } else if (process.env.NODE_ENV !== 'production' && typeof value === 'function' && !ignoredNames.has(name)) {
         logError(
           `Effects: поле "${name}" — функция, но не обёрнута в this.effect(...). Эффекты регистрируются только через this.effect, иначе они молча не запустятся.`,
           value,

@@ -1,7 +1,7 @@
 import type { Selectors } from '../../core'
 import type { Dispatcher, Effects } from '../../reactive'
 import { createSynapseModule } from './factory'
-import type { SynapseConfig, SynapseModule } from './synapse.types'
+import type { CreateSynapseOptions, SynapseConfig, SynapseModule } from './synapse.types'
 
 /**
  * Создаёт ленивый class-based synapse из фабрики-конфига.
@@ -25,6 +25,20 @@ import type { SynapseConfig, SynapseModule } from './synapse.types'
  *
  * const { dispatcher, selectors } = await postsSynapse
  * ```
+ *
+ * Опциональный второй аргумент `{ ssrShell }` включает синхронный серверный рендер для
+ * «фоновых» провайдеров без серверных данных (см. {@link CreateSynapseOptions}):
+ *
+ * @example
+ * ```ts
+ * export const presenceSynapse = createSynapse(
+ *   async () => { const core = await getCoreSynapse(); ... return { storage, dependencies: [core], dispatcher, selectors, effects } },
+ *   { ssrShell: () => {
+ *       const storage = new MemoryStorage({ name: 'presence', initialState })
+ *       return { storage, selectors: new PresenceSelectors(storage), dispatcher: new PresenceDispatcher(storage) }
+ *     } },
+ * )
+ * ```
  */
 export function createSynapse<
   TState extends Record<string, any>,
@@ -33,6 +47,7 @@ export function createSynapse<
   TEffects extends Effects<TState, NonNullable<TDispatcher>, any> | undefined = undefined,
 >(
   factory: () => SynapseConfig<TState, TDispatcher, TSelectors, TEffects> | Promise<SynapseConfig<TState, TDispatcher, TSelectors, TEffects>>,
+  options?: CreateSynapseOptions<TState, TDispatcher, TSelectors>,
 ): SynapseModule<TState, TDispatcher, TSelectors> {
-  return createSynapseModule<TState, TDispatcher, TSelectors>(factory)
+  return createSynapseModule<TState, TDispatcher, TSelectors>(factory, options)
 }

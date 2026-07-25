@@ -50,7 +50,7 @@ export const counter = createSynapse(async () => {
 - **Selectors** — memoized computed values with dependency tracking
 - **Immer-like Updates** — mutate state directly inside `update()` callbacks
 - **API Client** — HTTP client with tag-based caching and invalidation
-- **React Integration** — hooks on `useSyncExternalStore` (Concurrent Mode safe), with **SSR** support (`createSynapseCtx({ ssr: true })` + `dehydrate`)
+- **React Integration** — hooks on `useSyncExternalStore` (Concurrent Mode safe), with **SSR** support: seed server data via `createSynapseCtx({ ssr: true })` + `dehydrate`, or server-render data-less "background" providers via `ssrShell`
 - **RxJS Effects** — dispatchers, effects, and watchers (Redux-Observable style)
 - **Middleware & Plugins** — extensible sync/async pipelines
 - **EventBus** — decoupled inter-module communication with wildcards
@@ -111,7 +111,7 @@ The docs are organized into **three independent pillars** — start with the arc
 
 | Topic                                                    | Description                                          |
 |----------------------------------------------------------|------------------------------------------------------|
-| [createSynapseCtx](./docs/en/synapse-ctx.md)             | React context integration + SSR (`ssr`, `dehydrate`) |
+| [createSynapseCtx](./docs/en/synapse-ctx.md)             | React context integration + SSR (`ssr`, `dehydrate`, `ssrShell`) |
 | [awaitSynapse](./docs/en/await-synapse.md)               | Async synapse in components                          |
 | [SSR hydration](./docs/en/ssr-hydration.md)              | Server-render state, seed it on the client           |
 

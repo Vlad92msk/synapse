@@ -1,8 +1,8 @@
-import type { IStorage } from '../../core'
+import type { IStorage, ISyncStorage } from '../../core'
 import { Selectors } from '../../core'
 import type { Effect } from '../../reactive'
 import { Dispatcher, Effects, EffectsModule, FINALIZE, toObservable } from '../../reactive'
-import type { Synapse, SynapseConfig, SynapseModule } from './synapse.types'
+import type { Synapse, SynapseConfig, SynapseModule, SynapseShellConfig } from './synapse.types'
 import { waitForDependencies } from './waitForDependencies'
 
 /** Шаг очистки, накапливаемый в порядке конструирования; выполняется в LIFO. */
@@ -166,12 +166,75 @@ async function buildSynapse<TState extends Record<string, any>, TDispatcher, TSe
 }
 
 /**
+ * Синхронная сборка SSR-оболочки (см. {@link SynapseShellConfig}). Мини-версия
+ * {@link buildSynapse}: без async-пролога, без `waitForDependencies`, без эффектов.
+ * Хранилище доводится до `READY` синхронно через `initializeSync()` — так серверный
+ * рендер получает стор из `initialState` на первом же синхронном кадре.
+ *
+ * Требует синхронного хранилища (Memory/LocalStorage). Async-хранилище (IndexedDB) →
+ * понятная ошибка: у него синхронного SSR быть не может.
+ */
+function buildSynapseSync<TState extends Record<string, any>, TDispatcher, TSelectors>(
+  shellFactory: () => SynapseShellConfig<any, any, any>,
+): Synapse<TState, TDispatcher, TSelectors> {
+  const config = shellFactory()
+  validateFactoryConfig(config)
+
+  const storage = config.storage as IStorage<TState>
+  if (storage.isSync !== true || typeof (storage as Partial<ISyncStorage<TState>>).initializeSync !== 'function') {
+    throw new Error('createSynapse(ssrShell): "storage" должен быть синхронным (напр. MemoryStorage) — только он умеет initializeSync().')
+  }
+
+  const cleanup: CleanupStep[] = []
+
+  try {
+    ;(storage as ISyncStorage<TState>).initializeSync()
+    cleanup.push(() => storage.destroy())
+
+    const selectors = config.selectors as (Selectors<TState> & TSelectors) | undefined
+    if (selectors) {
+      cleanup.push(() => selectors.destroy())
+    }
+
+    const dispatcher = config.dispatcher as (Dispatcher<TState> & TDispatcher) | undefined
+    if (dispatcher) {
+      dispatcher[FINALIZE]()
+      cleanup.push(() => dispatcher.destroy())
+    }
+
+    const state$ = toObservable(storage)
+
+    let destroyed = false
+    const synapse: Synapse<TState, TDispatcher, TSelectors> = {
+      storage,
+      state$,
+      dispatcher: dispatcher as TDispatcher,
+      actions: dispatcher as TDispatcher,
+      selectors: selectors as TSelectors,
+      destroy: async () => {
+        if (destroyed) return
+        destroyed = true
+        await teardown(cleanup)
+      },
+    }
+
+    return synapse
+  } catch (error) {
+    // Fail-fast: откатываем уже созданное и пробрасываем ошибку (teardown async — fire-and-forget).
+    void teardown(cleanup).catch(() => {})
+    throw error
+  }
+}
+
+/**
  * Создаёт ленивый пересоздаваемый handle поверх фабрики. Фабрика исполняется один раз
  * при первом `ready()`/`await`; параллельные `await` делят один промис.
  */
 export function createSynapseModule<TState extends Record<string, any>, TDispatcher, TSelectors>(
   factory: () => SynapseConfig<any, any, any, any> | Promise<SynapseConfig<any, any, any, any>>,
+  moduleOptions?: { ssrShell?: () => SynapseShellConfig<any, any, any> },
 ): SynapseModule<TState, TDispatcher, TSelectors> {
+  const ssrShellFactory = moduleOptions?.ssrShell
   let pending: Promise<Synapse<TState, TDispatcher, TSelectors>> | undefined
   let settled: Synapse<TState, TDispatcher, TSelectors> | undefined
   // Был ли текущий мемоизированный запуск собран С эффектами. Нужен для апгрейда
@@ -247,9 +310,17 @@ export function createSynapseModule<TState extends Record<string, any>, TDispatc
       return settled
     },
 
+    buildSyncShell() {
+      // Не мемоизируем: новый инстанс на вызов (per-request изоляция на сервере;
+      // throwaway на первый кадр гидрации на клиенте). Без ssrShell — возможности нет.
+      if (!ssrShellFactory) return undefined
+      return buildSynapseSync<TState, TDispatcher, TSelectors>(ssrShellFactory)
+    },
+
     fork() {
       // Независимый handle из той же фабрики — со своим стором и жизненным циклом.
-      return createSynapseModule<TState, TDispatcher, TSelectors>(factory)
+      // ssrShell переносим: форк тоже должен уметь синхронный SSR.
+      return createSynapseModule<TState, TDispatcher, TSelectors>(factory, moduleOptions)
     },
 
     async destroy() {

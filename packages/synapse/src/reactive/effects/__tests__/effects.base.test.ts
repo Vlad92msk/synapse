@@ -392,6 +392,22 @@ describe('dev-проверки', () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('forgot'), expect.anything())
     warn.mockRestore()
   })
+
+  it('не ворнит на инъектированные функции-поля, помеченные static nonEffectFields', () => {
+    const warn = vi.spyOn(loggerConsole, 'warn').mockImplementation(() => {})
+    class InjectedEffects extends Effects<State, TestDispatcher> {
+      static override nonEffectFields = ['resolveSocket']
+      constructor(private readonly resolveSocket: () => { send: () => void }) {
+        super()
+      }
+      readonly real = this.effect(() => EMPTY)
+    }
+    // resolveSocket — обычная функция-поле (parameter property), но помечена как не-эффект.
+    const inst = new InjectedEffects(() => ({ send: () => {} }))
+    expect(inst.getEffects()).toHaveLength(1)
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
 })
 
 describe('строгая типизация (компилируемые type-тесты)', () => {

@@ -17,6 +17,7 @@ import { SelectorSystemExample } from './examples/SelectorSystemExample'
 import { ReactiveSelectorExample } from './examples/ReactiveSelectorExample'
 import { SynapseCtxExample } from './examples/SynapseCtxExample'
 import { SynapseCtxSsrExample } from './examples/SynapseCtxSsrExample'
+import { SynapseCtxSsrShellExample } from './examples/SynapseCtxSsrShellExample'
 import { SynapseAwaiterExample } from './examples/SynapseAwaiterExample'
 import { EventBusExample } from './examples/EventBusExample'
 import { MiddlewaresExample } from './examples/MiddlewaresExample'
@@ -64,6 +65,7 @@ const examples = [
   // React
   { id: 'synapse-ctx', label: 'createSynapseCtx', component: SynapseCtxExample, group: 'react' },
   { id: 'synapse-ctx-ssr', label: 'createSynapseCtx (SSR)', component: SynapseCtxSsrExample, group: 'react' },
+  { id: 'synapse-ctx-ssr-shell', label: 'createSynapseCtx (SSR shell)', component: SynapseCtxSsrShellExample, group: 'react' },
   // Паттерны
   { id: 'middlewares', label: 'Middlewares', component: MiddlewaresExample, group: 'patterns' },
   { id: 'shared-worker-mw', label: 'sharedWorkerMiddleware (media player)', component: SharedWorkerMiddlewareExample, group: 'patterns' },

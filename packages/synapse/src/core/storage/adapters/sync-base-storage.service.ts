@@ -68,6 +68,18 @@ export abstract class SyncBaseStorage<T extends Record<string, any>> extends Sto
   }
 
   /**
+   * Синхронная инициализация sync-хранилища. Вся работа Memory/LocalStorage
+   * (`initializeMiddlewares` + `initializeWithMiddlewares`) синхронна — здесь она
+   * выполняется без `await`, чтобы {@link StorageCore.initializeSync} мог довести
+   * хранилище до `READY` в пределах одного тика (SSR sync-shell).
+   */
+  protected performInitializeSync(): void {
+    this.initializeMiddlewares()
+    this.initializeWithMiddlewares()
+    this._stateCache = this.getRawState()
+  }
+
+  /**
    * Дефолт для `config.clearOnDestroy`, если он не задан.
    * Memory: `true` (эфемерное). LocalStorage переопределяет на `false` (персистентное).
    */

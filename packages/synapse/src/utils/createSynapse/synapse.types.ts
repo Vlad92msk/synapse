@@ -38,6 +38,45 @@ export interface SynapseConfig<
 }
 
 /**
+ * Синхронная «SSR-оболочка» модуля — подмножество {@link SynapseConfig} БЕЗ `effects`
+ * и `dependencies`. Возвращается опциональной `ssrShell`-фабрикой в
+ * `createSynapse(factory, { ssrShell })`.
+ *
+ * Назначение: дать модулю способ синхронно (без `await` async-фабрики и её зависимостей)
+ * подняться из `initialState` на сервере, чтобы провайдер отрендерил `children` в SSR-HTML.
+ * Полный стор со всеми зависимостями и эффектами достраивается на клиенте как обычно.
+ *
+ * Требование: `storage` должен быть синхронным (Memory/LocalStorage) — только он умеет
+ * `initializeSync()`. Эффекты/зависимости здесь намеренно недопустимы: на сервере они не нужны.
+ */
+export interface SynapseShellConfig<
+  TState extends Record<string, any>,
+  TDispatcher extends Dispatcher<TState> | undefined = undefined,
+  TSelectors extends Selectors<TState> | undefined = undefined,
+> {
+  /** Синхронное хранилище оболочки (Memory/LocalStorage) с `initialState`. */
+  storage: IStorage<TState>
+  /** Инстанс class-диспетчера (финализируется сборщиком). */
+  dispatcher?: TDispatcher
+  /** Инстанс class-селекторов. */
+  selectors?: TSelectors
+}
+
+/** Опции {@link createSynapse}. */
+export interface CreateSynapseOptions<
+  TState extends Record<string, any>,
+  TDispatcher extends Dispatcher<TState> | undefined = undefined,
+  TSelectors extends Selectors<TState> | undefined = undefined,
+> {
+  /**
+   * Синхронная фабрика SSR-оболочки. Задайте для «фоновых» провайдеров без серверных
+   * данных (presence/relations/media-player), чтобы они рендерили `children` на сервере.
+   * Включается связкой с `createSynapseCtx(module, { ssr: true })`.
+   */
+  ssrShell?: () => SynapseShellConfig<TState, TDispatcher, TSelectors>
+}
+
+/**
  * Готовый synapse — результат запуска фабрики (`SynapseModule.ready()`).
  */
 export interface Synapse<TState extends Record<string, any>, TDispatcher, TSelectors> {
@@ -83,6 +122,15 @@ export interface SynapseModule<TState extends Record<string, any>, TDispatcher, 
    * Нужен SSR-биндингу: позволяет отдать стор на первом синхронном рендере без `await`.
    */
   getSnapshot(): Synapse<TState, TDispatcher, TSelectors> | undefined
+  /**
+   * Синхронно строит SSR-оболочку из `ssrShell`-фабрики (см. {@link SynapseShellConfig}):
+   * поднимает стор из `initialState` без `await`, без зависимостей и эффектов. Возвращает
+   * НОВЫЙ инстанс на каждый вызов (request-изоляция на сервере; throwaway на первый кадр
+   * гидрации на клиенте) — НЕ мемоизируется. `undefined`, если `ssrShell` не задана.
+   *
+   * Использует `createSynapseCtx` при `ssr: true`, чтобы отрендерить `children` на сервере.
+   */
+  buildSyncShell(): Synapse<TState, TDispatcher, TSelectors> | undefined
   /**
    * Создаёт независимый handle из той же фабрики. Каждый fork — со своим жизненным циклом
    * и состоянием (общего стора нет). Нужен для per-request изоляции на сервере (SSR):

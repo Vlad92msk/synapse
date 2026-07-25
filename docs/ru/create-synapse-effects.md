@@ -112,6 +112,19 @@ readonly loadList = this.effect((action$, state$, ctx) => {
 
 Опциональный teardown — `override onDestroy()` (закрыть сокеты, отписаться от внешнего источника).
 
+> **`static nonEffectFields`** (с 5.4.0). Dev-проверка «забытых эффектов» сканирует все
+> функциональные поля инстанса и предупреждает о тех, что не обёрнуты в `this.effect`. Инъектированные
+> в конструкторе функции-зависимости (геттеры/фабрики, напр. `resolveSocket: () => Socket`) — не
+> эффекты, и без пометки давали бы ложный варнинг. Помечай их:
+>
+> ```typescript
+> class PresenceEffects extends Effects<PresenceState, PresenceDispatcher> {
+>   static override nonEffectFields = ['resolveSocket']
+>   constructor(private resolveSocket: () => PresenceSocketService) { super() }
+>   readonly connection = this.effect(/* … */)
+> }
+> ```
+
 ## ofType / ofTypes
 
 ```typescript

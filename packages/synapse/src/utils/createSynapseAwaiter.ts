@@ -1,7 +1,15 @@
 import { handleCallbackError } from '../_utils/error-handling.util'
 import { type IStorageBase, StorageStatus } from '../core'
 
-/** Минимальная форма готового synapse, нужная awaiter'у: доступ к storage. */
+// createSynapseAwaiter — обёртка над стором, отвечает на один вопрос: «стор готов?».
+// Зачем: стор бывает НЕ готов в момент рендера (фабрика ждёт зависимости, storage.initialize()
+// у IndexedDB асинхронный), а React при первом рендере спрашивает синхронно. Awaiter — маленький
+// автомат из трёх состояний: pending → ready | error.
+//   - готов сейчас  → отдаёт стор синхронно (getStoreIfReady) — путь SSR / sync-стора;
+//   - ещё не готов  → держит Promise и зовёт подписчиков onReady/onError, когда достроится.
+// Кто пользуется: createSynapseCtx (useState — синхронный кадр, useEffect — подписка на готовность).
+
+/** Минимальная форма стора для awaiter'а: только storage (готовность читаем из storage.initStatus). */
 export interface AwaitableSynapse {
   storage: IStorageBase<any>
 }
@@ -10,17 +18,18 @@ export interface AwaitableSynapse {
 const isThenable = (value: unknown): value is PromiseLike<unknown> => typeof (value as { then?: unknown } | null)?.then === 'function'
 
 /**
- * Синхронно извлекает уже готовый synapse из входа, если это возможно:
- *  - `SynapseModule`-handle, уже собранный (`getSnapshot()` отдаёт synapse);
- *  - напрямую переданный synapse с уже инициализированным (READY) хранилищем.
- * Иначе `undefined` — резолв уйдёт в async-ветку. Это и есть SSR sync-fast-path.
+ * Пытается достать ГОТОВЫЙ стор прямо сейчас, без ожидания. Два случая:
+ *  - вход — handle: берём собранный стор через getSnapshot() (после dehydrate он READY);
+ *  - вход — уже готовый стор напрямую (не Promise) с READY-хранилищем.
+ * Не вышло → undefined → пойдём асинхронным путём. Это и есть SSR sync-fast-path:
+ * так серверный рендер получает main синхронно, без спиннера.
  */
 const resolveSyncReady = <TStore extends AwaitableSynapse>(input: PromiseLike<TStore> | TStore): TStore | undefined => {
-  // Handle: синхронный снапшот уже собранного synapse (server после dehydrate / повторный mount).
+  // Вход — handle: берём уже собранный стор (сервер после dehydrate / повторный mount на клиенте).
   const snapshot = (input as { getSnapshot?: () => TStore | undefined } | null)?.getSnapshot?.()
   if (snapshot && snapshot.storage.initStatus.status === StorageStatus.READY) return snapshot
 
-  // Напрямую переданный готовый synapse (не thenable) с READY-хранилищем.
+  // Вход — готовый стор передали напрямую (не Promise), с READY-хранилищем.
   if (!isThenable(input) && (input as TStore).storage?.initStatus?.status === StorageStatus.READY) {
     return input as TStore
   }
@@ -80,31 +89,36 @@ export interface SynapseAwaiter<TStore extends AwaitableSynapse> {
  * готовый synapse. Работает в любом JS окружении: Node.js, браузер, React Native.
  */
 export function createSynapseAwaiter<TStore extends AwaitableSynapse>(synapseStorePromise: PromiseLike<TStore> | TStore): SynapseAwaiter<TStore> {
+  // Состояние автомата: статус + сам стор + ошибка. Меняются либо синхронно (fast-path ниже),
+  // либо асинхронно (storeInitPromise), либо гасятся в destroy().
   let status: 'pending' | 'ready' | 'error' = 'pending'
   let store: TStore | undefined
   let error: Error | null = null
   let destroyed = false
 
+  // Подписчики на готовность/ошибку (их наполняет onReady/onError, дёргает async-путь).
   const readyCallbacks = new Set<(store: TStore) => void>()
   const errorCallbacks = new Set<(error: Error) => void>()
 
-  // SSR sync-fast-path: если стор уже готов синхронно — выставляем состояние ДО возврата,
-  // чтобы getStoreIfReady() отдавал его на первом синхронном рендере (сервер/гидрация).
+  // Sync-fast-path: если стор готов уже сейчас — выставляем 'ready' ДО возврата, чтобы
+  // getStoreIfReady() отдал его на первом же синхронном рендере (сервер / клиентская гидрация).
   const syncReady = resolveSyncReady(synapseStorePromise)
   if (syncReady) {
     store = syncReady
     status = 'ready'
   }
 
-  // Создаем Promise для инициализации хранилища
+  // Async-путь: ждём, пока стор соберётся и хранилище станет READY, затем 'ready' + зовём onReady
+  // (или onError). Нужен, когда синхронно готового не было (async-стор на клиенте): компонент
+  // подписался в useEffect и перерисуется, когда стор достроится.
   const storeInitPromise = (async () => {
     try {
       const resolvedStore = await Promise.resolve(synapseStorePromise)
 
-      // Дополнительно ждем готовности хранилища
+      // Ждём готовности хранилища (storage.initialize() может быть асинхронным).
       await resolvedStore.storage.waitForReady()
 
-      // Если awaiter был уничтожен во время инициализации — не обновляем состояние
+      // awaiter уничтожили пока ждали — состояние не трогаем.
       if (destroyed) return resolvedStore
 
       store = resolvedStore
@@ -142,6 +156,8 @@ export function createSynapseAwaiter<TStore extends AwaitableSynapse>(synapseSto
     }
   })()
 
+  // Публичный API: синхронные геттеры + подписки. Из createSynapseCtx зовут getStoreIfReady()
+  // (в useState/useEffect) и onReady/onError (подписка в useEffect на async-готовность).
   return {
     waitForReady: () => storeInitPromise,
 
@@ -189,6 +205,8 @@ export function createSynapseAwaiter<TStore extends AwaitableSynapse>(synapseSto
 
     getError: () => error,
 
+    // Сброс: отписываем всех и обнуляем состояние. Флаг destroyed не даёт async-пути записать
+    // готовность после уничтожения (напр. размонтировали клиентский awaiter в cleanupSynapse).
     destroy: () => {
       destroyed = true
       readyCallbacks.clear()
