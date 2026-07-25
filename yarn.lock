@@ -6119,7 +6119,7 @@ symbol-tree@^3.2.4:
     web-vitals "^4.2.4"
 
 synapse-storage@*, "synapse-storage@file:/Users/vlad/web_dev/synapse/packages/synapse":
-  version "5.0.6"
+  version "5.4.1"
   resolved "file:packages/synapse"
 
 synckit@^0.11.12:
