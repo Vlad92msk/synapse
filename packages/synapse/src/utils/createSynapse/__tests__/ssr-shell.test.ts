@@ -90,9 +90,9 @@ describe('SynapseModule.buildSyncShell', () => {
     expect(shell!.actions).toBeDefined()
   })
 
-  it('без ssrShell возвращает undefined', () => {
+  it('без ssrShell метода buildSyncShell нет (честный признак «умеет sync SSR»)', () => {
     const handle = makeBackgroundSynapse(false)
-    expect(handle.buildSyncShell()).toBeUndefined()
+    expect(handle.buildSyncShell).toBeUndefined()
   })
 
   it('каждый вызов — новый изолированный инстанс (request-изоляция)', () => {

@@ -257,30 +257,50 @@ the async factory, its dependencies and effects — so the provider renders `chi
 full store (with dependencies and effects) is assembled on the client afterwards, and the context switches
 to it seamlessly.
 
-### Declaring the shell
+### Declaring the shell — object form (recommended)
 
-`createSynapse` takes an optional second argument. The shell factory is **synchronous** and returns a
-subset of the config — `{ storage, dispatcher?, selectors? }`, **without** `effects`/`dependencies`. Its
-`storage` must be synchronous (`MemoryStorage`/`LocalStorage`).
+The cleanest way is the **object form** of `createSynapse`: declare the **synchronous core**
+(`storage`/`dispatcher`/`selectors`) separately from the **async wiring** (`wire`: `dependencies`/
+`effects`). The library then **derives the SSR shell automatically** from the sync core — no manual
+`ssrShell`, and `name`/`initialState` live in exactly one place. `wire` runs only when the real store is
+assembled (client) and never on the server.
 
 ```ts
 import { createSynapse } from 'synapse-storage/utils'
 import { MemoryStorage } from 'synapse-storage/core'
 
+export const presenceSynapse = createSynapse({
+  // sync core — the library builds the SSR shell from this, no manual ssrShell
+  storage: () => new MemoryStorage<PresenceState>({ name: 'presence', initialState }),
+  dispatcher: (s) => new PresenceDispatcher(s),
+  selectors: (s) => new PresenceSelectors(s),
+  // async wiring — client only (deps / effects / endpoints / WS)
+  wire: async () => ({
+    dependencies: [await getCoreSynapse()],
+    effects: new PresenceEffects(await getPresenceEndpoints()),
+  }),
+})
+```
+
+- Zero SSR boilerplate: the shell = `{ storage(), dispatcher(storage), selectors(storage) }`.
+- One source of truth for `name`/`initialState` (no sync/async drift → no hydration bug).
+- `wire` never runs on the server → WS/IndexedDB/effects don't reach it by construction.
+- `storage` must be synchronous (`MemoryStorage`/`LocalStorage`) for the auto-shell. For an async store
+  (IndexedDB) there's no synchronous SSR — just don't set `{ ssr: true }` on the provider (as before).
+
+### Declaring the shell — functional form + manual `ssrShell` (escape hatch)
+
+If you keep the functional factory (or your `dispatcher`/`selectors` need client-only constructor args
+that must not run on the server), pass a synchronous `ssrShell` as the second argument. It returns a
+subset of the config — `{ storage, dispatcher?, selectors? }`, **without** `effects`/`dependencies`.
+
+```ts
 export const presenceSynapse = createSynapse(
-  // async factory — the real store (deps + effects), client only
   async () => {
     const core = await getCoreSynapse()
     const storage = new MemoryStorage<PresenceState>({ name: 'presence', initialState })
-    return {
-      storage,
-      dependencies: [core],
-      dispatcher: new PresenceDispatcher(storage),
-      selectors: new PresenceSelectors(storage),
-      effects: new PresenceEffects(/* … */),
-    }
+    return { storage, dependencies: [core], dispatcher: new PresenceDispatcher(storage), selectors: new PresenceSelectors(storage), effects: new PresenceEffects(/* … */) }
   },
-  // sync SSR shell — no deps, no effects; renders children with initialState on the server
   {
     ssrShell: () => {
       const storage = new MemoryStorage<PresenceState>({ name: 'presence', initialState })
@@ -290,9 +310,9 @@ export const presenceSynapse = createSynapse(
 )
 ```
 
-> **Avoiding duplication.** The shell repeats only the sync part (storage + selectors + dispatcher).
-> Extract a `buildSyncCore()` helper and call it from both the factory and the shell if you want a single
-> source of truth.
+> **Forgot the shell?** If you set `{ ssr: true }` on the provider but the module has no `ssrShell`
+> (nor the object form), and the store isn't synchronously ready, `createSynapseCtx` logs a one-time
+> `[Synapse]` dev-warning instead of silently gating with `loadingComponent`.
 
 ### The provider
 
@@ -312,10 +332,12 @@ upgrades to the real store.
 
 ### How it works
 
-- **Server.** With `ssr: true` and a not-yet-ready store, the Provider builds the shell
-  (`module.buildSyncShell()`) and renders `children`. It does **not** touch the shared client awaiter on
-  the server — so the async factory / effects / WebSocket never run there, and the module singleton can't
-  leak between requests. The empty `initialState` is constant → **request isolation for free**.
+- **Server.** With `ssr: true`, the Provider renders a **fresh shell per render**
+  (`module.buildSyncShell()`) — for both background and `dehydratedState` stores — and never touches the
+  shared client awaiter / main singleton. So the async factory / effects / WebSocket never run on the
+  server, and no request state is written to a process-global object → **request isolation by
+  construction, safe even under streaming SSR** (Next App Router streams by default). Legacy modules
+  without a shell fall back to the shared-main path (safe only for non-streaming `renderToString`).
 - **Client hydration.** The first frame builds the same shell (empty state) → identical to the server →
   no mismatch. Then, in `useEffect`, the real async store is assembled; once ready the context swaps to it
   and the shell is destroyed.
@@ -323,6 +345,21 @@ upgrades to the real store.
   `dehydrate`), so `{ ssr: true }` without `dehydratedState` still showed `loadingComponent`. Now
   `ssr: true` enables the shell path. Without an `ssrShell` the flag is a no-op (the old
   `loadingComponent` gate) — backward compatible.
+
+### Gotchas
+
+- **`storage`/`dispatcher`/`selectors` run on the server** (they build the shell). Keep them SSR-safe —
+  no `window`/`document`/`localStorage` in their constructors. If you need client-only construction, use
+  the functional form with a separate `ssrShell`.
+- **Shell-phase interactions are discarded on upgrade.** The shell is a throwaway display store for the
+  first frame; when the real store swaps in, any actions dispatched against the shell before the upgrade
+  are lost. Treat the shell subtree as display-only until it upgrades (for a data store the real store is
+  re-seeded from `dehydratedState`, so its data is not lost — only pre-upgrade user actions).
+- **`wire` runs before `storage.initialize()`.** Don't read/mutate the store inside `wire` — it only
+  returns `dependencies`/`effects`. State comes from `initialState`, `dehydratedState`, or effects.
+- **Async storage (IndexedDB) can't do a sync shell.** If a module's `storage` is async and you set
+  `{ ssr: true }`, the shell build fails; the Provider **degrades to `loadingComponent`** (no crash) and
+  logs a one-time dev-warning. Just don't set `{ ssr: true }` for async-store providers.
 
 ### `dehydrate` vs `ssrShell`
 
@@ -332,7 +369,14 @@ upgrades to the real store.
 | Provider has **no** server data but must not block SSR (app shell) | `ssrShell` + `{ ssr: true }` |
 | Client-only, no SSR | neither — the default lazy `loadingComponent` gate |
 
-They compose: a page can seed a feed via `dehydratedState` while a `presence` shell two levels up uses
-`ssrShell` — without the shell, the gate would cut the seeded feed out of the HTML anyway.
+They compose on two levels:
+
+- **Across the tree:** a page can seed a feed via `dehydratedState` while a `presence` shell two levels up
+  uses `ssrShell` — without the shell, the gate would cut the seeded feed out of the HTML anyway.
+- **On one store:** give a data store **both** `dehydratedState` **and** a shell (the object form derives it).
+  On the first client frame, if the real async store isn't ready yet, the shell is **seeded with the
+  snapshot** → frame 1 renders the same content as the server → no hydration mismatch (and no subtree
+  regeneration, which can otherwise re-run inline `<head>` scripts and drop your theme/CSS). For a data
+  store, prefer the object form so it gets a shell — then you don't even need a `loadingComponent`.
 
 The full pokemon module — [Pokemon (recipe)](./pokemon-advanced.md).

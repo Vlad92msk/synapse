@@ -114,4 +114,46 @@ describe('SSR-оболочка — клиентская гидрация и ап
     })
     expect(container.textContent).toContain('label:clicked')
   })
+
+  // Композиция ssrShell + dehydratedState: стор С серверными данными. Оболочка засевается снапшотом,
+  // поэтому первый клиентский кадр = серверный контент (а не пустая оболочка / loadingComponent).
+  it('засеянная оболочка: кадр-1 рендерит контент из dehydratedState (нет mismatch)', async () => {
+    // wire никогда не резолвится → реальный async-стор не готов в окне теста → всегда путь оболочки
+    // (и на сервере, и на клиенте). Оболочку засевает dehydratedState.
+    const handle = createSynapse<State, LabelDispatcher, LabelSelectors>({
+      storage: () => new MemoryStorage<State>({ name: `compose_${uid++}`, initialState: { label: 'empty' } }),
+      dispatcher: (s) => new LabelDispatcher(s),
+      selectors: (s) => new LabelSelectors(s),
+      wire: () => new Promise(() => {}), // eslint-disable-line @typescript-eslint/no-empty-function
+    })
+    // Не регистрируем cleanup: wire намеренно висит, destroy ждал бы его.
+    const ctx = createSynapseCtx(handle, { ssr: true, loadingComponent: createElement('p', null, 'loading') })
+
+    const View = ctx.contextSynapse(function View() {
+      const label = useSelector(ctx.useSynapseSelectors().label)
+      return createElement('section', null, `label:${label}`)
+    })
+
+    const snapshot = { label: 'seeded' } as State
+
+    // Сервер: оболочка засеяна снапшотом → контент (не пустой initialState, не loadingComponent).
+    const serverHtml = renderToString(createElement(View as any, { dehydratedState: snapshot }))
+    expect(serverHtml).toContain('label:seeded')
+    expect(serverHtml).not.toContain('label:empty')
+    expect(serverHtml).not.toContain('loading')
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const container = document.createElement('div')
+    container.innerHTML = serverHtml
+    document.body.appendChild(container)
+
+    await act(async () => {
+      hydrateRoot(container, createElement(StrictMode, null, createElement(View as any, { dehydratedState: snapshot })))
+    })
+
+    // Кадр-1 клиента = тот же контент (оболочка засеяна снапшотом) → нет hydration mismatch.
+    expect(container.textContent).toContain('label:seeded')
+    const mismatch = errorSpy.mock.calls.filter((c) => String(c[0]).toLowerCase().includes('hydrat'))
+    expect(mismatch).toEqual([])
+  })
 })

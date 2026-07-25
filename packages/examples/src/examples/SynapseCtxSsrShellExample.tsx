@@ -7,16 +7,16 @@ import { createSynapseCtx, useSelector } from 'synapse-storage/react'
 import { cardStyle, codeBlock, sectionTitle } from './styles'
 
 /**
- * createSynapseCtx + `ssrShell` — SSR для «фонового» провайдера БЕЗ серверных данных.
+ * createSynapseCtx + SSR-оболочка — SSR для «фонового» провайдера БЕЗ серверных данных.
  *
- * Presence-подобный модуль: его реальный стор строится async-фабрикой (эмуляция await зависимостей
- * — сокета/core), поэтому синхронно на сервере он НЕ готов. Без `ssrShell` провайдер упёрся бы в
- * гейт `loadingComponent` и срезал бы всё поддерево из серверного HTML. С `ssrShell` модуль
- * синхронно поднимает «пустой» стор из `initialState` → children попадают в HTML, а на клиенте
- * контекст бесшовно апгрейдится до реального стора.
+ * Presence-подобный модуль: его реальный стор строится async-обвязкой (эмуляция await зависимостей —
+ * сокета/core), поэтому синхронно на сервере он НЕ готов. Без оболочки провайдер упёрся бы в гейт
+ * `loadingComponent` и срезал бы всё поддерево из серверного HTML. Через **объектную форму**
+ * `createSynapse({ storage, dispatcher, selectors, wire })` библиотека сама выводит SSR-оболочку из
+ * sync-ядра → children попадают в HTML, а на клиенте контекст бесшовно апгрейдится до реального стора.
  *
- * Пара к SynapseCtsSsrExample: там сеется стор С серверными данными (`dehydratedState`), здесь —
- * фоновый провайдер БЕЗ данных.
+ * Пара к SynapseCtxSsrExample: там сеется стор С серверными данными (`dehydratedState`), здесь —
+ * фоновый провайдер БЕЗ данных (оболочка авто-выводится, ручной `ssrShell` не нужен).
  */
 
 interface PresenceState extends Record<string, any> {
@@ -34,28 +34,27 @@ class PresenceDispatcher extends Dispatcher<PresenceState> {
   readonly disconnect = this.action((store) => store.update((s) => ((s.online = false), (s.peers = 0))))
 }
 
-// Синхронное ядро — переиспользуем в фабрике и в ssrShell, чтобы не дублировать сборку слоёв.
-const buildSyncCore = (name: string, seed: PresenceState) => {
-  const storage = new MemoryStorage<PresenceState>({ name, initialState: seed })
-  return { storage, selectors: new PresenceSelectors(storage), dispatcher: new PresenceDispatcher(storage) }
-}
-
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-// С ssrShell: async-фабрика имитирует ожидание зависимостей (1.2s) и «приходит» с реальными данными;
-// ssrShell даёт синхронный пустой стор для сервера/первого кадра.
-const presenceWithShell = createSynapse<PresenceState, PresenceDispatcher, PresenceSelectors>(
-  async () => {
+// Объектная форма: sync-ядро (storage/dispatcher/selectors) отделено от async-обвязки (wire).
+// SSR-оболочка выводится автоматически из sync-ядра — ручной ssrShell писать НЕ нужно. wire
+// имитирует ожидание зависимостей (1.2s) и «доезжает» реальными данными только на клиенте.
+const presenceWithShell = createSynapse<PresenceState, PresenceDispatcher, PresenceSelectors>({
+  storage: () => new MemoryStorage<PresenceState>({ name: 'presence_shell', initialState }),
+  dispatcher: (s) => new PresenceDispatcher(s),
+  selectors: (s) => new PresenceSelectors(s),
+  wire: async ({ storage }) => {
     await delay(1200)
-    return buildSyncCore('presence_shell_real', { online: true, peers: 3 })
+    storage.update((s) => ((s.online = true), (s.peers = 3))) // «данные пришли» на клиенте
+    return {}
   },
-  { ssrShell: () => buildSyncCore('presence_shell_ssr', initialState) },
-)
+})
 
-// Без ssrShell: тот же async-стор, но синхронного SSR у него нет → гейт loadingComponent.
+// Функциональная форма без ssrShell: синхронного SSR у стора нет → гейт loadingComponent.
 const presenceNoShell = createSynapse<PresenceState, PresenceDispatcher, PresenceSelectors>(async () => {
   await delay(1200)
-  return buildSyncCore('presence_noshell_real', { online: true, peers: 3 })
+  const storage = new MemoryStorage<PresenceState>({ name: 'presence_noshell', initialState: { online: true, peers: 3 } })
+  return { storage, dispatcher: new PresenceDispatcher(storage), selectors: new PresenceSelectors(storage) }
 })
 
 const CtxShell = createSynapseCtx(presenceWithShell, { ssr: true, loadingComponent: <em style={{ color: '#c0392b' }}>gate: loadingComponent (subtree cut)</em> })
@@ -109,17 +108,18 @@ export function SynapseCtxSsrShellExample() {
     <div style={cardStyle}>
       <h2>createSynapseCtx — SSR shell (background provider)</h2>
       <p>
-        Фоновый провайдер над async-стором <b>без серверных данных</b>. С <code>ssrShell</code> его
-        поддерево попадает в серверный HTML; без — гейт <code>loadingComponent</code> срезает контент.
+        Фоновый провайдер над async-стором <b>без серверных данных</b>. С авто-оболочкой (объектная
+        форма <code>createSynapse</code>) его поддерево попадает в серверный HTML; без — гейт{' '}
+        <code>loadingComponent</code> срезает контент.
       </p>
 
       <h3 style={sectionTitle}>Server HTML (renderToStaticMarkup)</h3>
       <p style={{ margin: '4px 0' }}>
-        <b>with ssrShell</b> — контент в разметке:
+        <b>object form (auto shell)</b> — контент в разметке:
       </p>
       <pre style={codeBlock}>{serverHtml.withShell}</pre>
       <p style={{ margin: '4px 0' }}>
-        <b>without ssrShell</b> — только заглушка, поддерево вырезано:
+        <b>no shell</b> — только заглушка, поддерево вырезано:
       </p>
       <pre style={codeBlock}>{serverHtml.noShell}</pre>
 

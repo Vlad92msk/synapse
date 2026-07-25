@@ -21033,55 +21033,79 @@
             {
               "type": "heading",
               "data": {
-                "text": "Declaring the shell",
+                "text": "Declaring the shell — object form (recommended)",
                 "level": 3,
-                "id": "declaring-the-shell"
+                "id": "declaring-the-shell-object-form-recommended"
               }
             },
             {
               "type": "paragraph",
               "data": {
-                "text": "createSynapse takes an optional second argument. The shell factory is synchronous and returns a\nsubset of the config — { storage, dispatcher?, selectors? }, without effects/dependencies. Its\nstorage must be synchronous (MemoryStorage/LocalStorage).",
+                "text": "The cleanest way is the object form of createSynapse: declare the synchronous core\n(storage/dispatcher/selectors) separately from the async wiring (wire: dependencies/\neffects). The library then derives the SSR shell automatically from the sync core — no manual\nssrShell, and name/initialState live in exactly one place. wire runs only when the real store is\nassembled (client) and never on the server.",
                 "formatting": {
                   "bold": [
                     {
-                      "start": 70,
-                      "end": 81
+                      "start": 24,
+                      "end": 35
                     },
                     {
-                      "start": 157,
-                      "end": 164
+                      "start": 66,
+                      "end": 82
+                    },
+                    {
+                      "start": 134,
+                      "end": 146
+                    },
+                    {
+                      "start": 195,
+                      "end": 230
                     }
                   ],
                   "italic": [],
                   "code": [
                     {
-                      "start": 0,
-                      "end": 13
+                      "start": 39,
+                      "end": 52
                     },
                     {
-                      "start": 119,
-                      "end": 155
+                      "start": 84,
+                      "end": 91
                     },
                     {
-                      "start": 165,
-                      "end": 172
+                      "start": 92,
+                      "end": 102
                     },
                     {
-                      "start": 173,
-                      "end": 185
+                      "start": 103,
+                      "end": 112
                     },
                     {
-                      "start": 191,
-                      "end": 198
+                      "start": 148,
+                      "end": 152
                     },
                     {
-                      "start": 220,
-                      "end": 233
+                      "start": 154,
+                      "end": 166
                     },
                     {
-                      "start": 234,
-                      "end": 246
+                      "start": 168,
+                      "end": 175
+                    },
+                    {
+                      "start": 262,
+                      "end": 270
+                    },
+                    {
+                      "start": 276,
+                      "end": 280
+                    },
+                    {
+                      "start": 281,
+                      "end": 293
+                    },
+                    {
+                      "start": 321,
+                      "end": 325
                     }
                   ],
                   "links": []
@@ -21092,7 +21116,178 @@
               "type": "code",
               "data": {
                 "language": "ts",
-                "code": "import { createSynapse } from 'synapse-storage/utils'\nimport { MemoryStorage } from 'synapse-storage/core'\n\nexport const presenceSynapse = createSynapse(\n  // async factory — the real store (deps + effects), client only\n  async () => {\n    const core = await getCoreSynapse()\n    const storage = new MemoryStorage<PresenceState>({ name: 'presence', initialState })\n    return {\n      storage,\n      dependencies: [core],\n      dispatcher: new PresenceDispatcher(storage),\n      selectors: new PresenceSelectors(storage),\n      effects: new PresenceEffects(/* … */),\n    }\n  },\n  // sync SSR shell — no deps, no effects; renders children with initialState on the server\n  {\n    ssrShell: () => {\n      const storage = new MemoryStorage<PresenceState>({ name: 'presence', initialState })\n      return { storage, selectors: new PresenceSelectors(storage), dispatcher: new PresenceDispatcher(storage) }\n    },\n  },\n)",
+                "code": "import { createSynapse } from 'synapse-storage/utils'\nimport { MemoryStorage } from 'synapse-storage/core'\n\nexport const presenceSynapse = createSynapse({\n  // sync core — the library builds the SSR shell from this, no manual ssrShell\n  storage: () => new MemoryStorage<PresenceState>({ name: 'presence', initialState }),\n  dispatcher: (s) => new PresenceDispatcher(s),\n  selectors: (s) => new PresenceSelectors(s),\n  // async wiring — client only (deps / effects / endpoints / WS)\n  wire: async () => ({\n    dependencies: [await getCoreSynapse()],\n    effects: new PresenceEffects(await getPresenceEndpoints()),\n  }),\n})",
+                "meta": null
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Zero SSR boilerplate: the shell = { storage(), dispatcher(storage), selectors(storage) }.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 34,
+                              "end": 88
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "One source of truth for name/initialState (no sync/async drift → no hydration bug).",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 24,
+                              "end": 28
+                            },
+                            {
+                              "start": 29,
+                              "end": 41
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "wire never runs on the server → WS/IndexedDB/effects don't reach it by construction.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 4
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "storage must be synchronous (MemoryStorage/LocalStorage) for the auto-shell. For an async store\n(IndexedDB) there's no synchronous SSR — just don't set { ssr: true } on the provider (as before).",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 7
+                            },
+                            {
+                              "start": 29,
+                              "end": 42
+                            },
+                            {
+                              "start": 43,
+                              "end": 55
+                            },
+                            {
+                              "start": 152,
+                              "end": 165
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "heading",
+              "data": {
+                "text": "Declaring the shell — functional form + manual ssrShell (escape hatch)",
+                "level": 3,
+                "id": "declaring-the-shell-functional-form-manual-ssrshell-escape-hatch"
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "If you keep the functional factory (or your dispatcher/selectors need client-only constructor args\nthat must not run on the server), pass a synchronous ssrShell as the second argument. It returns a\nsubset of the config — { storage, dispatcher?, selectors? }, without effects/dependencies.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 259,
+                      "end": 266
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 44,
+                      "end": 54
+                    },
+                    {
+                      "start": 55,
+                      "end": 64
+                    },
+                    {
+                      "start": 152,
+                      "end": 160
+                    },
+                    {
+                      "start": 221,
+                      "end": 257
+                    },
+                    {
+                      "start": 267,
+                      "end": 274
+                    },
+                    {
+                      "start": 275,
+                      "end": 287
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "ts",
+                "code": "export const presenceSynapse = createSynapse(\n  async () => {\n    const core = await getCoreSynapse()\n    const storage = new MemoryStorage<PresenceState>({ name: 'presence', initialState })\n    return { storage, dependencies: [core], dispatcher: new PresenceDispatcher(storage), selectors: new PresenceSelectors(storage), effects: new PresenceEffects(/* … */) }\n  },\n  {\n    ssrShell: () => {\n      const storage = new MemoryStorage<PresenceState>({ name: 'presence', initialState })\n      return { storage, selectors: new PresenceSelectors(storage), dispatcher: new PresenceDispatcher(storage) }\n    },\n  },\n)",
                 "meta": null
               }
             },
@@ -21103,19 +21298,35 @@
                   {
                     "type": "paragraph",
                     "data": {
-                      "text": "Avoiding duplication. The shell repeats only the sync part (storage + selectors + dispatcher).\nExtract a buildSyncCore() helper and call it from both the factory and the shell if you want a single\nsource of truth.",
+                      "text": "Forgot the shell? If you set { ssr: true } on the provider but the module has no ssrShell\n(nor the object form), and the store isn't synchronously ready, createSynapseCtx logs a one-time\n[Synapse] dev-warning instead of silently gating with loadingComponent.",
                       "formatting": {
                         "bold": [
                           {
                             "start": 0,
-                            "end": 21
+                            "end": 17
                           }
                         ],
                         "italic": [],
                         "code": [
                           {
-                            "start": 105,
-                            "end": 120
+                            "start": 29,
+                            "end": 42
+                          },
+                          {
+                            "start": 81,
+                            "end": 89
+                          },
+                          {
+                            "start": 154,
+                            "end": 170
+                          },
+                          {
+                            "start": 187,
+                            "end": 196
+                          },
+                          {
+                            "start": 241,
+                            "end": 257
                           }
                         ],
                         "links": []
@@ -21195,7 +21406,7 @@
                     {
                       "type": "paragraph",
                       "data": {
-                        "text": "Server. With ssr: true and a not-yet-ready store, the Provider builds the shell\n(module.buildSyncShell()) and renders children. It does not touch the shared client awaiter on\nthe server — so the async factory / effects / WebSocket never run there, and the module singleton can't\nleak between requests. The empty initialState is constant → request isolation for free.",
+                        "text": "Server. With ssr: true, the Provider renders a fresh shell per render\n(module.buildSyncShell()) — for both background and dehydratedState stores — and never touches the\nshared client awaiter / main singleton. So the async factory / effects / WebSocket never run on the\nserver, and no request state is written to a process-global object → request isolation by\nconstruction, safe even under streaming SSR (Next App Router streams by default). Legacy modules\nwithout a shell fall back to the shared-main path (safe only for non-streaming renderToString).",
                         "formatting": {
                           "bold": [
                             {
@@ -21203,12 +21414,12 @@
                               "end": 7
                             },
                             {
-                              "start": 136,
-                              "end": 139
+                              "start": 47,
+                              "end": 69
                             },
                             {
-                              "start": 339,
-                              "end": 365
+                              "start": 338,
+                              "end": 402
                             }
                           ],
                           "italic": [],
@@ -21218,16 +21429,16 @@
                               "end": 22
                             },
                             {
-                              "start": 81,
-                              "end": 104
+                              "start": 71,
+                              "end": 94
                             },
                             {
-                              "start": 118,
-                              "end": 126
+                              "start": 122,
+                              "end": 137
                             },
                             {
-                              "start": 312,
-                              "end": 324
+                              "start": 535,
+                              "end": 549
                             }
                           ],
                           "links": []
@@ -21331,6 +21542,195 @@
             {
               "type": "heading",
               "data": {
+                "text": "Gotchas",
+                "level": 3,
+                "id": "gotchas"
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "storage/dispatcher/selectors run on the server (they build the shell). Keep them SSR-safe —\nno window/document/localStorage in their constructors. If you need client-only construction, use\nthe functional form with a separate ssrShell.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 46
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 7
+                            },
+                            {
+                              "start": 8,
+                              "end": 18
+                            },
+                            {
+                              "start": 19,
+                              "end": 28
+                            },
+                            {
+                              "start": 95,
+                              "end": 101
+                            },
+                            {
+                              "start": 102,
+                              "end": 110
+                            },
+                            {
+                              "start": 111,
+                              "end": 123
+                            },
+                            {
+                              "start": 225,
+                              "end": 233
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Shell-phase interactions are discarded on upgrade. The shell is a throwaway display store for the\nfirst frame; when the real store swaps in, any actions dispatched against the shell before the upgrade\nare lost. Treat the shell subtree as display-only until it upgrades (for a data store the real store is\nre-seeded from dehydratedState, so its data is not lost — only pre-upgrade user actions).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 50
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 320,
+                              "end": 335
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "wire runs before storage.initialize(). Don't read/mutate the store inside wire — it only\nreturns dependencies/effects. State comes from initialState, dehydratedState, or effects.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 38
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 4
+                            },
+                            {
+                              "start": 17,
+                              "end": 37
+                            },
+                            {
+                              "start": 74,
+                              "end": 78
+                            },
+                            {
+                              "start": 97,
+                              "end": 109
+                            },
+                            {
+                              "start": 110,
+                              "end": 117
+                            },
+                            {
+                              "start": 136,
+                              "end": 148
+                            },
+                            {
+                              "start": 150,
+                              "end": 165
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Async storage (IndexedDB) can't do a sync shell. If a module's storage is async and you set\n{ ssr: true }, the shell build fails; the Provider degrades to loadingComponent (no crash) and\nlogs a one-time dev-warning. Just don't set { ssr: true } for async-store providers.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 48
+                            },
+                            {
+                              "start": 143,
+                              "end": 171
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 63,
+                              "end": 70
+                            },
+                            {
+                              "start": 92,
+                              "end": 105
+                            },
+                            {
+                              "start": 155,
+                              "end": 171
+                            },
+                            {
+                              "start": 231,
+                              "end": 244
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "heading",
+              "data": {
                 "text": "dehydrate vs ssrShell",
                 "level": 3,
                 "id": "dehydrate-vs-ssrshell"
@@ -21378,27 +21778,103 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "They compose: a page can seed a feed via dehydratedState while a presence shell two levels up uses\nssrShell — without the shell, the gate would cut the seeded feed out of the HTML anyway.",
+                "text": "They compose on two levels:",
                 "formatting": {
                   "bold": [],
                   "italic": [],
-                  "code": [
-                    {
-                      "start": 41,
-                      "end": 56
-                    },
-                    {
-                      "start": 65,
-                      "end": 73
-                    },
-                    {
-                      "start": 99,
-                      "end": 107
-                    }
-                  ],
+                  "code": [],
                   "links": []
                 }
               }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Across the tree: a page can seed a feed via dehydratedState while a presence shell two levels up\nuses ssrShell — without the shell, the gate would cut the seeded feed out of the HTML anyway.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 16
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 44,
+                              "end": 59
+                            },
+                            {
+                              "start": 68,
+                              "end": 76
+                            },
+                            {
+                              "start": 102,
+                              "end": 110
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "On one store: give a data store both dehydratedState and a shell (the object form derives it).\nOn the first client frame, if the real async store isn't ready yet, the shell is seeded with the\nsnapshot → frame 1 renders the same content as the server → no hydration mismatch (and no subtree\nregeneration, which can otherwise re-run inline <head> scripts and drop your theme/CSS). For a data\nstore, prefer the object form so it gets a shell — then you don't even need a loadingComponent.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 13
+                            },
+                            {
+                              "start": 32,
+                              "end": 36
+                            },
+                            {
+                              "start": 53,
+                              "end": 56
+                            },
+                            {
+                              "start": 176,
+                              "end": 200
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 37,
+                              "end": 52
+                            },
+                            {
+                              "start": 338,
+                              "end": 344
+                            },
+                            {
+                              "start": 468,
+                              "end": 484
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
             },
             {
               "type": "paragraph",
@@ -21421,8 +21897,8 @@
             }
           ],
           "metadata": {
-            "wordCount": 517,
-            "codeBlocksCount": 2,
+            "wordCount": 962,
+            "codeBlocksCount": 3,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": true,
@@ -21434,11 +21910,11 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-07-25T17:18:45.383Z",
-        "wordCount": 1771,
-        "readingTime": 9,
+        "lastModified": "2026-07-25T18:57:53.130Z",
+        "wordCount": 2268,
+        "readingTime": 12,
         "sectionsCount": 10,
-        "codeBlocksCount": 13
+        "codeBlocksCount": 14
       }
     },
     "to-observable": {
@@ -46515,7 +46991,7 @@
             {
               "type": "heading",
               "data": {
-                "text": "Объявление оболочки",
+                "text": "Объявление оболочки — объектная форма (рекомендуется)",
                 "level": 3,
                 "id": "-"
               }
@@ -46523,47 +46999,71 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "createSynapse принимает опциональный второй аргумент. Фабрика оболочки синхронна и возвращает\nподмножество конфига — { storage, dispatcher?, selectors? }, без effects/dependencies. Её\nstorage должен быть синхронным (MemoryStorage/LocalStorage).",
+                "text": "Самый чистый способ — объектная форма createSynapse: объявляешь синхронное ядро\n(storage/dispatcher/selectors) отдельно от async-обвязки (wire: dependencies/effects).\nБиблиотека тогда выводит SSR-оболочку сама из sync-ядра — ручной ssrShell не нужен, а\nname/initialState живут в одном месте. wire исполняется только при сборке реального стора\n(клиент) и никогда — на сервере.",
                 "formatting": {
                   "bold": [
                     {
-                      "start": 71,
-                      "end": 80
+                      "start": 22,
+                      "end": 37
                     },
                     {
-                      "start": 155,
-                      "end": 158
+                      "start": 64,
+                      "end": 79
+                    },
+                    {
+                      "start": 123,
+                      "end": 136
+                    },
+                    {
+                      "start": 184,
+                      "end": 209
                     }
                   ],
                   "italic": [],
                   "code": [
                     {
-                      "start": 0,
-                      "end": 13
+                      "start": 38,
+                      "end": 51
                     },
                     {
-                      "start": 117,
-                      "end": 153
+                      "start": 81,
+                      "end": 88
                     },
                     {
-                      "start": 159,
-                      "end": 166
+                      "start": 89,
+                      "end": 99
                     },
                     {
-                      "start": 167,
-                      "end": 179
+                      "start": 100,
+                      "end": 109
                     },
                     {
-                      "start": 184,
-                      "end": 191
+                      "start": 138,
+                      "end": 142
                     },
                     {
-                      "start": 216,
-                      "end": 229
+                      "start": 144,
+                      "end": 156
                     },
                     {
-                      "start": 230,
-                      "end": 242
+                      "start": 157,
+                      "end": 164
+                    },
+                    {
+                      "start": 232,
+                      "end": 240
+                    },
+                    {
+                      "start": 253,
+                      "end": 257
+                    },
+                    {
+                      "start": 258,
+                      "end": 270
+                    },
+                    {
+                      "start": 292,
+                      "end": 296
                     }
                   ],
                   "links": []
@@ -46574,7 +47074,178 @@
               "type": "code",
               "data": {
                 "language": "ts",
-                "code": "import { createSynapse } from 'synapse-storage/utils'\nimport { MemoryStorage } from 'synapse-storage/core'\n\nexport const presenceSynapse = createSynapse(\n  // async-фабрика — реальный стор (deps + effects), только клиент\n  async () => {\n    const core = await getCoreSynapse()\n    const storage = new MemoryStorage<PresenceState>({ name: 'presence', initialState })\n    return {\n      storage,\n      dependencies: [core],\n      dispatcher: new PresenceDispatcher(storage),\n      selectors: new PresenceSelectors(storage),\n      effects: new PresenceEffects(/* … */),\n    }\n  },\n  // синхронная SSR-оболочка — без deps и effects; рендерит children с initialState на сервере\n  {\n    ssrShell: () => {\n      const storage = new MemoryStorage<PresenceState>({ name: 'presence', initialState })\n      return { storage, selectors: new PresenceSelectors(storage), dispatcher: new PresenceDispatcher(storage) }\n    },\n  },\n)",
+                "code": "import { createSynapse } from 'synapse-storage/utils'\nimport { MemoryStorage } from 'synapse-storage/core'\n\nexport const presenceSynapse = createSynapse({\n  // sync-ядро — из него библиотека строит SSR-оболочку, без ручного ssrShell\n  storage: () => new MemoryStorage<PresenceState>({ name: 'presence', initialState }),\n  dispatcher: (s) => new PresenceDispatcher(s),\n  selectors: (s) => new PresenceSelectors(s),\n  // async-обвязка — только клиент (deps / effects / endpoints / WS)\n  wire: async () => ({\n    dependencies: [await getCoreSynapse()],\n    effects: new PresenceEffects(await getPresenceEndpoints()),\n  }),\n})",
+                "meta": null
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Ноль boilerplate на SSR: оболочка = { storage(), dispatcher(storage), selectors(storage) }.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 36,
+                              "end": 90
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Один источник правды для name/initialState (нет расхождения sync/async → нет бага гидрации).",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 25,
+                              "end": 29
+                            },
+                            {
+                              "start": 30,
+                              "end": 42
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "wire не бежит на сервере → WS/IndexedDB/эффекты туда не едут by construction.",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 4
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "storage должен быть синхронным (MemoryStorage/LocalStorage) для авто-оболочки. У async-стора\n(IndexedDB) синхронного SSR нет — просто не ставь { ssr: true } у провайдера (как и раньше).",
+                        "formatting": {
+                          "bold": [],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 7
+                            },
+                            {
+                              "start": 32,
+                              "end": 45
+                            },
+                            {
+                              "start": 46,
+                              "end": 58
+                            },
+                            {
+                              "start": 143,
+                              "end": 156
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "heading",
+              "data": {
+                "text": "Объявление оболочки — функциональная форма + ручной ssrShell (escape hatch)",
+                "level": 3,
+                "id": "-ssrshell-escape-hatch"
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Если оставляешь функциональную фабрику (или dispatcher/selectors требуют client-only аргументы\nконструктора, которым нельзя исполняться на сервере) — передай синхронный ssrShell вторым аргументом.\nОн возвращает подмножество конфига — { storage, dispatcher?, selectors? }, без\neffects/dependencies.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 272,
+                      "end": 275
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 44,
+                      "end": 54
+                    },
+                    {
+                      "start": 55,
+                      "end": 64
+                    },
+                    {
+                      "start": 169,
+                      "end": 177
+                    },
+                    {
+                      "start": 234,
+                      "end": 270
+                    },
+                    {
+                      "start": 276,
+                      "end": 283
+                    },
+                    {
+                      "start": 284,
+                      "end": 296
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "ts",
+                "code": "export const presenceSynapse = createSynapse(\n  async () => {\n    const core = await getCoreSynapse()\n    const storage = new MemoryStorage<PresenceState>({ name: 'presence', initialState })\n    return { storage, dependencies: [core], dispatcher: new PresenceDispatcher(storage), selectors: new PresenceSelectors(storage), effects: new PresenceEffects(/* … */) }\n  },\n  {\n    ssrShell: () => {\n      const storage = new MemoryStorage<PresenceState>({ name: 'presence', initialState })\n      return { storage, selectors: new PresenceSelectors(storage), dispatcher: new PresenceDispatcher(storage) }\n    },\n  },\n)",
                 "meta": null
               }
             },
@@ -46585,19 +47256,35 @@
                   {
                     "type": "paragraph",
                     "data": {
-                      "text": "Как избежать дублирования. Оболочка повторяет только синхронную часть (storage + selectors +\ndispatcher). Вынеси хелпер buildSyncCore() и зови его из фабрики и из оболочки — будет единый источник.",
+                      "text": "Забыл оболочку? Если поставил { ssr: true } у провайдера, а ssrShell (или объектной формы) у\nмодуля нет, и стор не готов синхронно — createSynapseCtx один раз пишет [Synapse]-варнинг вместо\nмолчаливого отката к loadingComponent.",
                       "formatting": {
                         "bold": [
                           {
                             "start": 0,
-                            "end": 26
+                            "end": 15
                           }
                         ],
                         "italic": [],
                         "code": [
                           {
-                            "start": 120,
-                            "end": 135
+                            "start": 30,
+                            "end": 43
+                          },
+                          {
+                            "start": 60,
+                            "end": 68
+                          },
+                          {
+                            "start": 133,
+                            "end": 149
+                          },
+                          {
+                            "start": 165,
+                            "end": 174
+                          },
+                          {
+                            "start": 211,
+                            "end": 227
                           }
                         ],
                         "links": []
@@ -46677,7 +47364,7 @@
                     {
                       "type": "paragraph",
                       "data": {
-                        "text": "Сервер. При ssr: true и НЕ готовом сторе Provider строит оболочку (module.buildSyncShell()) и\nрендерит children. Он не трогает общий client awaiter на сервере — поэтому async-фабрика / эффекты\n/ WebSocket там не запускаются, а module-синглтон не может протечь между запросами. Пустой initialState\nконстантен → request-изоляция бесплатно.",
+                        "text": "Сервер. При ssr: true Provider рендерит свежую оболочку на каждый рендер\n(module.buildSyncShell()) — и для фонового стора, и для стора с dehydratedState — и не трогает общий\nclient awaiter / main-синглтон. Поэтому async-фабрика / эффекты / WebSocket на сервере не запускаются, и\nникакое состояние запроса не пишется в процесс-глобальный объект → request-изоляция by construction,\nбезопасно даже при стриминге (Next App Router по умолчанию стримит). Легаси-модули без оболочки\nиспользуют общий main — безопасно только для не-стримингового renderToString.",
                         "formatting": {
                           "bold": [
                             {
@@ -46685,12 +47372,12 @@
                               "end": 7
                             },
                             {
-                              "start": 116,
-                              "end": 126
+                              "start": 40,
+                              "end": 72
                             },
                             {
-                              "start": 310,
-                              "end": 336
+                              "start": 346,
+                              "end": 408
                             }
                           ],
                           "italic": [],
@@ -46700,16 +47387,16 @@
                               "end": 21
                             },
                             {
-                              "start": 67,
-                              "end": 90
+                              "start": 74,
+                              "end": 97
                             },
                             {
-                              "start": 103,
-                              "end": 111
+                              "start": 137,
+                              "end": 152
                             },
                             {
-                              "start": 284,
-                              "end": 296
+                              "start": 538,
+                              "end": 552
                             }
                           ],
                           "links": []
@@ -46809,6 +47496,195 @@
             {
               "type": "heading",
               "data": {
+                "text": "Подводные камни",
+                "level": 3,
+                "id": "-"
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "storage/dispatcher/selectors исполняются на сервере (из них строится оболочка). Держи их\nSSR-safe — никаких window/document/localStorage в конструкторах. Нужна client-only сборка —\nфункциональная форма с отдельным ssrShell.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 51
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 7
+                            },
+                            {
+                              "start": 8,
+                              "end": 18
+                            },
+                            {
+                              "start": 19,
+                              "end": 28
+                            },
+                            {
+                              "start": 108,
+                              "end": 114
+                            },
+                            {
+                              "start": 115,
+                              "end": 123
+                            },
+                            {
+                              "start": 124,
+                              "end": 136
+                            },
+                            {
+                              "start": 214,
+                              "end": 222
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Взаимодействия в фазе оболочки теряются при апгрейде. Оболочка — throwaway-стор для первого кадра;\nкогда въезжает реальный стор, действия, задиспатченные в оболочку до апгрейда, пропадают. Считай\nподдерево оболочки display-only до апгрейда (для стора с данными реальный стор пере-засевается из\ndehydratedState — данные не теряются, теряются только до-апгрейдные действия пользователя).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 53
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 294,
+                              "end": 309
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "wire исполняется ДО storage.initialize(). Не читай/не мутируй стор внутри wire — он лишь\nвозвращает dependencies/effects. Состояние приходит из initialState, dehydratedState или эффектов.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 41
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 4
+                            },
+                            {
+                              "start": 20,
+                              "end": 40
+                            },
+                            {
+                              "start": 74,
+                              "end": 78
+                            },
+                            {
+                              "start": 100,
+                              "end": 112
+                            },
+                            {
+                              "start": 113,
+                              "end": 120
+                            },
+                            {
+                              "start": 144,
+                              "end": 156
+                            },
+                            {
+                              "start": 158,
+                              "end": 173
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Async-хранилище (IndexedDB) не умеет синхронную оболочку. Если storage модуля async, а ты выставил\n{ ssr: true } — сборка оболочки падает; провайдер деградирует к loadingComponent (без краша) и\nодин раз пишет dev-варнинг. Просто не ставь { ssr: true } для провайдеров с async-стором.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 57
+                            },
+                            {
+                              "start": 149,
+                              "end": 179
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 63,
+                              "end": 70
+                            },
+                            {
+                              "start": 99,
+                              "end": 112
+                            },
+                            {
+                              "start": 163,
+                              "end": 179
+                            },
+                            {
+                              "start": 238,
+                              "end": 251
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "heading",
+              "data": {
                 "text": "dehydrate vs ssrShell",
                 "level": 3,
                 "id": "dehydrate-vs-ssrshell"
@@ -46856,27 +47732,95 @@
             {
               "type": "paragraph",
               "data": {
-                "text": "Они компонуются: страница может засеять ленту через dehydratedState, а шелл presence двумя уровнями\nвыше — использовать ssrShell; без оболочки гейт всё равно вырезал бы засеянную ленту из HTML.",
+                "text": "Они компонуются на двух уровнях:",
                 "formatting": {
                   "bold": [],
                   "italic": [],
-                  "code": [
-                    {
-                      "start": 52,
-                      "end": 67
-                    },
-                    {
-                      "start": 76,
-                      "end": 84
-                    },
-                    {
-                      "start": 120,
-                      "end": 128
-                    }
-                  ],
+                  "code": [],
                   "links": []
                 }
               }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "По дереву: страница засевает ленту через dehydratedState, а шелл presence двумя уровнями выше —\nчерез ssrShell; без оболочки гейт вырезал бы засеянную ленту из HTML.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 10
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 41,
+                              "end": 56
+                            },
+                            {
+                              "start": 65,
+                              "end": 73
+                            },
+                            {
+                              "start": 102,
+                              "end": 110
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "На одном сторе: дай стору с данными И dehydratedState, И оболочку (объектная форма выводит её\nсама). Тогда на первом клиентском кадре, если реальный async-стор ещё не готов, оболочка засевается\nснапшотом → кадр-1 рендерит тот же контент, что и сервер → нет hydration mismatch (и нет регенерации\nподдерева, которая иначе переигрывает инлайн-<head>-скрипты и роняет тему/CSS). Для стора с данными\nпредпочитай объектную форму, чтобы у него была оболочка — тогда loadingComponent и не нужен.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 15
+                            },
+                            {
+                              "start": 183,
+                              "end": 203
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 38,
+                              "end": 53
+                            },
+                            {
+                              "start": 340,
+                              "end": 346
+                            },
+                            {
+                              "start": 459,
+                              "end": 475
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
             },
             {
               "type": "paragraph",
@@ -46899,8 +47843,8 @@
             }
           ],
           "metadata": {
-            "wordCount": 433,
-            "codeBlocksCount": 2,
+            "wordCount": 812,
+            "codeBlocksCount": 3,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": true,
@@ -46912,11 +47856,11 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-07-25T17:19:14.079Z",
-        "wordCount": 1569,
-        "readingTime": 8,
+        "lastModified": "2026-07-25T18:58:02.723Z",
+        "wordCount": 2000,
+        "readingTime": 10,
         "sectionsCount": 10,
-        "codeBlocksCount": 13
+        "codeBlocksCount": 14
       }
     },
     "to-observable": {

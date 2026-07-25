@@ -310,13 +310,6 @@ export function createSynapseModule<TState extends Record<string, any>, TDispatc
       return settled
     },
 
-    buildSyncShell() {
-      // Не мемоизируем: новый инстанс на вызов (per-request изоляция на сервере;
-      // throwaway на первый кадр гидрации на клиенте). Без ssrShell — возможности нет.
-      if (!ssrShellFactory) return undefined
-      return buildSynapseSync<TState, TDispatcher, TSelectors>(ssrShellFactory)
-    },
-
     fork() {
       // Независимый handle из той же фабрики — со своим стором и жизненным циклом.
       // ssrShell переносим: форк тоже должен уметь синхронный SSR.
@@ -352,6 +345,13 @@ export function createSynapseModule<TState extends Record<string, any>, TDispatc
     then(onFulfilled, onRejected) {
       return handle.ready().then(onFulfilled, onRejected)
     },
+  }
+
+  // buildSyncShell вешаем ТОЛЬКО при наличии ssrShell — чтобы `typeof handle.buildSyncShell`
+  // был честным признаком «модуль умеет синхронный SSR» (иначе метода нет). Не мемоизируем:
+  // новый инстанс на вызов (per-request изоляция на сервере; throwaway на первый кадр гидрации).
+  if (ssrShellFactory) {
+    handle.buildSyncShell = () => buildSynapseSync<TState, TDispatcher, TSelectors>(ssrShellFactory)
   }
 
   return handle

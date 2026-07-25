@@ -5,8 +5,9 @@
 // вместо того чтобы срезать поддерево loadingComponent'ом.
 import { createElement } from 'react'
 import { renderToString } from 'react-dom/server'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { loggerConsole } from '../../_utils/logger-console.util'
 import { MemoryStorage } from '../../core/storage/adapters/memory-storage.service'
 import { Selectors } from '../../core/selector/selectors.base'
 import { Dispatcher } from '../../reactive/dispatcher/dispatcher.base'
@@ -117,5 +118,85 @@ describe('SSR — фоновый провайдер через ssrShell', () => 
     // Оба видят чистый initialState — ни один не «протёк» в другой.
     expect(a).toContain('online:false')
     expect(b).toContain('online:false')
+  })
+})
+
+// ─── Объектная форма: авто-вывод оболочки + серверный рендер ─────────────────────────────
+describe('SSR — объектная форма createSynapse (авто-оболочка)', () => {
+  const cleanups: Array<() => Promise<void>> = []
+  afterEach(async () => {
+    while (cleanups.length) await cleanups.pop()!()
+  })
+
+  it('провайдер объектной формы рендерит children на сервере без ручного ssrShell', () => {
+    const handle = createSynapse<State, PresenceDispatcher, PresenceSelectors>({
+      storage: () => new MemoryStorage<State>({ name: `presence_obj_${uid++}`, initialState }),
+      dispatcher: (s) => new PresenceDispatcher(s),
+      selectors: (s) => new PresenceSelectors(s),
+      wire: async () => {
+        await Promise.resolve()
+        return {}
+      },
+    })
+    const ctx = createSynapseCtx(handle, { ssr: true, loadingComponent: createElement('div', null, 'LOADING') })
+    cleanups.push(ctx.cleanupSynapse)
+
+    const Provider = ctx.contextSynapse(function Provider() {
+      const online = useSelector(ctx.useSynapseSelectors().online)
+      return createElement('span', null, `online:${String(online)}`)
+    })
+
+    const html = renderToString(createElement(Provider as any))
+    expect(html).toContain('online:false') // оболочка отрендерила children
+    expect(html).not.toContain('LOADING')
+  })
+})
+
+// ─── Dev-варнинг: ssr:true без ssrShell ──────────────────────────────────────────────────
+describe('SSR — dev-варнинг про ssr:true без ssrShell', () => {
+  const cleanups: Array<() => Promise<void>> = []
+  afterEach(async () => {
+    while (cleanups.length) await cleanups.pop()!()
+    vi.restoreAllMocks()
+  })
+
+  it('варнит один раз, когда ssr:true, стор не готов и оболочки нет', () => {
+    const warn = vi.spyOn(loggerConsole, 'warn').mockImplementation(() => {})
+
+    const handle = createSynapse<State, PresenceDispatcher, PresenceSelectors>(async () => {
+      await Promise.resolve()
+      const storage = new MemoryStorage<State>({ name: `noshell_warn_${uid++}`, initialState })
+      return { storage, dispatcher: new PresenceDispatcher(storage), selectors: new PresenceSelectors(storage) }
+    })
+    const ctx = createSynapseCtx(handle, { ssr: true, loadingComponent: createElement('div', null, 'LOADING') })
+    cleanups.push(ctx.cleanupSynapse)
+    const Provider = ctx.contextSynapse(function Provider() {
+      return createElement('span', null, 'x')
+    })
+
+    renderToString(createElement(Provider as any))
+    renderToString(createElement(Provider as any))
+
+    const hits = warn.mock.calls.filter((c) => String(c[0]).includes('ssrShell'))
+    expect(hits).toHaveLength(1) // один раз, не на каждый рендер
+  })
+
+  it('НЕ варнит для объектной формы (оболочка есть)', () => {
+    const warn = vi.spyOn(loggerConsole, 'warn').mockImplementation(() => {})
+
+    const handle = createSynapse<State, PresenceDispatcher, PresenceSelectors>({
+      storage: () => new MemoryStorage<State>({ name: `obj_nowarn_${uid++}`, initialState }),
+      dispatcher: (s) => new PresenceDispatcher(s),
+      selectors: (s) => new PresenceSelectors(s),
+    })
+    const ctx = createSynapseCtx(handle, { ssr: true })
+    cleanups.push(ctx.cleanupSynapse)
+    const Provider = ctx.contextSynapse(function Provider() {
+      return createElement('span', null, 'x')
+    })
+
+    renderToString(createElement(Provider as any))
+    const hits = warn.mock.calls.filter((c) => String(c[0]).includes('ssrShell'))
+    expect(hits).toHaveLength(0)
   })
 })

@@ -62,6 +62,74 @@ export interface SynapseShellConfig<
   selectors?: TSelectors
 }
 
+/**
+ * Синхронное «ядро» модуля — уже построенные `storage`/`dispatcher`/`selectors`. Передаётся
+ * в `wire` объектной формы {@link SynapseObjectConfig}, чтобы async-обвязка могла к ним обратиться.
+ */
+export interface SynapseCore<
+  TState extends Record<string, any>,
+  TDispatcher extends Dispatcher<TState> | undefined = undefined,
+  TSelectors extends Selectors<TState> | undefined = undefined,
+> {
+  storage: IStorage<TState>
+  dispatcher: TDispatcher
+  selectors: TSelectors
+}
+
+/**
+ * Async-обвязка модуля — зависимости и эффекты, которые нужны только на клиенте. Возвращается
+ * функцией `wire` объектной формы {@link SynapseObjectConfig}; на сервере (SSR-оболочка) НЕ исполняется.
+ */
+export interface SynapseWiring<TState extends Record<string, any>, TEffects extends Effects<TState, any, any> | undefined = undefined> {
+  /** Зависимости от других synapse (формат `waitForDependencies`). */
+  dependencies?: DependencyInput[]
+  /** Таймаут ожидания готовности зависимостей (мс). */
+  dependencyTimeout?: number
+  /** Class-эффекты и/или legacy-функции. */
+  effects?: TEffects | Array<TEffects | Effect>
+  /** Чужие диспетчеры, чьи экшены вливаются в `action$`. */
+  externalDispatchers?: Record<string, Dispatcher<any>>
+}
+
+/**
+ * Объектная (структурная) форма {@link createSynapse} — разносит СИНХРОННУЮ сборку ядра
+ * (`storage`/`dispatcher`/`selectors`) и АСИНХРОННУЮ обвязку (`wire`: `dependencies`/`effects`).
+ *
+ * Главный выигрыш: SSR-оболочка **выводится библиотекой автоматически** из sync-ядра — ручной
+ * `ssrShell` не нужен, а `name`/`initialState` объявлены один раз (нет расхождения sync/async).
+ * `wire` исполняется только при сборке реального стора (клиент) и НЕ бежит на сервере.
+ *
+ * @example
+ * ```ts
+ * export const relationsSynapse = createSynapse({
+ *   storage: () => new MemoryStorage<RelationsState>({ name: 'relations', initialState }),
+ *   dispatcher: (s) => new RelationsDispatcher(s),
+ *   selectors: (s) => new RelationsSelectors(s),
+ *   wire: async () => ({ effects: new RelationsEffects(await getRelationsEndpoints()) }),
+ * })
+ * ```
+ *
+ * Оболочка авто-выводится, только если `storage` синхронный (Memory/LocalStorage). Для async-стора
+ * (IndexedDB) синхронного SSR нет — не задавай `{ ssr: true }` у провайдера (как и раньше).
+ * Для случаев, где `dispatcher`/`selectors` требуют client-only аргументы, используй функциональную
+ * форму с ручным `ssrShell`.
+ */
+export interface SynapseObjectConfig<
+  TState extends Record<string, any>,
+  TDispatcher extends Dispatcher<TState> | undefined = undefined,
+  TSelectors extends Selectors<TState> | undefined = undefined,
+  TEffects extends Effects<TState, NonNullable<TDispatcher>, any> | undefined = undefined,
+> {
+  /** Синхронный конструктор хранилища. Зовётся заново под каждый стор/оболочку (изоляция). */
+  storage: () => IStorage<TState>
+  /** Синхронный конструктор class-диспетчера из хранилища. */
+  dispatcher?: (storage: IStorage<TState>) => TDispatcher
+  /** Синхронный конструктор class-селекторов из хранилища. */
+  selectors?: (storage: IStorage<TState>) => TSelectors
+  /** Async-обвязка (deps/effects) — только клиент. Получает уже собранное sync-ядро. */
+  wire?: (core: SynapseCore<TState, TDispatcher, TSelectors>) => SynapseWiring<TState, TEffects> | Promise<SynapseWiring<TState, TEffects>>
+}
+
 /** Опции {@link createSynapse}. */
 export interface CreateSynapseOptions<
   TState extends Record<string, any>,
@@ -129,8 +197,12 @@ export interface SynapseModule<TState extends Record<string, any>, TDispatcher, 
    * гидрации на клиенте) — НЕ мемоизируется. `undefined`, если `ssrShell` не задана.
    *
    * Использует `createSynapseCtx` при `ssr: true`, чтобы отрендерить `children` на сервере.
+   *
+   * **Присутствует только если у модуля задана `ssrShell`** (или объектная форма `createSynapse`).
+   * Иначе метода нет — `typeof module.buildSyncShell === 'function'` служит честным признаком
+   * «модуль умеет синхронный SSR».
    */
-  buildSyncShell(): Synapse<TState, TDispatcher, TSelectors> | undefined
+  buildSyncShell?(): Synapse<TState, TDispatcher, TSelectors> | undefined
   /**
    * Создаёт независимый handle из той же фабрики. Каждый fork — со своим жизненным циклом
    * и состоянием (общего стора нет). Нужен для per-request изоляции на сервере (SSR):

@@ -253,30 +253,51 @@ presence, relations, media-player. Их стор строится **async-фаб
 async-фабрики, её зависимостей и эффектов — чтобы провайдер отрендерил `children` на сервере. Полный стор
 (с зависимостями и эффектами) достраивается на клиенте, после чего контекст бесшовно переключается на него.
 
-### Объявление оболочки
+### Объявление оболочки — объектная форма (рекомендуется)
 
-`createSynapse` принимает опциональный второй аргумент. Фабрика оболочки **синхронна** и возвращает
-подмножество конфига — `{ storage, dispatcher?, selectors? }`, **без** `effects`/`dependencies`. Её
-`storage` должен быть синхронным (`MemoryStorage`/`LocalStorage`).
+Самый чистый способ — **объектная форма** `createSynapse`: объявляешь **синхронное ядро**
+(`storage`/`dispatcher`/`selectors`) отдельно от **async-обвязки** (`wire`: `dependencies`/`effects`).
+Библиотека тогда **выводит SSR-оболочку сама** из sync-ядра — ручной `ssrShell` не нужен, а
+`name`/`initialState` живут в одном месте. `wire` исполняется только при сборке реального стора
+(клиент) и никогда — на сервере.
 
 ```ts
 import { createSynapse } from 'synapse-storage/utils'
 import { MemoryStorage } from 'synapse-storage/core'
 
+export const presenceSynapse = createSynapse({
+  // sync-ядро — из него библиотека строит SSR-оболочку, без ручного ssrShell
+  storage: () => new MemoryStorage<PresenceState>({ name: 'presence', initialState }),
+  dispatcher: (s) => new PresenceDispatcher(s),
+  selectors: (s) => new PresenceSelectors(s),
+  // async-обвязка — только клиент (deps / effects / endpoints / WS)
+  wire: async () => ({
+    dependencies: [await getCoreSynapse()],
+    effects: new PresenceEffects(await getPresenceEndpoints()),
+  }),
+})
+```
+
+- Ноль boilerplate на SSR: оболочка = `{ storage(), dispatcher(storage), selectors(storage) }`.
+- Один источник правды для `name`/`initialState` (нет расхождения sync/async → нет бага гидрации).
+- `wire` не бежит на сервере → WS/IndexedDB/эффекты туда не едут by construction.
+- `storage` должен быть синхронным (`MemoryStorage`/`LocalStorage`) для авто-оболочки. У async-стора
+  (IndexedDB) синхронного SSR нет — просто не ставь `{ ssr: true }` у провайдера (как и раньше).
+
+### Объявление оболочки — функциональная форма + ручной `ssrShell` (escape hatch)
+
+Если оставляешь функциональную фабрику (или `dispatcher`/`selectors` требуют client-only аргументы
+конструктора, которым нельзя исполняться на сервере) — передай синхронный `ssrShell` вторым аргументом.
+Он возвращает подмножество конфига — `{ storage, dispatcher?, selectors? }`, **без**
+`effects`/`dependencies`.
+
+```ts
 export const presenceSynapse = createSynapse(
-  // async-фабрика — реальный стор (deps + effects), только клиент
   async () => {
     const core = await getCoreSynapse()
     const storage = new MemoryStorage<PresenceState>({ name: 'presence', initialState })
-    return {
-      storage,
-      dependencies: [core],
-      dispatcher: new PresenceDispatcher(storage),
-      selectors: new PresenceSelectors(storage),
-      effects: new PresenceEffects(/* … */),
-    }
+    return { storage, dependencies: [core], dispatcher: new PresenceDispatcher(storage), selectors: new PresenceSelectors(storage), effects: new PresenceEffects(/* … */) }
   },
-  // синхронная SSR-оболочка — без deps и effects; рендерит children с initialState на сервере
   {
     ssrShell: () => {
       const storage = new MemoryStorage<PresenceState>({ name: 'presence', initialState })
@@ -286,8 +307,9 @@ export const presenceSynapse = createSynapse(
 )
 ```
 
-> **Как избежать дублирования.** Оболочка повторяет только синхронную часть (storage + selectors +
-> dispatcher). Вынеси хелпер `buildSyncCore()` и зови его из фабрики и из оболочки — будет единый источник.
+> **Забыл оболочку?** Если поставил `{ ssr: true }` у провайдера, а `ssrShell` (или объектной формы) у
+> модуля нет, и стор не готов синхронно — `createSynapseCtx` один раз пишет `[Synapse]`-варнинг вместо
+> молчаливого отката к `loadingComponent`.
 
 ### Провайдер
 
@@ -307,10 +329,12 @@ export const PresenceProvider = withPresence(({ children }) => <>{children}</>)
 
 ### Как это работает
 
-- **Сервер.** При `ssr: true` и НЕ готовом сторе Provider строит оболочку (`module.buildSyncShell()`) и
-  рендерит `children`. Он **не трогает** общий client awaiter на сервере — поэтому async-фабрика / эффекты
-  / WebSocket там не запускаются, а module-синглтон не может протечь между запросами. Пустой `initialState`
-  константен → **request-изоляция бесплатно**.
+- **Сервер.** При `ssr: true` Provider рендерит **свежую оболочку на каждый рендер**
+  (`module.buildSyncShell()`) — и для фонового стора, и для стора с `dehydratedState` — и не трогает общий
+  client awaiter / main-синглтон. Поэтому async-фабрика / эффекты / WebSocket на сервере не запускаются, и
+  никакое состояние запроса не пишется в процесс-глобальный объект → **request-изоляция by construction,
+  безопасно даже при стриминге** (Next App Router по умолчанию стримит). Легаси-модули без оболочки
+  используют общий main — безопасно только для не-стримингового `renderToString`.
 - **Клиентская гидрация.** Первый кадр строит ту же оболочку (пустое состояние) → идентично серверу → нет
   mismatch. Затем в `useEffect` собирается реальный async-стор; по готовности контекст переключается на
   него, а оболочка уничтожается.
@@ -318,6 +342,21 @@ export const PresenceProvider = withPresence(({ children }) => <>{children}</>)
   `dehydrate`), поэтому `{ ssr: true }` без `dehydratedState` всё равно показывал `loadingComponent`.
   Теперь `ssr: true` включает путь оболочки. Без `ssrShell` флаг — no-op (прежний гейт `loadingComponent`),
   обратная совместимость сохранена.
+
+### Подводные камни
+
+- **`storage`/`dispatcher`/`selectors` исполняются на сервере** (из них строится оболочка). Держи их
+  SSR-safe — никаких `window`/`document`/`localStorage` в конструкторах. Нужна client-only сборка —
+  функциональная форма с отдельным `ssrShell`.
+- **Взаимодействия в фазе оболочки теряются при апгрейде.** Оболочка — throwaway-стор для первого кадра;
+  когда въезжает реальный стор, действия, задиспатченные в оболочку до апгрейда, пропадают. Считай
+  поддерево оболочки display-only до апгрейда (для стора с данными реальный стор пере-засевается из
+  `dehydratedState` — данные не теряются, теряются только до-апгрейдные действия пользователя).
+- **`wire` исполняется ДО `storage.initialize()`.** Не читай/не мутируй стор внутри `wire` — он лишь
+  возвращает `dependencies`/`effects`. Состояние приходит из `initialState`, `dehydratedState` или эффектов.
+- **Async-хранилище (IndexedDB) не умеет синхронную оболочку.** Если `storage` модуля async, а ты выставил
+  `{ ssr: true }` — сборка оболочки падает; провайдер **деградирует к `loadingComponent`** (без краша) и
+  один раз пишет dev-варнинг. Просто не ставь `{ ssr: true }` для провайдеров с async-стором.
 
 ### `dehydrate` vs `ssrShell`
 
@@ -327,7 +366,14 @@ export const PresenceProvider = withPresence(({ children }) => <>{children}</>)
 | У провайдера серверных данных **нет**, но он не должен блокировать SSR (шелл приложения) | `ssrShell` + `{ ssr: true }` |
 | Только клиент, без SSR | ни то, ни другое — дефолтный ленивый гейт `loadingComponent` |
 
-Они компонуются: страница может засеять ленту через `dehydratedState`, а шелл `presence` двумя уровнями
-выше — использовать `ssrShell`; без оболочки гейт всё равно вырезал бы засеянную ленту из HTML.
+Они компонуются на двух уровнях:
+
+- **По дереву:** страница засевает ленту через `dehydratedState`, а шелл `presence` двумя уровнями выше —
+  через `ssrShell`; без оболочки гейт вырезал бы засеянную ленту из HTML.
+- **На одном сторе:** дай стору с данными И `dehydratedState`, И оболочку (объектная форма выводит её
+  сама). Тогда на первом клиентском кадре, если реальный async-стор ещё не готов, оболочка **засевается
+  снапшотом** → кадр-1 рендерит тот же контент, что и сервер → нет hydration mismatch (и нет регенерации
+  поддерева, которая иначе переигрывает инлайн-`<head>`-скрипты и роняет тему/CSS). Для стора с данными
+  предпочитай объектную форму, чтобы у него была оболочка — тогда `loadingComponent` и не нужен.
 
 Весь модуль pokemon целиком — [Pokemon (рецепт)](./pokemon-advanced.md).

@@ -156,6 +156,13 @@ export function createSynapseAwaiter<TStore extends AwaitableSynapse>(synapseSto
     }
   })()
 
+  // Защита от unhandled rejection: ошибка сборки доставляется через onError/getError (channel
+  // подписок), но сам storeInitPromise при этом отклоняется. Если его никто не await'ит (типичный
+  // случай: createSynapseCtx работает через onReady/onError, не через waitForReady), отклонение
+  // всплыло бы как unhandledRejection (шум на сервере, падение strict-процессов). Гасим отдельным
+  // .catch — waitForReady() по-прежнему отдаёт тот же промис, и его потребитель получит throw.
+  storeInitPromise.catch(() => {})
+
   // Публичный API: синхронные геттеры + подписки. Из createSynapseCtx зовут getStoreIfReady()
   // (в useState/useEffect) и onReady/onError (подписка в useEffect на async-готовность).
   return {

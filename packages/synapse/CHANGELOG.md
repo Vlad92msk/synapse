@@ -26,10 +26,33 @@
       } },
   )
   ```
-- **`SynapseModule.buildSyncShell()`** — синхронно строит стор из `ssrShell` (без `await`, без
+- **Объектная форма `createSynapse({ storage, dispatcher?, selectors?, wire? })`** (типы
+  `SynapseObjectConfig` / `SynapseCore` / `SynapseWiring`) — **рекомендуемый** способ для новых модулей.
+  Разносит синхронное ядро (`storage`/`dispatcher`/`selectors`) и async-обвязку (`wire`:
+  `dependencies`/`effects`), поэтому **SSR-оболочка выводится автоматически** — ручной `ssrShell` не
+  нужен, а `name`/`initialState` объявлены один раз (нет расхождения sync/async). `wire` исполняется
+  только при сборке реального стора (клиент) и НЕ бежит на сервере → клиентская машинерия (WS/эффекты)
+  на сервер не едет by construction.
+  ```ts
+  export const relationsSynapse = createSynapse({
+    storage: () => new MemoryStorage<RelationsState>({ name: 'relations', initialState }),
+    dispatcher: (s) => new RelationsDispatcher(s),
+    selectors: (s) => new RelationsSelectors(s),
+    wire: async () => ({ effects: new RelationsEffects(await getRelationsEndpoints()) }),
+  })
+  // ssrShell выводится сам — писать его не нужно
+  ```
+  Функциональная форма с ручным `ssrShell` остаётся (escape hatch для client-only конструкторов
+  `dispatcher`/`selectors`).
+- **`SynapseModule.buildSyncShell?()`** — синхронно строит стор из `ssrShell` (без `await`, без
   зависимостей и эффектов). Новый инстанс на каждый вызов (per-request изоляция на сервере;
-  throwaway на первый кадр гидрации на клиенте) — не мемоизируется. `undefined`, если `ssrShell` не
-  задана. `fork()` переносит `ssrShell`.
+  throwaway на первый кадр гидрации на клиенте) — не мемоизируется. **Присутствует только если задана
+  `ssrShell` / объектная форма** — `typeof module.buildSyncShell === 'function'` служит честным
+  признаком «модуль умеет синхронный SSR». `fork()` переносит `ssrShell`.
+- **Dev-варнинг «`ssr: true` без `ssrShell`».** Если у провайдера `{ ssr: true }`, но стор не готов
+  синхронно и оболочки нет (забыли `ssrShell`) — `createSynapseCtx` один раз пишет явный
+  `[Synapse]`-варнинг вместо молчаливого отката к `loadingComponent` (симптом «пустой body» был далеко
+  от причины). Не срабатывает для валидного `ssr: true` + `dehydratedState` (стор уже готов).
 - **`ISyncStorage.initializeSync(): this`** — синхронная инициализация sync-хранилища (доводит до
   `READY` в один тик, без `await`). Async-хранилища (IndexedDB/worker) её не имеют → понятная ошибка.
 - **`createSynapseCtx(module, { ssr: true })` теперь работает для фоновых провайдеров.** При `ssr: true`
@@ -39,10 +62,43 @@
   - **Флаг `ssr` больше не «мёртвый».** Раньше гейт рендера его не читал (использовался только в
     `dehydrate`), и `{ ssr: true }` без `dehydratedState` всё равно давал `loadingComponent`. JSDoc
     опции переписан честно. Без `ssrShell` флаг — no-op (прежнее поведение).
-  - **Request-изоляция и никакой клиентской машинерии на сервере.** На сервере оболочка строится, не
-    трогая общий `clientAwaiter` — async-фабрика/эффекты/WS/IndexedDB на сервер не едут, cross-request
-    bleed невозможен by design (пустой `initialState` константен). Оболочка уничтожается при свапе на
-    реальный стор.
+  - **Request-изоляция by construction (streaming-safe) и никакой клиентской машинерии на сервере.**
+    На сервере для модуля с оболочкой Provider рендерит **свежую оболочку на каждый рендер** (и для
+    фонового стора, и для стора с `dehydratedState`), НЕ трогая общий `clientAwaiter`/main-синглтон —
+    async-фабрика/эффекты/WS/IndexedDB на сервер не едут. Так как общий main не мутируется, изоляция
+    держится **и при стриминге** (Next App Router по умолчанию стримит — там нет гарантии «синхронный
+    рендер без await между засевом и чтением», на которой держался старый путь засева main; см.
+    `SSR-HYDRATION-KONSPEKT §5.5`). Легаси-модули без оболочки по-прежнему используют общий main —
+    безопасно только вне стриминга; для них рекомендуется миграция на объектную форму. Оболочка
+    уничтожается при свапе на реальный стор.
+  - **Композиция `ssrShell` + `dehydratedState`.** Если у стора С серверными данными есть оболочка
+    (объектная форма выводит её сама), на первом клиентском кадре оболочка **засевается снапшотом**
+    (`dehydratedState`) → кадр-1 рендерит тот же контент, что и сервер → нет hydration mismatch и
+    регенерации поддерева (которая эскалировала до слёта инлайн-скрипта темы/CSS). Раньше оболочка на
+    кадре-1 оставалась пустой (или, без оболочки, показывался `loadingComponent`) → mismatch. Пути
+    больше не взаимоисключающи. Для фоновых сторов без снапшота seedHydration — no-op (оболочка пустая,
+    как и было).
+
+### Устойчивость SSR (найдено адверсариальным аудитом)
+
+- **Async-хранилище в объектной форме + `ssr: true` больше не рушит серверный рендер.** Объектная форма
+  всегда вешает `buildSyncShell`, а у IndexedDB синхронного SSR нет → `buildSyncShell` бросал прямо в
+  рендере (**500**). Теперь `createSynapseCtx` ловит это, **деградирует к `loadingComponent`** и один раз
+  пишет dev-варнинг с причиной.
+- **Нет unhandled-rejection при серверном рендере фонового провайдера.** На сервере фоновый провайдер
+  больше **не поднимает `clientAwaiter`** (раньше это дёргало async-фабрику/IndexedDB на сервере →
+  висящий reject на каждый запрос) — отдаёт оболочку или гейт напрямую.
+- **`createSynapseAwaiter`: reject сборки стора больше не всплывает как unhandled rejection.** Ошибка
+  по-прежнему доставляется через `onError`/`getError`, но внутренний промис теперь защищён `.catch` —
+  упавшая фабрика (напр. `wire` бросил) не роняет strict-процесс и не шумит в логах. `waitForReady()`
+  по-прежнему отдаёт reject своему потребителю.
+- **Нет мутации общего main-синглтона на сервере для стора с `dehydratedState` + оболочкой** (найдено
+  независимой верификацией). Раньше серверный рендер стора с данными засевал `dehydratedState` в общий
+  main (безопасно только вне стриминга). Теперь для модуля с оболочкой сервер рендерит свежую засеянную
+  оболочку → изоляция под запрос by construction, безопасно и при стриминге.
+- **Понятнее варнинг деградации оболочки.** Сообщение больше не утверждает, что причина — обязательно
+  async-хранилище: `LocalStorage` синхронен, но падает на сервере без `localStorage`. Текст теперь
+  перечисляет обе причины.
 
 ### DX: ложный effect-варнинг на инъектированные функции-поля
 
@@ -64,12 +120,22 @@
 
 - `utils/createSynapse/__tests__/ssr-shell.test.ts` — `initializeSync` (sync READY / идемпотентность /
   ошибка на async), `buildSyncShell` (sync READY из `ssrShell`, изоляция инстансов, `fork`, ошибки).
+- `utils/createSynapse/__tests__/object-form.test.ts` — объектная форма: авто-вывод оболочки из sync-ядра,
+  `wire` НЕ вызывается при сборке оболочки (только при сборке реального стора), изоляция инстансов.
 - `react/__tests__/ssr-shell.server.test.tsx` — фоновый провайдер над async-стором рендерит `children`
-  в серверный HTML (не `loadingComponent`), no-op без `ssrShell`, нет request bleed.
+  в серверный HTML (не `loadingComponent`), no-op без `ssrShell`, нет request bleed; объектная форма
+  рендерит children без ручного `ssrShell`; dev-варнинг на `ssr:true`-без-оболочки (один раз, не для
+  объектной формы).
 - `react/__tests__/ssr-shell.client.test.tsx` — первый кадр гидрации === серверный (нет hydration
   mismatch), апгрейд оболочка→реальный стор, живой стор после апгрейда.
 - `reactive/effects/__tests__/effects.base.test.ts` — `nonEffectFields` подавляет ложный варнинг,
   забытый эффект по-прежнему ворнит.
+- `react/__tests__/ssr-audit.server.test.tsx` / `ssr-audit.client.test.tsx` — адверсариальный аудит:
+  async-storage + `ssr:true` (деградация без 500), изоляция засеянной оболочки между запросами,
+  object-form `fork`, StrictMode-двойной маунт (нет «destroyed storage»), error-путь (нет unhandled
+  rejection), отсутствие лишней сборки оболочки при синхронно готовом сторе.
+- `react/__tests__/ssr-shell.client.test.tsx` — композиция `ssrShell` + `dehydratedState`: засеянная
+  оболочка на первом клиентском кадре (нет hydration mismatch).
 
 ## [5.3.0] - 2026-07-05
 
