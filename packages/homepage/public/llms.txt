@@ -32,6 +32,7 @@ Dig deeper (machine-readable, no JS):
 - [useCreateStorage (localStorage)](https://synapse-homepage.web.app/docs/hook-local): The same useCreateStorage, only with type: 'localStorage' — data survives a
 - [useCreateStorage (indexedDB)](https://synapse-homepage.web.app/docs/hook-idb): The same useCreateStorage with type: 'indexedDB'.
 - [Static .create()](https://synapse-homepage.web.app/docs/static): Every storage class has a static .create() method — a full equivalent of the new operator.
+- [browserStorage (server-safe)](https://synapse-homepage.web.app/docs/browser-storage): browserStorage(config, { client }) (exported from synapse-storage/core) is a server-safe storage
 - [Reading data (get/getState)](https://synapse-homepage.web.app/docs/reading-data): All the ways to read data from a storage. The examples use the end-to-end todoStorage — the same
 - [Writing data (set/update)](https://synapse-homepage.web.app/docs/writing-data): All the ways to write data to a storage. The examples use the end-to-end todoStorage from the
 - [remove / has / keys / clear / reset](https://synapse-homepage.web.app/docs/operations): Operations for checking existence, removing keys, and resetting the storage.

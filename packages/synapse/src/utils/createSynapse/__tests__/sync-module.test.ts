@@ -59,7 +59,10 @@ describe('createSynapse — синхронная (C) форма', () => {
     class PostsSelectors extends Selectors<PostsState> {
       readonly list = this.select((s) => s.list)
       readonly currentUserId = this.combine([this.core.profile], (p) => p?.id ?? null)
-      constructor(storage: MemoryStorage<PostsState>, private readonly core: CoreSelectors) {
+      constructor(
+        storage: MemoryStorage<PostsState>,
+        private readonly core: CoreSelectors,
+      ) {
         super(storage)
       }
     }
@@ -243,9 +246,10 @@ describe('createSynapse — синхронная (C) форма', () => {
         isServer
           ? new MemoryStorage<PostsState>({ name: nm('prefs'), initialState: { list: [] } })
           : new LocalStorage<PostsState>({ name: nm('prefs'), initialState: { list: [] } }),
-      selectors: (s) => new (class extends Selectors<PostsState> {
-        readonly list = this.select((st) => st.list)
-      })(s),
+      selectors: (s) =>
+        new (class extends Selectors<PostsState> {
+          readonly list = this.select((st) => st.list)
+        })(s),
     })
 
     // @vitest-environment node → isServer === true → Memory-ветка, конструкция синхронна и безопасна.
@@ -283,15 +287,16 @@ describe('createSynapse — синхронная (C) форма', () => {
   })
 
   it('postConstruct: ошибка откатывает конструкцию (fail-fast)', () => {
-    expect(() =>
-      createSynapse(
-        { storage: () => new MemoryStorage<PostsState>({ name: nm('boom'), initialState: { list: [] } }) },
-        {
-          postConstruct: () => {
-            throw new Error('boom')
+    expect(
+      () =>
+        createSynapse(
+          { storage: () => new MemoryStorage<PostsState>({ name: nm('boom'), initialState: { list: [] } }) },
+          {
+            postConstruct: () => {
+              throw new Error('boom')
+            },
           },
-        },
-      ).storage,
+        ).storage,
     ).toThrow('boom')
   })
 

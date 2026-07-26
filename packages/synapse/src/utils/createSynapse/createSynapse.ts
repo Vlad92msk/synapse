@@ -1,7 +1,7 @@
 import type { IStorage, Selectors } from '../../core'
 import type { Dispatcher, Effect, Effects } from '../../reactive'
-import { createSyncSynapseModule, type SyncEffectsContext } from './syncModule'
 import type { SyncSynapseModule, SyncSynapseOptions } from './synapse.types'
+import { createSyncSynapseModule, type SyncEffectsContext } from './syncModule'
 import type { DependencyInput } from './types'
 
 /** Выводит форму состояния из типа хранилища: `IStorage<T>` → `T`. Даёт вывести `TState` из `storage: () => new MemoryStorage<State>()`. */
@@ -42,9 +42,7 @@ export function createSynapse<
     selectors?: (storage: TStorage) => TSelectors
     dependencies?: DependencyInput[]
     dependencyTimeout?: number
-    externalDispatchers?:
-      | Record<string, Dispatcher<any>>
-      | ((ctx: SyncEffectsContext<StateOf<TStorage>, TDispatcher, TSelectors>) => Record<string, Dispatcher<any>>)
+    externalDispatchers?: Record<string, Dispatcher<any>> | ((ctx: SyncEffectsContext<StateOf<TStorage>, TDispatcher, TSelectors>) => Record<string, Dispatcher<any>>)
     effects?: (ctx: SyncEffectsContext<StateOf<TStorage>, TDispatcher, TSelectors>) => SyncEffectsResult<StateOf<TStorage>>
   },
   options?: SyncSynapseOptions<StateOf<TStorage>, TDispatcher, TSelectors>,
@@ -76,9 +74,7 @@ createSynapse.of = function of<
     selectors?: (storage: IStorage<TState>) => TSelectors
     dependencies?: DependencyInput[]
     dependencyTimeout?: number
-    externalDispatchers?:
-      | Record<string, Dispatcher<any>>
-      | ((ctx: SyncEffectsContext<TState, TDispatcher, TSelectors>) => Record<string, Dispatcher<any>>)
+    externalDispatchers?: Record<string, Dispatcher<any>> | ((ctx: SyncEffectsContext<TState, TDispatcher, TSelectors>) => Record<string, Dispatcher<any>>)
     effects?: (ctx: SyncEffectsContext<TState, TDispatcher, TSelectors>) => SyncEffectsResult<TState>
   },
   options?: SyncSynapseOptions<TState, TDispatcher, TSelectors>,

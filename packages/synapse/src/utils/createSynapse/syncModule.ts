@@ -32,9 +32,7 @@ export interface SyncSynapseConfig<
   dependencyTimeout?: number
   // Чужие диспетчеры, чьи экшены вливаются в `action$`. Резолвится лениво на старте эффектов;
   // функция-форма не форсит eager-конструкцию чужого стора. Пример: `() => ({ core: coreSynapse.dispatcher })`.
-  externalDispatchers?:
-    | Record<string, Dispatcher<any>>
-    | ((ctx: SyncEffectsContext<TState, TDispatcher, TSelectors>) => Record<string, Dispatcher<any>>)
+  externalDispatchers?: Record<string, Dispatcher<any>> | ((ctx: SyncEffectsContext<TState, TDispatcher, TSelectors>) => Record<string, Dispatcher<any>>)
   // Фабрика эффектов; зовётся только в ready() (клиент) → может быть async (ленивый резолв endpoints).
   effects?: (ctx: SyncEffectsContext<TState, TDispatcher, TSelectors>) => EffectsInput<TEffects> | Promise<EffectsInput<TEffects>>
   // Синхронный хук после конструкции ядра, до первого рендера. Для нормализации persisted-состояния
@@ -67,7 +65,9 @@ async function teardown(cleanup: CleanupStep[]): Promise<void> {
 
 // Синхронная конструкция ядра: storage → READY (initializeSync), dispatcher финализирован,
 // селекторы материализованы, state$ всегда. Эффекты НЕ стартуют. Требует sync-хранилища.
-function constructSyncCore<TState extends Record<string, any>, TDispatcher, TSelectors>(config: SyncSynapseConfig<any, any, any, any>): {
+function constructSyncCore<TState extends Record<string, any>, TDispatcher, TSelectors>(
+  config: SyncSynapseConfig<any, any, any, any>,
+): {
   synapse: Synapse<TState, TDispatcher, TSelectors>
   cleanup: CleanupStep[]
 } {
@@ -124,11 +124,9 @@ function constructSyncCore<TState extends Record<string, any>, TDispatcher, TSel
  * к геттеру/`ready()`), эффекты стартуют отдельно в `ready()` после `waitForDependencies`. Расцеп даёт
  * синхронный `handle.selectors`/`.storage`/`.state$` — основа cross-store DI.
  */
-export function createSyncSynapseModule<
-  TState extends Record<string, any>,
-  TDispatcher extends Dispatcher<TState> | undefined,
-  TSelectors extends Selectors<TState> | undefined,
->(config: SyncSynapseConfig<TState, any, any, any>): SyncSynapseModule<TState, TDispatcher, TSelectors> {
+export function createSyncSynapseModule<TState extends Record<string, any>, TDispatcher extends Dispatcher<TState> | undefined, TSelectors extends Selectors<TState> | undefined>(
+  config: SyncSynapseConfig<TState, any, any, any>,
+): SyncSynapseModule<TState, TDispatcher, TSelectors> {
   type ReadySynapse = Synapse<TState, TDispatcher, TSelectors>
 
   let main: ReadySynapse | undefined

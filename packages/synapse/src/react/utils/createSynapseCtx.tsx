@@ -101,7 +101,6 @@ export function createSynapseCtx<TState extends Record<string, any>, TDispatcher
         return () => {
           cancelled = true
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [])
 
       if (error) return <div>{`${ERROR_CONTEXT_INIT} ${error.message}`}</div>

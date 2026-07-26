@@ -17,8 +17,7 @@ interface State extends Record<string, any> {
 
 let uid = 0
 
-const makeHandle = (initial: State = { count: 0, label: 'init' }) =>
-  createSynapse({ storage: () => new MemoryStorage<State>({ name: `dh_${uid++}`, initialState: initial }) })
+const makeHandle = (initial: State = { count: 0, label: 'init' }) => createSynapse({ storage: () => new MemoryStorage<State>({ name: `dh_${uid++}`, initialState: initial }) })
 
 class NoopDispatcher extends Dispatcher<State> {
   readonly bump = this.action((store) =>
