@@ -121,6 +121,11 @@
   background: var(--accent-orange-hover);
 }
 
+.searchWrap {
+  display: flex;
+  align-items: center;
+}
+
 .langWrap {
   display: flex;
   align-items: center;

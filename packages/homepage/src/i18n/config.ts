@@ -211,6 +211,8 @@ const resources = {
       'search.placeholder': 'Поиск в документации...',
       'search.noResults': 'Ничего не найдено',
       'search.results': 'Результаты поиска',
+      'search.hint.navigate': 'навигация',
+      'search.hint.open': 'открыть',
 
       'quickStart.createStorage': 'Создание хранилища',
       'quickStart.updateValue': 'Обновление значения',
@@ -425,6 +427,8 @@ const resources = {
       'search.placeholder': 'Search documentation...',
       'search.noResults': 'No results found',
       'search.results': 'Search Results',
+      'search.hint.navigate': 'to navigate',
+      'search.hint.open': 'to open',
 
       'quickStart.createStorage': 'Create storage',
       'quickStart.updateValue': 'Update value',

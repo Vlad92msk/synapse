@@ -14,7 +14,9 @@ export const DocPage = ({ docKey }: { docKey: DocKey }) => {
     <>
       <ExampleLinks docKey={docKey} />
       {doc.sections.map((section) => (
-        <div key={section.id}>
+        // id — якорь для глубоких ссылок из поиска (/docs/<key> + scroll к section.id).
+        // scroll-margin-top уводит заголовок из-под фиксированной шапки при переходе.
+        <div key={section.id} id={section.id} style={{ scrollMarginTop: '24px' }}>
           <h1>{section.title}</h1>
           {section.content.map((block, index) => (
             <Block key={`${section.id}-${index}`} block={block} />

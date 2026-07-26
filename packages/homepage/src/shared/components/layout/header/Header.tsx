@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { DocsSearch } from '@shared/components/search'
 import { Logo } from '@shared/components/ui/logo/Logo'
 import { useDocumentation } from '@shared/hooks/useDocumentation'
 
@@ -50,6 +51,10 @@ export const Header = () => {
           <span className={style.brandName}>Synapse</span>
           <span className={style.version}>v{__APP_VERSION__}</span>
         </Link>
+
+        <div className={style.searchWrap}>
+          <DocsSearch />
+        </div>
 
         <div className={`${style.langWrap} ${style.langWrapDesktop}`}>
           <LanguageSwitcher />

@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useDocumentation } from '@shared/hooks/useDocumentation'
 
 import style from './DocsContent.module.css'
@@ -15,14 +15,26 @@ export const DocsContent = (props: DocsContentProps) => {
   const { sectionKey, section, isSidebarOpen, isMobile } = props
   const { t } = useDocumentation()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const contentRef = useRef<HTMLDivElement>(null)
+  // Переход из поиска кладёт целевую под-секцию в location.state.docsAnchor —
+  // скроллим к ней; иначе (обычная смена раздела) — к началу страницы.
+  const docsAnchor = (location.state as { docsAnchor?: string } | null)?.docsAnchor
   useEffect(() => {
-    contentRef.current?.scrollTo({
-      behavior: 'smooth',
-      top: 0,
-    })
-  }, [sectionKey])
+    const container = contentRef.current
+    if (!container) return
+
+    if (docsAnchor) {
+      const target = container.querySelector(`#${CSS.escape(docsAnchor)}`)
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        return
+      }
+    }
+
+    container.scrollTo({ behavior: 'smooth', top: 0 })
+  }, [sectionKey, docsAnchor, location.key])
 
   return (
     <div className={`${style.docsContent} ${isSidebarOpen && !isMobile ? style.withSidebar : style.fullWidth}`}>
