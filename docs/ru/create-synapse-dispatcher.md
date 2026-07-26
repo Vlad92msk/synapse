@@ -133,14 +133,11 @@ import { PokemonSelectors } from './pokemon.selectors'
 import { initialState } from './pokemon.store'
 import type { PokemonState } from './pokemon.types'
 
-const pokemonSynapse = createSynapse(async () => {
-  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState })
-  return {
-    storage,
-    dispatcher: new PokemonDispatcher(storage),
-    selectors: new PokemonSelectors(storage),
-    // effects — на следующей странице
-  }
+export const pokemonSynapse = createSynapse({
+  storage: () => new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+  dispatcher: (s) => new PokemonDispatcher(s),
+  selectors: (s) => new PokemonSelectors(s),
+  // effects — на следующей странице
 })
 ```
 

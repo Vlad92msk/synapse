@@ -14,6 +14,12 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['./vitest.setup.ts'],
     include: ['src/**/__tests__/**/*.test.{ts,tsx}'],
+    // Type-level тесты (`*.test-d.ts`) — гейтят вывод генериков/инференс через компилятор.
+    typecheck: {
+      enabled: true,
+      tsconfig: './tsconfig.json',
+      include: ['src/**/__tests__/**/*.test-d.ts'],
+    },
     coverage: {
       provider: 'v8',
       // «Ядро» этапа 0: модули, чьё текущее поведение зафиксировано страховочными тестами.

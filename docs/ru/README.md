@@ -31,13 +31,10 @@ class CounterSelectors extends Selectors<{ count: number }> {
   count = this.select((s) => s.count)
 }
 
-export const counter = createSynapse(async () => {
-  const storage = new MemoryStorage({ name: 'counter', initialState: { count: 0 } })
-  return {
-    storage,
-    dispatcher: new CounterDispatcher(storage),
-    selectors: new CounterSelectors(storage),
-  }
+export const counter = createSynapse({
+  storage: () => new MemoryStorage({ name: 'counter', initialState: { count: 0 } }),
+  dispatcher: (s) => new CounterDispatcher(s),
+  selectors: (s) => new CounterSelectors(s),
 })
 ```
 
@@ -53,7 +50,7 @@ export const counter = createSynapse(async () => {
 - **API-клиент** — HTTP-клиент с кэшированием и инвалидацией на основе тегов
 - **Persist-миграции** — `version` + `migrate(oldState, oldVersion)` для localStorage/IndexedDB
 - **SSR-гидрация** — `storage.hydrate(state)` для серверного состояния
-- **React интеграция** — хуки на `useSyncExternalStore` (Concurrent Mode safe), с поддержкой **SSR**: засев серверных данных через `createSynapseCtx({ ssr: true })` + `dehydrate`, либо серверный рендер «фоновых» провайдеров без серверных данных через `ssrShell`
+- **React интеграция** — хуки на `useSyncExternalStore` (Concurrent Mode safe), с поддержкой **SSR** by construction (без флага `ssr`): засев серверных данных через `createSynapseCtx` + `dehydrate` + проп `dehydratedState`, а серверный рендер «фоновых» провайдеров без серверных данных работает сам (синхронная C-форма → `buildSyncShell`)
 - **RxJS эффекты** — диспетчеры, эффекты и watchers (стиль Redux-Observable)
 - **Middleware** — расширяемые sync/async пайплайны (batching, shallowCompare, logger, broadcast)
 - **EventBus** — декаплинг межмодульного общения с wildcard-паттернами
@@ -86,7 +83,7 @@ export const counter = createSynapse(async () => {
 | [useCreateStorage (Memory)](./hook-memory.md)                          | Хук для MemoryStorage       |
 | [useCreateStorage (LocalStorage)](./hook-local-storage.md)             | Хук для LocalStorage        |
 | [useCreateStorage (IndexedDB)](./hook-indexeddb.md)                    | Хук для IndexedDB           |
-| [createSynapseCtx](./synapse-ctx.md)                                  | React context интеграция + SSR (`ssr`, `dehydrate`, `ssrShell`) |
+| [createSynapseCtx](./synapse-ctx.md)                                  | React context интеграция + SSR (`ssr`, `dehydrate`, авто-`buildSyncShell`) |
 | [awaitSynapse](./await-synapse.md)                                    | Async synapse в компонентах |
 
 ### Работа с данными
@@ -103,7 +100,7 @@ export const counter = createSynapse(async () => {
 
 | Тема                                                            | Описание                                  |
 |-----------------------------------------------------------------|-------------------------------------------|
-| [Базовая сборка](./create-synapse-basic.md)                     | `createSynapse(factory)` + storage + селекторы |
+| [Базовая сборка](./create-synapse-basic.md)                     | `createSynapse({ storage, … })` (C-форма) + storage + селекторы |
 | [Dispatcher](./create-synapse-dispatcher.md)                    | `class extends Dispatcher` — намерения и апдейты |
 | [Effects](./create-synapse-effects.md)                          | `class extends Effects` — RxJS side effects |
 | [Dispatcher (подробно)](./dispatcher-detailed.md)               | action / signal / apiActions / watcher    |

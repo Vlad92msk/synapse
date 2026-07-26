@@ -3,7 +3,6 @@ import { BehaviorSubject, EMPTY, Observable, of } from 'rxjs'
 import { distinctUntilChanged, map, mergeMap, tap } from 'rxjs/operators'
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
 
-import { loggerConsole } from '../../../_utils/logger-console.util'
 import { MemoryStorage } from '../../../core/storage/adapters/memory-storage.service'
 import { Dispatcher, FINALIZE } from '../../dispatcher/dispatcher.base'
 import type { ApiRequestState } from '../../dispatcher/standalone'
@@ -380,21 +379,18 @@ describe('совместимость и реестр', () => {
 })
 
 describe('dev-проверки', () => {
-  it('предупреждает о поле-функции без обёртки this.effect', () => {
-    const warn = vi.spyOn(loggerConsole, 'warn').mockImplementation(() => {})
+  it('бросает (dev) на поле-функцию без обёртки this.effect', () => {
     class ForgotEffects extends Effects<State, TestDispatcher> {
       readonly real = this.effect(() => EMPTY)
       // забыл this.effect — обычная функция-поле
       readonly forgot = (action$: Observable<any>) => action$
     }
-    new ForgotEffects().getEffects()
 
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('forgot'), expect.anything())
-    warn.mockRestore()
+    // Fail-fast: не молчаливый warn, а throw с именем поля.
+    expect(() => new ForgotEffects().getEffects()).toThrow(/forgot/)
   })
 
-  it('не ворнит на инъектированные функции-поля, помеченные static nonEffectFields', () => {
-    const warn = vi.spyOn(loggerConsole, 'warn').mockImplementation(() => {})
+  it('не бросает на инъектированные функции-поля, помеченные static nonEffectFields', () => {
     class InjectedEffects extends Effects<State, TestDispatcher> {
       static override nonEffectFields = ['resolveSocket']
       constructor(private readonly resolveSocket: () => { send: () => void }) {
@@ -405,8 +401,6 @@ describe('dev-проверки', () => {
     // resolveSocket — обычная функция-поле (parameter property), но помечена как не-эффект.
     const inst = new InjectedEffects(() => ({ send: () => {} }))
     expect(inst.getEffects()).toHaveLength(1)
-    expect(warn).not.toHaveBeenCalled()
-    warn.mockRestore()
   })
 })
 

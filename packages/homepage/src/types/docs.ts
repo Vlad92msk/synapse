@@ -1,10 +1,10 @@
 // Auto-generated types for structured documentation
-// Generated at: 2026-07-25T19:04:01.218Z
+// Generated at: 2026-07-26T12:44:44.374Z
 // Master locale: en
 
 export type Locale = 'en' | 'ru'
 
-export type DocKey = 'api-client' | 'api-ssr-pokemon' | 'api-use-mutation' | 'api-use-query' | 'architecture' | 'await-synapse' | 'cache-layers' | 'create-synapse-basic' | 'create-synapse-dispatcher' | 'create-synapse-effects' | 'custom-fetch-fn' | 'custom-fetch-service-worker' | 'delete-has-keys' | 'dependencies' | 'dispatcher-detailed' | 'event-bus' | 'forms' | 'hook-indexeddb' | 'hook-local-storage' | 'hook-memory' | 'indexeddb-storage' | 'install' | 'local-storage' | 'memory-storage' | 'middlewares' | 'persist-migration' | 'pokemon-advanced' | 'reactive-reads' | 'reading-data' | 'selector-system' | 'shared-worker-middleware' | 'singleton' | 'ssr-hydration' | 'static-create' | 'storage-factory' | 'subscriptions' | 'synapse-awaiter' | 'synapse-ctx' | 'to-observable' | 'use-storage-observable' | 'use-storage-subscribe' | 'use-subscription' | 'worker-cache-storage' | 'writing-data'
+export type DocKey = 'api-client' | 'api-ssr-pokemon' | 'api-use-mutation' | 'api-use-query' | 'architecture' | 'await-synapse' | 'browser-storage' | 'cache-layers' | 'create-synapse-basic' | 'create-synapse-dispatcher' | 'create-synapse-effects' | 'custom-fetch-fn' | 'custom-fetch-service-worker' | 'delete-has-keys' | 'dependencies' | 'dispatcher-detailed' | 'event-bus' | 'forms' | 'hook-indexeddb' | 'hook-local-storage' | 'hook-memory' | 'indexeddb-storage' | 'install' | 'local-storage' | 'memory-storage' | 'middlewares' | 'persist-migration' | 'pokemon-advanced' | 'reactive-reads' | 'reading-data' | 'selector-system' | 'shared-worker-middleware' | 'singleton' | 'ssr-hydration' | 'static-create' | 'storage-factory' | 'subscriptions' | 'synapse-awaiter' | 'synapse-ctx' | 'to-observable' | 'use-storage-observable' | 'use-storage-subscribe' | 'use-subscription' | 'worker-cache-storage' | 'writing-data'
 
 
 // ✅ ТОЧНЫЕ ТИПЫ ДЛЯ SECTION ID
@@ -15,8 +15,9 @@ export interface DocSectionIds {
   'api-use-query': 'useapiquery-react-hook-for-get-requests' | 'import' | 'usage' | 'return-value' | 'options' | 'ssr-no-loading-flash-after-hydration' | 'auto-refetch-on-cache-invalidation' | 'notes' | 'see-also'
   'architecture': 'two-layers-state-manager-and-business-logic-layer' | 'layer-1-state-manager-where-the-state-lives' | 'layer-2-business-logic-layer-how-logic-manages-the-state' | 'why-this-separation-matters'
   'await-synapse': 'awaitsynapse' | 'creating' | 'withsynapseready-hoc-how-the-demo-module-is-lifted' | 'usesynapseready-hook' | 'programmatic-api' | 'relation-to-createsynapseawaiter'
+  'browser-storage': 'browserstorage-server-safe' | 'why' | 'usage' | 'client-only-middleware' | 'options' | 'see-also'
   'cache-layers': 'caching-layers' | 'the-request-path' | 'layer-1-application-cache-storage' | 'layer-2-transport-basequeryfetchfn' | 'layer-3-network-your-serviceworker-cache-api' | 'other-libraries-do-the-same' | 'choosing-a-setup' | 'devtools-network-cheat-sheet'
-  'create-synapse-basic': 'createsynapse-basic' | 'storage-and-state-pokemonstorets' | 'selectors-pokemonselectorsts' | 'assembly-createsynapsefactory' | 'the-return-value' | 'usage-in-react' | 'async-initialization-in-the-factory'
+  'create-synapse-basic': 'createsynapse-basic' | 'storage-and-state-pokemonstorets' | 'selectors-pokemonselectorsts' | 'assembly-createsynapseconfig' | 'the-return-value' | 'usage-in-react' | 'async-lives-in-the-effects-factory' | 'full-shape-every-config-field' | 'extras-dx'
   'create-synapse-dispatcher': 'createsynapse-dispatcher' | 'dispatcher-pokemondispatcherts' | 'thisaction' | 'thiswatcher' | 'signal-and-apiactions' | 'assembly' | 'the-return-value' | 'react-createsynapsectx'
   'create-synapse-effects': 'createsynapse-effects' | 'effects-pokemoneffectsts' | 'thiseffect' | 'oftype-oftypes' | 'reading-state-in-an-effect-selectorobject-selectormap' | 'handling-requests-validatemap-reads-mutationmap-writes' | 'assembly' | 'return-value'
   'custom-fetch-fn': 'custom-basequeryfetchfn' | 'when-it-makes-sense' | 'configuration' | 'auth-retry-example' | 'cache-and-tags-work-on-top' | 'no-library-extension-needed' | 'when-to-use'
@@ -46,7 +47,7 @@ export interface DocSectionIds {
   'storage-factory': 'storagefactory' | 'typed-methods' | 'universal-create' | 'when-to-use' | 'when-not-to-use'
   'subscriptions': 'subscriptions-subscribe' | '1-subscribekey-callback' | '2-subscribeselector-callback' | '3-subscribetoallcallback' | '4-usestoragesubscribe-react-hook'
   'synapse-awaiter': 'createsynapseawaiter-framework-independent-awaiter' | 'imports-and-creation' | 'programmatic-surface' | 'ssr-sync-fast-path' | 'usage-in-react-without-the-wrapper'
-  'synapse-ctx': 'createsynapsectx' | 'creating-the-context' | 'using-the-hooks-in-child-components' | 'hoc-contextsynapse' | 'usesynapsestate-only-with-effects' | 'reactive-reads-in-a-component' | 'cleanup' | 'three-variants-of-createsynapsectx' | 'ssr-server-rendering-seeded-sync-stores' | 'ssr-data-less-background-providers-ssrshell'
+  'synapse-ctx': 'createsynapsectx' | 'creating-the-context' | 'using-the-hooks-in-child-components' | 'hoc-contextsynapse' | 'usesynapsestate-only-with-effects' | 'reactive-reads-in-a-component' | 'cleanup' | 'three-variants-of-createsynapsectx' | 'ssr-server-rendering-seeded-sync-stores' | 'ssr-data-less-background-providers'
   'to-observable': 'toobservable' | 'signature' | 'selector-a-slice-instead-of-the-whole-state' | 'equals-how-slices-are-compared' | 'in-effects' | 'notes'
   'use-storage-observable': 'usestorageobservable' | 'basic-usage' | 'operators-on-top-of-the-stream' | 'why-debounce-here' | 'about-deps-what-goes-in' | 'example-debounced-search' | 'example-a-notification-aggregator' | 'notes'
   'use-storage-subscribe': 'usestoragesubscribe' | 'basic-usage' | 'object-and-array-slices-equals' | 'notes'
@@ -177,5 +178,5 @@ export interface DocsData {
 
 // Constants
 export const AVAILABLE_LOCALES: Locale[] = ['en', 'ru']
-export const AVAILABLE_DOC_KEYS: DocKey[] = ['api-client', 'api-ssr-pokemon', 'api-use-mutation', 'api-use-query', 'architecture', 'await-synapse', 'cache-layers', 'create-synapse-basic', 'create-synapse-dispatcher', 'create-synapse-effects', 'custom-fetch-fn', 'custom-fetch-service-worker', 'delete-has-keys', 'dependencies', 'dispatcher-detailed', 'event-bus', 'forms', 'hook-indexeddb', 'hook-local-storage', 'hook-memory', 'indexeddb-storage', 'install', 'local-storage', 'memory-storage', 'middlewares', 'persist-migration', 'pokemon-advanced', 'reactive-reads', 'reading-data', 'selector-system', 'shared-worker-middleware', 'singleton', 'ssr-hydration', 'static-create', 'storage-factory', 'subscriptions', 'synapse-awaiter', 'synapse-ctx', 'to-observable', 'use-storage-observable', 'use-storage-subscribe', 'use-subscription', 'worker-cache-storage', 'writing-data']
+export const AVAILABLE_DOC_KEYS: DocKey[] = ['api-client', 'api-ssr-pokemon', 'api-use-mutation', 'api-use-query', 'architecture', 'await-synapse', 'browser-storage', 'cache-layers', 'create-synapse-basic', 'create-synapse-dispatcher', 'create-synapse-effects', 'custom-fetch-fn', 'custom-fetch-service-worker', 'delete-has-keys', 'dependencies', 'dispatcher-detailed', 'event-bus', 'forms', 'hook-indexeddb', 'hook-local-storage', 'hook-memory', 'indexeddb-storage', 'install', 'local-storage', 'memory-storage', 'middlewares', 'persist-migration', 'pokemon-advanced', 'reactive-reads', 'reading-data', 'selector-system', 'shared-worker-middleware', 'singleton', 'ssr-hydration', 'static-create', 'storage-factory', 'subscriptions', 'synapse-awaiter', 'synapse-ctx', 'to-observable', 'use-storage-observable', 'use-storage-subscribe', 'use-subscription', 'worker-cache-storage', 'writing-data']
 export const MASTER_LOCALE: Locale = 'en'

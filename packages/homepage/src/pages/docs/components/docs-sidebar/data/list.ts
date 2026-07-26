@@ -27,7 +27,7 @@ export const DOC_NAV: NavPillar[] = [
     groups: [
       {
         titleKey: 'nav.sections.create',
-        items: [{ key: 'memory' }, { key: 'local' }, { key: 'indexeddb' }, { key: 'worker-cache' }, { key: 'factory' }, { key: 'hook-memory' }, { key: 'hook-local' }, { key: 'hook-idb' }, { key: 'static' }],
+        items: [{ key: 'memory' }, { key: 'local' }, { key: 'indexeddb' }, { key: 'worker-cache' }, { key: 'factory' }, { key: 'hook-memory' }, { key: 'hook-local' }, { key: 'hook-idb' }, { key: 'static' }, { key: 'browser-storage' }],
       },
       {
         titleKey: 'nav.sections.data',

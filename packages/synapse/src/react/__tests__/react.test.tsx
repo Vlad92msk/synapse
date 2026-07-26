@@ -98,7 +98,7 @@ describe('createSynapseCtx', () => {
     }
   })
 
-  it('Provider гейтит детей до готовности, хуки отдают selectors/actions', async () => {
+  it('C-форма: sync-стор готов сразу — дети рендерятся на первом кадре, хуки отдают selectors/actions', async () => {
     class CtxDispatcher extends Dispatcher<State> {
       readonly increment = this.action((store, n: number) => {
         store.update((draft) => {
@@ -111,9 +111,10 @@ describe('createSynapseCtx', () => {
       readonly count = this.select((s) => s.count)
     }
 
-    const handle = createSynapse(() => {
-      const storage = new MemoryStorage<State>({ name: `ctx_${uid++}`, initialState: { count: 0, other: 'a' } })
-      return { storage, dispatcher: new CtxDispatcher(storage), selectors: new CtxSelectors(storage) }
+    const handle = createSynapse({
+      storage: () => new MemoryStorage<State>({ name: `ctx_${uid++}`, initialState: { count: 0, other: 'a' } }),
+      dispatcher: (s) => new CtxDispatcher(s),
+      selectors: (s) => new CtxSelectors(s),
     })
 
     const ctx = createSynapseCtx(handle, { loadingComponent: <div data-testid="loading">loading</div> })
@@ -132,12 +133,8 @@ describe('createSynapseCtx', () => {
 
     render(<Inner />)
 
-    // до готовности показывается loadingComponent
-    expect(screen.getByTestId('loading')).toBeInTheDocument()
-    expect(screen.queryByTestId('val')).toBeNull()
-
-    // после готовности — дети с selectors/actions
-    await waitFor(() => expect(screen.getByTestId('val')).toBeInTheDocument())
+    // Синхронная конструкция → дети сразу, без loadingComponent-гейта.
+    expect(screen.queryByTestId('loading')).toBeNull()
     expect(screen.getByTestId('val').textContent).toBe('0')
 
     // actions из контекста работают

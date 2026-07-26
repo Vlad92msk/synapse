@@ -241,14 +241,13 @@ action stream (so its effects react to bus events like regular actions), pass th
 `externalDispatchers` — this is "communication variant 3" from [dependencies](./dependencies.md):
 
 ```typescript
-const bus = await pokemonEventsHandle
-
-const mySynapse = createSynapse(() => ({
-  storage,
-  dispatcher: new MyDispatcher(storage),
-  effects: new MyEffects(),
-  externalDispatchers: { eventBus: bus.dispatcher },  // bus actions land in action$
-}))
+const mySynapse = createSynapse({
+  storage: () => new MemoryStorage<MyState>({ name: 'my', initialState }),
+  dispatcher: (s) => new MyDispatcher(s),
+  effects: () => new MyEffects(),
+  // lazy slot: bus actions land in action$; resolved at the start of effects
+  externalDispatchers: () => ({ eventBus: pokemonEventsHandle.dispatcher }),
+})
 ```
 
 ## See also

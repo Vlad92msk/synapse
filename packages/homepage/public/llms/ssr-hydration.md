@@ -77,16 +77,17 @@ const synapse = await pokemonSynapse.ready()
 synapse.storage.hydrate(serverState)
 ```
 
-It is usually more convenient to work at the module level:
-[`createSynapseCtx({ ssr: true })`](./synapse-ctx.md) builds the snapshot via `dehydrate` and
-synchronously seeds the store on the client through the `dehydratedState` prop — solving the same
-task for the whole module rather than a bare storage.
+It is usually more convenient to work at the module level: [`createSynapseCtx`](./synapse-ctx.md) builds
+the snapshot via `dehydrate` and synchronously seeds the store through the `dehydratedState` prop (SSR is
+enabled by construction — no `ssr` flag needed) — solving the same task for the whole module rather than a
+bare storage.
 
 For a provider that has **no** server data but still must not block SSR (a "background" shell over a
-large subtree — presence, relations, a media-player), there is no snapshot to hydrate. Use
-[`ssrShell`](./synapse-ctx.md#ssr--data-less-background-providers-ssrshell) instead: the module builds a
-synchronous empty store from `initialState` on the server so its `children` reach the HTML, then upgrades
-to the real async store on the client.
+large subtree — presence, relations, a media-player), there is no snapshot to hydrate. In that case
+[nothing special is required](./synapse-ctx.md#ssr--data-less-background-providers): the C-form is
+synchronous, so the module itself builds an empty store from `initialState` (`buildSyncShell`) on the
+server so its `children` reach the HTML, then upgrades to the real store on the client (effects start in
+the browser).
 
 ## Types
 

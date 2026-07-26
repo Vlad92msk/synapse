@@ -22,7 +22,7 @@ pokemon-advanced/
   pokemon.selectors.ts   — производные значения (class Selectors)
   pokemon.dispatcher.ts  — намерения (class Dispatcher)
   pokemon.effects.ts     — side-effects на RxJS (class Effects)
-  pokemon.synapse.ts     — сборка через createSynapse(factory)
+  pokemon.synapse.ts     — сборка через createSynapse({ … }) (C-форма)
   index.ts               — публичные экспорты
   PokemonAdvancedExample.tsx / PokemonDemo.tsx — UI поверх synapse
   helpers.ts             — мелкие утилиты представления (typeColor)
@@ -207,19 +207,17 @@ export class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {
 Собираем Synapse
 
 ```typescript
-export const pokemonSynapse = createSynapse(async () => {
-  await initPokemonApi()                                       // async-пролог
-
-  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState })
-
-  return {
-    storage,
-    dependencies: [settingsStorage],                           // зависимость от стора настроек
-    dependencyTimeout: 10000,
-    dispatcher: new PokemonDispatcher(storage),
-    selectors: new PokemonSelectors(storage),
-    effects: new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage)),
-  }
+export const pokemonSynapse = createSynapse({
+  // синхронная конструкция ядра — TState выводится из фабрики storage
+  storage: () => new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+  dependencies: [settingsStorage],                             // гейт СТАРТА эффектов
+  dependencyTimeout: 10000,
+  dispatcher: (s) => new PokemonDispatcher(s),
+  selectors: (s) => new PokemonSelectors(s),
+  effects: async () => {
+    await initPokemonApi()                                     // async-пролог уехал в эффекты
+    return new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage))
+  },
 })
 
 export type PokemonSynapse = Awaited<typeof pokemonSynapse>

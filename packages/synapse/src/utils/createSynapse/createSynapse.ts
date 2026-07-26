@@ -1,98 +1,87 @@
 import type { IStorage, Selectors } from '../../core'
-import type { Dispatcher, Effects } from '../../reactive'
-import { createSynapseModule } from './factory'
-import type { CreateSynapseOptions, SynapseConfig, SynapseModule, SynapseObjectConfig, SynapseShellConfig } from './synapse.types'
+import type { Dispatcher, Effect, Effects } from '../../reactive'
+import { createSyncSynapseModule, type SyncEffectsContext } from './syncModule'
+import type { SyncSynapseModule, SyncSynapseOptions } from './synapse.types'
+import type { DependencyInput } from './types'
+
+/** Выводит форму состояния из типа хранилища: `IStorage<T>` → `T`. Даёт вывести `TState` из `storage: () => new MemoryStorage<State>()`. */
+type StateOf<TStorage> = TStorage extends IStorage<infer TState> ? TState : never
+
+/** Что может вернуть фабрика `effects`: инстанс(ы) `Effects`/функции-эффекты, возможно асинхронно (ленивый резолв endpoints). */
+type SyncEffectsResult<TState extends Record<string, any>> =
+  | Effects<TState, any, any>
+  | Array<Effects<TState, any, any> | Effect>
+  | undefined
+  | Promise<Effects<TState, any, any> | Array<Effects<TState, any, any> | Effect> | undefined>
 
 /**
- * Создаёт ленивый class-based synapse. Две формы:
+ * Создаёт ленивый class-based synapse (C-форма): синхронная конструкция ядра
+ * (`storage`/`dispatcher`/`selectors`) + `dependencies` (гейт старта эффектов) + фабрика `effects`.
+ * Возвращает {@link SyncSynapseModule} — с синхронным доступом к main-ядру (`.selectors` и т.д.)
+ * для cross-store DI. `TState` выводится из `storage: () => new MemoryStorage<State>()`.
  *
- * 1. **Функциональная** — `createSynapse(factory, { ssrShell? })`. Фабрика возвращает
- *    {@link SynapseConfig} с уже сконструированными class-слоями. SSR-оболочку задаёшь вручную
- *    через `ssrShell` (см. ниже).
- * 2. **Объектная** — `createSynapse({ storage, dispatcher?, selectors?, wire? })` (см.
- *    {@link SynapseObjectConfig}). Разносит синхронное ядро и async-обвязку; **SSR-оболочка
- *    выводится автоматически** — ручной `ssrShell` не нужен. Рекомендуется для новых модулей,
- *    особенно «фоновых» провайдеров.
- *
- * Возвращается {@link SynapseModule}-handle: фабрика исполняется один раз при первом `await`/`ready()`,
- * повторные `await` делят один промис, `destroy()` сбрасывает мемоизацию (handle пересоздаваемый).
- *
- * @example Функциональная форма
+ * @example
  * ```ts
- * const postsSynapse = createSynapse(() => {
- *   const storage = new MemoryStorage<PostsState>({ name: 'posts', initialState })
- *   return { storage, dispatcher: new PostsDispatcher(storage), selectors: new PostsSelectors(storage), effects: new PostsEffects(api) }
+ * export const postsSynapse = createSynapse({
+ *   storage: () => new MemoryStorage<PostsState>({ name: 'posts', initialState }),
+ *   dispatcher: (s) => new PostsDispatcher(s),
+ *   selectors: (s) => new PostsSelectors(s, coreSynapse.selectors),   // cross-store DI
+ *   dependencies: [coreSynapse],
+ *   effects: async () => new PostsEffects(await getPostsEndpoints(), coreSynapse.state$),
  * })
- * ```
- *
- * @example Объектная форма (авто-вывод SSR-оболочки)
- * ```ts
- * export const relationsSynapse = createSynapse({
- *   storage: () => new MemoryStorage<RelationsState>({ name: 'relations', initialState }),
- *   dispatcher: (s) => new RelationsDispatcher(s),
- *   selectors: (s) => new RelationsSelectors(s),
- *   wire: async () => ({ effects: new RelationsEffects(await getRelationsEndpoints()) }),
- * })
- * // ssrShell выводится сам из storage/dispatcher/selectors — писать его не нужно.
- * ```
- *
- * @example Функциональная форма + ручной `ssrShell` (escape hatch)
- * ```ts
- * export const presenceSynapse = createSynapse(
- *   async () => { const core = await getCoreSynapse(); return { storage, dependencies: [core], dispatcher, selectors, effects } },
- *   { ssrShell: () => { const storage = new MemoryStorage({ name: 'presence', initialState }); return { storage, selectors: new PresenceSelectors(storage), dispatcher: new PresenceDispatcher(storage) } } },
- * )
  * ```
  */
 export function createSynapse<
-  TState extends Record<string, any>,
-  TDispatcher extends Dispatcher<TState> | undefined = undefined,
-  TSelectors extends Selectors<TState> | undefined = undefined,
-  TEffects extends Effects<TState, NonNullable<TDispatcher>, any> | undefined = undefined,
+  TStorage extends IStorage<any>,
+  TDispatcher extends Dispatcher<StateOf<TStorage>> | undefined = undefined,
+  TSelectors extends Selectors<StateOf<TStorage>> | undefined = undefined,
 >(
-  factory: () => SynapseConfig<TState, TDispatcher, TSelectors, TEffects> | Promise<SynapseConfig<TState, TDispatcher, TSelectors, TEffects>>,
-  options?: CreateSynapseOptions<TState, TDispatcher, TSelectors>,
-): SynapseModule<TState, TDispatcher, TSelectors>
-export function createSynapse<
+  config: {
+    storage: () => TStorage
+    dispatcher?: (storage: TStorage) => TDispatcher
+    selectors?: (storage: TStorage) => TSelectors
+    dependencies?: DependencyInput[]
+    dependencyTimeout?: number
+    externalDispatchers?:
+      | Record<string, Dispatcher<any>>
+      | ((ctx: SyncEffectsContext<StateOf<TStorage>, TDispatcher, TSelectors>) => Record<string, Dispatcher<any>>)
+    effects?: (ctx: SyncEffectsContext<StateOf<TStorage>, TDispatcher, TSelectors>) => SyncEffectsResult<StateOf<TStorage>>
+  },
+  options?: SyncSynapseOptions<StateOf<TStorage>, TDispatcher, TSelectors>,
+): SyncSynapseModule<StateOf<TStorage>, TDispatcher, TSelectors> {
+  // postConstruct приходит вторым аргументом (контекстно типизируется) — вливаем в конфиг.
+  return createSyncSynapseModule<StateOf<TStorage>, TDispatcher, TSelectors>({ ...(config as any), postConstruct: options?.postConstruct })
+}
+
+/**
+ * Явно-типизированная C-форма — когда `TState` неудобно выводить из фабрики `storage`. Те же поля,
+ * но генерики задаются вручную; `postConstruct` — вторым аргументом (контекстная типизация).
+ *
+ * @example
+ * ```ts
+ * const accounts = createSynapse.of<AccountsState, AccountsDispatcher, AccountsSelectors>(
+ *   { storage: () => new LocalStorage({ name: 'accounts', initialState }), dispatcher: (s) => new AccountsDispatcher(s) },
+ *   { postConstruct: ({ actions }) => actions.resetTransient() },
+ * )
+ * ```
+ */
+createSynapse.of = function of<
   TState extends Record<string, any>,
   TDispatcher extends Dispatcher<TState> | undefined = undefined,
   TSelectors extends Selectors<TState> | undefined = undefined,
-  TEffects extends Effects<TState, NonNullable<TDispatcher>, any> | undefined = undefined,
->(config: SynapseObjectConfig<TState, TDispatcher, TSelectors, TEffects>): SynapseModule<TState, TDispatcher, TSelectors>
-export function createSynapse<
-  TState extends Record<string, any>,
-  TDispatcher extends Dispatcher<TState> | undefined = undefined,
-  TSelectors extends Selectors<TState> | undefined = undefined,
-  TEffects extends Effects<TState, NonNullable<TDispatcher>, any> | undefined = undefined,
 >(
-  factoryOrConfig:
-    | (() => SynapseConfig<TState, TDispatcher, TSelectors, TEffects> | Promise<SynapseConfig<TState, TDispatcher, TSelectors, TEffects>>)
-    | SynapseObjectConfig<TState, TDispatcher, TSelectors, TEffects>,
-  options?: CreateSynapseOptions<TState, TDispatcher, TSelectors>,
-): SynapseModule<TState, TDispatcher, TSelectors> {
-  // Функциональная форма — как раньше.
-  if (typeof factoryOrConfig === 'function') {
-    return createSynapseModule<TState, TDispatcher, TSelectors>(factoryOrConfig, options)
-  }
-
-  // Объектная форма: собираем factory (sync-ядро + await wire) и АВТО-ssrShell (только sync-ядро).
-  const config = factoryOrConfig
-
-  const buildCore = (storage: IStorage<TState>) => ({
-    storage,
-    dispatcher: config.dispatcher?.(storage) as TDispatcher,
-    selectors: config.selectors?.(storage) as TSelectors,
-  })
-
-  const factory = async (): Promise<SynapseConfig<TState, TDispatcher, TSelectors, TEffects>> => {
-    const core = buildCore(config.storage())
-    const wiring = config.wire ? await config.wire(core) : undefined
-    return { ...core, ...(wiring ?? {}) } as SynapseConfig<TState, TDispatcher, TSelectors, TEffects>
-  }
-
-  // Оболочка = то же sync-ядро из свежего storage, без wire. Для async-хранилища buildSyncShell
-  // бросит понятную ошибку (у него синхронного SSR нет) — как и при ручном ssrShell.
-  const ssrShell = (): SynapseShellConfig<TState, TDispatcher, TSelectors> => buildCore(config.storage())
-
-  return createSynapseModule<TState, TDispatcher, TSelectors>(factory, { ssrShell })
+  config: {
+    storage: () => IStorage<TState>
+    dispatcher?: (storage: IStorage<TState>) => TDispatcher
+    selectors?: (storage: IStorage<TState>) => TSelectors
+    dependencies?: DependencyInput[]
+    dependencyTimeout?: number
+    externalDispatchers?:
+      | Record<string, Dispatcher<any>>
+      | ((ctx: SyncEffectsContext<TState, TDispatcher, TSelectors>) => Record<string, Dispatcher<any>>)
+    effects?: (ctx: SyncEffectsContext<TState, TDispatcher, TSelectors>) => SyncEffectsResult<TState>
+  },
+  options?: SyncSynapseOptions<TState, TDispatcher, TSelectors>,
+): SyncSynapseModule<TState, TDispatcher, TSelectors> {
+  return createSyncSynapseModule<TState, TDispatcher, TSelectors>({ ...config, postConstruct: options?.postConstruct } as any)
 }

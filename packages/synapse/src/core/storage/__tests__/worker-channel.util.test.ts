@@ -83,6 +83,16 @@ describe('WorkerChannel (фолбэк на SyncBroadcastChannel)', () => {
     await expect(promise).resolves.toBeNull()
   })
 
+  it('close до ответа резолвит pending requestSync как null (не reject) — нет Error: Channel closed при dev double-mount', async () => {
+    const ch = track(new WorkerChannel(nextChannel()))
+
+    const promise = ch.requestSync() // повис в ожидании ответа
+    ch.close() // teardown между mount'ами
+
+    // Закрытие — не ошибка: pending резолвится null (как таймаут), без Error-стека.
+    await expect(promise).resolves.toBeNull()
+  })
+
   it('несериализуемый payload даёт понятную ошибку (structured clone)', () => {
     const ch = track(new WorkerChannel(nextChannel()))
 

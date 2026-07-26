@@ -64,6 +64,14 @@
     "4": "programmatic-api",
     "5": "relation-to-createsynapseawaiter"
   },
+  "browser-storage": {
+    "0": "browserstorage-server-safe",
+    "1": "why",
+    "2": "usage",
+    "3": "client-only-middleware",
+    "4": "options",
+    "5": "see-also"
+  },
   "cache-layers": {
     "0": "caching-layers",
     "1": "the-request-path",
@@ -78,10 +86,12 @@
     "0": "createsynapse-basic",
     "1": "storage-and-state-pokemonstorets",
     "2": "selectors-pokemonselectorsts",
-    "3": "assembly-createsynapsefactory",
+    "3": "assembly-createsynapseconfig",
     "4": "the-return-value",
     "5": "usage-in-react",
-    "6": "async-initialization-in-the-factory"
+    "6": "async-lives-in-the-effects-factory",
+    "7": "full-shape-every-config-field",
+    "8": "extras-dx"
   },
   "create-synapse-dispatcher": {
     "0": "createsynapse-dispatcher",
@@ -344,7 +354,7 @@
     "6": "cleanup",
     "7": "three-variants-of-createsynapsectx",
     "8": "ssr-server-rendering-seeded-sync-stores",
-    "9": "ssr-data-less-background-providers-ssrshell"
+    "9": "ssr-data-less-background-providers"
   },
   "to-observable": {
     "0": "toobservable",

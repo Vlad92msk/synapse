@@ -1,6 +1,6 @@
 # Synapse Storage — full documentation
 
-Source: https://synapse-homepage.web.app/docs · npm: synapse-storage · Generated: 2026-07-25
+Source: https://synapse-homepage.web.app/docs · npm: synapse-storage · Generated: 2026-07-26
 
 ---
 
@@ -106,15 +106,12 @@ class PostsEffects extends Effects<PostsState, PostsDispatcher> {
   )
 }
 
-// Module assembly — a lazy singleton handle.
-export const postsSynapse = createSynapse(async () => {
-  const storage = new MemoryStorage<PostsState>({ name: 'posts', initialState })
-  return {
-    storage,
-    dispatcher: new PostsDispatcher(storage),
-    selectors: new PostsSelectors(storage),
-    effects: new PostsEffects(await getPostsApi()),
-  }
+// Module assembly — a lazy singleton handle (C-form: synchronous core construction).
+export const postsSynapse = createSynapse({
+  storage: () => new MemoryStorage<PostsState>({ name: 'posts', initialState }),
+  dispatcher: (s) => new PostsDispatcher(s),
+  selectors: (s) => new PostsSelectors(s),
+  effects: async () => new PostsEffects(await getPostsApi()),   // async moves into effects
 })
 ```
 
@@ -1901,9 +1898,12 @@ unsub2()
 # createSynapse (basic)
 
 
-`createSynapse(factory)` assembles the **data-management layer** into a single lazy module. The
-minimal form is **storage + selectors**, with no dispatcher or effects: changes go through storage
-directly. We'll add the dispatcher and effects on the next pages
+`createSynapse(config)` assembles the **data-management layer** into a single lazy module. The
+only form is a **synchronous config object** (C-form): `storage` (a factory for synchronous
+storage), optionally `dispatcher` / `selectors` / `dependencies` / `effects`. Core construction is
+synchronous; everything async (endpoints, sockets, dependency readiness) moves into the effects
+lifecycle. The minimal form is **storage + selectors**, with no dispatcher or effects: changes go
+through storage directly. We'll add the dispatcher and effects on the next pages
 ([Dispatcher](./create-synapse-dispatcher.md), [Effects](./create-synapse-effects.md)).
 
 Everything on one domain — `pokemon-advanced` (see the [Pokemon example](./pokemon-advanced.md)).
@@ -1967,11 +1967,13 @@ export class PokemonSelectors extends Selectors<PokemonState> {
 > The full set of selectors (statuses and errors of both requests, `selectedPokemon`, `hasMore`) is
 > in `pokemon.selectors.ts`. More on selectors themselves — [Selectors](./selector-system.md).
 
-## Assembly: createSynapse(factory)
+## Assembly: createSynapse(config)
 
-`createSynapse(factory)` returns a **lazy handle**. The factory runs once — on the first `await` /
-`ready()`, not on import (this matters for SSR and for keeping a module import from hitting the
-network).
+`createSynapse(config)` returns a **lazy handle**. The factories (`storage`/`dispatcher`/
+`selectors`) run lazily — on the first `await` / `ready()` (or on the first synchronous access to
+`.storage`/`.selectors`), not on import (this matters for SSR and for keeping a module import from
+hitting the network). Yet core construction itself is **synchronous**: `storage` is driven to
+`READY` in a single tick, and `state$` is always present — even before `await`.
 
 The minimal form — storage + selectors only:
 
@@ -1983,22 +1985,24 @@ import { PokemonSelectors } from './pokemon.selectors'
 import { initialState } from './pokemon.store'
 import type { PokemonState } from './pokemon.types'
 
-const pokemonSynapse = createSynapse(async () => {
-  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState })
-  return {
-    storage,
-    selectors: new PokemonSelectors(storage),
-    // dispatcher / effects — we'll add them on the next pages
-  }
+export const pokemonSynapse = createSynapse({
+  // storage — a factory for SYNCHRONOUS storage (Memory/LocalStorage); TState is inferred from it
+  storage: () => new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+  selectors: (s) => new PokemonSelectors(s),
+  // dispatcher / effects — we'll add them on the next pages
 })
 
 export type PokemonSynapse = Awaited<typeof pokemonSynapse>
 ```
 
+> `TState` (the `PokemonState` type) is **inferred** from the `storage` factory — no need to spell
+> out generics by hand. If the type is awkward to infer from the factory, there's an explicit form
+> `createSynapse.of<State, Dispatcher, Selectors>({ … })`.
+
 ## The return value
 
 ```typescript
-// The handle is thenable: await runs the factory and returns the assembled module
+// The handle is thenable: await starts effects and returns the assembled module
 const store = await pokemonSynapse
 
 // The result (basic — no dispatcher):
@@ -2008,8 +2012,13 @@ store.state$     // Observable<PokemonState> — the state stream (ALWAYS presen
 store.dispatcher // undefined (no dispatcher)
 store.actions    // undefined (the dispatcher alias)
 
+// The C-form exposes the main core SYNCHRONOUSLY (no await) — the basis of cross-store DI:
+pokemonSynapse.storage        // IStorage<PokemonState> — available immediately
+pokemonSynapse.selectors      // PokemonSelectors — can be passed into other selectors' constructors
+pokemonSynapse.state$         // Observable<PokemonState>
+
 // The handle itself:
-pokemonSynapse.ready()        // Promise<store> — same as await
+pokemonSynapse.ready()        // Promise<store> — same as await (starts effects)
 pokemonSynapse.isReady()      // boolean
 pokemonSynapse.getSnapshot()  // store | undefined — synchronous access (needed for SSR)
 pokemonSynapse.destroy()      // Promise<void> — cleanup + memoization reset (the handle is recreatable)
@@ -2040,29 +2049,120 @@ store.storage.update((s) => {
 > (loading from an API) appear — that's the job of [Dispatcher](./create-synapse-dispatcher.md) and
 > [Effects](./create-synapse-effects.md).
 
-## Async initialization in the factory
+## Async lives in the `effects` factory
 
-The factory is a plain `async` function, so any prologue (fetching seed data, an API client's
-`init()`) is done right inside it, before assembling the module:
+Core construction is **synchronous**, so everything async lives in the `effects` factory: it can be
+`async` and lazily resolves browser-only resources (an API client's `init()`, endpoints, the `ApiClient`
+IndexedDB cache, sockets) — after the core is built, and only on the client:
 
 ```typescript
-const pokemonSynapse = createSynapse(async () => {
-  // the async prologue runs once on the first await
-  const seed = await fetch('https://pokeapi.co/api/v2/pokemon?limit=12').then((r) => r.json())
-
-  const storage = new MemoryStorage<PokemonState>({
-    name: 'pokemon-advanced',
-    initialState: { ...initialState, /* ...prepared seed... */ },
-  })
-  return {
-    storage,
-    selectors: new PokemonSelectors(storage),
-  }
+export const pokemonSynapse = createSynapse({
+  storage: () => new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+  selectors: (s) => new PokemonSelectors(s),
+  // async — only here; core construction and rendering don't touch it
+  effects: async () => new PokemonEffects(await getPokemonEndpoints()),
 })
 ```
 
-> In the full module this prologue is `await initPokemonApi()` (initializing `pokemonApiClient`). How
-> it looks together with the dispatcher, effects, and dependencies — [Pokemon example](./pokemon-advanced.md).
+> Server and client build the store identically from `initialState`, the SSR shell is inferred
+> automatically (see [SSR](./ssr-hydration.md)), and a module import doesn't hit the network. How
+> `effects` looks together with the dispatcher and dependencies — [Effects](./create-synapse-effects.md)
+> and the [Pokemon example](./pokemon-advanced.md).
+
+## Full shape — every config field
+
+You usually need 2–3 fields, but here is the **entire surface** of the C-form at once (commented-out
+fields are optional), so you can see what it can do:
+
+```typescript
+import { MemoryStorage } from 'synapse-storage/core'
+import { createSynapse } from 'synapse-storage/utils'
+
+export const pokemonSynapse = createSynapse(
+  {
+    // 1. storage — the ONLY required field. A factory for a synchronous storage
+    //    (MemoryStorage/LocalStorage). TState is inferred from its type.
+    storage: () => new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+
+    // 2. dispatcher — a factory for the class dispatcher (intents + store updates). Gets storage.
+    dispatcher: (s) => new PokemonDispatcher(s),
+
+    // 3. selectors — a factory for the class selectors. Gets storage; this is also where
+    //    cross-store DI goes (ANOTHER module's selectors are available synchronously):
+    //    new X(s, coreSynapse.selectors).
+    selectors: (s) => new PokemonSelectors(s),
+
+    // 4. dependencies — the gate for STARTING effects (not construction): the core is built
+    //    immediately, effects wait for these stores/modules to be ready. An item is an IStorage,
+    //    a synapse handle, or any PromiseLike<{ storage }>.
+    dependencies: [settingsStorage],
+
+    // 5. dependencyTimeout — the dependencies wait timeout, ms (defaults to 30000).
+    dependencyTimeout: 10000,
+
+    // 6. externalDispatchers — foreign dispatchers whose actions are merged into the shared
+    //    action$ (communication pattern 3). A lazy slot-function is preferred — it doesn't force
+    //    eager construction of the foreign store on import; resolved when effects start.
+    externalDispatchers: () => ({ settings: settingsSynapse.dispatcher }),
+
+    // 7. effects — an effects factory; MAY be async (the whole async prologue goes here).
+    //    ctx = { storage, dispatcher, selectors, deps }. Returns Effects instance(s) /
+    //    effect functions / undefined.
+    effects: async ({ selectors }) =>
+      new PokemonEffects(await getPokemonEndpoints(), selectors),
+  },
+  {
+    // 8. The SECOND argument — options. postConstruct: a synchronous hook after core construction
+    //    (storage READY, dispatcher finalized), BEFORE the first render. The home for normalizing
+    //    persisted state (clearing transient flags).
+    postConstruct: ({ actions }) => actions.resetTransient(),
+  },
+)
+```
+
+## Extras (DX)
+
+- **`browserStorage(config, { client })`** (exported from `synapse-storage/core`) — a server-safe
+  storage factory: `MemoryStorage` on the server (no `window`), `client(config)` in the browser.
+  Removes the manual `const isServer = typeof window === …` + branch; add client-only middleware
+  (`syncBroadcastMiddleware`) inside `client`. Both branches are a sync store of the same shape, and
+  the type is inferred without manual generics.
+  ```typescript
+  // browserStorage(...) itself returns a factory () => ISyncStorage — pass it as-is
+  storage: browserStorage(
+    { name: 'draft', initialState },
+    { client: (cfg) => new LocalStorage(cfg) },
+  )
+  ```
+- **`postConstruct` — the second argument** `createSynapse(config, { postConstruct })`. A synchronous
+  hook after core construction (storage `READY`, dispatcher finalized), BEFORE the first render — for
+  normalizing persisted state (clearing transient flags). A separate argument (not a config field) so
+  the callback is contextually typed with the already-inferred `TDispatcher`:
+  ```typescript
+  export const accounts = createSynapse(
+    {
+      storage: () => new LocalStorage<AccountsState>({ name: 'accounts', initialState }),
+      dispatcher: (s) => new AccountsDispatcher(s),
+    },
+    // persisted state from localStorage may have kept transient flags (isSubmitting, etc.) —
+    // clear them synchronously BEFORE the first render. `actions` is typed as AccountsDispatcher.
+    { postConstruct: ({ actions }) => actions.resetTransient() },
+  )
+  ```
+- **`createSynapse.of<State, Dispatcher, Selectors>(config, options?)`** — the explicitly-typed C-form,
+  for when `TState` is awkward to infer from the `storage` factory (manual generics without falling
+  through to a constraint error):
+  ```typescript
+  // generics set manually; config fields and the second argument are the same as createSynapse
+  export const accounts = createSynapse.of<AccountsState, AccountsDispatcher, AccountsSelectors>(
+    {
+      storage: () => new LocalStorage({ name: 'accounts', initialState }),
+      dispatcher: (s) => new AccountsDispatcher(s),
+      selectors: (s) => new AccountsSelectors(s),
+    },
+    { postConstruct: ({ actions }) => actions.resetTransient() },
+  )
+  ```
 
 ---
 
@@ -2200,14 +2300,11 @@ import { PokemonSelectors } from './pokemon.selectors'
 import { initialState } from './pokemon.store'
 import type { PokemonState } from './pokemon.types'
 
-const pokemonSynapse = createSynapse(async () => {
-  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState })
-  return {
-    storage,
-    dispatcher: new PokemonDispatcher(storage),
-    selectors: new PokemonSelectors(storage),
-    // effects — on the next page
-  }
+export const pokemonSynapse = createSynapse({
+  storage: () => new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+  dispatcher: (s) => new PokemonDispatcher(s),
+  selectors: (s) => new PokemonSelectors(s),
+  // effects — on the next page
 })
 ```
 
@@ -2540,24 +2637,24 @@ import { PokemonDispatcher } from './pokemon.dispatcher'
 import { PokemonEffects } from './pokemon.effects'
 import { PokemonSelectors } from './pokemon.selectors'
 
-export const pokemonSynapse = createSynapse(async () => {
-  await initPokemonApi()                 // async prologue: initialize the API client
-  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState })
-
-  return {
-    storage,
-    dependencies: [settingsStorage],     // dependency on another storage
-    dependencyTimeout: 10000,
-    dispatcher: new PokemonDispatcher(storage),
-    selectors: new PokemonSelectors(storage),
-    // services and external stores — through the effects' constructor (captured in the closure)
-    effects: new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage)),
-  }
+export const pokemonSynapse = createSynapse({
+  storage: () => new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+  dispatcher: (s) => new PokemonDispatcher(s),
+  selectors: (s) => new PokemonSelectors(s),
+  dependencies: [settingsStorage],       // gate for the START of effects (not construction)
+  dependencyTimeout: 10000,
+  // the effects factory can be async — the whole async prologue moves here (init API client,
+  // resolve endpoints). Services and external stores are captured in the effects constructor closure.
+  effects: async () => {
+    await initPokemonApi()               // async prologue: initialize the API client
+    return new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage))
+  },
 })
 ```
 
-Effects start **automatically** when the module is initialized (the first `await pokemonSynapse`).
-More on the async factory, `dependencies` and `dependencyTimeout` — [Dependencies](./dependencies.md).
+Effects start **automatically** when the module is initialized (the first `await pokemonSynapse`),
+and only after `dependencies` (a gate for the start, not construction — the core is assembled right away).
+More on the `effects` factory, `dependencies` and `dependencyTimeout` — [Dependencies](./dependencies.md).
 
 ## Return value
 
@@ -2791,8 +2888,10 @@ dispatcher.destroy()
 # Cross-module dependencies
 
 
-One `createSynapse` can depend on another storage or module. Dependencies are **awaited before the
-factory runs** — by assembly time they are guaranteed to be initialized.
+One `createSynapse` can depend on another storage or module. `dependencies` is a **gate for the
+START of effects, not for construction**: the core (storage/dispatcher/selectors) is assembled
+synchronously right away, while `waitForDependencies` runs inside `ready()` before starting the
+effects — by the time effects start, the dependencies are guaranteed to be initialized.
 
 Same domain — `pokemon-advanced`. It depends on a separate `settingsStorage` (`pageSize`).
 
@@ -2820,26 +2919,24 @@ import { MemoryStorage } from 'synapse-storage/core'
 import { toObservable } from 'synapse-storage/reactive'
 import { createSynapse } from 'synapse-storage/utils'
 
-export const pokemonSynapse = createSynapse(async () => {
-  await initPokemonApi()                       // the factory's async prologue
-  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState })
-
-  return {
-    storage,
-    dependencies: [settingsStorage],           // wait for readiness before assembly
-    dependencyTimeout: 10000,                   // ms, default 30000
-    dispatcher: new PokemonDispatcher(storage),
-    selectors: new PokemonSelectors(storage),
-    // settings$ — the external store's state as an Observable (pattern 1, see below)
-    effects: new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage)),
-  }
+export const pokemonSynapse = createSynapse({
+  storage: () => new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+  dependencies: [settingsStorage],             // gate for the START of effects (core is built right away)
+  dependencyTimeout: 10000,                     // ms, default 30000
+  dispatcher: (s) => new PokemonDispatcher(s),
+  selectors: (s) => new PokemonSelectors(s),
+  // settings$ — the external store's state as an Observable (pattern 1, see below)
+  effects: async () => {
+    await initPokemonApi()                     // the async prologue moved into the effects factory
+    return new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage))
+  },
 })
 ```
 
 **A dependency can be** (`DependencyInput`):
 
 - a raw `IStorage` — like `settingsStorage` above (its `initialize()` is awaited for us);
-- another synapse handle — `dependencies: [await otherSynapse]` (the handle is thenable + `waitForReady`);
+- another synapse handle — `dependencies: [otherSynapse]` (the handle is itself thenable — no `await` needed);
 - any `PromiseLike<{ storage }>`.
 
 In the effects `pageSize` arrives via `withLatestFrom(this.settings$)` — see
@@ -2888,14 +2985,16 @@ class SettingsSelectors extends Selectors<SettingsState> {
   }
 }
 
-// assembly (the factory awaited auth and passed in its selectors):
-const auth = await authSynapse
-return {
-  storage,
-  dependencies: [auth],
-  selectors: new SettingsSelectors(storage, auth.selectors),
-}
+// assembly: cross-store DI SYNCHRONOUSLY — the C-form exposes `authSynapse.selectors` without await
+createSynapse({
+  storage: () => new MemoryStorage<SettingsState>({ name: 'settings', initialState }),
+  dependencies: [authSynapse],                                  // gate for the start of effects
+  selectors: (s) => new SettingsSelectors(s, authSynapse.selectors),
+})
 ```
+
+> `combineAcross` / `createLazyForeignSelector` are no longer needed and have been **removed** — the
+> cross-store link is built directly through constructor DI (`authSynapse.selectors` is available synchronously).
 
 ### 3. React to another store's ACTIONS — via `externalDispatchers`
 
@@ -2912,14 +3011,15 @@ class SettingsEffects extends Effects<SettingsState, SettingsDispatcher, { auth:
   )
 }
 
-// in assembly the external dispatchers are wired in as externalDispatchers
-return {
-  storage,
-  dependencies: [auth],
-  dispatcher: new SettingsDispatcher(storage),
-  effects: new SettingsEffects(),
-  externalDispatchers: { auth: auth.dispatcher },
-}
+// in assembly the external dispatchers are wired in as externalDispatchers — a lazy slot function
+// (doesn't force eager construction of the other store on import; resolved at the start of effects)
+createSynapse({
+  storage: () => new MemoryStorage<SettingsState>({ name: 'settings', initialState }),
+  dependencies: [authSynapse],
+  dispatcher: (s) => new SettingsDispatcher(s),
+  effects: () => new SettingsEffects(),
+  externalDispatchers: () => ({ auth: authSynapse.dispatcher }),
+})
 ```
 
 ### 4. Mediator / event-bus
@@ -2931,10 +3031,11 @@ details — [createEventBus](./event-bus.md).
 ## Initialization order
 
 ```typescript
-// The order inside a createSynapse factory:
-// 1. Dependencies are ready (Promise.all + timeout); their storage.initialize() is idempotent
-// 2. The factory runs → creates storage, dispatcher, selectors, effects
-// 3. storage.initialize() + starting the effects
+// The order in the C-form createSynapse:
+// 1. Construction is SYNCHRONOUS: storage.initializeSync() → READY, dispatcher finalized,
+//    selectors materialized, state$ present — all available BEFORE ready()/await (cross-store DI)
+// 2. ready()/await: waitForDependencies (Promise.all + timeout) — gate for the START of effects
+// 3. Resolve the effects factory (may be async) + externalDispatchers → start the effects
 
 // On timeout — an error is thrown (default 30000ms, pokemon uses 10000):
 // 'Dependency 0 ("pokemon-settings") timed out after 10000ms. Check that it initializes correctly.'
@@ -3102,23 +3203,25 @@ const ctx = createSynapseCtx(pokemonSynapse)
 
 ## SSR — server-rendering seeded sync stores
 
-> Available since **5.0.1**. Classic `renderToString` only (streaming/Suspense is out of scope).
+> Since **6.0.0** SSR is **enabled by construction** — there is no separate `ssr` flag anymore (removed).
+> The C-form construction is synchronous, so on the server the Provider builds a fresh shell per render
+> (`buildSyncShell`) and synchronously seeds its `dehydratedState`. Classic `renderToString` only
+> (streaming/Suspense is out of scope).
 >
 > The full runnable cycle (dehydrate → renderToString → hydration) is in
 > [`SynapseCtxSsrExample.tsx`](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SynapseCtxSsrExample.tsx)
 > (on the Posts domain; below the same mechanics are shown on pokemon).
 
-By default `createSynapseCtx` gates children behind `loadingComponent` until the module is ready —
-on the server this yields empty HTML (no SEO, no first paint from server-state). The `ssr: true`
-flag enables a mode where a synchronously-ready store (Memory/LocalStorage — like pokemon) renders
-content right away.
+Previously `createSynapseCtx` gated children behind `loadingComponent` until the module was ready, and
+server rendering was enabled by the `ssr: true` flag. Now the store is always synchronously ready for the
+first frame, so server-rendering seeded content is the default behavior, and `loadingComponent` remains
+only a fallback render (an async store that couldn't be built synchronously).
 
 ### Options
 
 ```typescript
 const PokemonCtx = createSynapseCtx(pokemonSynapse, {
-  loadingComponent: <Spinner />,
-  ssr: true, // enable server-rendering of seeded sync stores
+  loadingComponent: <Spinner />, // fallback render (normally the C-form is ready for the first frame)
 })
 ```
 
@@ -3135,9 +3238,10 @@ dehydrate(opts?: { initialState?: Partial<TState> }): Promise<TState>
 ### Server: build the snapshot
 
 `dehydrate` creates a **per-request fork** of the module (parallel requests do not share state —
-no request bleed), seeds `initialState` via `hydrate`, and returns a serializable snapshot. With
-`ssr: true` it additionally warms the main handle with the same snapshot, so a synchronous
-`renderToString` gets a ready store on the first render.
+no request bleed), seeds `initialState` via `hydrate`, and returns a serializable snapshot. On the
+server the Provider then builds a fresh shell per render and synchronously seeds it with this snapshot,
+so `renderToString` returns ready content on the first render (the main singleton is left untouched —
+request isolation by construction).
 
 ```typescript
 // Any data-fetching path (the pokemon ApiClient, etc.) → a snapshot.
@@ -3157,7 +3261,7 @@ const html = renderToString(<PokedexWithContext dehydratedState={dehydrated} />)
 > import { dehydrateModule } from 'synapse-storage/utils'
 >
 > // in a server (RSC) file — pokemonSynapse is imported directly, no 'use client' context
-> const dehydrated = await dehydrateModule(pokemonSynapse, { ssr: true, state: { pokemonList: list } })
+> const dehydrated = await dehydrateModule(pokemonSynapse, { state: { pokemonList: list } })
 > ```
 >
 > `state` is merged on top of the fork's `initialState` (shallow, top-level) — you may pass only the
@@ -3185,146 +3289,115 @@ hydrateRoot(container, <PokedexWithContext dehydratedState={dehydrated} />)
 - **Async stores (IndexedDB).** No synchronous server content (async init): the server keeps the
   previous `loadingComponent` gate, without crashing and without request bleed; `dehydrate` still
   collects a correct snapshot (it awaits the async `hydrate`).
-- **Backward compatibility.** Without `ssr` and without `dehydratedState` the behavior is unchanged
-  (lazy start + `loadingComponent`); hook signatures did not change.
+- **Without `dehydratedState`.** A data-less background provider renders an empty shell from
+  `initialState` (see the section below); hook signatures did not change.
 
-## SSR — data-less "background" providers (`ssrShell`)
+## SSR — data-less "background" providers
 
-> Available since **5.4.0**.
+> Since **6.0.0** the SSR shell is derived **by the C-form itself** — the manual `ssrShell`, the object
+> form with `wire`, and the functional factory have been **removed**. The only form is the synchronous
+> config (see [createSynapse](./create-synapse-basic.md)).
 
-The section above server-renders a store that **has server data** (`dehydratedState`). But some providers
-wrap a large subtree (the app shell) yet have **no server data of their own** — presence, relations, a
-media-player. Their store is built by an **async factory** (`await getCoreSynapse()`, a socket, …), so it
-is never synchronously ready on the server. Without help such a provider hits the `loadingComponent` gate
-on the server and renders nothing — **cutting off the entire subtree below it**, including a correctly
-seeded feed two levels deeper.
+The section above server-renders a store that **received server data** (`dehydratedState`). But some
+providers wrap a large subtree (the app shell) yet have **no server data of their own** — presence,
+relations, a media-player. Previously their store was built by an async factory and wasn't synchronously
+ready on the server, so the provider hit the `loadingComponent` gate and rendered nothing — **cutting off
+the entire subtree below it**, including a correctly seeded feed two levels deeper.
 
-`ssrShell` gives the module a way to build a **synchronous "empty" store from `initialState`** — bypassing
-the async factory, its dependencies and effects — so the provider renders `children` on the server. The
-full store (with dependencies and effects) is assembled on the client afterwards, and the context switches
-to it seamlessly.
+Now construction is **synchronous by construction**: `storage`/`dispatcher`/`selectors` are built from
+`initialState` in a single tick, while everything async (deps, endpoints, WS) lives in the `effects`
+factory, which **does not run on the server**. So **every** C-form module with a synchronous storage has
+`buildSyncShell()` — a way to synchronously bring up an "empty" store from `initialState` so the provider
+renders `children` on the server. The full store (with dependencies and effects) is assembled on the
+client afterwards, after which the context switches to it seamlessly.
 
-### Declaring the shell — object form (recommended)
+### Nothing special to declare
 
-The cleanest way is the **object form** of `createSynapse`: declare the **synchronous core**
-(`storage`/`dispatcher`/`selectors`) separately from the **async wiring** (`wire`: `dependencies`/
-`effects`). The library then **derives the SSR shell automatically** from the sync core — no manual
-`ssrShell`, and `name`/`initialState` live in exactly one place. `wire` runs only when the real store is
-assembled (client) and never on the server.
+The shell is derived from the sync core — just write a plain C-form and keep everything async in `effects`:
 
 ```ts
 import { createSynapse } from 'synapse-storage/utils'
 import { MemoryStorage } from 'synapse-storage/core'
 
 export const presenceSynapse = createSynapse({
-  // sync core — the library builds the SSR shell from this, no manual ssrShell
+  // sync core — the library builds the SSR shell from it automatically
   storage: () => new MemoryStorage<PresenceState>({ name: 'presence', initialState }),
   dispatcher: (s) => new PresenceDispatcher(s),
   selectors: (s) => new PresenceSelectors(s),
-  // async wiring — client only (deps / effects / endpoints / WS)
-  wire: async () => ({
-    dependencies: [await getCoreSynapse()],
-    effects: new PresenceEffects(await getPresenceEndpoints()),
-  }),
+  dependencies: [coreSynapse],                       // gate for the START of effects (not construction)
+  // async — client only (endpoints / WS); does not run on the server
+  effects: async () => new PresenceEffects(await getPresenceEndpoints(), coreSynapse.state$),
 })
 ```
 
 - Zero SSR boilerplate: the shell = `{ storage(), dispatcher(storage), selectors(storage) }`.
 - One source of truth for `name`/`initialState` (no sync/async drift → no hydration bug).
-- `wire` never runs on the server → WS/IndexedDB/effects don't reach it by construction.
-- `storage` must be synchronous (`MemoryStorage`/`LocalStorage`) for the auto-shell. For an async store
-  (IndexedDB) there's no synchronous SSR — just don't set `{ ssr: true }` on the provider (as before).
+- `effects` never runs on the server → WS/IndexedDB/effects don't reach it by construction.
+- `storage` must be synchronous (`MemoryStorage`/`LocalStorage`). For an async store (IndexedDB) there's no
+  synchronous shell → the provider degrades to `loadingComponent` (see the gotchas).
 
-### Declaring the shell — functional form + manual `ssrShell` (escape hatch)
-
-If you keep the functional factory (or your `dispatcher`/`selectors` need client-only constructor args
-that must not run on the server), pass a synchronous `ssrShell` as the second argument. It returns a
-subset of the config — `{ storage, dispatcher?, selectors? }`, **without** `effects`/`dependencies`.
-
-```ts
-export const presenceSynapse = createSynapse(
-  async () => {
-    const core = await getCoreSynapse()
-    const storage = new MemoryStorage<PresenceState>({ name: 'presence', initialState })
-    return { storage, dependencies: [core], dispatcher: new PresenceDispatcher(storage), selectors: new PresenceSelectors(storage), effects: new PresenceEffects(/* … */) }
-  },
-  {
-    ssrShell: () => {
-      const storage = new MemoryStorage<PresenceState>({ name: 'presence', initialState })
-      return { storage, selectors: new PresenceSelectors(storage), dispatcher: new PresenceDispatcher(storage) }
-    },
-  },
-)
-```
-
-> **Forgot the shell?** If you set `{ ssr: true }` on the provider but the module has no `ssrShell`
-> (nor the object form), and the store isn't synchronously ready, `createSynapseCtx` logs a one-time
-> `[Synapse]` dev-warning instead of silently gating with `loadingComponent`.
+> **Server-safe storage.** If the storage is client-only (`LocalStorage` needs `localStorage`, a media-player
+> reads `tabId`/broadcast) — wrap the factory in `browserStorage(config, { client })` (exported from
+> `synapse-storage/core`): `MemoryStorage` on the server, `client(config)` in the browser. Both branches are a
+> sync store of the same shape, and the type is inferred without manual generics. See [SSR hydration](./ssr-hydration.md).
 
 ### The provider
 
-Turn on `ssr: true` — nothing else changes at the call site. A background provider is usually just a
-pass-through:
+Nothing to turn on — the call site is a plain `createSynapseCtx`. A background provider simply passes its
+children through:
 
 ```tsx
 export const { contextSynapse: withPresence } =
-  createSynapseCtx(presenceSynapse, { ssr: true, loadingComponent: null })
+  createSynapseCtx(presenceSynapse, { loadingComponent: null })
 
 export const PresenceProvider = withPresence(({ children }) => <>{children}</>)
 ```
 
-On the server `PresenceProvider` now renders its `children` (the whole subtree reaches the HTML); on the
+On the server `PresenceProvider` renders its `children` (the whole subtree reaches the HTML); on the
 client the first frame renders the same empty shell (matching the server — no hydration mismatch), then
 upgrades to the real store.
 
 ### How it works
 
-- **Server.** With `ssr: true`, the Provider renders a **fresh shell per render**
-  (`module.buildSyncShell()`) — for both background and `dehydratedState` stores — and never touches the
-  shared client awaiter / main singleton. So the async factory / effects / WebSocket never run on the
-  server, and no request state is written to a process-global object → **request isolation by
-  construction, safe even under streaming SSR** (Next App Router streams by default). Legacy modules
-  without a shell fall back to the shared-main path (safe only for non-streaming `renderToString`).
-- **Client hydration.** The first frame builds the same shell (empty state) → identical to the server →
-  no mismatch. Then, in `useEffect`, the real async store is assembled; once ready the context swaps to it
-  and the shell is destroyed.
-- **`ssr` is no longer a no-op.** Previously the render gate ignored `ssr` entirely (it was only read by
-  `dehydrate`), so `{ ssr: true }` without `dehydratedState` still showed `loadingComponent`. Now
-  `ssr: true` enables the shell path. Without an `ssrShell` the flag is a no-op (the old
-  `loadingComponent` gate) — backward compatible.
+- **Server.** The Provider renders a **fresh shell per render** (`buildSyncShell()`) — for both the
+  background store and a store with `dehydratedState` — and never touches the shared client awaiter /
+  main singleton. So the `effects` factory / WebSocket never run on the server, and no request state is
+  written to a process-global object → **request isolation by construction, safe even under streaming SSR**
+  (Next App Router streams by default).
+- **Client hydration.** The first frame builds the same shell (empty state) → identical to the server → no
+  mismatch. Then, in `useEffect`, the real store's effects start; once ready the context swaps to it and the
+  shell is destroyed.
 
 ### Gotchas
 
 - **`storage`/`dispatcher`/`selectors` run on the server** (they build the shell). Keep them SSR-safe —
-  no `window`/`document`/`localStorage` in their constructors. If you need client-only construction, use
-  the functional form with a separate `ssrShell`.
+  no `window`/`document`/`localStorage` in their constructors. If you need client-only construction, wrap
+  `storage` in `browserStorage(config, { client })`, and pass client-only `dispatcher`/`selectors` args
+  under an env guard (`isServer ? undefined : getTabId()`).
 - **Shell-phase interactions are discarded on upgrade.** The shell is a throwaway display store for the
   first frame; when the real store swaps in, any actions dispatched against the shell before the upgrade
   are lost. Treat the shell subtree as display-only until it upgrades (for a data store the real store is
   re-seeded from `dehydratedState`, so its data is not lost — only pre-upgrade user actions).
-- **`wire` runs before `storage.initialize()`.** Don't read/mutate the store inside `wire` — it only
-  returns `dependencies`/`effects`. State comes from `initialState`, `dehydratedState`, or effects.
-- **Async storage (IndexedDB) can't do a sync shell.** If a module's `storage` is async and you set
-  `{ ssr: true }`, the shell build fails; the Provider **degrades to `loadingComponent`** (no crash) and
-  logs a one-time dev-warning. Just don't set `{ ssr: true }` for async-store providers.
+- **Async storage (IndexedDB) can't do a sync shell.** If a module's `storage` is async, there's no sync
+  shell; the provider **degrades to `loadingComponent`** on the server (no crash) and logs a one-time
+  dev-warning. Such a background provider yields no server content — this is expected.
 
-### `dehydrate` vs `ssrShell`
+### `dehydrate` + the shell
 
 | Situation | Use |
 |---|---|
 | Store **has** server data (a feed, a first page) | `dehydrate` / `dehydrateModule` + `dehydratedState` prop (section above) |
-| Provider has **no** server data but must not block SSR (app shell) | `ssrShell` + `{ ssr: true }` |
-| Client-only, no SSR | neither — the default lazy `loadingComponent` gate |
+| Provider has **no** server data but must not block SSR (app shell) | nothing — the shell is derived from the sync core |
+| Client-only (async store, IndexedDB) | no server shell → `loadingComponent` gate |
 
 They compose on two levels:
 
-- **Across the tree:** a page can seed a feed via `dehydratedState` while a `presence` shell two levels up
-  uses `ssrShell` — without the shell, the gate would cut the seeded feed out of the HTML anyway.
-- **On one store:** give a data store **both** `dehydratedState` **and** a shell (the object form derives it).
-  On the first client frame, if the real async store isn't ready yet, the shell is **seeded with the
-  snapshot** → frame 1 renders the same content as the server → no hydration mismatch (and no subtree
-  regeneration, which can otherwise re-run inline `<head>` scripts and drop your theme/CSS). For a data
-  store, prefer the object form so it gets a shell — then you don't even need a `loadingComponent`.
+- **Across the tree:** a page seeds a feed via `dehydratedState` while a `presence` shell two levels up
+  renders its own shell (by construction); without the shell, the gate would cut the seeded feed out of the HTML.
+- **On one store:** a data store gets **both** `dehydratedState` **and** a shell (the C-form derives it).
+  Then on the first client frame, if the real store isn't ready yet, the shell is **seeded with the snapshot** →
+  frame 1 renders the same content as the server → no hydration mismatch (and no subtree regeneration, which can
+  otherwise re-run inline `<head>` scripts and drop your theme/CSS).
 
 The full pokemon module — [Pokemon (recipe)](./pokemon-advanced.md).
 
@@ -3542,16 +3615,17 @@ const synapse = await pokemonSynapse.ready()
 synapse.storage.hydrate(serverState)
 ```
 
-It is usually more convenient to work at the module level:
-[`createSynapseCtx({ ssr: true })`](./synapse-ctx.md) builds the snapshot via `dehydrate` and
-synchronously seeds the store on the client through the `dehydratedState` prop — solving the same
-task for the whole module rather than a bare storage.
+It is usually more convenient to work at the module level: [`createSynapseCtx`](./synapse-ctx.md) builds
+the snapshot via `dehydrate` and synchronously seeds the store through the `dehydratedState` prop (SSR is
+enabled by construction — no `ssr` flag needed) — solving the same task for the whole module rather than a
+bare storage.
 
 For a provider that has **no** server data but still must not block SSR (a "background" shell over a
-large subtree — presence, relations, a media-player), there is no snapshot to hydrate. Use
-[`ssrShell`](./synapse-ctx.md#ssr--data-less-background-providers-ssrshell) instead: the module builds a
-synchronous empty store from `initialState` on the server so its `children` reach the HTML, then upgrades
-to the real async store on the client.
+large subtree — presence, relations, a media-player), there is no snapshot to hydrate. In that case
+[nothing special is required](./synapse-ctx.md#ssr--data-less-background-providers): the C-form is
+synchronous, so the module itself builds an empty store from `initialState` (`buildSyncShell`) on the
+server so its `children` reach the HTML, then upgrades to the real store on the client (effects start in
+the browser).
 
 ## Types
 
@@ -4658,14 +4732,13 @@ action stream (so its effects react to bus events like regular actions), pass th
 `externalDispatchers` — this is "communication variant 3" from [dependencies](./dependencies.md):
 
 ```typescript
-const bus = await pokemonEventsHandle
-
-const mySynapse = createSynapse(() => ({
-  storage,
-  dispatcher: new MyDispatcher(storage),
-  effects: new MyEffects(),
-  externalDispatchers: { eventBus: bus.dispatcher },  // bus actions land in action$
-}))
+const mySynapse = createSynapse({
+  storage: () => new MemoryStorage<MyState>({ name: 'my', initialState }),
+  dispatcher: (s) => new MyDispatcher(s),
+  effects: () => new MyEffects(),
+  // lazy slot: bus actions land in action$; resolved at the start of effects
+  externalDispatchers: () => ({ eventBus: pokemonEventsHandle.dispatcher }),
+})
 ```
 
 ## See also
@@ -6337,7 +6410,7 @@ pokemon-advanced/
   pokemon.selectors.ts   — derived values (class Selectors)
   pokemon.dispatcher.ts  — intents (class Dispatcher)
   pokemon.effects.ts     — side-effects on RxJS (class Effects)
-  pokemon.synapse.ts     — assembly via createSynapse(factory)
+  pokemon.synapse.ts     — assembly via createSynapse({ … }) (C-form)
   index.ts               — public exports
   PokemonAdvancedExample.tsx / PokemonDemo.tsx — UI on top of the synapse
   helpers.ts             — small presentation utilities (typeColor)
@@ -6534,24 +6607,22 @@ export class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {
 
 → in detail: [create-synapse-basic](./create-synapse-basic.md), [dependencies](./dependencies.md)
 
-`createSynapse(factory)` ties everything together. The factory is **async** — it has an
-`initPokemonApi()` prologue. It returns a lazy handle: the factory starts on the first `await`/`ready()`,
-not on import.
+`createSynapse(config)` ties everything together. Construction is synchronous; the **async** prologue
+(`initPokemonApi()`) lives in the `effects` factory. It returns a lazy handle: the factories start on
+the first `await`/`ready()`, not on import.
 
 ```typescript
-export const pokemonSynapse = createSynapse(async () => {
-  await initPokemonApi()                                       // async prologue
-
-  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState })
-
-  return {
-    storage,
-    dependencies: [settingsStorage],                           // dependency on the settings store
-    dependencyTimeout: 10000,
-    dispatcher: new PokemonDispatcher(storage),
-    selectors: new PokemonSelectors(storage),
-    effects: new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage)),
-  }
+export const pokemonSynapse = createSynapse({
+  // synchronous core construction — TState is inferred from the storage factory
+  storage: () => new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+  dependencies: [settingsStorage],                             // gate for the START of effects
+  dependencyTimeout: 10000,
+  dispatcher: (s) => new PokemonDispatcher(s),
+  selectors: (s) => new PokemonSelectors(s),
+  effects: async () => {
+    await initPokemonApi()                                     // async prologue moved into effects
+    return new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage))
+  },
 })
 
 export type PokemonSynapse = Awaited<typeof pokemonSynapse>

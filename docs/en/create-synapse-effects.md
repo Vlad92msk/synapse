@@ -294,24 +294,24 @@ import { PokemonDispatcher } from './pokemon.dispatcher'
 import { PokemonEffects } from './pokemon.effects'
 import { PokemonSelectors } from './pokemon.selectors'
 
-export const pokemonSynapse = createSynapse(async () => {
-  await initPokemonApi()                 // async prologue: initialize the API client
-  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState })
-
-  return {
-    storage,
-    dependencies: [settingsStorage],     // dependency on another storage
-    dependencyTimeout: 10000,
-    dispatcher: new PokemonDispatcher(storage),
-    selectors: new PokemonSelectors(storage),
-    // services and external stores — through the effects' constructor (captured in the closure)
-    effects: new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage)),
-  }
+export const pokemonSynapse = createSynapse({
+  storage: () => new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+  dispatcher: (s) => new PokemonDispatcher(s),
+  selectors: (s) => new PokemonSelectors(s),
+  dependencies: [settingsStorage],       // gate for the START of effects (not construction)
+  dependencyTimeout: 10000,
+  // the effects factory can be async — the whole async prologue moves here (init API client,
+  // resolve endpoints). Services and external stores are captured in the effects constructor closure.
+  effects: async () => {
+    await initPokemonApi()               // async prologue: initialize the API client
+    return new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage))
+  },
 })
 ```
 
-Effects start **automatically** when the module is initialized (the first `await pokemonSynapse`).
-More on the async factory, `dependencies` and `dependencyTimeout` — [Dependencies](./dependencies.md).
+Effects start **automatically** when the module is initialized (the first `await pokemonSynapse`),
+and only after `dependencies` (a gate for the start, not construction — the core is assembled right away).
+More on the `effects` factory, `dependencies` and `dependencyTimeout` — [Dependencies](./dependencies.md).
 
 ## Return value
 

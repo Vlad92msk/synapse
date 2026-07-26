@@ -22,6 +22,8 @@ export class SyncBroadcastChannel<T = unknown> {
 
   private syncTimeoutMs = 1000
 
+  private closed = false
+
   private pendingSyncRequests: Map<
     string,
     {
@@ -134,10 +136,16 @@ export class SyncBroadcastChannel<T = unknown> {
     this.postMessage(type, payload)
   }
 
-  /**
-   * Запрос синхронизации данных с других вкладок
-   */
+  /** Закрыт ли канал (dev double-mount / teardown). Потребители могут пропустить initial-sync. */
+  public get isClosed(): boolean {
+    return this.closed
+  }
+
+  /** Запрос синхронизации данных с других вкладок. */
   public async requestSync(): Promise<T | null> {
+    // Канал уже закрыт (dev-teardown между mount'ами) — «нет ответа», без ошибки.
+    if (this.closed) return null
+
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pendingSyncRequests.delete(this.tabId)
@@ -154,10 +162,12 @@ export class SyncBroadcastChannel<T = unknown> {
    * Закрытие канала
    */
   public close() {
-    // Очищаем все pending запросы
+    this.closed = true
+    // Pending initial-sync резолвим как «нет ответа» (как таймаут, resolve(null)) — закрытие канала
+    // не ошибка (типичный dev double-mount в StrictMode/Fast Refresh), не шумим Error-стеком.
     for (const [, request] of this.pendingSyncRequests) {
       clearTimeout(request.timeout)
-      request.reject(new Error('Channel closed'))
+      request.resolve(null)
     }
     this.pendingSyncRequests.clear()
 

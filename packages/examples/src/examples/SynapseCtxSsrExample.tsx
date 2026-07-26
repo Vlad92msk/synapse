@@ -5,13 +5,12 @@ import { pokemonSynapse } from './pokemon-advanced/pokemon.synapse'
 import type { PokemonBrief, PokemonState } from './pokemon-advanced/pokemon.types'
 
 /**
- * createSynapseCtx в SSR-режиме на домене pokemon. При `ssr: true` и снапшоте, переданном
- * пропом `dehydratedState`, Provider сеет sync-стор синхронно и рендерит детей сразу — без
- * `loadingComponent`, без мигания, без клиентского фетча. Это пара к ssr-hydration: там
- * гидрируется «голый» storage, здесь — целый модуль через контекст.
+ * createSynapseCtx с SSR на домене pokemon. SSR включён by construction (флага `ssr` больше нет):
+ * получив снапшот пропом `dehydratedState`, Provider сеет sync-стор синхронно и рендерит детей
+ * сразу — без `loadingComponent`, без мигания, без клиентского фетча. Это пара к ssr-hydration:
+ * там гидрируется «голый» storage, здесь — целый модуль через контекст.
  */
 const PokemonCtx = createSynapseCtx(pokemonSynapse, {
-  ssr: true,
   loadingComponent: <div style={{ padding: 16, color: '#888' }}>Initializing…</div>,
 })
 
@@ -52,7 +51,7 @@ export function SynapseCtxSsrExample() {
       <h2>createSynapseCtx — SSR (Pokemon)</h2>
       <p>
         Снапшот стора готовится «на сервере» (<code>dehydrate</code>) и уходит пропом
-        <code> dehydratedState</code>. При <code>ssr: true</code> Provider сеет стор синхронно — список
+        <code> dehydratedState</code>. Provider сеет стор синхронно (SSR by construction) — список
         виден на первом же рендере.
       </p>
       <h3 style={sectionTitle}>Seeded via context</h3>

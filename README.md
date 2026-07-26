@@ -29,13 +29,10 @@ class CounterSelectors extends Selectors<{ count: number }> {
   count = this.select((s) => s.count)
 }
 
-export const counter = createSynapse(async () => {
-  const storage = new MemoryStorage({ name: 'counter', initialState: { count: 0 } })
-  return {
-    storage,
-    dispatcher: new CounterDispatcher(storage),
-    selectors: new CounterSelectors(storage),
-  }
+export const counter = createSynapse({
+  storage: () => new MemoryStorage({ name: 'counter', initialState: { count: 0 } }),
+  dispatcher: (s) => new CounterDispatcher(s),
+  selectors: (s) => new CounterSelectors(s),
 })
 ```
 
@@ -50,7 +47,7 @@ export const counter = createSynapse(async () => {
 - **Selectors** — memoized computed values with dependency tracking
 - **Immer-like Updates** — mutate state directly inside `update()` callbacks
 - **API Client** — HTTP client with tag-based caching and invalidation
-- **React Integration** — hooks on `useSyncExternalStore` (Concurrent Mode safe), with **SSR** support: seed server data via `createSynapseCtx({ ssr: true })` + `dehydrate`, or server-render data-less "background" providers via `ssrShell`
+- **React Integration** — hooks on `useSyncExternalStore` (Concurrent Mode safe), with **SSR** by construction (no `ssr` flag): seed server data via `createSynapseCtx` + `dehydrate` + `dehydratedState` prop; server-rendering data-less "background" providers works on its own (synchronous C-form → `buildSyncShell`)
 - **RxJS Effects** — dispatchers, effects, and watchers (Redux-Observable style)
 - **Middleware & Plugins** — extensible sync/async pipelines
 - **EventBus** — decoupled inter-module communication with wildcards
@@ -111,7 +108,7 @@ The docs are organized into **three independent pillars** — start with the arc
 
 | Topic                                                    | Description                                          |
 |----------------------------------------------------------|------------------------------------------------------|
-| [createSynapseCtx](./docs/en/synapse-ctx.md)             | React context integration + SSR (`ssr`, `dehydrate`, `ssrShell`) |
+| [createSynapseCtx](./docs/en/synapse-ctx.md)             | React context integration + SSR (`ssr`, `dehydrate`, auto `buildSyncShell`) |
 | [awaitSynapse](./docs/en/await-synapse.md)               | Async synapse in components                          |
 | [SSR hydration](./docs/en/ssr-hydration.md)              | Server-render state, seed it on the client           |
 

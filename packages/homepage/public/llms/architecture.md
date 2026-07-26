@@ -101,15 +101,12 @@ class PostsEffects extends Effects<PostsState, PostsDispatcher> {
   )
 }
 
-// Module assembly — a lazy singleton handle.
-export const postsSynapse = createSynapse(async () => {
-  const storage = new MemoryStorage<PostsState>({ name: 'posts', initialState })
-  return {
-    storage,
-    dispatcher: new PostsDispatcher(storage),
-    selectors: new PostsSelectors(storage),
-    effects: new PostsEffects(await getPostsApi()),
-  }
+// Module assembly — a lazy singleton handle (C-form: synchronous core construction).
+export const postsSynapse = createSynapse({
+  storage: () => new MemoryStorage<PostsState>({ name: 'posts', initialState }),
+  dispatcher: (s) => new PostsDispatcher(s),
+  selectors: (s) => new PostsSelectors(s),
+  effects: async () => new PostsEffects(await getPostsApi()),   // async moves into effects
 })
 ```
 

@@ -154,22 +154,25 @@ const ctx = createSynapseCtx(pokemonSynapse)
 
 ## SSR — серверный рендер засеянных sync-сторов
 
-> Доступно с **5.0.1**. Только классический `renderToString` (streaming/Suspense — вне скоупа).
+> С **6.0.0** SSR **включён by construction** — отдельного флага `ssr` больше нет (удалён).
+> Конструкция C-формы синхронна, поэтому на сервере Provider строит свежую оболочку на каждый рендер
+> (`buildSyncShell`) и синхронно сеет её `dehydratedState`. Только классический `renderToString`
+> (streaming/Suspense — вне скоупа).
 >
 > Полный запускаемый цикл (dehydrate → renderToString → гидрация) — в
 > [`SynapseCtxSsrExample.tsx`](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SynapseCtxSsrExample.tsx)
 > (на домене Posts; ниже та же механика показана на pokemon).
 
-По умолчанию `createSynapseCtx` гейтит детей `loadingComponent`, пока модуль не готов — на сервере
-это даёт пустой HTML (нет SEO, нет первого кадра из server-state). Флаг `ssr: true` включает режим,
-в котором синхронно-готовый стор (Memory/LocalStorage — как у pokemon) рендерит контент сразу.
+Раньше `createSynapseCtx` гейтил детей `loadingComponent`, пока модуль не готов, и серверный рендер
+включался флагом `ssr: true`. Теперь стор всегда синхронно готов к первому кадру, поэтому серверный
+рендер засеянного контента — поведение по умолчанию, а `loadingComponent` остаётся лишь запасным
+рендером (async-стор, который не удалось построить синхронно).
 
 ### Опции
 
 ```typescript
 const PokemonCtx = createSynapseCtx(pokemonSynapse, {
-  loadingComponent: <Spinner />,
-  ssr: true, // включить серверный рендер засеянных sync-сторов
+  loadingComponent: <Spinner />, // запасной рендер (в норме C-форма готова к первому кадру)
 })
 ```
 
@@ -187,8 +190,9 @@ dehydrate(opts?: { initialState?: Partial<TState> }): Promise<TState>
 
 `dehydrate` создаёт **per-request форк** модуля (параллельные запросы не делят состояние —
 никакого request bleed), сеет `initialState` через `hydrate` и возвращает сериализуемый снапшот.
-При `ssr: true` он дополнительно прогревает основной handle тем же снапшотом, чтобы синхронный
-`renderToString` отдал готовый стор на первом рендере.
+На сервере Provider затем строит свежую оболочку на каждый рендер и синхронно сеет её этим снапшотом,
+чтобы `renderToString` отдал готовый контент на первом рендере (main-синглтон при этом не трогается —
+изоляция запроса by construction).
 
 ```typescript
 // Любой контур добычи данных (ApiClient pokemon и т.п.) → снапшот.
@@ -208,7 +212,7 @@ const html = renderToString(<PokedexWithContext dehydratedState={dehydrated} />)
 > import { dehydrateModule } from 'synapse-storage/utils'
 >
 > // в серверном (RSC) файле — pokemonSynapse импортируется напрямую, без 'use client'-контекста
-> const dehydrated = await dehydrateModule(pokemonSynapse, { ssr: true, state: { pokemonList: list } })
+> const dehydrated = await dehydrateModule(pokemonSynapse, { state: { pokemonList: list } })
 > ```
 >
 > `state` накладывается поверх `initialState` форка (shallow, top-level) — можно передать только
@@ -235,145 +239,114 @@ hydrateRoot(container, <PokedexWithContext dehydratedState={dehydrated} />)
 - **Async-сторы (IndexedDB).** Синхронного серверного рендера контента нет (инициализация async):
   на сервере остаётся прежний гейт `loadingComponent`, без краша и без request bleed; `dehydrate`
   всё равно собирает корректный снапшот (дожидается async-`hydrate`).
-- **Обратная совместимость.** Без `ssr` и без `dehydratedState` поведение прежнее (ленивый старт +
-  `loadingComponent`); сигнатуры хуков не менялись.
+- **Без `dehydratedState`.** Фоновый провайдер без серверных данных рендерит пустую оболочку из
+  `initialState` (см. секцию ниже); сигнатуры хуков не менялись.
 
-## SSR — «фоновые» провайдеры без серверных данных (`ssrShell`)
+## SSR — «фоновые» провайдеры без серверных данных
 
-> Доступно с **5.4.0**.
+> С **6.0.0** SSR-оболочка выводится **самой C-формой** — ручной `ssrShell`, объектная форма с `wire`
+> и функциональная фабрика **удалены**. Единственная форма — синхронный конфиг (см.
+> [createSynapse](./create-synapse-basic.md)).
 
 Секция выше серверно рендерит стор, которому **пришли серверные данные** (`dehydratedState`). Но часть
 провайдеров оборачивает большое поддерево (шелл приложения), а **своих серверных данных не имеет** —
-presence, relations, media-player. Их стор строится **async-фабрикой** (`await getCoreSynapse()`, сокет,
-…), поэтому синхронно на сервере он никогда не готов. Без помощи такой провайдер упирается в гейт
-`loadingComponent` на сервере и рендерит пустоту — **срезая всё поддерево под собой**, включая корректно
-засеянную ленту двумя уровнями глубже.
+presence, relations, media-player. Раньше их стор строился async-фабрикой и синхронно на сервере не был
+готов, поэтому провайдер упирался в гейт `loadingComponent` и рендерил пустоту — **срезая всё поддерево
+под собой**, включая корректно засеянную ленту двумя уровнями глубже.
 
-`ssrShell` даёт модулю способ синхронно построить **«пустой» стор из `initialState`** — в обход
-async-фабрики, её зависимостей и эффектов — чтобы провайдер отрендерил `children` на сервере. Полный стор
-(с зависимостями и эффектами) достраивается на клиенте, после чего контекст бесшовно переключается на него.
+Теперь конструкция **синхронна by construction**: `storage`/`dispatcher`/`selectors` строятся из
+`initialState` в один тик, а всё async (deps, endpoints, WS) живёт в фабрике `effects`, которая
+**на сервере не исполняется**. Поэтому у **любого** C-form-модуля с синхронным хранилищем есть
+`buildSyncShell()` — способ синхронно поднять «пустой» стор из `initialState`, чтобы провайдер
+отрендерил `children` на сервере. Полный стор (с зависимостями и эффектами) достраивается на клиенте,
+после чего контекст бесшовно переключается на него.
 
-### Объявление оболочки — объектная форма (рекомендуется)
+### Ничего специального объявлять не нужно
 
-Самый чистый способ — **объектная форма** `createSynapse`: объявляешь **синхронное ядро**
-(`storage`/`dispatcher`/`selectors`) отдельно от **async-обвязки** (`wire`: `dependencies`/`effects`).
-Библиотека тогда **выводит SSR-оболочку сама** из sync-ядра — ручной `ssrShell` не нужен, а
-`name`/`initialState` живут в одном месте. `wire` исполняется только при сборке реального стора
-(клиент) и никогда — на сервере.
+Оболочка выводится из sync-ядра — просто пиши обычную C-форму, а всё async держи в `effects`:
 
 ```ts
 import { createSynapse } from 'synapse-storage/utils'
 import { MemoryStorage } from 'synapse-storage/core'
 
 export const presenceSynapse = createSynapse({
-  // sync-ядро — из него библиотека строит SSR-оболочку, без ручного ssrShell
+  // sync-ядро — из него библиотека строит SSR-оболочку автоматически
   storage: () => new MemoryStorage<PresenceState>({ name: 'presence', initialState }),
   dispatcher: (s) => new PresenceDispatcher(s),
   selectors: (s) => new PresenceSelectors(s),
-  // async-обвязка — только клиент (deps / effects / endpoints / WS)
-  wire: async () => ({
-    dependencies: [await getCoreSynapse()],
-    effects: new PresenceEffects(await getPresenceEndpoints()),
-  }),
+  dependencies: [coreSynapse],                       // гейт СТАРТА эффектов (не конструкции)
+  // async — только клиент (endpoints / WS); на сервере не исполняется
+  effects: async () => new PresenceEffects(await getPresenceEndpoints(), coreSynapse.state$),
 })
 ```
 
 - Ноль boilerplate на SSR: оболочка = `{ storage(), dispatcher(storage), selectors(storage) }`.
 - Один источник правды для `name`/`initialState` (нет расхождения sync/async → нет бага гидрации).
-- `wire` не бежит на сервере → WS/IndexedDB/эффекты туда не едут by construction.
-- `storage` должен быть синхронным (`MemoryStorage`/`LocalStorage`) для авто-оболочки. У async-стора
-  (IndexedDB) синхронного SSR нет — просто не ставь `{ ssr: true }` у провайдера (как и раньше).
+- `effects` не бежит на сервере → WS/IndexedDB/эффекты туда не едут by construction.
+- `storage` должен быть синхронным (`MemoryStorage`/`LocalStorage`). У async-стора (IndexedDB) синхронной
+  оболочки нет → провайдер деградирует к `loadingComponent` (см. подводные камни).
 
-### Объявление оболочки — функциональная форма + ручной `ssrShell` (escape hatch)
-
-Если оставляешь функциональную фабрику (или `dispatcher`/`selectors` требуют client-only аргументы
-конструктора, которым нельзя исполняться на сервере) — передай синхронный `ssrShell` вторым аргументом.
-Он возвращает подмножество конфига — `{ storage, dispatcher?, selectors? }`, **без**
-`effects`/`dependencies`.
-
-```ts
-export const presenceSynapse = createSynapse(
-  async () => {
-    const core = await getCoreSynapse()
-    const storage = new MemoryStorage<PresenceState>({ name: 'presence', initialState })
-    return { storage, dependencies: [core], dispatcher: new PresenceDispatcher(storage), selectors: new PresenceSelectors(storage), effects: new PresenceEffects(/* … */) }
-  },
-  {
-    ssrShell: () => {
-      const storage = new MemoryStorage<PresenceState>({ name: 'presence', initialState })
-      return { storage, selectors: new PresenceSelectors(storage), dispatcher: new PresenceDispatcher(storage) }
-    },
-  },
-)
-```
-
-> **Забыл оболочку?** Если поставил `{ ssr: true }` у провайдера, а `ssrShell` (или объектной формы) у
-> модуля нет, и стор не готов синхронно — `createSynapseCtx` один раз пишет `[Synapse]`-варнинг вместо
-> молчаливого отката к `loadingComponent`.
+> **Server-safe хранилище.** Если хранилище client-only (`LocalStorage` требует `localStorage`, media-player
+> берёт `tabId`/broadcast) — оберни фабрику в `browserStorage(config, { client })` (экспорт из
+> `synapse-storage/core`): `MemoryStorage` на сервере, `client(config)` в браузере. Обе ветки — sync-стор
+> одной формы, тип выводится без ручных дженериков. См. [SSR-гидрация](./ssr-hydration.md).
 
 ### Провайдер
 
-Включи `ssr: true` — на месте вызова больше ничего не меняется. Фоновый провайдер обычно просто прокидывает
+Ничего включать не нужно — на месте вызова обычный `createSynapseCtx`. Фоновый провайдер просто прокидывает
 детей:
 
 ```tsx
 export const { contextSynapse: withPresence } =
-  createSynapseCtx(presenceSynapse, { ssr: true, loadingComponent: null })
+  createSynapseCtx(presenceSynapse, { loadingComponent: null })
 
 export const PresenceProvider = withPresence(({ children }) => <>{children}</>)
 ```
 
-На сервере `PresenceProvider` теперь рендерит `children` (всё поддерево доходит до HTML); на клиенте
+На сервере `PresenceProvider` рендерит `children` (всё поддерево доходит до HTML); на клиенте
 первый кадр рендерит ту же пустую оболочку (совпадает с сервером — нет hydration mismatch), затем
 апгрейдится до реального стора.
 
 ### Как это работает
 
-- **Сервер.** При `ssr: true` Provider рендерит **свежую оболочку на каждый рендер**
-  (`module.buildSyncShell()`) — и для фонового стора, и для стора с `dehydratedState` — и не трогает общий
-  client awaiter / main-синглтон. Поэтому async-фабрика / эффекты / WebSocket на сервере не запускаются, и
-  никакое состояние запроса не пишется в процесс-глобальный объект → **request-изоляция by construction,
-  безопасно даже при стриминге** (Next App Router по умолчанию стримит). Легаси-модули без оболочки
-  используют общий main — безопасно только для не-стримингового `renderToString`.
+- **Сервер.** Provider рендерит **свежую оболочку на каждый рендер** (`buildSyncShell()`) — и для
+  фонового стора, и для стора с `dehydratedState` — и не трогает общий client awaiter / main-синглтон.
+  Поэтому фабрика `effects` / WebSocket на сервере не запускаются, и никакое состояние запроса не пишется
+  в процесс-глобальный объект → **request-изоляция by construction, безопасно даже при стриминге**
+  (Next App Router по умолчанию стримит).
 - **Клиентская гидрация.** Первый кадр строит ту же оболочку (пустое состояние) → идентично серверу → нет
-  mismatch. Затем в `useEffect` собирается реальный async-стор; по готовности контекст переключается на
+  mismatch. Затем в `useEffect` стартуют эффекты реального стора; по готовности контекст переключается на
   него, а оболочка уничтожается.
-- **Флаг `ssr` больше не «мёртвый».** Раньше гейт рендера его вообще не читал (использовался только в
-  `dehydrate`), поэтому `{ ssr: true }` без `dehydratedState` всё равно показывал `loadingComponent`.
-  Теперь `ssr: true` включает путь оболочки. Без `ssrShell` флаг — no-op (прежний гейт `loadingComponent`),
-  обратная совместимость сохранена.
 
 ### Подводные камни
 
 - **`storage`/`dispatcher`/`selectors` исполняются на сервере** (из них строится оболочка). Держи их
   SSR-safe — никаких `window`/`document`/`localStorage` в конструкторах. Нужна client-only сборка —
-  функциональная форма с отдельным `ssrShell`.
+  оберни `storage` в `browserStorage(config, { client })`, а client-only аргументы `dispatcher`/`selectors`
+  передавай под env-гардом (`isServer ? undefined : getTabId()`).
 - **Взаимодействия в фазе оболочки теряются при апгрейде.** Оболочка — throwaway-стор для первого кадра;
   когда въезжает реальный стор, действия, задиспатченные в оболочку до апгрейда, пропадают. Считай
   поддерево оболочки display-only до апгрейда (для стора с данными реальный стор пере-засевается из
   `dehydratedState` — данные не теряются, теряются только до-апгрейдные действия пользователя).
-- **`wire` исполняется ДО `storage.initialize()`.** Не читай/не мутируй стор внутри `wire` — он лишь
-  возвращает `dependencies`/`effects`. Состояние приходит из `initialState`, `dehydratedState` или эффектов.
-- **Async-хранилище (IndexedDB) не умеет синхронную оболочку.** Если `storage` модуля async, а ты выставил
-  `{ ssr: true }` — сборка оболочки падает; провайдер **деградирует к `loadingComponent`** (без краша) и
-  один раз пишет dev-варнинг. Просто не ставь `{ ssr: true }` для провайдеров с async-стором.
+- **Async-хранилище (IndexedDB) не умеет синхронную оболочку.** Если `storage` модуля async, синхронной
+  оболочки нет; провайдер **деградирует к `loadingComponent`** на сервере (без краша) и один раз пишет
+  dev-варнинг. Такой фоновый провайдер серверного контента не даёт — это ожидаемо.
 
-### `dehydrate` vs `ssrShell`
+### `dehydrate` + оболочка
 
 | Ситуация | Что использовать |
 |---|---|
 | У стора **есть** серверные данные (лента, первая страница) | `dehydrate` / `dehydrateModule` + проп `dehydratedState` (секция выше) |
-| У провайдера серверных данных **нет**, но он не должен блокировать SSR (шелл приложения) | `ssrShell` + `{ ssr: true }` |
-| Только клиент, без SSR | ни то, ни другое — дефолтный ленивый гейт `loadingComponent` |
+| У провайдера серверных данных **нет**, но он не должен блокировать SSR (шелл приложения) | ничего — оболочка выводится сама из sync-ядра |
+| Только клиент (async-стор, IndexedDB) | серверной оболочки нет → гейт `loadingComponent` |
 
 Они компонуются на двух уровнях:
 
-- **По дереву:** страница засевает ленту через `dehydratedState`, а шелл `presence` двумя уровнями выше —
-  через `ssrShell`; без оболочки гейт вырезал бы засеянную ленту из HTML.
-- **На одном сторе:** дай стору с данными И `dehydratedState`, И оболочку (объектная форма выводит её
-  сама). Тогда на первом клиентском кадре, если реальный async-стор ещё не готов, оболочка **засевается
-  снапшотом** → кадр-1 рендерит тот же контент, что и сервер → нет hydration mismatch (и нет регенерации
-  поддерева, которая иначе переигрывает инлайн-`<head>`-скрипты и роняет тему/CSS). Для стора с данными
-  предпочитай объектную форму, чтобы у него была оболочка — тогда `loadingComponent` и не нужен.
+- **По дереву:** страница засевает ленту через `dehydratedState`, а шелл `presence` двумя уровнями выше
+  рендерит свою оболочку (by construction); без оболочки гейт вырезал бы засеянную ленту из HTML.
+- **На одном сторе:** стор с данными получает И `dehydratedState`, И оболочку (C-форма выводит её сама).
+  Тогда на первом клиентском кадре, если реальный стор ещё не готов, оболочка **засевается снапшотом** →
+  кадр-1 рендерит тот же контент, что и сервер → нет hydration mismatch (и нет регенерации поддерева,
+  которая иначе переигрывает инлайн-`<head>`-скрипты и роняет тему/CSS).
 
 Весь модуль pokemon целиком — [Pokemon (рецепт)](./pokemon-advanced.md).

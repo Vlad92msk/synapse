@@ -240,14 +240,13 @@ bus.actions.subscribe({
 `externalDispatchers` — это «вариант коммуникации 3» из раздела [dependencies](./dependencies.md):
 
 ```typescript
-const bus = await pokemonEventsHandle
-
-const mySynapse = createSynapse(() => ({
-  storage,
-  dispatcher: new MyDispatcher(storage),
-  effects: new MyEffects(),
-  externalDispatchers: { eventBus: bus.dispatcher },  // экшены шины попадут в action$
-}))
+const mySynapse = createSynapse({
+  storage: () => new MemoryStorage<MyState>({ name: 'my', initialState }),
+  dispatcher: (s) => new MyDispatcher(s),
+  effects: () => new MyEffects(),
+  // ленивый слот: экшены шины попадут в action$; резолвится на старте эффектов
+  externalDispatchers: () => ({ eventBus: pokemonEventsHandle.dispatcher }),
+})
 ```
 
 ## См. также

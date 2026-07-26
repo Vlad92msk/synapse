@@ -99,15 +99,12 @@ class PostsEffects extends Effects<PostsState, PostsDispatcher> {
   )
 }
 
-// Сборка модуля — ленивый singleton-handle.
-export const postsSynapse = createSynapse(async () => {
-  const storage = new MemoryStorage<PostsState>({ name: 'posts', initialState })
-  return {
-    storage,
-    dispatcher: new PostsDispatcher(storage),
-    selectors: new PostsSelectors(storage),
-    effects: new PostsEffects(await getPostsApi()),
-  }
+// Сборка модуля — ленивый singleton-handle (C-форма: синхронная конструкция ядра).
+export const postsSynapse = createSynapse({
+  storage: () => new MemoryStorage<PostsState>({ name: 'posts', initialState }),
+  dispatcher: (s) => new PostsDispatcher(s),
+  selectors: (s) => new PostsSelectors(s),
+  effects: async () => new PostsEffects(await getPostsApi()),   // async уезжает в эффекты
 })
 ```
 

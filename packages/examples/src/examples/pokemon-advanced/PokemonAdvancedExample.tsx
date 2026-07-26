@@ -14,7 +14,7 @@ import { PokemonDemo } from './PokemonDemo'
  *   pokemon.selectors.ts   — производные значения (class Selectors)
  *   pokemon.dispatcher.ts  — намерения (class Dispatcher)
  *   pokemon.effects.ts     — side-effects на RxJS (class Effects)
- *   pokemon.synapse.ts     — сборка через createSynapse(factory)
+ *   pokemon.synapse.ts     — сборка через createSynapse({ … }) (C-форма)
  *
  * Здесь — только UI-обёртка: подъём ленивого synapse через `awaitSynapse` и демо
  * поверх него. Разбор кода — в docs/ru (раздел React / await-synapse, Рецепты).

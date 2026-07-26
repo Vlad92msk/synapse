@@ -335,21 +335,21 @@ describe('наследование', () => {
   })
 })
 
-describe('интеграция с createSynapse(factory)', () => {
+describe('интеграция с createSynapse (C-форма)', () => {
   it('инстанс класса как dispatcher; эффект-функция реагирует через action$', async () => {
     const seen: number[] = []
 
-    const handle = createSynapse(() => ({
-      storage,
-      dispatcher: new TestDispatcher(storage),
-      effects: [
+    const handle = createSynapse({
+      storage: () => storage,
+      dispatcher: (s) => new TestDispatcher(s),
+      effects: () => [
         (action$: any, _state$: any, { dispatcher }: any) =>
           action$.pipe(
             ofType((dispatcher as TestDispatcher).increment),
             tap((a: any) => seen.push(a.payload)),
           ),
       ],
-    }))
+    })
 
     const synapse = await handle
     const d = synapse.dispatcher as TestDispatcher

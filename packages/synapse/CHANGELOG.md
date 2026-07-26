@@ -1,5 +1,112 @@
 # Changelog
 
+## [6.0.0] - 2026-07-26 — MAJOR: единая синхронная C-форма `createSynapse`
+
+> **Кумулятивная сводка всех правок после 5.4.0.**
+> Конструкция стора синхронна; всё async (endpoints, сокеты, готовность зависимостей) уезжает в
+> жизненный цикл эффектов. Сервер и клиент строят стор одинаково из `initialState` → SSR-оболочка-как-класс
+> исчезает, остаётся **ОДНА форма записи**. Переходные формы 5.4.0 (`ssrShell`/`wire`/объектная форма с
+> `wire`), функциональная фабрика и `combineAcross` **удалены**. Зелёное: 341 тест (вкл. type-level
+> через vitest typecheck), `tsc` чист, `rslib build` ок. `sn_client` полностью на C-форме.
+
+### Северная звезда
+
+**Конструкция стора синхронна; всё async (endpoints, сокеты, готовность зависимостей) уезжает в
+жизненный цикл эффектов.** Следствие: сервер и клиент строят стор одинаково из `initialState`,
+SSR-оболочка-как-класс исчезает, остаётся ОДНА форма записи. DI/зависимости/эффекты сохранены.
+
+### C-форма `createSynapse` — единственный объектный конфиг
+
+```ts
+export const postsSynapse = createSynapse({
+  storage: () => new MemoryStorage<PostsState>({ name: 'posts', initialState }),   // СИНХРОННО → READY
+  dispatcher: (s) => new PostsDispatcher(s),
+  selectors: (s) => new PostsSelectors(s, coreSynapse.selectors),                  // cross-store DI
+  dependencies: [coreSynapse],                                                     // гейт СТАРТА эффектов
+  effects: async () => new PostsEffects(await getPostsEndpoints(), coreSynapse.state$),
+})
+```
+
+- **Синхронная конструкция.** `storage.initializeSync()` → `READY` сразу, `dispatcher[FINALIZE]()`,
+  селекторы материализованы, `state$` есть всегда — всё это доступно ДО `ready()`/`await`. Требует
+  синхронного хранилища (`MemoryStorage`/`LocalStorage`); у async-стора (IndexedDB) синхронной
+  конструкции нет.
+- **`SyncSynapseModule` — синхронные геттеры.** Handle C-формы отдаёт `.storage`/`.selectors`/
+  `.dispatcher`/`.actions`/`.state$` **синхронно** (main-ядро строится лениво при первом обращении).
+  Это и есть основа **cross-store DI**: чужой `coreSynapse.selectors`/`.state$` передаётся в
+  конструктор своих селекторов/эффектов синхронно, без инъекции async-стора и **без `combineAcross`**.
+- **`dependencies` = гейт СТАРТА эффектов**, не конструкции. Конструкция не ждёт зависимостей;
+  `waitForDependencies` отрабатывает в `ready()` перед стартом эффектов.
+- **`effects(ctx)` может быть async.** Резолвь browser-only endpoints (IndexedDB-кэш ApiClient и т.п.)
+  лениво прямо здесь — конструкция/рендер этого не касаются. `ctx = { storage, dispatcher, selectors, deps }`.
+- **`externalDispatchers`** (вариант коммуникации 3 — чужие экшены вливаются в `action$`): поддержан
+  в C-форме как **ленивый слот** — функция `(ctx) => ({ core: coreSynapse.dispatcher })` (предпочтительно,
+  не форсит eager-конструкцию чужого стора на импорте) либо готовый `Record`. Резолвится на старте
+  эффектов, после `waitForDependencies` (чужой dispatcher к этому моменту финализирован).
+- **`ready({ withEffects: false })`** — серверный прогрев/дегидрация: собирает стор без старта эффектов.
+- **SSR-изоляция by construction.** На сервере провайдер строит свежий стор на каждый рендер
+  (`buildSyncShell`), клиент делит общий main-синглтон, роуты пере-сеют его `dehydratedState`.
+
+### Паттерны server-safety (конструкция бежит и на сервере)
+
+- **LocalStorage-модуль:** ветвление в фабрике — `storage: () => isServer ? new MemoryStorage(...) :
+  new LocalStorage(...)`. Обе ветки — sync-хранилища одной формы; `StateOf` выводит `TState` из union'а.
+  На сервере стор поднимается пустым из `initialState`, на клиенте — из `localStorage`.
+- **Browser-only аргументы конструктора** (media-player: `tabId`, `syncBroadcastMiddleware`): та же
+  env-ветвь — передавай client-only аргументы в `dispatcher`/`selectors` через фабрику под гардом
+  (`isServer ? undefined : getTabId()`), а sync-broadcast middleware добавляй в storage только на клиенте.
+  Библиотека не ограничивает конструкторные аргументы — фабрики `dispatcher: (s) => new X(s, …)`
+  принимают что угодно.
+
+### DX-правки по фидбеку миграции (sn_client)
+
+- **`postConstruct` — ВТОРОЙ аргумент** `createSynapse(config, { postConstruct })` (тип
+  `SyncSynapseOptions`). Синхронный хук после конструкции ядра (storage READY, dispatcher финализирован),
+  ДО первого рендера — дом для нормализации persisted-состояния (гашение транзитных флагов:
+  `postConstruct: ({ actions }) => actions.resetTransient()`). **Почему 2-й аргумент, а не поле конфига:**
+  в отдельном параметре колбэк контекстно типизируется уже выведенным `TDispatcher` (в object-литерале
+  рядом с `dispatcher: (s) => …` параметр получал бы `implicit any` под `noImplicitAny`). Fail-fast.
+- **`createSynapse.of<State, Disp, Sel>(config, options?)`** — явно-типизированная C-форма БЕЗ
+  fall-through на legacy-перегрузку. Для случаев, где нужны ручные дженерики: `createSynapse<…>({...})`
+  роняло вызов на wire-конфиг → ложная excess-property ошибка на `dependencies`; `.of` этого не делает.
+- **`browserStorage(config, { client })`** (экспорт из `synapse-storage/core`) — server-safe фабрика
+  хранилища: `MemoryStorage` на сервере (нет `window`), `client(config)` в браузере. Убирает per-module
+  ритуал `const isServer = typeof window === …` + ветку; client-only middleware (`syncBroadcastMiddleware`)
+  добавляй в `client`-фабрике. Обе ветки — sync-стор одной формы, тип выводится без ручных дженериков.
+- **`syncBroadcastMiddleware`: нет `Error: Channel closed`** при dev double-mount. `SyncBroadcastChannel.close()`
+  теперь резолвит pending initial-sync как `null` (как таймаут «нет ответа»), а не режектит Error — плюс
+  флаг `isClosed`. Закрытие канала (StrictMode/Fast Refresh teardown) больше не шумит стеком.
+- **`nonEffectFields`: dev-throw (fail-fast) вместо тихого warn.** Поле-функция в `Effects` без обёртки
+  `this.effect` и не объявленная в `static nonEffectFields` теперь в dev **бросает** (с именем поля), а не
+  логирует warning — забытый эффект ловится сразу, а не «молча не запускается». В production — no-op.
+- **Тише логи зависимостей.** Убран безусловный `[Synapse] Waiting for N dependencies to be ready...`.
+- **`vitest typecheck` включён** (`*.test-d.ts`): вывод генериков C-формы, инференс колбэка `postConstruct`
+  и `.of` теперь гейтятся компилятором (раньше type-инварианты не роняли CI — тесты исключены из `tsc`).
+
+### Известный острый край (дока, не баг)
+
+- **Cross-store `state$`/`selectors` на сервере = общий пустой синглтон core** (profile=null для всех
+  запросов). **Безопасно, пока сервер не гидрирует core.** Если появится серверная гидрация ядра — будет
+  request bleed. Dev-warning НЕ добавлен намеренно: на сервере это состояние сейчас нормальное и постоянное,
+  warning кричал бы «волк» на каждый рендер. Инвариант держать в голове.
+
+### BREAKING — что удалено (миграция)
+
+Единственная форма теперь — C-форма. Удалены и **не компилируются**:
+
+- `createSynapse(factory)` (функциональная форма) и `createSynapse({ …, wire })` (объектная форма с `wire`)
+  → `createSynapse({ storage, dispatcher?, selectors?, dependencies?, externalDispatchers?, effects? })`.
+- Ручной `ssrShell` (`createSynapse(factory, { ssrShell })`) → оболочка выводится C-формой (`buildSyncShell`).
+- `combineAcross`/`createLazyForeignSelector`/`ForeignSelectorRef` → cross-store через конструкторный DI.
+- `factory.ts` (`createSynapseModule`/`buildSynapse`/`buildSynapseSync`).
+- Типы `SynapseConfig`/`SynapseObjectConfig`/`SynapseWiring`/`SynapseCore`/`SynapseShellConfig`/
+  `CreateSynapseOptions` → актуальны `SyncSynapseModule`/`SyncSynapseOptions`/`Synapse`/`SynapseModule`.
+- `createSynapseCtx`: опция `ssr` и `loadingComponent`-гейт как основной путь (стор всегда синхронно готов);
+  swap «оболочка→main». `dehydrateModule`: опция `ssr` (грела main-синглтон).
+
+Явные дженерики на основной функции (`createSynapse<State,…>({…})`) больше не «проваливаются тихо»:
+первый генерик — `TStorage`, поэтому это ясная ошибка констрейнта. Для явных типов — `createSynapse.of`.
+
 ## [5.4.0] - 2026-07-25
 
 ### SSR для «фоновых» context-провайдеров: синхронная SSR-оболочка

@@ -23,9 +23,10 @@ class CtxSelectors extends Selectors<State> {
 }
 
 const makeHandle = (initial: State = { count: 0 }) =>
-  createSynapse<State, CtxDispatcher, CtxSelectors>(() => {
-    const storage = new MemoryStorage<State>({ name: `aw_${uid++}`, initialState: initial })
-    return { storage, dispatcher: new CtxDispatcher(storage), selectors: new CtxSelectors(storage) }
+  createSynapse<State, CtxDispatcher, CtxSelectors>({
+    storage: () => new MemoryStorage<State>({ name: `aw_${uid++}`, initialState: initial }),
+    dispatcher: (s) => new CtxDispatcher(s),
+    selectors: (s) => new CtxSelectors(s),
   })
 
 describe('createSynapseAwaiter — SSR sync-fast-path', () => {

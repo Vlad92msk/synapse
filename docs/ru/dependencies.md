@@ -2,8 +2,10 @@
 
 > [Назад к оглавлению](./README.md) · [Сборка модуля (`pokemon.synapse.ts`)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/pokemon-advanced/pokemon.synapse.ts) · [Песочница (Auth → Settings)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/DependenciesExample.tsx)
 
-Один `createSynapse` может зависеть от другого хранилища или модуля. Зависимости **ожидаются перед
-исполнением фабрики** — к моменту сборки они гарантированно инициализированы.
+Один `createSynapse` может зависеть от другого хранилища или модуля. `dependencies` — это **гейт
+СТАРТА эффектов, а не конструкции**: ядро (storage/dispatcher/selectors) собирается синхронно сразу,
+а `waitForDependencies` отрабатывает в `ready()` перед запуском эффектов — к моменту старта эффектов
+зависимости гарантированно инициализированы.
 
 Домен тот же — `pokemon-advanced`. Он зависит от отдельного `settingsStorage` (`pageSize`).
 
@@ -31,26 +33,24 @@ import { MemoryStorage } from 'synapse-storage/core'
 import { toObservable } from 'synapse-storage/reactive'
 import { createSynapse } from 'synapse-storage/utils'
 
-export const pokemonSynapse = createSynapse(async () => {
-  await initPokemonApi()                       // async-пролог фабрики
-  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState })
-
-  return {
-    storage,
-    dependencies: [settingsStorage],           // ждём готовности до сборки
-    dependencyTimeout: 10000,                   // мс, по умолчанию 30000
-    dispatcher: new PokemonDispatcher(storage),
-    selectors: new PokemonSelectors(storage),
-    // settings$ — состояние внешнего стора как Observable (паттерн 1, см. ниже)
-    effects: new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage)),
-  }
+export const pokemonSynapse = createSynapse({
+  storage: () => new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+  dependencies: [settingsStorage],             // гейт СТАРТА эффектов (ядро строится сразу)
+  dependencyTimeout: 10000,                     // мс, по умолчанию 30000
+  dispatcher: (s) => new PokemonDispatcher(s),
+  selectors: (s) => new PokemonSelectors(s),
+  // settings$ — состояние внешнего стора как Observable (паттерн 1, см. ниже)
+  effects: async () => {
+    await initPokemonApi()                     // async-пролог уехал в фабрику эффектов
+    return new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage))
+  },
 })
 ```
 
 **Зависимостью может быть** (`DependencyInput`):
 
 - сырое хранилище `IStorage` — как `settingsStorage` выше (его `initialize()` дождутся за нас);
-- другой synapse-handle — `dependencies: [await otherSynapse]` (handle thenable + `waitForReady`);
+- другой synapse-handle — `dependencies: [otherSynapse]` (handle сам thenable — `await` не нужен);
 - любой `PromiseLike<{ storage }>`.
 
 В эффектах `pageSize` приезжает через `withLatestFrom(this.settings$)` — см.
@@ -99,14 +99,16 @@ class SettingsSelectors extends Selectors<SettingsState> {
   }
 }
 
-// сборка (фабрика дождалась auth и прокинула его селекторы):
-const auth = await authSynapse
-return {
-  storage,
-  dependencies: [auth],
-  selectors: new SettingsSelectors(storage, auth.selectors),
-}
+// сборка: cross-store DI СИНХРОННО — C-форма отдаёт `authSynapse.selectors` без await
+createSynapse({
+  storage: () => new MemoryStorage<SettingsState>({ name: 'settings', initialState }),
+  dependencies: [authSynapse],                                  // гейт старта эффектов
+  selectors: (s) => new SettingsSelectors(s, authSynapse.selectors),
+})
 ```
+
+> `combineAcross` / `createLazyForeignSelector` больше не нужны и **удалены** — cross-store связь
+> строится напрямую через конструкторный DI (`authSynapse.selectors` доступен синхронно).
 
 ### 3. Реагировать на ЭКШЕНЫ внешнего стора — через `externalDispatchers`
 
@@ -123,14 +125,15 @@ class SettingsEffects extends Effects<SettingsState, SettingsDispatcher, { auth:
   )
 }
 
-// в сборке внешние диспетчеры подключаются как externalDispatchers
-return {
-  storage,
-  dependencies: [auth],
-  dispatcher: new SettingsDispatcher(storage),
-  effects: new SettingsEffects(),
-  externalDispatchers: { auth: auth.dispatcher },
-}
+// в сборке внешние диспетчеры подключаются как externalDispatchers — ленивый слот-функция
+// (не форсит eager-конструкцию чужого стора на импорте; резолвится на старте эффектов)
+createSynapse({
+  storage: () => new MemoryStorage<SettingsState>({ name: 'settings', initialState }),
+  dependencies: [authSynapse],
+  dispatcher: (s) => new SettingsDispatcher(s),
+  effects: () => new SettingsEffects(),
+  externalDispatchers: () => ({ auth: authSynapse.dispatcher }),
+})
 ```
 
 ### 4. Медиатор / event-bus
@@ -141,10 +144,11 @@ return {
 ## Порядок инициализации
 
 ```typescript
-// Порядок внутри фабрики createSynapse:
-// 1. Зависимости готовы (Promise.all + таймаут); их storage.initialize() идемпотентен
-// 2. Фабрика исполняется → создаёт storage, dispatcher, selectors, effects
-// 3. storage.initialize() + запуск эффектов
+// Порядок в C-форме createSynapse:
+// 1. Конструкция СИНХРОННА: storage.initializeSync() → READY, dispatcher финализирован,
+//    selectors материализованы, state$ есть — всё доступно ДО ready()/await (cross-store DI)
+// 2. ready()/await: waitForDependencies (Promise.all + таймаут) — гейт СТАРТА эффектов
+// 3. Резолв фабрики effects (может быть async) + externalDispatchers → запуск эффектов
 
 // При таймауте — выбрасывается ошибка (по умолчанию 30000 мс, у pokemon — 10000):
 // 'Dependency 0 ("pokemon-settings") timed out after 10000ms. Check that it initializes correctly.'

@@ -209,27 +209,21 @@ class EventBusDispatcher extends Dispatcher<EventBusState> {
  * bus.dispatcher.publish({ event: 'USER_UPDATED', data: { userId: 123 } })
  * bus.dispatcher.subscribe({ eventPattern: 'CORE_*', handler: (data, event) => {} })
  *
- * // Использование как зависимости / внешнего диспетчера другого synapse:
- * const mySynapse = createSynapse(() => ({
- *   storage,
- *   dispatcher: new MyDispatcher(storage),
- *   effects: new MyEffects(),
- *   externalDispatchers: { eventBus: bus.dispatcher },
- * }))
+ * // Использование как внешнего диспетчера другого synapse:
+ * const mySynapse = createSynapse({
+ *   storage: () => new MemoryStorage<MyState>({ name: 'my', initialState }),
+ *   dispatcher: (s) => new MyDispatcher(s),
+ *   externalDispatchers: () => ({ eventBus: eventBus.dispatcher }),
+ *   effects: () => new MyEffects(),
+ * })
  * ```
  */
 export const createEventBus = (config: EventBusConfig = {}) =>
-  createSynapse(() => {
-    const storage = new MemoryStorage<EventBusState>({
-      name: config.name || 'eventBus',
-      initialState: {
-        events: {},
-        subscriptions: {},
-      },
-    })
-
-    return {
-      storage,
-      dispatcher: new EventBusDispatcher(storage, config),
-    }
+  createSynapse({
+    storage: () =>
+      new MemoryStorage<EventBusState>({
+        name: config.name || 'eventBus',
+        initialState: { events: {}, subscriptions: {} },
+      }),
+    dispatcher: (storage) => new EventBusDispatcher(storage, config),
   })

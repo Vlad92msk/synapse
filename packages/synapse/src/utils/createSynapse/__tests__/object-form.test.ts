@@ -1,8 +1,8 @@
 // @vitest-environment node
 //
-// Объектная форма createSynapse({ storage, dispatcher, selectors, wire }): авто-вывод SSR-оболочки
-// из sync-ядра, а async-обвязка (wire) не бежит при сборке оболочки.
-import { describe, expect, it, vi } from 'vitest'
+// C-форма createSynapse({ storage, dispatcher, selectors, dependencies?, effects? }): синхронная
+// конструкция ядра, buildSyncShell для SSR-изоляции, вывод генериков из фабрики storage.
+import { describe, expect, it } from 'vitest'
 
 import { MemoryStorage } from '../../../core/storage/adapters/memory-storage.service'
 import { StorageStatus } from '../../../core/storage/storage.interface'
@@ -25,15 +25,15 @@ class CounterSelectors extends Selectors<State> {
 let uid = 0
 const name = () => `objform_${uid++}`
 
-describe('createSynapse — объектная форма', () => {
-  it('авто-выводит SSR-оболочку из sync-ядра (без ручного ssrShell)', () => {
+describe('createSynapse — C-форма', () => {
+  it('buildSyncShell отдаёт READY-ядро синхронно из initialState', () => {
     const handle = createSynapse<State, CounterDispatcher, CounterSelectors>({
       storage: () => new MemoryStorage<State>({ name: name(), initialState }),
       dispatcher: (s) => new CounterDispatcher(s),
       selectors: (s) => new CounterSelectors(s),
     })
 
-    const shell = handle.buildSyncShell()
+    const shell = handle.buildSyncShell!()
     expect(shell).toBeDefined()
     expect(shell!.storage.initStatus.status).toBe(StorageStatus.READY)
     expect(shell!.storage.getStateSync()).toEqual(initialState)
@@ -41,49 +41,13 @@ describe('createSynapse — объектная форма', () => {
     expect(shell!.selectors).toBeInstanceOf(CounterSelectors)
   })
 
-  it('wire НЕ вызывается при сборке оболочки (клиентская обвязка на сервер не едет)', async () => {
-    const wire = vi.fn(async () => ({}))
-    const handle = createSynapse<State, CounterDispatcher, CounterSelectors>({
-      storage: () => new MemoryStorage<State>({ name: name(), initialState }),
-      dispatcher: (s) => new CounterDispatcher(s),
-      selectors: (s) => new CounterSelectors(s),
-      wire,
-    })
-
-    handle.buildSyncShell()
-    expect(wire).not.toHaveBeenCalled()
-
-    // wire исполняется только при сборке реального стора.
-    await handle.ready()
-    expect(wire).toHaveBeenCalledTimes(1)
-  })
-
-  it('wire получает sync-ядро и вливает dependencies/effects в реальный стор', async () => {
-    const wire = vi.fn((core: { storage: unknown; dispatcher: unknown; selectors: unknown }) => {
-      expect(core.storage).toBeDefined()
-      expect(core.dispatcher).toBeInstanceOf(CounterDispatcher)
-      return {}
-    })
-    const handle = createSynapse<State, CounterDispatcher, CounterSelectors>({
-      storage: () => new MemoryStorage<State>({ name: name(), initialState }),
-      dispatcher: (s) => new CounterDispatcher(s),
-      selectors: (s) => new CounterSelectors(s),
-      wire,
-    })
-
-    const synapse = await handle.ready()
-    expect(synapse.selectors).toBeInstanceOf(CounterSelectors)
-    expect(synapse.actions).toBeInstanceOf(CounterDispatcher)
-    expect(wire).toHaveBeenCalledTimes(1)
-  })
-
-  it('каждый вызов оболочки — свежий изолированный storage', () => {
+  it('каждый вызов оболочки — свежий изолированный storage (request-изоляция)', () => {
     const handle = createSynapse<State, CounterDispatcher, CounterSelectors>({
       storage: () => new MemoryStorage<State>({ name: name(), initialState }),
       selectors: (s) => new CounterSelectors(s),
     })
-    const a = handle.buildSyncShell()!
-    const b = handle.buildSyncShell()!
+    const a = handle.buildSyncShell!()!
+    const b = handle.buildSyncShell!()!
     expect(a.storage).not.toBe(b.storage)
     a.storage.set('value', 42)
     expect(b.storage.getStateSync().value).toBe(0)
@@ -93,13 +57,31 @@ describe('createSynapse — объектная форма', () => {
     const handle = createSynapse<State>({
       storage: () => new MemoryStorage<State>({ name: name(), initialState }),
     })
-    const shell = handle.buildSyncShell()!
+    const shell = handle.buildSyncShell!()!
     expect(shell.storage.getStateSync()).toEqual(initialState)
     expect(shell.dispatcher).toBeUndefined()
     expect(shell.selectors).toBeUndefined()
   })
 
-  it('без wire реальный стор тоже собирается', async () => {
+  it('выводит генерики из storage без ручного перечисления (<State, Disp, Sel>)', async () => {
+    // Ни одного генерика в вызове — TState выводится из MemoryStorage<State>,
+    // TDispatcher/TSelectors — из конструкторов.
+    const handle = createSynapse({
+      storage: () => new MemoryStorage<State>({ name: name(), initialState }),
+      dispatcher: (s) => new CounterDispatcher(s),
+      selectors: (s) => new CounterSelectors(s),
+    })
+
+    const synapse = await handle.ready()
+    const v: number = synapse.selectors.value.selectSync()
+    expect(v).toBe(0)
+    synapse.actions.inc()
+    expect(synapse.storage.getStateSync().value).toBe(1)
+    expect(synapse.selectors).toBeInstanceOf(CounterSelectors)
+    expect(synapse.actions).toBeInstanceOf(CounterDispatcher)
+  })
+
+  it('реальный стор собирается через ready()', async () => {
     const handle = createSynapse<State, CounterDispatcher, CounterSelectors>({
       storage: () => new MemoryStorage<State>({ name: name(), initialState }),
       dispatcher: (s) => new CounterDispatcher(s),

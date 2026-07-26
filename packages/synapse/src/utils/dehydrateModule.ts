@@ -1,4 +1,3 @@
-import { StorageStatus } from '../core'
 import type { SynapseModule } from './createSynapse/index'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -21,10 +20,6 @@ import type { SynapseModule } from './createSynapse/index'
 export interface DehydrateModuleOptions<TState extends Record<string, any>> {
   // Серверные данные под запрос
   state?: Partial<TState>
-  // Подготовить синглтон к синхронному SSR-рендеру: собрать его и залить snapshot. Только для
-  // синхронно готовых (READY) сторов (Memory/LocalStorage); у async-сторов (IndexedDB)
-  // синхронного серверного рендера нет — шаг пропускается.
-  ssr?: boolean
 }
 
 // Server-safe дегидрация модуля: снимает сериализуемый снапшот состояния (уровень 4) для пропа
@@ -34,13 +29,12 @@ export const dehydrateModule = async <TState extends Record<string, any>, TDispa
   externalSynapseModule: SynapseModule<TState, TDispatcher, TSelectors>,
   options?: DehydrateModuleOptions<TState>,
 ): Promise<TState> => {
-  const { state, ssr = false } = options ?? {}
+  const { state } = options ?? {}
 
-  // Форк: изоляция под запрос
-  // fork() берёт ту же фабрику и делает НОВЫЙ независимый handle (уровень 1)
+  // Форк: изоляция под запрос (новый независимый handle из той же фабрики).
   const synapseModule = externalSynapseModule.fork()
 
-  // Создаем экземпляр Synapse (без модуля эффектов)
+  // Собираем стор без эффектов, мержим серверные данные, снимаем снапшот и уничтожаем форк.
   const synapse = await synapseModule.ready({ withEffects: false })
 
   // Мердж initialState форка + серверные данные
@@ -51,15 +45,6 @@ export const dehydrateModule = async <TState extends Record<string, any>, TDispa
 
   // Уничтожаем synapseModule
   await synapseModule.destroy()
-
-  if (ssr) {
-    // Задача - не передать куда-то данные, а сделать externalSynapseModule готовым к рендеру (чтобы не было спиннера) в Provider
-    const mainSynapse = await externalSynapseModule.ready({ withEffects: false })
-    // READY — только у синхронных сторов; у async (IndexedDB) синхронного SSR нет, шаг пропускается.
-    if (mainSynapse.storage.initStatus.status === StorageStatus.READY) {
-      await mainSynapse.storage.hydrate(snapshot)
-    }
-  }
 
   return snapshot
 }

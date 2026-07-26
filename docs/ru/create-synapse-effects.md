@@ -293,24 +293,24 @@ import { PokemonDispatcher } from './pokemon.dispatcher'
 import { PokemonEffects } from './pokemon.effects'
 import { PokemonSelectors } from './pokemon.selectors'
 
-export const pokemonSynapse = createSynapse(async () => {
-  await initPokemonApi()                 // async-пролог: инициализация API-клиента
-  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState })
-
-  return {
-    storage,
-    dependencies: [settingsStorage],     // зависимость от другого хранилища
-    dependencyTimeout: 10000,
-    dispatcher: new PokemonDispatcher(storage),
-    selectors: new PokemonSelectors(storage),
-    // сервисы и внешние сторы — через конструктор эффектов (захват в замыкание)
-    effects: new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage)),
-  }
+export const pokemonSynapse = createSynapse({
+  storage: () => new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+  dispatcher: (s) => new PokemonDispatcher(s),
+  selectors: (s) => new PokemonSelectors(s),
+  dependencies: [settingsStorage],       // гейт СТАРТА эффектов (не конструкции)
+  dependencyTimeout: 10000,
+  // фабрика effects может быть async — сюда уезжает весь async-пролог (init API-клиента,
+  // резолв endpoints). Сервисы и внешние сторы захватываются в замыкание конструктора эффектов.
+  effects: async () => {
+    await initPokemonApi()               // async-пролог: инициализация API-клиента
+    return new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage))
+  },
 })
 ```
 
-Эффекты запускаются **автоматически** при инициализации модуля (первый `await pokemonSynapse`).
-Подробнее про async-фабрику, `dependencies` и `dependencyTimeout` — [Зависимости](./dependencies.md).
+Эффекты запускаются **автоматически** при инициализации модуля (первый `await pokemonSynapse`),
+и только после `dependencies` (гейт старта, а не конструкции — ядро собирается сразу).
+Подробнее про фабрику `effects`, `dependencies` и `dependencyTimeout` — [Зависимости](./dependencies.md).
 
 ## Возвращаемое значение
 

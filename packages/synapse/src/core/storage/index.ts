@@ -15,6 +15,9 @@ export { StorageCore } from './adapters/storage-core'
 export { SyncBaseStorage } from './adapters/sync-base-storage.service'
 export { WorkerCacheStorage } from './adapters/worker-storage.service'
 
+// Server-safe фабрика хранилища для C-формы (Memory на сервере / client-стор в браузере)
+export { browserStorage, type BrowserStorageOptions } from './browser-storage.util'
+
 // Экспортируем утилиты, которые нужны в публичном API
 export {
   type AsyncMiddleware,

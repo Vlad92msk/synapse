@@ -8,6 +8,7 @@ import {
   IndexedDBStoragePage,
   WorkerCacheStoragePage,
   StorageFactoryPage,
+  BrowserStoragePage,
   HookMemoryPage,
   HookLocalStoragePage,
   HookIndexedDBPage,
@@ -61,6 +62,7 @@ export const sectionsList: Record<string, ReactNode> = {
   'nav.sections.create.hook-local': <HookLocalStoragePage />,
   'nav.sections.create.hook-idb': <HookIndexedDBPage />,
   'nav.sections.create.static': <StaticCreatePage />,
+  'nav.sections.create.browser-storage': <BrowserStoragePage />,
   // Работа с данными
   'nav.sections.data.reading-data': <ReadingDataPage />,
   'nav.sections.data.writing-data': <WritingDataPage />,

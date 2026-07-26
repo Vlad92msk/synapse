@@ -27,13 +27,10 @@ class CounterSelectors extends Selectors<{ count: number }> {
   count = this.select((s) => s.count)
 }
 
-export const counter = createSynapse(async () => {
-  const storage = new MemoryStorage({ name: 'counter', initialState: { count: 0 } })
-  return {
-    storage,
-    dispatcher: new CounterDispatcher(storage),
-    selectors: new CounterSelectors(storage),
-  }
+export const counter = createSynapse({
+  storage: () => new MemoryStorage({ name: 'counter', initialState: { count: 0 } }),
+  dispatcher: (s) => new CounterDispatcher(s),
+  selectors: (s) => new CounterSelectors(s),
 })
 ```
 
@@ -49,7 +46,7 @@ export const counter = createSynapse(async () => {
 - **Immer-like Updates** — mutate state directly inside `update()` callbacks
 - **API Client** — HTTP client with tag-based caching and invalidation
 - **Persist Migrations** — `version` + `migrate(oldState, oldVersion)` for localStorage/IndexedDB
-- **SSR Hydration** — `storage.hydrate(state)` to seed server-rendered state; `createSynapseCtx({ ssr: true })` for seeded stores, `ssrShell` to server-render data-less "background" providers
+- **SSR Hydration** — `storage.hydrate(state)` to seed server-rendered state; `createSynapseCtx` + `dehydratedState` prop for seeded stores (SSR on by construction, no `ssr` flag); data-less "background" providers server-render on their own (synchronous C-form → auto `buildSyncShell`)
 - **React Integration** — hooks on `useSyncExternalStore` (Concurrent Mode safe)
 - **RxJS Effects** — dispatchers, effects, and watchers (Redux-Observable style)
 - **Middleware** — extensible sync/async pipelines (batching, shallowCompare, logger, broadcast)
@@ -107,17 +104,13 @@ class PostsEffects extends Effects<PostsState, PostsDispatcher> {
   override onDestroy() { /* close sockets etc. */ }
 }
 
-// — Assembly: lazy singleton handle. Factory runs once on first await/ready(), not on import —
-export const postsSynapse = createSynapse(async () => {
-  const core = await coreSynapse                                        // handle is thenable
-  const storage = new MemoryStorage<PostsState>({ name: 'posts', initialState })
-  return {
-    storage,
-    dependencies: [core],
-    dispatcher: new PostsDispatcher(storage),
-    selectors:  new PostsSelectors(storage, core.selectors),
-    effects:    new PostsEffects(api),
-  }
+// — Assembly (C-form): synchronous core construction; all async lives in `effects` —
+export const postsSynapse = createSynapse({
+  storage: () => new MemoryStorage<PostsState>({ name: 'posts', initialState }),
+  dispatcher: (s) => new PostsDispatcher(s),
+  selectors:  (s) => new PostsSelectors(s, coreSynapse.selectors),     // cross-store DI, synchronous
+  dependencies: [coreSynapse],                                         // gate for effects START
+  effects: async () => new PostsEffects(await getPostsApi()),          // async resolves here
 })
 
 const { storage, state$, dispatcher, actions, selectors } = await postsSynapse
@@ -196,7 +189,7 @@ See the full `pokemon-class` example in `packages/examples` (next to the functio
 | `createSelectorsFn: (s) => ({ ... })`                       | fields on `class extends Selectors<S>`                    |
 | external selectors typed twice (value + manual type)        | a constructor parameter (`private core: CoreSelectors`)   |
 | 6-slot `Effect<...>` generics + `services`/`externalStates` | `class extends Effects<S, D, Ext?>`, deps via constructor |
-| `createFeatureSynapse` userland wrapper                     | built-in lazy handle from `createSynapse(factory)`        |
+| `createFeatureSynapse` userland wrapper                     | built-in lazy handle from `createSynapse({ storage, … })` |
 | `createSynapseCtx(getPostsSynapse())` (eager on import)     | `createSynapseCtx(postsSynapse)` (lazy handle)            |
 
 ## Documentation

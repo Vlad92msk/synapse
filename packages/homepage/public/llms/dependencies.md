@@ -3,8 +3,10 @@
 # Cross-module dependencies
 
 
-One `createSynapse` can depend on another storage or module. Dependencies are **awaited before the
-factory runs** — by assembly time they are guaranteed to be initialized.
+One `createSynapse` can depend on another storage or module. `dependencies` is a **gate for the
+START of effects, not for construction**: the core (storage/dispatcher/selectors) is assembled
+synchronously right away, while `waitForDependencies` runs inside `ready()` before starting the
+effects — by the time effects start, the dependencies are guaranteed to be initialized.
 
 Same domain — `pokemon-advanced`. It depends on a separate `settingsStorage` (`pageSize`).
 
@@ -32,26 +34,24 @@ import { MemoryStorage } from 'synapse-storage/core'
 import { toObservable } from 'synapse-storage/reactive'
 import { createSynapse } from 'synapse-storage/utils'
 
-export const pokemonSynapse = createSynapse(async () => {
-  await initPokemonApi()                       // the factory's async prologue
-  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState })
-
-  return {
-    storage,
-    dependencies: [settingsStorage],           // wait for readiness before assembly
-    dependencyTimeout: 10000,                   // ms, default 30000
-    dispatcher: new PokemonDispatcher(storage),
-    selectors: new PokemonSelectors(storage),
-    // settings$ — the external store's state as an Observable (pattern 1, see below)
-    effects: new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage)),
-  }
+export const pokemonSynapse = createSynapse({
+  storage: () => new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+  dependencies: [settingsStorage],             // gate for the START of effects (core is built right away)
+  dependencyTimeout: 10000,                     // ms, default 30000
+  dispatcher: (s) => new PokemonDispatcher(s),
+  selectors: (s) => new PokemonSelectors(s),
+  // settings$ — the external store's state as an Observable (pattern 1, see below)
+  effects: async () => {
+    await initPokemonApi()                     // the async prologue moved into the effects factory
+    return new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage))
+  },
 })
 ```
 
 **A dependency can be** (`DependencyInput`):
 
 - a raw `IStorage` — like `settingsStorage` above (its `initialize()` is awaited for us);
-- another synapse handle — `dependencies: [await otherSynapse]` (the handle is thenable + `waitForReady`);
+- another synapse handle — `dependencies: [otherSynapse]` (the handle is itself thenable — no `await` needed);
 - any `PromiseLike<{ storage }>`.
 
 In the effects `pageSize` arrives via `withLatestFrom(this.settings$)` — see
@@ -100,14 +100,16 @@ class SettingsSelectors extends Selectors<SettingsState> {
   }
 }
 
-// assembly (the factory awaited auth and passed in its selectors):
-const auth = await authSynapse
-return {
-  storage,
-  dependencies: [auth],
-  selectors: new SettingsSelectors(storage, auth.selectors),
-}
+// assembly: cross-store DI SYNCHRONOUSLY — the C-form exposes `authSynapse.selectors` without await
+createSynapse({
+  storage: () => new MemoryStorage<SettingsState>({ name: 'settings', initialState }),
+  dependencies: [authSynapse],                                  // gate for the start of effects
+  selectors: (s) => new SettingsSelectors(s, authSynapse.selectors),
+})
 ```
+
+> `combineAcross` / `createLazyForeignSelector` are no longer needed and have been **removed** — the
+> cross-store link is built directly through constructor DI (`authSynapse.selectors` is available synchronously).
 
 ### 3. React to another store's ACTIONS — via `externalDispatchers`
 
@@ -124,14 +126,15 @@ class SettingsEffects extends Effects<SettingsState, SettingsDispatcher, { auth:
   )
 }
 
-// in assembly the external dispatchers are wired in as externalDispatchers
-return {
-  storage,
-  dependencies: [auth],
-  dispatcher: new SettingsDispatcher(storage),
-  effects: new SettingsEffects(),
-  externalDispatchers: { auth: auth.dispatcher },
-}
+// in assembly the external dispatchers are wired in as externalDispatchers — a lazy slot function
+// (doesn't force eager construction of the other store on import; resolved at the start of effects)
+createSynapse({
+  storage: () => new MemoryStorage<SettingsState>({ name: 'settings', initialState }),
+  dependencies: [authSynapse],
+  dispatcher: (s) => new SettingsDispatcher(s),
+  effects: () => new SettingsEffects(),
+  externalDispatchers: () => ({ auth: authSynapse.dispatcher }),
+})
 ```
 
 ### 4. Mediator / event-bus
@@ -143,10 +146,11 @@ details — [createEventBus](./event-bus.md).
 ## Initialization order
 
 ```typescript
-// The order inside a createSynapse factory:
-// 1. Dependencies are ready (Promise.all + timeout); their storage.initialize() is idempotent
-// 2. The factory runs → creates storage, dispatcher, selectors, effects
-// 3. storage.initialize() + starting the effects
+// The order in the C-form createSynapse:
+// 1. Construction is SYNCHRONOUS: storage.initializeSync() → READY, dispatcher finalized,
+//    selectors materialized, state$ present — all available BEFORE ready()/await (cross-store DI)
+// 2. ready()/await: waitForDependencies (Promise.all + timeout) — gate for the START of effects
+// 3. Resolve the effects factory (may be async) + externalDispatchers → start the effects
 
 // On timeout — an error is thrown (default 30000ms, pokemon uses 10000):
 // 'Dependency 0 ("pokemon-settings") timed out after 10000ms. Check that it initializes correctly.'

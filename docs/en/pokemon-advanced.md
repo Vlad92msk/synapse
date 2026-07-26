@@ -22,7 +22,7 @@ pokemon-advanced/
   pokemon.selectors.ts   — derived values (class Selectors)
   pokemon.dispatcher.ts  — intents (class Dispatcher)
   pokemon.effects.ts     — side-effects on RxJS (class Effects)
-  pokemon.synapse.ts     — assembly via createSynapse(factory)
+  pokemon.synapse.ts     — assembly via createSynapse({ … }) (C-form)
   index.ts               — public exports
   PokemonAdvancedExample.tsx / PokemonDemo.tsx — UI on top of the synapse
   helpers.ts             — small presentation utilities (typeColor)
@@ -219,24 +219,22 @@ export class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {
 
 → in detail: [create-synapse-basic](./create-synapse-basic.md), [dependencies](./dependencies.md)
 
-`createSynapse(factory)` ties everything together. The factory is **async** — it has an
-`initPokemonApi()` prologue. It returns a lazy handle: the factory starts on the first `await`/`ready()`,
-not on import.
+`createSynapse(config)` ties everything together. Construction is synchronous; the **async** prologue
+(`initPokemonApi()`) lives in the `effects` factory. It returns a lazy handle: the factories start on
+the first `await`/`ready()`, not on import.
 
 ```typescript
-export const pokemonSynapse = createSynapse(async () => {
-  await initPokemonApi()                                       // async prologue
-
-  const storage = new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState })
-
-  return {
-    storage,
-    dependencies: [settingsStorage],                           // dependency on the settings store
-    dependencyTimeout: 10000,
-    dispatcher: new PokemonDispatcher(storage),
-    selectors: new PokemonSelectors(storage),
-    effects: new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage)),
-  }
+export const pokemonSynapse = createSynapse({
+  // synchronous core construction — TState is inferred from the storage factory
+  storage: () => new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+  dependencies: [settingsStorage],                             // gate for the START of effects
+  dependencyTimeout: 10000,
+  dispatcher: (s) => new PokemonDispatcher(s),
+  selectors: (s) => new PokemonSelectors(s),
+  effects: async () => {
+    await initPokemonApi()                                     // async prologue moved into effects
+    return new PokemonEffects(pokemonApiClient.getEndpoints(), toObservable(settingsStorage))
+  },
 })
 
 export type PokemonSynapse = Awaited<typeof pokemonSynapse>

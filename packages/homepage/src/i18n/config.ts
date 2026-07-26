@@ -128,6 +128,7 @@ const resources = {
       'nav.sections.create.hook-local': 'useCreateStorage (localStorage)',
       'nav.sections.create.hook-idb': 'useCreateStorage (indexedDB)',
       'nav.sections.create.static': 'Static .create()',
+      'nav.sections.create.browser-storage': 'browserStorage (server-safe)',
 
       'nav.sections.data': 'Работа с данными',
       'nav.sections.data.reading-data': 'Чтение данных (get/getState)',
@@ -341,6 +342,7 @@ const resources = {
       'nav.sections.create.hook-local': 'useCreateStorage (localStorage)',
       'nav.sections.create.hook-idb': 'useCreateStorage (indexedDB)',
       'nav.sections.create.static': 'Static .create()',
+      'nav.sections.create.browser-storage': 'browserStorage (server-safe)',
 
       'nav.sections.data': 'Working with Data',
       'nav.sections.data.reading-data': 'Reading data (get/getState)',

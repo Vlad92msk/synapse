@@ -54,17 +54,14 @@ describe('createSynapseCtx(handle)', () => {
     }
   })
 
-  it('фабрика не вызывается на импорте; вызывается при mount; loadingComponent до готовности; дети получают selectors/actions', async () => {
-    const factory = vi.fn(() => {
-      const storage = newStorage()
-      return { storage, dispatcher: new TestDispatcher(storage), selectors: new TestSelectors(storage) }
-    })
-    const handle = createSynapse(factory)
+  it('storage-фабрика не вызывается на импорте; вызывается при mount; дети сразу получают selectors/actions', async () => {
+    const factory = vi.fn(() => newStorage())
+    const handle = createSynapse({ storage: factory, dispatcher: (s) => new TestDispatcher(s), selectors: (s) => new TestSelectors(s) })
 
     const ctx = createSynapseCtx(handle, { loadingComponent: <div data-testid="loading">loading</div> })
     cleanup = ctx.cleanupSynapse
 
-    // импорт/создание контекста фабрику не дёргает
+    // импорт/создание контекста конструкцию не дёргает (main строится лениво)
     expect(factory).not.toHaveBeenCalled()
 
     const Inner = ctx.contextSynapse(function Inner() {
@@ -80,13 +77,9 @@ describe('createSynapseCtx(handle)', () => {
 
     render(<Inner />)
 
-    // пока synapse не готов — loadingComponent (фабрика стартует в микротаске после mount)
-    expect(screen.getByTestId('loading')).toBeInTheDocument()
-    expect(screen.queryByTestId('val')).toBeNull()
-
-    // mount запустил фабрику (ровно один раз)
-    await waitFor(() => expect(factory).toHaveBeenCalledTimes(1))
-    await waitFor(() => expect(screen.getByTestId('val')).toBeInTheDocument())
+    // Синхронная конструкция: mount построил main (ровно один раз) и дети отрендерены сразу — без гейта.
+    expect(factory).toHaveBeenCalledTimes(1)
+    expect(screen.queryByTestId('loading')).toBeNull()
     expect(screen.getByTestId('val').textContent).toBe('0')
 
     // actions из контекста работают (class-dispatcher: поля = dispatch-функции)
@@ -96,12 +89,9 @@ describe('createSynapseCtx(handle)', () => {
     await waitFor(() => expect(screen.getByTestId('val').textContent).toBe('1'))
   })
 
-  it('два Provider\'а одного handle → один запуск фабрики (синглтон)', async () => {
-    const factory = vi.fn(() => {
-      const storage = newStorage()
-      return { storage, selectors: new TestSelectors(storage) }
-    })
-    const handle = createSynapse(factory)
+  it('два Provider\'а одного handle → одна конструкция main (синглтон)', async () => {
+    const factory = vi.fn(() => newStorage())
+    const handle = createSynapse({ storage: factory, selectors: (s) => new TestSelectors(s) })
 
     const ctx = createSynapseCtx(handle, { loadingComponent: <div>loading</div> })
     cleanup = ctx.cleanupSynapse
@@ -123,18 +113,13 @@ describe('createSynapseCtx(handle)', () => {
       </>,
     )
 
-    await waitFor(() => {
-      expect(screen.getByTestId('a')).toBeInTheDocument()
-      expect(screen.getByTestId('b')).toBeInTheDocument()
-    })
+    expect(screen.getByTestId('a')).toBeInTheDocument()
+    expect(screen.getByTestId('b')).toBeInTheDocument()
     expect(factory).toHaveBeenCalledTimes(1)
   })
 
   it('unmount Provider\'а не убивает синглтон (handle.isReady остаётся true)', async () => {
-    const handle = createSynapse(() => {
-      const storage = newStorage()
-      return { storage, selectors: new TestSelectors(storage) }
-    })
+    const handle = createSynapse({ storage: () => newStorage(), selectors: (s) => new TestSelectors(s) })
     const ctx = createSynapseCtx(handle, { loadingComponent: <div>loading</div> })
     cleanup = ctx.cleanupSynapse
 
@@ -154,7 +139,7 @@ describe('createSynapseCtx(handle)', () => {
 
   it('useSelector поверх class-селекторов: ререндер только при изменении значения', async () => {
     const storage = newStorage()
-    const handle = createSynapse(() => ({ storage, selectors: new TestSelectors(storage) }))
+    const handle = createSynapse({ storage: () => storage, selectors: (s) => new TestSelectors(s) })
     const ctx = createSynapseCtx(handle, { loadingComponent: <div>loading</div> })
     cleanup = ctx.cleanupSynapse
 
@@ -190,11 +175,8 @@ describe('createSynapseCtx(handle)', () => {
   })
 
   it('пересоздание: cleanupSynapse() сбрасывает handle, повторный mount исполняет фабрику заново', async () => {
-    const factory = vi.fn(() => {
-      const storage = newStorage()
-      return { storage, selectors: new TestSelectors(storage) }
-    })
-    const handle = createSynapse(factory)
+    const factory = vi.fn(() => newStorage())
+    const handle = createSynapse({ storage: factory, selectors: (s) => new TestSelectors(s) })
     const ctx = createSynapseCtx(handle, { loadingComponent: <div>loading</div> })
 
     const Inner = ctx.contextSynapse(function Inner() {
@@ -218,11 +200,8 @@ describe('createSynapseCtx(handle)', () => {
   })
 
   it('StrictMode: двойной mount не дублирует запуск фабрики', async () => {
-    const factory = vi.fn(() => {
-      const storage = newStorage()
-      return { storage, selectors: new TestSelectors(storage) }
-    })
-    const handle = createSynapse(factory)
+    const factory = vi.fn(() => newStorage())
+    const handle = createSynapse({ storage: factory, selectors: (s) => new TestSelectors(s) })
     const ctx = createSynapseCtx(handle, { loadingComponent: <div>loading</div> })
     cleanup = ctx.cleanupSynapse
 
@@ -244,11 +223,8 @@ describe('createSynapseCtx(handle)', () => {
 // ── awaitSynapse(handle) — приём handle напрямую (5.2) ───────────────────────
 describe('awaitSynapse(handle) (5.2)', () => {
   it('принимает SynapseModule-handle без обёртки () => handle.ready(); гейтит до готовности', async () => {
-    const factory = vi.fn(() => {
-      const storage = newStorage()
-      return { storage, selectors: new TestSelectors(storage) }
-    })
-    const handle = createSynapse(factory)
+    const factory = vi.fn(() => newStorage())
+    const handle = createSynapse({ storage: factory, selectors: (s) => new TestSelectors(s) })
 
     // handle передаётся напрямую — никакого `() => handle.ready()` бойлерплейта
     const gate = awaitSynapse(handle, { loadingComponent: <div data-testid="loading">loading</div> })

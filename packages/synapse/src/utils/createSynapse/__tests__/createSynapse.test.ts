@@ -1,4 +1,4 @@
-// Страховочные тесты createSynapse(factory) — жизненный цикл и waitForDependencies.
+// Страховочные тесты createSynapse (C-форма) — жизненный цикл и waitForDependencies.
 import { firstValueFrom } from 'rxjs'
 import { map } from 'rxjs/operators'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -45,11 +45,11 @@ describe('createSynapse — полный жизненный цикл', () => {
     const storage = newStorage()
     let effectRan = false
 
-    const handle = createSynapse(() => ({
-      storage,
-      dispatcher: new CountDispatcher(storage),
-      selectors: new CountSelectors(storage),
-      effects: [
+    const handle = createSynapse({
+      storage: () => storage,
+      dispatcher: (s) => new CountDispatcher(s),
+      selectors: (s) => new CountSelectors(s),
+      effects: () => [
         (action$, _s$, { dispatcher }) =>
           action$.pipe(
             ofType((dispatcher as CountDispatcher).increment),
@@ -58,7 +58,7 @@ describe('createSynapse — полный жизненный цикл', () => {
             }),
           ),
       ],
-    }))
+    })
     created.push(handle)
 
     const synapse = await handle
@@ -81,7 +81,7 @@ describe('createSynapse — полный жизненный цикл', () => {
 
   it('storage-only: есть storage / state$ / destroy, нет dispatcher/selectors', async () => {
     const storage = newStorage()
-    const handle = createSynapse(() => ({ storage }))
+    const handle = createSynapse({ storage: () => storage })
     created.push(handle)
     const synapse = await handle
 
@@ -93,19 +93,29 @@ describe('createSynapse — полный жизненный цикл', () => {
 
   it('storage+selectors без dispatcher', async () => {
     const storage = newStorage()
-    const handle = createSynapse(() => ({ storage, selectors: new CountSelectors(storage) }))
+    const handle = createSynapse({ storage: () => storage, selectors: (s) => new CountSelectors(s) })
     created.push(handle)
     const synapse = await handle
 
     expect(synapse.selectors!.count.select()).toBe(0)
     expect(synapse.dispatcher).toBeUndefined()
   })
+
+  it('конструкция синхронна: main доступен через геттеры до ready()', () => {
+    const storage = newStorage({ count: 3 })
+    const handle = createSynapse({ storage: () => storage, selectors: (s) => new CountSelectors(s) })
+    created.push(handle)
+
+    // Синхронный доступ к main без await — основа cross-store DI.
+    expect(handle.selectors!.count.select()).toBe(3)
+    expect(handle.storage).toBe(storage)
+  })
 })
 
 describe('createSynapse — destroy', () => {
   it('destroy() уничтожает storage', async () => {
     const storage = newStorage()
-    const handle = createSynapse(() => ({ storage, dispatcher: new CountDispatcher(storage) }))
+    const handle = createSynapse({ storage: () => storage, dispatcher: (s) => new CountDispatcher(s) })
     await handle.ready()
 
     await handle.destroy()
@@ -117,23 +127,19 @@ describe('createSynapse — destroy', () => {
 })
 
 describe('createSynapse — waitForDependencies', () => {
-  it('поддерживает raw storage, { storage } и Promise<Synapse> как зависимости', async () => {
-    // raw storage
+  it('поддерживает raw storage, { storage } и handle как зависимости', async () => {
     const depStorage = newStorage({ count: 1 })
+    const depHandle = createSynapse({ storage: () => newStorage({ count: 2 }) })
 
-    // другой synapse-handle
-    const depHandle = createSynapse(() => ({ storage: newStorage({ count: 2 }) }))
-
-    const main = createSynapse(() => ({
-      storage: newStorage(),
+    const main = createSynapse({
+      storage: () => newStorage(),
       dependencies: [depStorage, { storage: newStorage({ count: 3 }) }, depHandle],
-    }))
+    })
     created.push(main)
     created.push(depHandle)
 
     const synapse = await main
 
-    // зависимости инициализированы
     expect(depStorage.initStatus.status).toBe('ready')
     expect(synapse.storage.initStatus.status).toBe('ready')
   })
@@ -145,11 +151,11 @@ describe('createSynapse — waitForDependencies', () => {
       waitForReady: () => new Promise(() => {}), // никогда не резолвится
     }
 
-    const handle = createSynapse(() => ({
-      storage: newStorage(),
+    const handle = createSynapse({
+      storage: () => newStorage(),
       dependencies: [slow],
       dependencyTimeout: 50,
-    }))
+    })
 
     await expect(handle.ready()).rejects.toThrow(/timed out/i)
   })

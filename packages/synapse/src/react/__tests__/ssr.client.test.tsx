@@ -29,11 +29,12 @@ class CtxSelectors extends Selectors<State> {
 }
 
 const makeCtx = () => {
-  const handle = createSynapse<State, CtxDispatcher, CtxSelectors>(() => {
-    const storage = new MemoryStorage<State>({ name: `ssrc_${uid++}`, initialState: { user: 'default' } })
-    return { storage, dispatcher: new CtxDispatcher(storage), selectors: new CtxSelectors(storage) }
+  const handle = createSynapse<State, CtxDispatcher, CtxSelectors>({
+    storage: () => new MemoryStorage<State>({ name: `ssrc_${uid++}`, initialState: { user: 'default' } }),
+    dispatcher: (s) => new CtxDispatcher(s),
+    selectors: (s) => new CtxSelectors(s),
   })
-  return createSynapseCtx(handle, { ssr: true, loadingComponent: createElement('div', null, 'loading') })
+  return createSynapseCtx(handle, { loadingComponent: createElement('div', null, 'loading') })
 }
 
 describe('SSR — клиентская гидрация', () => {

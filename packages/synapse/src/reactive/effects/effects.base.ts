@@ -1,6 +1,5 @@
 import type { Observable } from 'rxjs'
 
-import { logError } from '../../_utils/error-handling.util'
 import type { Action } from '../dispatcher'
 import type { Dispatcher } from '../dispatcher/dispatcher.base'
 import { type Effect, EFFECT_NAME, EFFECT_OPTIONS, type EffectOptions } from './effects.module'
@@ -125,11 +124,12 @@ export abstract class Effects<TState extends Record<string, any>, TDispatcher, T
       if (typeof value === 'function' && (value as { [EFFECT_MARKER]?: true })[EFFECT_MARKER]) {
         recipeNames.push(name)
       } else if (process.env.NODE_ENV !== 'production' && typeof value === 'function' && !ignoredNames.has(name)) {
-        logError(
-          `Effects: поле "${name}" — функция, но не обёрнута в this.effect(...). Эффекты регистрируются только через this.effect, иначе они молча не запустятся.`,
-          value,
-          null,
-          'warn',
+        // Fail-fast (dev): поле-функция не обёрнута в this.effect — иначе эффект молча не запустится.
+        // Если это конструкторный хелпер-зависимость — объяви его в `static nonEffectFields`.
+        throw new Error(
+          `Effects: поле "${name}" — функция, но не обёрнута в this.effect(...). ` +
+            'Оборачивай эффекты в this.effect(...), либо, если это хелпер-зависимость, объяви его в ' +
+            '`static nonEffectFields = [...]`. Иначе эффект не зарегистрируется и молча не запустится.',
         )
       }
     }

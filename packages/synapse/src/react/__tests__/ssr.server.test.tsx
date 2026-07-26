@@ -29,11 +29,12 @@ class PostsSelectors extends Selectors<State> {
 }
 
 const makeCtx = () => {
-  const handle = createSynapse<State, PostsDispatcher, PostsSelectors>(() => {
-    const storage = new MemoryStorage<State>({ name: `ssr_${uid++}`, initialState: { user: 'default', count: 0 } })
-    return { storage, dispatcher: new PostsDispatcher(storage), selectors: new PostsSelectors(storage) }
+  const handle = createSynapse<State, PostsDispatcher, PostsSelectors>({
+    storage: () => new MemoryStorage<State>({ name: `ssr_${uid++}`, initialState: { user: 'default', count: 0 } }),
+    dispatcher: (s) => new PostsDispatcher(s),
+    selectors: (s) => new PostsSelectors(s),
   })
-  return createSynapseCtx(handle, { ssr: true, loadingComponent: createElement('div', { 'data-testid': 'loading' }, 'loading') })
+  return createSynapseCtx(handle, { loadingComponent: createElement('div', { 'data-testid': 'loading' }, 'loading') })
 }
 
 describe('SSR — серверный renderToString', () => {

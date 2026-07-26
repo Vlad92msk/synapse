@@ -1,4 +1,4 @@
-import { handleOperationError, logError } from '../../_utils/error-handling.util'
+import { handleOperationError } from '../../_utils/error-handling.util'
 import type { IStorageBase } from '../../core'
 import type { DependencyInput } from './types'
 
@@ -21,8 +21,9 @@ export async function waitForDependencies(dependencies: DependencyInput[] = [], 
     return
   }
 
-  logError(`Waiting for ${dependencies.length} dependencies to be ready...`, '', null, 'warn')
-
+  // Намеренно БЕЗ безусловного лога «Waiting for N dependencies»: при нормальном старте это чистый
+  // шум (по строке на каждый зависящий модуль). Единственный actionable сигнал — таймаут ниже,
+  // который называет конкретный зависший dependency.
   await Promise.all(
     dependencies.map(async (dependencyOrPromise, index) => {
       try {

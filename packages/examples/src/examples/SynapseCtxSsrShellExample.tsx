@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { MemoryStorage, Selectors } from 'synapse-storage/core'
+import { IndexedDBStorage, MemoryStorage, Selectors } from 'synapse-storage/core'
 import { Dispatcher } from 'synapse-storage/reactive'
 import { createSynapse } from 'synapse-storage/utils'
 import { createSynapseCtx, useSelector } from 'synapse-storage/react'
@@ -9,14 +9,14 @@ import { cardStyle, codeBlock, sectionTitle } from './styles'
 /**
  * createSynapseCtx + SSR-оболочка — SSR для «фонового» провайдера БЕЗ серверных данных.
  *
- * Presence-подобный модуль: его реальный стор строится async-обвязкой (эмуляция await зависимостей —
- * сокета/core), поэтому синхронно на сервере он НЕ готов. Без оболочки провайдер упёрся бы в гейт
- * `loadingComponent` и срезал бы всё поддерево из серверного HTML. Через **объектную форму**
- * `createSynapse({ storage, dispatcher, selectors, wire })` библиотека сама выводит SSR-оболочку из
- * sync-ядра → children попадают в HTML, а на клиенте контекст бесшовно апгрейдится до реального стора.
+ * Presence-подобный модуль: своих серверных данных нет, всё async (сокет/core/endpoints) живёт в
+ * фабрике `effects`, которая на сервере не исполняется. Т.к. C-форма конструирует ядро СИНХРОННО из
+ * `initialState`, у модуля с sync-хранилищем автоматически есть `buildSyncShell` → провайдер рендерит
+ * children в серверный HTML, а на клиенте контекст бесшовно апгрейдится до реального стора (эффекты
+ * стартуют в браузере). Ручной `ssrShell` / объектная форма с `wire` больше не нужны — удалены.
  *
  * Пара к SynapseCtxSsrExample: там сеется стор С серверными данными (`dehydratedState`), здесь —
- * фоновый провайдер БЕЗ данных (оболочка авто-выводится, ручной `ssrShell` не нужен).
+ * фоновый провайдер БЕЗ данных (оболочка выводится by construction).
  */
 
 interface PresenceState extends Record<string, any> {
@@ -36,29 +36,29 @@ class PresenceDispatcher extends Dispatcher<PresenceState> {
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-// Объектная форма: sync-ядро (storage/dispatcher/selectors) отделено от async-обвязки (wire).
-// SSR-оболочка выводится автоматически из sync-ядра — ручной ssrShell писать НЕ нужно. wire
-// имитирует ожидание зависимостей (1.2s) и «доезжает» реальными данными только на клиенте.
-const presenceWithShell = createSynapse<PresenceState, PresenceDispatcher, PresenceSelectors>({
+// C-форма с СИНХРОННЫМ хранилищем: SSR-оболочка выводится автоматически из sync-ядра. Фабрика
+// `effects` (только клиент) имитирует ожидание зависимостей (1.2s) и «доезжает» реальными данными.
+const presenceWithShell = createSynapse<MemoryStorage<PresenceState>, PresenceDispatcher, PresenceSelectors>({
   storage: () => new MemoryStorage<PresenceState>({ name: 'presence_shell', initialState }),
   dispatcher: (s) => new PresenceDispatcher(s),
   selectors: (s) => new PresenceSelectors(s),
-  wire: async ({ storage }) => {
+  effects: async ({ storage }) => {
     await delay(1200)
     storage.update((s) => ((s.online = true), (s.peers = 3))) // «данные пришли» на клиенте
-    return {}
+    return undefined // реальных RxJS-эффектов нет — только имитация подъезда данных
   },
 })
 
-// Функциональная форма без ssrShell: синхронного SSR у стора нет → гейт loadingComponent.
-const presenceNoShell = createSynapse<PresenceState, PresenceDispatcher, PresenceSelectors>(async () => {
-  await delay(1200)
-  const storage = new MemoryStorage<PresenceState>({ name: 'presence_noshell', initialState: { online: true, peers: 3 } })
-  return { storage, dispatcher: new PresenceDispatcher(storage), selectors: new PresenceSelectors(storage) }
+// ASYNC-хранилище (IndexedDB): синхронного SSR у него НЕТ → buildSyncShell отсутствует, провайдер
+// деградирует к гейту loadingComponent (единственный оставшийся случай «нет оболочки»).
+const presenceNoShell = createSynapse<IndexedDBStorage<PresenceState>, PresenceDispatcher, PresenceSelectors>({
+  storage: () => new IndexedDBStorage<PresenceState>({ name: 'presence_noshell', initialState: { online: true, peers: 3 }, options: {} }),
+  dispatcher: (s) => new PresenceDispatcher(s),
+  selectors: (s) => new PresenceSelectors(s),
 })
 
-const CtxShell = createSynapseCtx(presenceWithShell, { ssr: true, loadingComponent: <em style={{ color: '#c0392b' }}>gate: loadingComponent (subtree cut)</em> })
-const CtxNoShell = createSynapseCtx(presenceNoShell, { ssr: true, loadingComponent: <em style={{ color: '#c0392b' }}>gate: loadingComponent (subtree cut)</em> })
+const CtxShell = createSynapseCtx(presenceWithShell, { loadingComponent: <em style={{ color: '#c0392b' }}>gate: loadingComponent (subtree cut)</em> })
+const CtxNoShell = createSynapseCtx(presenceNoShell, { loadingComponent: <em style={{ color: '#c0392b' }}>gate: loadingComponent (subtree cut)</em> })
 
 // «Фоновый» провайдер: просто прокидывает детей в контексте стора.
 const ShellProvider = CtxShell.contextSynapse(function ShellProvider({ children }: { children?: React.ReactNode }) {
@@ -108,18 +108,18 @@ export function SynapseCtxSsrShellExample() {
     <div style={cardStyle}>
       <h2>createSynapseCtx — SSR shell (background provider)</h2>
       <p>
-        Фоновый провайдер над async-стором <b>без серверных данных</b>. С авто-оболочкой (объектная
-        форма <code>createSynapse</code>) его поддерево попадает в серверный HTML; без — гейт{' '}
-        <code>loadingComponent</code> срезает контент.
+        Фоновый провайдер <b>без серверных данных</b>. У C-формы с sync-хранилищем оболочка выводится
+        by construction (<code>buildSyncShell</code>) → его поддерево попадает в серверный HTML; у
+        async-хранилища (IndexedDB) синхронной оболочки нет → гейт <code>loadingComponent</code> срезает контент.
       </p>
 
       <h3 style={sectionTitle}>Server HTML (renderToStaticMarkup)</h3>
       <p style={{ margin: '4px 0' }}>
-        <b>object form (auto shell)</b> — контент в разметке:
+        <b>sync storage (auto shell)</b> — контент в разметке:
       </p>
       <pre style={codeBlock}>{serverHtml.withShell}</pre>
       <p style={{ margin: '4px 0' }}>
-        <b>no shell</b> — только заглушка, поддерево вырезано:
+        <b>async storage (no shell)</b> — только заглушка, поддерево вырезано:
       </p>
       <pre style={codeBlock}>{serverHtml.noShell}</pre>
 

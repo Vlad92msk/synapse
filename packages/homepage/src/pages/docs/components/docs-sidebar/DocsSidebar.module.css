@@ -120,7 +120,7 @@
 
 .navButton.active {
   background: var(--bg-secondary) !important;
-  color: var(--text-primary) !important;
+  color: var(--accent-orange) !important;
   border-left: 2px solid var(--accent-orange) !important;
   font-weight: 600 !important;
 }

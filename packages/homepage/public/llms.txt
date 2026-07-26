@@ -50,7 +50,7 @@ Dig deeper (machine-readable, no JS):
 
 ## Business Logic Layer (createSynapse)
 
-- [createSynapse (basic)](https://synapse-homepage.web.app/docs/synapse-basic): createSynapse(factory) assembles the data-management layer into a single lazy module.
+- [createSynapse (basic)](https://synapse-homepage.web.app/docs/synapse-basic): createSynapse(config) assembles the data-management layer into a single lazy module.
 - [createSynapse (dispatcher)](https://synapse-homepage.web.app/docs/synapse-dispatcher): The next brick after the basic assembly: we add the dispatcher.
 - [createSynapse (effects)](https://synapse-homepage.web.app/docs/synapse-effects): The last brick after the dispatcher: effects — the RxJS layer
 - [Dispatcher (in detail)](https://synapse-homepage.web.app/docs/dispatcher-detail): The full surface of the Dispatcher class. The assembly page shows
