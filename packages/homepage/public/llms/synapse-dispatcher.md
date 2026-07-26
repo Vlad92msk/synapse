@@ -3,11 +3,39 @@
 # createSynapse (dispatcher)
 
 
+**TL;DR.** A dispatcher = a module's **named intents**. You write actions as class fields
+(`this.action` / `this.signal` / `this.apiActions` / `this.watcher`), the field name = the action name.
+A `store.actions.X(payload)` call changes state (for `action`) and/or throws an intent into `action$` —
+where effects catch it. You read through selectors, you write through the dispatcher.
+
+```typescript
+dispatcher: (s) => new PokemonDispatcher(s),   // one field in createSynapse
+store.actions.selectPokemon(25)                // calling an intent from the UI
+```
+
 The next brick after the [basic assembly](./create-synapse-basic.md): we add the **dispatcher**. It
 describes **intents** — named actions that change state — and **watchers** for reactive tracking.
 Effects (API calls per action) are on the [next page](./create-synapse-effects.md).
 
 Same domain — `pokemon-advanced`.
+
+## Why
+
+- **Named write entry points** instead of `storage.set/update` scattered across components: the whole
+  list of what a module can change lives in a single class.
+- **Intent ≠ mutation**: `signal`/`apiActions` may write nothing to the store and merely throw a signal
+  that an effect picks up (an API load). This way the UI knows nothing about the network — it sends an intent.
+- **A single `action$` stream** on which effects and cross-store reactions are built.
+
+## When to use / when it's NOT needed
+
+**Needed** when: named operations over state appear; there are side effects (loading from an API on a user
+action); you need a reactive watcher over a slice of state.
+
+**NOT needed** when: state is trivial and changes in one or two places — then the direct
+`store.storage.set/update` from the [basic form](./create-synapse-basic.md) is enough (you can skip adding
+a dispatcher altogether). A dispatcher without effects is just type-safe setters; its full power is
+unlocked in pair with [Effects](./create-synapse-effects.md).
 
 ## Dispatcher (`pokemon.dispatcher.ts`)
 
@@ -171,3 +199,11 @@ export const { contextSynapse, useSynapseSelectors, useSynapseActions } =
 
 More — [createSynapseCtx](./synapse-ctx.md). How intents turn into real API calls —
 [Effects](./create-synapse-effects.md).
+
+## See also
+
+- [createSynapse (basic)](./create-synapse-basic.md) — the form without a dispatcher (writing through storage directly).
+- [Dispatcher (in detail)](./dispatcher-detailed.md) — the whole surface: `action`/`signal`/`apiActions`/`keyedApiActions`/`watcher`, options (`meta`/`memoize`), the `ofType` rule, standalone use.
+- [createSynapse (effects)](./create-synapse-effects.md) — how intents get caught and turned into API calls.
+- [Selectors](./selector-system.md) — reading state (the dispatcher only writes).
+- [Pokemon (recipe)](./pokemon-advanced.md) — the dispatcher as part of a whole module.

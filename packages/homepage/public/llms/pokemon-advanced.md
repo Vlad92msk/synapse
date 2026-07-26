@@ -3,6 +3,12 @@
 # Pokemon Advanced — the recipe: the whole data layer on PokeAPI
 
 
+**TL;DR.** A complete, copy-into-your-project module on a real API (PokeAPI): it shows how to split
+the data layer into responsibility files and wire all the bricks together. One domain = one folder,
+and the C-form of `createSynapse` assembles it all. Read it after
+[basic](./create-synapse-basic.md) → [dispatcher](./create-synapse-dispatcher.md) →
+[effects](./create-synapse-effects.md) as the final assembly; or right away — as a structure template.
+
 The final page of the chain. Every previous section dissected one brick on this same domain — here
 they come together into **one working module**: ApiClient with caching → mappers → storage →
 selectors → dispatcher → effects → `createSynapse` → React. This is the reference for how to split a

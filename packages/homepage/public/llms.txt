@@ -17,56 +17,56 @@ Dig deeper (machine-readable, no JS):
 ## Overview
 
 - [Two layers: State Manager and Business Logic Layer](https://synapse-homepage.web.app/docs/architecture): Synapse is not "yet another state manager".
-- [Install](https://synapse-homepage.web.app/docs/install): The core pulls in no extra dependencies. rxjs and react are only needed if you use the
-- [Custom fetch-intercepting ServiceWorker](https://synapse-homepage.web.app/docs/custom-fetch-service-worker): An app-owned ServiceWorker (Workbox-style) that transparently intercepts fetch and applies
-- [Custom baseQuery.fetchFn](https://synapse-homepage.web.app/docs/custom-fetch-fn): ApiClient accepts a custom transport through baseQuery.fetchFn?: typeof fetch.
+- [Install](https://synapse-homepage.web.app/docs/install): One package — synapse-storage. The core pulls in no extra dependencies: rxjs and react are
+- [Custom fetch-intercepting ServiceWorker](https://synapse-homepage.web.app/docs/custom-fetch-service-worker): TL;DR: your own sw.js (layer 3) transparently intercepts fetch below ApiClient — precache, offline,
+- [Custom baseQuery.fetchFn](https://synapse-homepage.web.app/docs/custom-fetch-fn): TL;DR: pass baseQuery.fetchFn?: typeof fetch — your own function instead of the native fetch.
 
 ## State Manager (core)
 
-- [MemoryStorage](https://synapse-homepage.web.app/docs/memory): In-memory storage. Data lives only while the page is open. Synchronous API.
-- [LocalStorage](https://synapse-homepage.web.app/docs/local): Data is stored in the browser's localStorage and survives page reloads.
-- [IndexedDBStorage](https://synapse-homepage.web.app/docs/indexeddb): Data is stored in IndexedDB and survives reloads.
+- [MemoryStorage](https://synapse-homepage.web.app/docs/memory): TL;DR: in-memory storage with a synchronous API.
+- [LocalStorage](https://synapse-homepage.web.app/docs/local): TL;DR: a synchronous storage on top of localStorage.
+- [IndexedDBStorage](https://synapse-homepage.web.app/docs/indexeddb): TL;DR: a persistent storage on top of IndexedDB with an asynchronous API.
 - [WorkerCacheStorage](https://synapse-homepage.web.app/docs/worker-cache): WorkerCacheStorage is an asynchronous storage (extends AsyncBaseStorage, type: 'worker')
-- [StorageFactory](https://synapse-homepage.web.app/docs/factory): A factory for creating storages — an alternative to calling new MemoryStorage() / new LocalStorage() /
-- [useCreateStorage (memory)](https://synapse-homepage.web.app/docs/hook-memory): A React hook that creates and initializes a storage right inside a component and destroys it on
-- [useCreateStorage (localStorage)](https://synapse-homepage.web.app/docs/hook-local): The same useCreateStorage, only with type: 'localStorage' — data survives a
-- [useCreateStorage (indexedDB)](https://synapse-homepage.web.app/docs/hook-idb): The same useCreateStorage with type: 'indexedDB'.
-- [Static .create()](https://synapse-homepage.web.app/docs/static): Every storage class has a static .create() method — a full equivalent of the new operator.
-- [browserStorage (server-safe)](https://synapse-homepage.web.app/docs/browser-storage): browserStorage(config, { client }) (exported from synapse-storage/core) is a server-safe storage
-- [Reading data (get/getState)](https://synapse-homepage.web.app/docs/reading-data): All the ways to read data from a storage. The examples use the end-to-end todoStorage — the same
-- [Writing data (set/update)](https://synapse-homepage.web.app/docs/writing-data): All the ways to write data to a storage. The examples use the end-to-end todoStorage from the
-- [remove / has / keys / clear / reset](https://synapse-homepage.web.app/docs/operations): Operations for checking existence, removing keys, and resetting the storage.
-- [Subscriptions (subscribe)](https://synapse-homepage.web.app/docs/subscriptions): All the ways to subscribe to data changes in a storage.
-- [Reactive reads & controlled re-renders](https://synapse-homepage.web.app/docs/reactive-reads): The everyday pattern: you mutate a storage with ordinary methods (set/update) and read it
-- [useStorageSubscribe](https://synapse-homepage.web.app/docs/use-storage-subscribe): The default way to read a storage reactively.
-- [useStorageObservable](https://synapse-homepage.web.app/docs/use-storage-observable): The RxJS path for "store → reactive in a component".
-- [toObservable](https://synapse-homepage.web.app/docs/to-observable): Turns a storage (IStorageBase) into an RxJS Observable of the state stream — for effects and
-- [useSubscription](https://synapse-homepage.web.app/docs/use-subscription): An imperative side-effect subscription from a component: subscribe to an Observable and do something
+- [StorageFactory](https://synapse-homepage.web.app/docs/factory): TL;DR: a static storage factory — an alternative to calling new MemoryStorage() / new LocalStorage() / new IndexedDBStorage() directly.
+- [useCreateStorage (memory)](https://synapse-homepage.web.app/docs/hook-memory): TL;DR. useCreateStorage({ type: 'memory', name, initialState }) — a React hook that
+- [useCreateStorage (localStorage)](https://synapse-homepage.web.app/docs/hook-local): TL;DR. The same useCreateStorage, only type: 'localStorage' — data survives
+- [useCreateStorage (indexedDB)](https://synapse-homepage.web.app/docs/hook-idb): TL;DR. The same useCreateStorage with type: 'indexedDB' — a component
+- [Static .create()](https://synapse-homepage.web.app/docs/static): TL;DR: every storage class has a static .create() method — a full equivalent of the new operator.
+- [browserStorage (server-safe)](https://synapse-homepage.web.app/docs/browser-storage): browserStorage(config, { client }) (exported from synapse-storage/core) is a wrapper that makes a
+- [Reading data (get / getState / getStateSync)](https://synapse-homepage.web.app/docs/reading-data): All the ways to read data once from a storage.
+- [Writing data (set / update)](https://synapse-homepage.web.app/docs/writing-data): All the ways to write data to a storage. The two main methods differ in scope:
+- [remove / has / keys / clear / reset](https://synapse-homepage.web.app/docs/operations): Operations over keys and the state lifecycle: check existence, list, remove a single key, or reset
+- [Subscriptions (subscribe)](https://synapse-homepage.web.app/docs/subscriptions): Subscriptions are a reaction to changes in data (as opposed to a one-off read).
+- [Reactive reads & controlled re-renders](https://synapse-homepage.web.app/docs/reactive-reads): TL;DR. You mutate a storage with ordinary methods (set/update) and read it reactively inside a
+- [useStorageSubscribe](https://synapse-homepage.web.app/docs/use-storage-subscribe): TL;DR. useStorageSubscribe(storage, selector[, { equals }]) — the default way to read a
+- [useStorageObservable / useObservable](https://synapse-homepage.web.app/docs/use-storage-observable): TL;DR. The RxJS path for "store → reactive in a component". Two hooks:
+- [toObservable](https://synapse-homepage.web.app/docs/to-observable): TL;DR. toObservable(storage[, selector, equals]) — turns a storage into an RxJS Observable of
+- [useSubscription](https://synapse-homepage.web.app/docs/use-subscription): TL;DR. useSubscription(factory, deps) is an imperative side-effect subscription from a component:
 - [Selectors](https://synapse-homepage.web.app/docs/selector-system): Selectors extract and compute data from a storage.
-- [Middlewares](https://synapse-homepage.web.app/docs/middlewares): Middlewares intercept storage operations (set, get, update, delete, clear) and can modify, filter, or group them.
-- [SharedWorkerMiddleware](https://synapse-homepage.web.app/docs/shared-worker): sharedWorkerMiddleware / syncSharedWorkerMiddleware synchronize storage state between tabs
-- [Singleton Pattern](https://synapse-homepage.web.app/docs/singleton): Reusing storage instances by name. Useful for shared state and when a storage is created in several places (React components, modules).
-- [Persist migrations (version + migrate)](https://synapse-homepage.web.app/docs/persist-migration): When the shape of initialState changes between releases, a persistent storage
-- [Forms — the recipe: form state on a synapse storage](https://synapse-homepage.web.app/docs/forms): Managing forms is the most common application case.
+- [Middlewares](https://synapse-homepage.web.app/docs/middlewares): Middleware intercepts storage operations (set/get/update/delete/clear/reset) and can
+- [SharedWorkerMiddleware](https://synapse-homepage.web.app/docs/shared-worker): syncSharedWorkerMiddleware / sharedWorkerMiddleware — cross-tab state synchronization through a
+- [Singleton Pattern](https://synapse-homepage.web.app/docs/singleton): singleton is a storage config field (BaseStorageConfig.singleton).
+- [Persist migrations (version + migrate)](https://synapse-homepage.web.app/docs/persist-migration): TL;DR: version + migrate in a persistent storage's config move saved old-schema data to the current schema on initialize() — without manual version checks an…
+- [Forms — the recipe: form state on a synapse storage](https://synapse-homepage.web.app/docs/forms): TL;DR. A form as a synapse storage is form state (values/errors/touched/…), point-wise
 
 ## Business Logic Layer (createSynapse)
 
 - [createSynapse (basic)](https://synapse-homepage.web.app/docs/synapse-basic): createSynapse(config) assembles the data-management layer into a single lazy module.
-- [createSynapse (dispatcher)](https://synapse-homepage.web.app/docs/synapse-dispatcher): The next brick after the basic assembly: we add the dispatcher.
-- [createSynapse (effects)](https://synapse-homepage.web.app/docs/synapse-effects): The last brick after the dispatcher: effects — the RxJS layer
-- [Dispatcher (in detail)](https://synapse-homepage.web.app/docs/dispatcher-detail): The full surface of the Dispatcher class. The assembly page shows
-- [Cross-module dependencies](https://synapse-homepage.web.app/docs/dependencies): One createSynapse can depend on another storage or module.
-- [createSynapseCtx](https://synapse-homepage.web.app/docs/synapse-ctx): React Context + HOC for accessing a Synapse module through hooks.
-- [awaitSynapse](https://synapse-homepage.web.app/docs/await-synapse): A React utility for waiting until a Synapse module is ready: HOC + hook + programmatic API.
-- [SSR hydration (hydrate)](https://synapse-homepage.web.app/docs/ssr-hydration): storage.hydrate(state) replaces the storage state with a ready snapshot.
+- [createSynapse (dispatcher)](https://synapse-homepage.web.app/docs/synapse-dispatcher): TL;DR. A dispatcher = a module's named intents. You write actions as class fields
+- [createSynapse (effects)](https://synapse-homepage.web.app/docs/synapse-effects): TL;DR. An effect = an RxJS recipe that listens to action$, performs a side-effect (an API call,
+- [Dispatcher (in detail)](https://synapse-homepage.web.app/docs/dispatcher-detail): TL;DR. A full reference to the Dispatcher factories. Picking a factory for the task:
+- [Cross-module dependencies](https://synapse-homepage.web.app/docs/dependencies): TL;DR. Two different questions that are often confused:
+- [createSynapseCtx](https://synapse-homepage.web.app/docs/synapse-ctx): TL;DR. createSynapseCtx(module, options?) wraps a Synapse module in a React Context + HOC:
+- [awaitSynapse](https://synapse-homepage.web.app/docs/await-synapse): TL;DR. awaitSynapse(handle, options?) waits until a Synapse module is ready and hands the ready
+- [SSR hydration (hydrate)](https://synapse-homepage.web.app/docs/ssr-hydration): TL;DR: storage.hydrate(state) seeds the store with a ready snapshot.
 - [createSynapseAwaiter — framework-independent awaiter](https://synapse-homepage.web.app/docs/synapse-awaiter): A utility for waiting on a Synapse module's async initialization.
 - [createEventBus — Event Bus](https://synapse-homepage.web.app/docs/event-bus): A pub/sub bus for communication between independent modules.
-- [Pokemon Advanced — the recipe: the whole data layer on PokeAPI](https://synapse-homepage.web.app/docs/pokemon-advanced): The final page of the chain. Every previous section dissected one brick on this same domain — here
+- [Pokemon Advanced — the recipe: the whole data layer on PokeAPI](https://synapse-homepage.web.app/docs/pokemon-advanced): TL;DR. A complete, copy-into-your-project module on a real API (PokeAPI): it shows how to split
 
 ## API Client
 
-- [Caching layers](https://synapse-homepage.web.app/docs/cache-layers): A request in a synapse app can be answered from three independent layers, stacked on top of each
+- [Caching layers](https://synapse-homepage.web.app/docs/cache-layers): TL;DR: a request is served by three independent layers, top to bottom — (1) the application cache
 - [ApiClient — HTTP Client with Caching](https://synapse-homepage.web.app/docs/api-client): A typed HTTP client: endpoints, tag-based caching, request-state subscriptions, abort.
-- [useApiQuery — React hook for GET requests](https://synapse-homepage.web.app/docs/api-use-query): A React Query–style hook over an ApiClient endpoint for reading data (GET).
-- [useApiMutation — React hook for mutations](https://synapse-homepage.web.app/docs/api-use-mutation): A React hook over an ApiClient endpoint for writes (POST/PUT/DELETE/PATCH).
-- [Pokémon SSR — server render + client pagination](https://synapse-homepage.web.app/docs/api-ssr-pokemon): A practical recipe: fetch the first page on the server, ship the cache to the client, render it with no
+- [useApiQuery — React hook for GET requests](https://synapse-homepage.web.app/docs/api-use-query): TL;DR: useApiQuery(endpoint, params, options?) is a React Query–style GET hook.
+- [useApiMutation — React hook for mutations](https://synapse-homepage.web.app/docs/api-use-mutation): TL;DR: useApiMutation(endpoint, options?) — a write hook (POST/PUT/DELETE/PATCH).
+- [Pokémon SSR — server render + client pagination](https://synapse-homepage.web.app/docs/api-ssr-pokemon): TL;DR: on the server api.request(...) warms the cache → api.dehydrate() into HTML → on the

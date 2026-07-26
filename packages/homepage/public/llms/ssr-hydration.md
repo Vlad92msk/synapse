@@ -3,12 +3,24 @@
 # SSR hydration (hydrate)
 
 
-`storage.hydrate(state)` replaces the storage state with a ready snapshot. The main scenario is
-**SSR**: the server serializes state (for example, the first page of pokemon), the client
-initializes the storage with it to avoid flicker and an extra data request.
+**TL;DR:** `storage.hydrate(state)` seeds the store with a ready snapshot. The main scenario is **SSR**: a server snapshot lands in the client store before the first render, with no flicker and no extra request.
+
+## Why
+
+`storage.hydrate(state)` replaces the storage state with a ready snapshot. The server serializes state (for example, the first page of pokemon), the client initializes the storage with it — the first render already has data.
 
 - **Sync storages** (`MemoryStorage`, `LocalStorage`): `hydrate(state): void`
 - **Async storages** (`IndexedDBStorage`): `hydrate(state): Promise<void>`
+
+## When to use
+
+- SSR/SSG: a server snapshot needs to be carried into the client store **before** the first render (no flicker, no re-fetch).
+- SPA with server data: swapping state on navigation (`hydrate` after `initialize()` notifies subscribers).
+
+## When not to use
+
+- You work at the `createSynapse`/[`createSynapseCtx`](./synapse-ctx.md) module level — there the snapshot is seeded via the `dehydratedState` prop, and a "bare" `hydrate` call isn't needed.
+- The provider has **no** server data — there's nothing to hydrate; the C-form builds an empty store from `initialState` on the server anyway (see below).
 
 ## Server → client flow
 

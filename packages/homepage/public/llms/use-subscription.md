@@ -3,10 +3,29 @@
 # useSubscription
 
 
-An imperative **side-effect** subscription from a component: subscribe to an `Observable` and do something
-on each emit (show a toast, log, dispatch) **without returning anything to render**. It's the counterpart
-to [useObservable](./use-storage-observable.md): that one returns a value for JSX, while `useSubscription`
-is for effects. See the [Reactive reads](./reactive-reads.md) overview.
+**TL;DR.** `useSubscription(factory, deps)` is an imperative **side-effect** subscription from a component:
+subscribe to an `Observable` and do something on each emit (show a toast, log, dispatch), **without
+returning anything to render**. It's the counterpart to [`useObservable`](./use-storage-observable.md):
+that one returns a value for JSX, while `useSubscription` is for effects. Unsubscription is automatic.
+
+## Why
+
+Sometimes reacting to a store change isn't "show a value" but "do something outward": a toast, a log, an
+imperative call, a dispatch. Putting that into `useObservable` is wrong (there's no value to render), and
+hand-writing `useEffect` + `subscribe` + cleanup is noisy and easy to forget the `unsubscribe`.
+`useSubscription` encapsulates the creation of the subscription and its **guaranteed teardown** on unmount
+/ `deps` change.
+
+## When to use / when you don't need it
+
+**Use it:** when the subscription result goes **outward** (toast, log, analytics, an imperative call)
+rather than into JSX. Especially when you need RxJS operators for aggregation (`bufferTime`, `pairwise`, …).
+
+**Don't need it:**
+
+- the result is needed **in render** → [`useObservable`](./use-storage-observable.md) (a value) or
+  [`useStorageSubscribe`](./use-storage-subscribe.md) (a slice without RxJS);
+- a side effect **without a stream/RxJS** — a plain reaction to a prop/value → a regular `useEffect`.
 
 ## Signature
 
@@ -91,6 +110,31 @@ function MessageNotifier() {
 A detailed walkthrough of the operators lives on the
 [useStorageObservable](./use-storage-observable.md#example-a-notification-aggregator) page.
 
+## All parameters (commented)
+
+```tsx
+useSubscription(
+  // 1. factory — creates the subscription and returns it (Unsubscribable). The side effects
+  //    live inside .subscribe(...). It is recreated on a deps change: the whole chain
+  //    (including stateful operators like bufferTime) is rebuilt from scratch.
+  () =>
+    toObservable(authStorage, (s) => s.error)
+      .pipe(filter(Boolean))
+      .subscribe((msg) => toast.error(msg as string)),
+
+  // 2. deps — like in useEffect: everything the factory closes over and that can change.
+  //    [] for a singleton store; [storage] for a store from props/context.
+  [],
+)
+```
+
+## Options
+
+| Parameter | Type | Description |
+|---|---|---|
+| `factory` | `() => Unsubscribable` | Creates the subscription; returns it for auto-unsubscribe. Side effect inside `.subscribe`. |
+| `deps` | `DependencyList` | Like in `useEffect`. On change the old subscription is torn down and `factory` is called again. |
+
 ## About `deps`
 
 Same rules as [useObservable](./use-storage-observable.md#about-deps--what-goes-in): `deps` holds
@@ -103,3 +147,10 @@ props/context use `[storage]`, otherwise the subscription stays on the old insta
 uses `shareReplay({ refCount: true })` under the hood — when the subscriber count drops to zero it
 unsubscribes from the store. So sprinkling `useSubscription`/`useObservable` across the project does
 **not** accumulate listeners on the storage: everything is released on unmount.
+
+## See also
+
+- [useObservable / useStorageObservable](./use-storage-observable.md) — a stream's value into render.
+- [toObservable](./to-observable.md) — the stream itself (usually the source for `factory`).
+- [useStorageSubscribe](./use-storage-subscribe.md) — reactive reading of a slice without RxJS.
+- [Reactive reads](./reactive-reads.md) — overview and choosing a tool.

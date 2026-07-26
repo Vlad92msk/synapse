@@ -3,10 +3,38 @@
 # Cross-module dependencies
 
 
+**TL;DR.** Two different questions that are often confused:
+
+- **`dependencies`** — *when* to start effects: a gate that waits for other stores to be ready
+  BEFORE starting effects (it does not delay core construction). `dependencies: [otherSynapse]`.
+- **Cross-store connection** — *how* modules exchange data: the 4 patterns below (read state,
+  read selectors, react to actions, mediator). This is independent of `dependencies`.
+
+```typescript
+createSynapse({
+  storage: () => new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+  dependencies: [settingsStorage],          // gate for the START of effects
+  effects: () => new PokemonEffects(api, toObservable(settingsStorage)),  // pattern 1: read state
+})
+```
+
+Usually both go together: since an effect reads another store — that store is also put into
+`dependencies` so that it's initialized by the time effects start.
+
 One `createSynapse` can depend on another storage or module. `dependencies` is a **gate for the
 START of effects, not for construction**: the core (storage/dispatcher/selectors) is assembled
 synchronously right away, while `waitForDependencies` runs inside `ready()` before starting the
 effects — by the time effects start, the dependencies are guaranteed to be initialized.
+
+## When you need `dependencies` / when you don't
+
+**Needed** when the starting module's effects read the state/selectors/actions of another store — so that
+by the time effects start it's ready (otherwise the first `withLatestFrom` would take an uninitialized
+value).
+
+**Not needed** when: the module doesn't depend on anyone; or the connection is purely at the `selectors`
+level (cross-store DI is synchronous and doesn't require waiting for a start). `dependencies` isn't about
+type safety and isn't about the DI itself — only about the **timing of the effects' start**.
 
 Same domain — `pokemon-advanced`. It depends on a separate `settingsStorage` (`pageSize`).
 
@@ -158,3 +186,11 @@ details — [createEventBus](./event-bus.md).
 
 How to hand the assembled `pokemonSynapse` to React and await readiness — [createSynapseCtx](./synapse-ctx.md)
 and [awaitSynapse](./await-synapse.md). The full module — [Pokemon (recipe)](./pokemon-advanced.md).
+
+## See also
+
+- [createSynapse (basic)](./create-synapse-basic.md) — a realistic cross-store module (combine from other modules' selectors + several APIs + a socket).
+- [createSynapse (effects)](./create-synapse-effects.md) — pattern 1 (`toObservable` + `withLatestFrom`) and pattern 3 (`externalDispatchers` + `ctx.external`) in action.
+- [Selectors](./selector-system.md) — pattern 2: other modules' selectors in `this.combine`.
+- [createEventBus](./event-bus.md) — pattern 4: a mediator between modules.
+- [awaitSynapse](./await-synapse.md) · [createSynapseCtx](./synapse-ctx.md) — how to await `ready()` in React.

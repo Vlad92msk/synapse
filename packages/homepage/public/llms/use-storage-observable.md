@@ -1,12 +1,58 @@
 <!-- source: docs/en/use-storage-observable.md · canonical: https://synapse-homepage.web.app/docs/use-storage-observable · part of https://synapse-homepage.web.app/llms-full.txt -->
 
-# useStorageObservable
+# useStorageObservable / useObservable
 
 
-The RxJS path for "store → reactive in a component". Equivalent to
-[useStorageSubscribe](./use-storage-subscribe.md), but you can pipe RxJS operators (`debounceTime`,
-`scan`, `bufferTime`, …) on top of the state stream. See the [Reactive reads](./reactive-reads.md)
-overview. The examples use the end-to-end `todoStorage` (`TodoState = { todos: Todo[]; filter: Filter }`).
+**TL;DR.** The RxJS path for "store → reactive in a component". Two hooks:
+
+- **`useStorageObservable(storage[, selector])`** — sugar: a store slice into render via RxJS, with no
+  operators of your own. Equivalent to [`useStorageSubscribe`](./use-storage-subscribe.md), only inside
+  RxJS.
+- **`useObservable(source, initial[, deps])`** — subscribe to **any** `Observable` (your own `pipe(...)`
+  or `selector.$`) and return its value to render. This is one level down: here you build the stream
+  yourself.
+
+Need operators (`debounceTime`, `scan`, `bufferTime`)? Reach for `toObservable` + `useObservable`. Both
+are imported from `synapse-storage/react`. The examples use the end-to-end `todoStorage`
+(`TodoState = { todos: Todo[]; filter: Filter }`).
+
+## Why
+
+`useStorageSubscribe` returns a slice as is. As soon as you need **stream processing** between the store
+and render (smooth it with a debounce, accumulate with `scan`, collapse with `bufferTime`), you need
+RxJS. `useObservable` subscribes to a ready `Observable` in `useEffect` and puts the latest value into
+state; `useStorageObservable` is a thin wrapper over `toObservable` + `useObservable` for the common case
+of "just a slice, no operators of your own".
+
+## When to use / when you don't need it
+
+**`useStorageObservable`** — you need a store slice into render, but for ideological/stylistic reasons
+through RxJS, with no operators of your own. If there are no operators and RxJS isn't important —
+[`useStorageSubscribe`](./use-storage-subscribe.md) is simpler.
+
+**`useObservable`** — you have **your own `Observable`**: an assembled `toObservable(...).pipe(...)`,
+`selector.$`, or an external RxJS source, and its value is needed **in render**.
+
+**Neither is needed** if:
+
+- reactive read without RxJS → [`useStorageSubscribe`](./use-storage-subscribe.md);
+- the result is a **side-effect**, not a render value → [`useSubscription`](./use-subscription.md);
+- the stream is needed **outside React** → [`toObservable`](./to-observable.md).
+
+## Signatures
+
+```typescript
+// sugar: a store slice into render via RxJS
+useStorageObservable<S>(storage: IStorageBase<S>): S
+useStorageObservable<S, R>(storage: IStorageBase<S>, selector: (state: S) => R): R
+
+// low level: any Observable → value into render
+useObservable<T>(
+  source: Observable<T> | (() => Observable<T>),
+  initialValue: T,
+  deps?: DependencyList,
+): T
+```
 
 ## Basic usage
 
@@ -185,9 +231,64 @@ So a burst of 10 messages within 2 seconds yields **one** toast "10 new messages
 "can the hook do this": once you're inside an `Observable`, the whole RxJS toolbox is available — you just
 pick the right entry point (`useObservable` to render a value, `useSubscription` to run a side-effect).
 
+## All parameters (commented)
+
+```tsx
+import { useStorageObservable, useObservable } from 'synapse-storage/react'
+import { toObservable } from 'synapse-storage/reactive'
+import { map } from 'rxjs/operators'
+
+// --- useStorageObservable: a store slice into render, no operators of your own ---
+const total = useStorageObservable(
+  // 1. storage — IStorageBase. The stream is memoized by [storage] (no re-subscribe on render).
+  todoStorage,
+  // 2. selector? — a slice (map + distinctUntilChanged). Without it — the whole state.
+  //    Deliberately NOT in deps: re-subscription happens only by storage.
+  (s) => s.todos.length,
+)
+
+// --- useObservable: any Observable → value into render ---
+const label = useObservable(
+  // 1. source — an Observable OR a factory () => Observable. A factory is needed for your own
+  //    operators (pipe). The hook memoizes the factory itself (see deps below).
+  () => toObservable(todoStorage, (s) => s.todos.length).pipe(map((n) => `${n} todos`)),
+  // 2. initialValue — what to return before the first emit (the stream emits the initial value
+  //    on subscribe, so flicker is usually zero, but the type is required).
+  '0 todos',
+  // 3. deps? — re-subscription (rebuilds the whole chain). Default: for a factory — []
+  //    (built once), for a direct Observable — [source]. Put here everything the factory
+  //    closes over that can change (a limit prop, a store from props, …).
+  [],
+)
+```
+
+## Parameters
+
+`useStorageObservable`:
+
+| Parameter | Type | Description |
+|---|---|---|
+| `storage` | `IStorageBase<S>` | Storage. The stream is memoized by `[storage]`. |
+| `selector?` | `(state: S) => R` | A slice (`map` + `distinctUntilChanged`). Without it — the whole state. Not in deps. |
+
+`useObservable`:
+
+| Parameter | Type | Description |
+|---|---|---|
+| `source` | `Observable<T> \| (() => Observable<T>)` | A ready stream or a factory. A factory is for your own operators. |
+| `initialValue` | `T` | Value before the first emit. |
+| `deps?` | `DependencyList` | Re-subscription. Default `[]` for a factory, `[source]` for a direct Observable. |
+
 ## Notes
 
 - A `toObservable` selector stream already runs through `distinctUntilChanged` — an extra
   `distinctUntilChanged` right after the selector is almost always redundant.
-- Need a simple reactive read without RxJS? Use [useStorageSubscribe](./use-storage-subscribe.md).
-- A stream outside React (effects, non-React code) — [toObservable](./to-observable.md).
+- `useObservable` also accepts `selector.$` directly (the Observable form of `SelectorAPI`) — you can do
+  `useObservable(selectors.active.$.pipe(debounceTime(300)), initial)`, see [Selectors](./selector-system.md).
+
+## See also
+
+- [useStorageSubscribe](./use-storage-subscribe.md) — a simple reactive read without RxJS.
+- [useSubscription](./use-subscription.md) — the same stream, but as a side-effect (no render).
+- [toObservable](./to-observable.md) — a stream outside React (effects, non-React code).
+- [Reactive reads](./reactive-reads.md) — overview and choosing a tool.

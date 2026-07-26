@@ -17,6 +17,23 @@ just packaged as a ready-made utility.
 > The reference pokemon module does **not** bake the bus in — event-bus is an optional integration on
 > top of it, so this page has no canonical pokemon file, only a runnable sandbox.
 
+## When to use
+
+- Several **independent** modules must react to domain events without knowing about each other
+  (analytics/toasts/badges listen for `POKEMON_*` without importing the pokemon synapse).
+- You need **wildcard subscriptions** (`POKEMON_*`, `*`), priorities, TTL, event history.
+- You want to **feed** external events into another synapse's action stream — via
+  `externalDispatchers` (see the end).
+
+## When NOT needed
+
+- Communication **within a single module** — that's the dispatcher/effects; the bus is an extra layer
+  here.
+- Two modules need a **direct, typed** call — a cross-store dependency is simpler
+  (see [dependencies](./dependencies.md)), without the indirection of string event names.
+- Cross-**tab** state synchronization — that's not the bus but
+  `syncBroadcastMiddleware`/`syncSharedWorkerMiddleware` (see [middlewares](./middlewares.md)).
+
 ## Imports
 
 ```typescript

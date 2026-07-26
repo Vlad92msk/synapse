@@ -5,6 +5,28 @@
 
 A typed HTTP client: endpoints, tag-based caching, request-state subscriptions, abort.
 
+## Why
+
+You describe the endpoints once (path, method, param and response types, tags) — and get a typed
+`request()`, caching out of the box, and precise tag-based invalidation after mutations. The client is
+**self-contained**: it doesn't pull in RxJS/`createSynapse`/React, and it works on the server too (SSR
+via `dehydrate`/`hydrate`). It feels close to RTK Query, but without Redux.
+
+## When to use
+
+- You need an HTTP layer with **caching and tag-based invalidation** (after a mutation the active
+  requests "come back to life").
+- You want **type-safe** endpoints and a single place for mapping the raw response into domain types.
+- SSR: warm up the cache on the server and hand it to the client with no loading flash
+  (`getCachedSync`).
+
+## When you DON'T need it
+
+- One or two one-off `fetch`es with no cache/invalidation — a native `fetch` is simpler, the client is
+  overkill.
+- The data is already cached by a ServiceWorker and a second layer isn't needed — see
+  [Caching layers](./cache-layers.md).
+
 > **New to the caching stack?** Start with [Caching layers](./cache-layers.md) — where the client's
 > cache sits relative to a ServiceWorker and `fetchFn`, and when to use which.
 
@@ -253,6 +275,70 @@ createPokemon: create<...>({
                                          // tagged 'pokemon-list'
 })
 ```
+
+## All client options (commented)
+
+The whole surface of `new ApiClient({...})` at once — what you can pass and why:
+
+```typescript
+import { ApiClient } from 'synapse-storage/api'
+import { MemoryStorage } from 'synapse-storage/core'
+
+export const client = new ApiClient({
+  // 1. storage — REQUIRED. The request-cache storage. An instance OR a factory () => IStorage
+  //    (the factory is called on init() — handy for universal SSR code: Memory on the server, anything on the client).
+  storage: () => new MemoryStorage({ name: 'api-cache', initialState: {} }),
+
+  // 2. baseQuery — REQUIRED. The default transport for all endpoints.
+  baseQuery: {
+    baseUrl: 'https://api.example.com',        // base URL, the endpoint's path is glued onto it
+    timeout: 10000,                            // overall request timeout (ms)
+    credentials: 'include',                    // RequestCredentials for fetch (cookies)
+    fetchFn: customFetch,                      // your own fetch function (e.g. via a ServiceWorker) — see CustomFetchFnExample
+    prepareHeaders: async (headers, ctx) => {  // mutate headers before sending
+      headers.set('Accept', 'application/json')
+      // ctx.requestParams / ctx.context / ctx.getFromStorage(key) / ctx.getCookie(name)
+      return headers
+    },
+  },
+
+  // 3. cache? — the global cache policy. false disables the cache entirely (even if endpoints set it).
+  cache: {
+    ttl: 60000,                                // record lifetime (ms)
+    invalidateOnError: true,                   // drop the endpoint's cache when a request errors
+  },
+
+  // 4. cacheableHeaderKeys? — headers that AFFECT the cache key (globally).
+  //    Important for SSR: the set must match on the server and the client, otherwise hydration "misses".
+  cacheableHeaderKeys: ['x-lang'],
+
+  // 5. retry? — the global retry policy (inherited by endpoints; can be overridden per endpoint).
+  retry: {
+    count: 3,                                  // number of retries (0 = no retry)
+    delay: (attempt) => attempt * 500,         // delay: a number (ms) or (attempt) => ms
+    retryOn: [0, 429, 500, 502, 503, 504],     // which HTTP statuses to retry on
+  },
+
+  // 6. endpoints — the endpoints factory. create<Params, Result>({ request, cache?, tags?, invalidatesTags?, retry? })
+  endpoints: async (create) => ({
+    getList: create<{ limit: number }, ListResponse>({
+      request: (p) => ({ path: '/items', method: 'GET', query: p }),
+      cache: { ttl: 120000 },                  // this endpoint's TTL (overrides the global one); cache:true — use the global; cache:false — don't cache
+      tags: ['items'],                         // record tags (for invalidation)
+      // invalidatesTags: ['items'],           // for mutations: which tags to drop on success
+    }),
+  }),
+})
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `storage` | `IStorage \| () => IStorage` | yes | The cache storage (an instance or a lazy factory for SSR). |
+| `baseQuery` | `FetchBaseQueryArgs` | yes | `baseUrl` (+ `timeout`/`credentials`/`fetchFn`/`prepareHeaders`). |
+| `cache?` | `CacheConfig \| false` | no | Global `ttl`/`invalidateOnError`; `false` — turn the cache off completely. |
+| `cacheableHeaderKeys?` | `string[]` | no | Headers that affect the cache key (critical for SSR stability). |
+| `retry?` | `RetryConfig` | no | Default `count`/`delay`/`retryOn` for all endpoints. |
+| `endpoints?` | `(create) => Promise<T>` | no | Endpoint descriptions via `create<Params, Result>({...})`. |
 
 ## getEndpoints() — direct access to the endpoints
 

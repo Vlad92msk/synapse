@@ -3,6 +3,11 @@
 # Custom fetch-intercepting ServiceWorker
 
 
+**TL;DR:** your own `sw.js` (layer 3) transparently intercepts `fetch` below `ApiClient` — precache, offline,
+per-URL strategies. Registered separately (`navigator.serviceWorker.register`), the client doesn't know about it,
+and `baseQuery.fetchFn` is left untouched. Not to be confused with `WorkerCacheStorage` (cache across tabs) or `fetchFn`
+(transport).
+
 An **app-owned ServiceWorker** (Workbox-style) that transparently intercepts `fetch` and applies
 network strategies per URL: precache, offline routing, cache-first / network-first /
 stale-while-revalidate. It sits **below** `ApiClient`, which never knows it exists — and its
@@ -129,3 +134,9 @@ Where a response comes from is directly observable in DevTools → Network:
   here. No library changes.
 - **Live cross-tab cache** (shared state held in a worker) → [`WorkerCacheStorage`](./worker-cache-storage.md).
 - **Replace the transport** (auth-retry, metrics, axios, worker) → [custom `baseQuery.fetchFn`](./custom-fetch-fn.md).
+
+## See also
+
+- [Cache layers](./cache-layers.md) — where the SW (layer 3) sits relative to the app cache and `fetchFn`.
+- [WorkerCacheStorage](./worker-cache-storage.md) — a live cross-tab cache (layer 1), not an offline layer.
+- [Custom `baseQuery.fetchFn`](./custom-fetch-fn.md) — replacing the transport (layer 2).

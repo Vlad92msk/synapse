@@ -3,10 +3,38 @@
 # toObservable
 
 
-Turns a storage (`IStorageBase`) into an RxJS `Observable` of the state stream — for **effects and
-non-React code**. It's the low-level utility that [useStorageObservable](./use-storage-observable.md) is
-built on. Imported from `synapse-storage/reactive`. The examples use the end-to-end `todoStorage`
-(`TodoState = { todos: Todo[]; filter: Filter }`).
+**TL;DR.** `toObservable(storage[, selector, equals])` — turns a storage into an RxJS `Observable` of
+the state stream. It's a **low-level utility for effects and non-React code**; the React hooks
+`useStorageObservable` / `useObservable` are built on it. Imported from `synapse-storage/reactive`. The
+examples use the end-to-end `todoStorage` (`TodoState = { todos: Todo[]; filter: Filter }`).
+
+## Why
+
+A storage is not an RxJS source on its own: it has `subscribe`/`getStateSync`, not `pipe`. As soon as
+you need to **run the state through operators** (`debounceTime`, `scan`, `bufferTime`, …) or **feed it
+into `createEffectConfig` as external state**, you need an `Observable`. `toObservable` builds exactly
+that bridge: it emits the current state on subscribe, then on every change.
+
+## When to use / when you DON'T need it
+
+**Use it:**
+
+- you're building a stream **outside React** — in effects, watchers, plain non-React modules;
+- you need an `Observable` of state as **external state** for `createEffectConfig.externalStates`;
+- in React you need **your own set of operators** on top of a slice — then `toObservable(...)` in a
+  factory + [`useObservable`](./use-storage-observable.md) / [`useSubscription`](./use-subscription.md).
+
+**You DON'T need it:**
+
+- **just a slice into a component without your own operators** →
+  [`useStorageObservable`](./use-storage-observable.md) (it memoizes `toObservable` for you);
+- **a reactive read with no RxJS at all** → [`useStorageSubscribe`](./use-storage-subscribe.md);
+- you're reading a memoized `SelectorAPI` — it already has `.$` (a ready-made `Observable`), no need to
+  wrap the store, see [Selectors](./selector-system.md).
+
+> In a React component, do **not** create `toObservable(...)` directly in render — a new Observable on
+> every render triggers re-subscriptions. Memoize it (which is what `useStorageObservable` does) or pass
+> it as a **factory** to `useObservable`.
 
 ## Signature
 
@@ -21,12 +49,6 @@ toObservable<T, R>(
   equals?: (a: R, b: R) => boolean,
 ): Observable<R>
 ```
-
-Three parameters:
-
-1. **`storage`** — the storage.
-2. **`selector`** *(optional)* — which slice to pull out of the state.
-3. **`equals`** *(optional)* — how to compare adjacent slice values to skip duplicates.
 
 ## `selector` — a slice instead of the whole state
 
@@ -88,6 +110,35 @@ createEffectConfig: () => ({
 })
 ```
 
+## All parameters (commented)
+
+```typescript
+import { toObservable } from 'synapse-storage/reactive'
+
+const slice$ = toObservable(
+  // 1. storage — IStorageBase (Memory/Local/IndexedDB — a shared interface).
+  //    The stream subscribes to storage.subscribeToAll and emits getStateSync().
+  todoStorage,
+
+  // 2. selector? — which slice to pull out. Without it the stream emits the WHOLE state on any
+  //    change. With it — map + distinctUntilChanged, emitting only when the slice changes.
+  (s) => s.todos.length,
+
+  // 3. equals? — comparator for distinctUntilChanged (defaults to Object.is).
+  //    Needed if the selector returns a new object/array every tick, or when you want a
+  //    coarser equivalence. Only makes sense TOGETHER with selector.
+  (a, b) => a === b,
+)
+```
+
+## Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `storage` | `IStorageBase<T>` | The storage. The stream emits `getStateSync()` on subscribe and on every change. |
+| `selector?` | `(state: T) => R` | The slice. Without it — the whole state; with it — `map` + `distinctUntilChanged`. |
+| `equals?` | `(a: R, b: R) => boolean` | Comparator for `distinctUntilChanged`. Defaults to `Object.is`. Only together with `selector`. |
+
 ## Notes
 
 - The stream emits the current state immediately on subscribe (via `getStateSync()`), then on every
@@ -95,8 +146,10 @@ createEffectConfig: () => ({
 - Under the hood it's `shareReplay({ refCount: true })`: multiple subscribers share a single store
   subscription, and when their count drops to zero the stream unsubscribes from the storage (no leaked
   listeners).
-- In a React component, do **not** create `toObservable(...)` directly in render — memoize it (which is
-  what [useStorageObservable](./use-storage-observable.md) does) or subscribe via `useObservable` with a
-  factory.
-- For a simple reactive read in a component without RxJS, use
-  [useStorageSubscribe](./use-storage-subscribe.md).
+
+## See also
+
+- [useStorageObservable / useObservable](./use-storage-observable.md) — the same stream in a React component.
+- [useSubscription](./use-subscription.md) — a subscription side-effect in React (the same `toObservable` inside).
+- [useStorageSubscribe](./use-storage-subscribe.md) — a reactive read in a component without RxJS.
+- [Reactive reads](./reactive-reads.md) — an overview and how to pick the tool.

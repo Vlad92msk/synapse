@@ -3,7 +3,10 @@
 # awaitSynapse
 
 
-A React utility for waiting until a Synapse module is ready: HOC + hook + programmatic API.
+**TL;DR.** `awaitSynapse(handle, options?)` waits until a Synapse module is ready and hands the ready
+`store` to components **without Context** — via a HOC (`withSynapseReady`), a hook (`useSynapseReady`)
+and a programmatic API. While the module initializes it shows `loadingComponent`; on error —
+`errorComponent`.
 
 `createSynapse` returns a **lazy handle** (see [create-synapse-basic](./create-synapse-basic.md)) — the
 factory starts on the first `await`/subscription, not on import. `awaitSynapse` lifts that handle: it kicks
@@ -13,6 +16,22 @@ once `storage` is initialized.
 Same domain — the `pokemonSynapse` assembled on the previous pages. This is the "manual" way to hand the
 module to components (no Context): an alternative to the [createSynapseCtx](./synapse-ctx.md) provider. It
 is exactly `awaitSynapse` that the module's demo uses — `PokemonAdvancedExample.tsx`.
+
+## When to use
+
+- The module is handed to **one or a few** components, and pulling in Context just for that isn't worth it.
+- You need **explicit control over the async prologue** (initPokemonApi and the like): show loading/error
+  until `storage` is ready.
+- Module readiness is needed **outside React too** (effects, utilities) — the same awaiter's programmatic API.
+
+## When it's NOT needed
+
+- The module is needed by a **large subtree** and it's more convenient to distribute it through a provider
+  and hooks → [createSynapseCtx](./synapse-ctx.md).
+- The module is **synchronous** and there's no async prologue — no waiting wrapper is needed, just take the
+  ready `store` from the handle directly.
+- The logic is entirely **outside React** (Node, vanilla JS) → use
+  [`createSynapseAwaiter`](./synapse-awaiter.md) directly, without the React wrapper.
 
 ## Creating
 
@@ -31,8 +50,29 @@ const pokemonAwaiter = awaitSynapse(pokemonSynapse, {
 ```
 
 `options` is optional: by default `loadingComponent` is `<div>Initializing...</div>` and `errorComponent`
-is the error text. It accepts not only a handle, but also a Promise of a ready synapse or a ready synapse
-itself.
+is the error text. The first argument accepts not only a handle, but also a Promise of a ready synapse or
+a ready synapse itself.
+
+### All parameters (commented)
+
+```typescript
+const pokemonAwaiter = awaitSynapse(
+  // 1. handle | Promise<synapse> | synapse — what to wait for. Usually the lazy handle from createSynapse.
+  pokemonSynapse,
+  // 2. options? — the styling of the waiting state (used by the HOC and the hook)
+  {
+    // Rendered while the module isn't ready. Defaults to <div>Initializing...</div>.
+    loadingComponent: <div>Initializing...</div>,
+    // Rendered on an initialization error. Defaults to the error text.
+    errorComponent: (error) => <div>Init failed: {error.message}</div>,
+  },
+)
+```
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `loadingComponent` | `React.ReactNode` | `<div>Initializing...</div>` | Rendered while the module isn't ready. |
+| `errorComponent` | `(error: Error) => React.ReactNode` | error text | Rendered on an initialization error. |
 
 ## withSynapseReady (HOC) — how the demo module is lifted
 

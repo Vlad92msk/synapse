@@ -138,26 +138,65 @@ export const postsSynapse = createSynapse({
 <!-- source: docs/en/install.md · url: https://synapse-homepage.web.app/docs/install -->
 # Install
 
-The core pulls in no extra dependencies. `rxjs` and `react` are only needed if you use the
-matching layer.
+
+One package — `synapse-storage`. The core pulls in no extra dependencies: `rxjs` and `react` are
+only needed if you use the matching layer.
+
+## Installing the package
 
 ```bash
+# npm
 npm install synapse-storage
-# or
+
+# yarn
 yarn add synapse-storage
+
+# pnpm
+pnpm add synapse-storage
 ```
 
-Optional peer dependencies — install them as needed:
+## Optional peer dependencies
+
+Install them as needed — only for the layers you actually use:
 
 ```bash
-# effects on RxJS
+# effects on RxJS (the synapse-storage/reactive layer)
 npm install rxjs
 
-# React hooks and SSR
-npm install react
+# React hooks and SSR (the synapse-storage/react layer)
+npm install react react-dom
 ```
 
-> Need only the reactive store? A single `synapse-storage` is enough — no `rxjs`, no `react`.
+> Need only the reactive store (`MemoryStorage`, selectors, dispatcher)? A single `synapse-storage`
+> is enough — no `rxjs`, no `react`.
+
+## Imports by layer (sub-entrypoints)
+
+The library is split into sub-packages so that only what you need ends up in the bundle. Import from
+a specific layer, not from the root:
+
+```typescript
+import { MemoryStorage, LocalStorage, Selectors } from 'synapse-storage/core'
+import { Dispatcher, createEffect } from 'synapse-storage/reactive'
+import { useStorageSubscribe, createSynapseCtx } from 'synapse-storage/react'
+import { createSynapse, createEventBus } from 'synapse-storage/utils'
+import { ApiClient } from 'synapse-storage/api'
+```
+
+| Entrypoint | What's inside | Requires |
+|---|---|---|
+| `synapse-storage/core` | Storages (`MemoryStorage`, `LocalStorage`, `IndexedDBStorage`), middleware, selectors | — |
+| `synapse-storage/reactive` | Dispatchers (`Dispatcher`) and Redux-Observable-style effects | `rxjs` |
+| `synapse-storage/react` | React hooks (`useStorageSubscribe`) and the SSR wrapper (`createSynapseCtx`) | `react`, `react-dom` |
+| `synapse-storage/utils` | `createSynapse`, `createEventBus`, `createSynapseAwaiter`, `dehydrateModule` | — |
+| `synapse-storage/api` | HTTP client with tag-based caching | — |
+
+> The package is **ESM-only** (`"type": "module"`). CommonJS `require` is not supported.
+
+## See also
+
+- [createSynapse (basic)](./create-synapse-basic.md) — where to start assembling a module.
+- [MemoryStorage](./memory-storage.md) · [LocalStorage](./local-storage.md) — your first storages.
 
 ---
 
@@ -165,10 +204,33 @@ npm install react
 # MemoryStorage
 
 
-In-memory storage. Data lives only while the page is open. Synchronous API.
+**TL;DR:** in-memory storage with a synchronous API. Data lives while the page is open; after a reload — a clean `initialState`. The default baseline choice.
 
-Every example in the State Manager section is built on a single end-to-end domain — a todo-list.
-It is the canonical store that is reused later in the "Working with data" and "Patterns" sections.
+## Why
+
+The simplest store with no persistence: state is kept in memory, all reads/writes are synchronous (no `await`). It also works on the server — an "empty" store is raised synchronously from `initialState`, so SSR/SSG doesn't break.
+
+Every example in the State Manager section is built on a single end-to-end domain — a todo-list. It is the canonical store that is reused later in the "Working with data" and "Patterns" sections.
+
+## When to use
+
+- Ephemeral UI state: filters, forms, modal state, selected items.
+- State that **must not** survive a page reload.
+- The default baseline choice — when persistence isn't needed.
+
+## When not to use
+
+- Data must survive a reload → [LocalStorage](./local-storage.md) (small things) or [IndexedDB](./indexeddb-storage.md) (large volumes).
+- Large/binary data → [IndexedDB](./indexeddb-storage.md).
+- You need cross-tab sync on top of persistence → see [browserStorage](./browser-storage.md) + `syncBroadcastMiddleware`.
+
+## How it differs from the neighboring storages
+
+| | API | Server | After a reload |
+|---|---|---|---|
+| **MemoryStorage** | sync | works (empty from `initialState`) | data is lost |
+| [LocalStorage](./local-storage.md) | sync | breaks without `localStorage` (needs [browserStorage](./browser-storage.md)) | preserved (~5 MB) |
+| [IndexedDB](./indexeddb-storage.md) | **async** | no sync construction | preserved (large volumes) |
 
 ## Domain
 
@@ -188,14 +250,16 @@ export interface TodoState {
 
 export const initialTodoState: TodoState = {
   todos: [
-    { id: 't1', title: 'Изучить Synapse', done: true },
-    { id: 't2', title: 'Собрать todo-приложение', done: false },
+    { id: 't1', title: 'Learn Synapse', done: true },
+    { id: 't2', title: 'Build a todo app', done: false },
   ],
   filter: 'all',
 }
 ```
 
-## Creating
+## Usage
+
+Copy-paste minimal form:
 
 ```typescript
 import { MemoryStorage } from 'synapse-storage/core'
@@ -206,7 +270,7 @@ export const todoStorage = new MemoryStorage<TodoState>({
   initialState: initialTodoState,
 })
 
-// Or via the static .create() — a full equivalent
+// Or via the static .create() — a full equivalent of new
 const todoStorage = MemoryStorage.create<TodoState>({
   name: 'todo',
   initialState: initialTodoState,
@@ -216,22 +280,58 @@ const todoStorage = MemoryStorage.create<TodoState>({
 await todoStorage.initialize()
 ```
 
-## When to use
+## All parameters (commented)
 
-- Ephemeral UI state: filters, forms, modal state, selected items.
-- State that must not survive a page reload.
-- The default baseline choice — when persistence isn't needed.
+`MemoryStorage` accepts `SyncStorageConfig<T>`. `TState` is inferred from `initialState` — the explicit generic is only needed if you want to pin the type down.
 
-## When not to use
+```typescript
+import { MemoryStorage } from 'synapse-storage/core'
 
-- You need to keep data across reloads → [LocalStorage](./local-storage.md) or
-  [IndexedDB](./indexeddb-storage.md).
-- Large amounts of data or binary data → [IndexedDB](./indexeddb-storage.md).
+const storage = new MemoryStorage<TodoState>({
+  // name — required. The store identifier (in logs, the singleton key, events).
+  name: 'todo',
+
+  // initialState — the initial state. TState is inferred from it and an "empty" store is built
+  //   on the server. For memory it is used as is on every start.
+  initialState: initialTodoState,
+
+  // version / migrate — IGNORED for memory (nothing to persist). Relevant for
+  //   LocalStorage/IndexedDB — see Persist migrations.
+
+  // clearOnDestroy? — whether to clear the data on destroy(). For memory it defaults to true
+  //   (an ephemeral storage). Usually no need to change.
+  clearOnDestroy: true,
+
+  // middlewares? — the sync-middleware pipeline. The getDefault argument gives the built-ins:
+  //   batching / shallowCompare / logger. You can also add your own (e.g. syncBroadcastMiddleware).
+  middlewares: (getDefault) => [
+    getDefault().shallowCompare(),           // don't notify subscribers if the value hasn't changed
+    getDefault().logger({ collapsed: true }), // dev logger for write actions
+  ],
+
+  // singleton? — return ONE instance for the same name/key instead of a new store.
+  singleton: {
+    enabled: true,                    // enable singleton (defaults to false)
+    // mergeStrategy — how to resolve a config conflict between instances with the same name
+    //   (FIRST_WINS by default; STRICT / DEEP_MERGE / OVERRIDE).
+    // warnOnConflict — warn in the console about config mismatches (defaults to true).
+    // key — a custom identification key (defaults to `${type}_${name}`).
+  },
+})
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | `string` | **Required.** The store identifier. |
+| `initialState?` | `T` | The initial state; `TState` is inferred from it. |
+| `middlewares?` | `(getDefault) => SyncMiddleware[]` | The sync-middleware pipeline. |
+| `singleton?` | `SingletonOptions` | One instance per `name`/`key`. |
+| `clearOnDestroy?` | `boolean` | Clear data on `destroy()` (memory: `true`). |
+| `version?` / `migrate?` | `number` / `MigrateFn` | Ignored for memory. |
 
 ## Working with data
 
-Reading, writing, subscriptions, and selectors are the same for all synchronous storages and are
-covered in the "Working with data" section:
+Reading, writing, subscriptions, and selectors are the same for all synchronous storages and are covered in the "Working with data" section:
 
 - [Reading data](./reading-data.md) — `get`, `getState`, `getStateSync`
 - [Writing data](./writing-data.md) — `set`, `update`, `reset`
@@ -253,19 +353,48 @@ const unsub = todoStorage.onStatusChange((status) => {
 await todoStorage.destroy()       // destruction (for memory, clears the data)
 ```
 
+## See also
+
+- [LocalStorage](./local-storage.md) · [IndexedDB](./indexeddb-storage.md) — the persistent variants.
+- [Static .create()](./static-create.md) · [StorageFactory](./storage-factory.md) — ways to create.
+- [browserStorage](./browser-storage.md) — memory on the server, LocalStorage in the browser in one line.
+
 ---
 
 <!-- source: docs/en/local-storage.md · url: https://synapse-homepage.web.app/docs/local -->
 # LocalStorage
 
 
-Data is stored in the browser's `localStorage` and survives page reloads. Synchronous API,
-fully identical to [MemoryStorage](./memory-storage.md).
+**TL;DR:** a synchronous storage on top of `localStorage`. Data survives reloads, the API is identical to [MemoryStorage](./memory-storage.md). For small settings that should be persisted.
 
-The same end-to-end todo domain (`TodoState`, `initialTodoState` — see [MemoryStorage](./memory-storage.md)),
-but now the tasks are persisted across reloads.
+## Why
 
-## Creating
+Persistence without asynchrony: the state is automatically written to the browser's `localStorage` and picked up on the next load. The key in `localStorage` equals the `name` field. You can read/write synchronously, without `await`.
+
+The same end-to-end todo domain (`TodoState`, `initialTodoState` — see [MemoryStorage](./memory-storage.md)), but now the tasks are persisted across reloads.
+
+## When to use
+
+- Small user settings that should survive a reload: theme, selected filter, form draft.
+- You want a synchronous API and simplicity — without async `await`.
+
+## When NOT to use
+
+- **Large volumes**, arrays of thousands of items, binary data → `localStorage` is limited (~5 MB) and serializes everything into a string. Take [IndexedDB](./indexeddb-storage.md).
+- Data must **not** survive the session → [MemoryStorage](./memory-storage.md).
+- The store is built **on the server** (SSR/SSG) → a plain `new LocalStorage()` will crash there (no `localStorage`). Wrap it in [browserStorage](./browser-storage.md): on the server it brings up `MemoryStorage`, in the browser — `LocalStorage`.
+
+## How it differs from neighboring storages
+
+| | API | Limit | Server |
+|---|---|---|---|
+| [MemoryStorage](./memory-storage.md) | sync | RAM | works, but data is not persisted |
+| **LocalStorage** | sync | ~5 MB, strings only | **crashes** without `localStorage` → needs [browserStorage](./browser-storage.md) |
+| [IndexedDB](./indexeddb-storage.md) | **async** | large/binary data | no sync construction |
+
+## Usage
+
+Copy-paste minimal form:
 
 ```typescript
 import { LocalStorage } from 'synapse-storage/core'
@@ -276,7 +405,7 @@ const storage = new LocalStorage<TodoState>({
   initialState: initialTodoState,
 })
 
-// Or via the static .create()
+// Or via the static .create() — equivalent to new
 const storage = LocalStorage.create<TodoState>({
   name: 'todo-local',
   initialState: initialTodoState,
@@ -286,38 +415,69 @@ const storage = LocalStorage.create<TodoState>({
 await storage.initialize()
 ```
 
-## When to use
+## All parameters (commented)
 
-- Small user settings and state that should survive a reload
-  (theme, selected filter, draft).
-- You want a synchronous API and simplicity — without async `await`.
+`LocalStorage` accepts the same `SyncStorageConfig<T>` as `MemoryStorage`, but here `version`/`migrate` actually work (the data is persistent).
 
-## When not to use
+```typescript
+import { LocalStorage } from 'synapse-storage/core'
 
-- Large amounts of data, arrays of thousands of items, or binary data → localStorage is
-  limited (~5 MB) and serializes everything into a string. Use [IndexedDB](./indexeddb-storage.md).
-- Data must not survive the session → [MemoryStorage](./memory-storage.md).
+const storage = new LocalStorage<TodoState>({
+  // name — required. Also serves as the KEY in localStorage.
+  name: 'todo-local',
 
-## Working with data
+  // initialState — the default on first run (when localStorage is still empty).
+  //   If data is already saved — initialize() picks it up instead of initialState.
+  initialState: initialTodoState,
 
-The write/read/subscription API is identical to MemoryStorage — see the "Working with data" section
-([Reading](./reading-data.md), [Writing](./writing-data.md), [Subscriptions](./subscriptions.md)).
-The only difference is that data is automatically synchronized into localStorage; the key in
-localStorage equals the `name` field.
+  // version? — the version of the persistent state schema. Set it when the shape of initialState
+  //   changes between releases and localStorage may hold data of an older schema.
+  version: 2,
+
+  // migrate? — transforms saved state of an older version to the current schema.
+  //   Called on initialize(), only if version is set and the saved version is lower.
+  migrate: (persisted, fromVersion) =>
+    fromVersion < 2 ? normalizeOld(persisted) : persisted,
+
+  // clearOnDestroy? — whether to wipe the data in localStorage on destroy().
+  //   For localStorage it defaults to FALSE (persistent: survives destroy, like IndexedDB).
+  clearOnDestroy: false,
+
+  // middlewares? — the sync middleware pipeline (getDefault provides batching/shallowCompare/logger).
+  middlewares: (getDefault) => [getDefault().shallowCompare()],
+
+  // singleton? — one instance per name/key (enabled/mergeStrategy/warnOnConflict/key).
+  singleton: { enabled: true },
+})
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | `string` | **Required.** Identifier + key in `localStorage`. |
+| `initialState?` | `T` | The default on first run. |
+| `version?` | `number` | Schema version for migrations. |
+| `migrate?` | `MigrateFn<T>` | Transform an old schema to the current one. |
+| `clearOnDestroy?` | `boolean` | Clear `localStorage` on `destroy()` (defaults to `false`). |
+| `middlewares?` | `(getDefault) => SyncMiddleware[]` | The middleware pipeline. |
+| `singleton?` | `SingletonOptions` | One instance per `name`/`key`. |
 
 ## destroy() and clearOnDestroy
 
-By default `destroy()` does **not** wipe the data in localStorage — the state survives storage
-destruction (persistent IndexedDB behaves the same way). The behavior is controlled by the
-`clearOnDestroy?: boolean` config flag (`SyncStorageConfig`): default `false` for
-`localStorage` and `true` for `memory` (ephemeral). To make `destroy()` clear localStorage,
-pass `{ clearOnDestroy: true }`.
+By default `destroy()` does **not** wipe the data in localStorage — the state survives storage destruction (persistent IndexedDB behaves the same way). The behavior is controlled by the `clearOnDestroy?: boolean` config flag (`SyncStorageConfig`): default `false` for `localStorage` and `true` for `memory` (ephemeral). To make `destroy()` clear localStorage, pass `{ clearOnDestroy: true }`.
+
+## Working with data
+
+The write/read/subscription API is identical to MemoryStorage — see the "Working with data" section ([Reading](./reading-data.md), [Writing](./writing-data.md), [Subscriptions](./subscriptions.md)). The only difference is that data is automatically synchronized into localStorage; the key in localStorage equals the `name` field.
 
 ## Persist migrations and SSR
 
-Since the data is persistent, when the shape of `initialState` changes between releases you can
-migrate it via `version` + `migrate` — see [Persist migrations](./persist-migration.md).
-Server state can be seeded via [`hydrate(state)`](./ssr-hydration.md).
+Since the data is persistent, when the shape of `initialState` changes between releases you can migrate it via `version` + `migrate` — see [Persist migrations](./persist-migration.md). Server state can be seeded via [`hydrate(state)`](./ssr-hydration.md), and the store can be safely built on the server via [browserStorage](./browser-storage.md).
+
+## See also
+
+- [MemoryStorage](./memory-storage.md) · [IndexedDB](./indexeddb-storage.md)
+- [browserStorage](./browser-storage.md) — server-safe LocalStorage for SSR/SSG.
+- [Persist migrations](./persist-migration.md) · [SSR hydration](./ssr-hydration.md)
 
 ---
 
@@ -325,32 +485,47 @@ Server state can be seeded via [`hydrate(state)`](./ssr-hydration.md).
 # IndexedDBStorage
 
 
-Data is stored in IndexedDB and survives reloads. **Asynchronous API** — read/write operations
-return a Promise.
+**TL;DR:** a persistent storage on top of IndexedDB with an **asynchronous** API. For large volumes and binary data, where localStorage is too tight. Read/write operations return a Promise.
 
-The same end-to-end todo domain (`TodoState`, `initialTodoState` — see [MemoryStorage](./memory-storage.md)),
-but in a persistent asynchronous storage.
+## Why
 
-## Creating
+Persistence without the localStorage limit: IndexedDB holds large arrays and binary data (Blob/ArrayBuffer) and survives reloads. The price is asynchrony: `get`/`set`/`update`/`has`/`keys`/`getState` return a Promise. But the state can always be read **synchronously from the cache** via `getStateSync()` (including in render).
+
+The same end-to-end todo domain (`TodoState`, `initialTodoState` — see [MemoryStorage](./memory-storage.md)), but in a persistent asynchronous storage.
+
+## When to use
+
+- Large amounts of data, arrays of thousands of items, binary data (Blob/ArrayBuffer).
+- You need persistence beyond the localStorage limit (~5 MB).
+
+## When NOT to use
+
+- Small state where you don't want asynchrony → [LocalStorage](./local-storage.md).
+- Ephemeral UI state → [MemoryStorage](./memory-storage.md).
+- The store is needed **synchronously on the server** (SSR/SSG) → IndexedDB has no synchronous construction, and the C-form of [`createSynapse`](./create-synapse-basic.md) does not bring it up synchronously. For a server-safe sync store see [browserStorage](./browser-storage.md).
+
+## How it differs from neighboring storages
+
+| | API | Volume | Server |
+|---|---|---|---|
+| [MemoryStorage](./memory-storage.md) | sync | RAM | works (ephemeral) |
+| [LocalStorage](./local-storage.md) | sync | ~5 MB, strings | needs [browserStorage](./browser-storage.md) |
+| **IndexedDB** | **async** | large/binary | **no sync construction** |
+
+## Usage
+
+Copy-paste minimal form (the `options` field is required, may be empty):
 
 ```typescript
 import { IndexedDBStorage } from 'synapse-storage/core'
 
-// options is a required field (may be an empty object)
 const storage = new IndexedDBStorage<TodoState>({
   name: 'todo-idb',
   initialState: initialTodoState,
-  options: {},
+  options: {}, // required field (may be an empty object)
 })
 
-// With a custom dbName
-const storage = new IndexedDBStorage<TodoState>({
-  name: 'todo-idb',
-  initialState: initialTodoState,
-  options: { dbName: 'my_app_db' }, // defaults to 'app_storage'
-})
-
-// Or via the static .create()
+// Or via the static .create() — equivalent to new
 const storage = IndexedDBStorage.create<TodoState>({
   name: 'todo-idb',
   initialState: initialTodoState,
@@ -360,6 +535,53 @@ const storage = IndexedDBStorage.create<TodoState>({
 await storage.initialize()
 ```
 
+## All parameters (commented)
+
+`IndexedDBStorage` accepts `IndexedDBStorageConfig<T>` — this is `AsyncStorageConfig` + the required `options`.
+
+```typescript
+import { IndexedDBStorage } from 'synapse-storage/core'
+
+const storage = new IndexedDBStorage<TodoState>({
+  // name — required. The name of the store (object store) inside the database.
+  name: 'todo-idb',
+
+  // initialState — the default on first run (when the DB is still empty).
+  initialState: initialTodoState,
+
+  // options — REQUIRED field (unlike memory/local). Database settings.
+  options: {
+    // dbName? — the IndexedDB database name. Defaults to 'app_storage'.
+    //   Stores with the same dbName live in the same database.
+    dbName: 'my_app_db',
+  },
+
+  // version? — the version of the state SCHEMA (persist-migration), not to be confused with the DB version.
+  //   The version is stored as a reserved record in the same store, not visible in getState()/keys().
+  version: 2,
+
+  // migrate? — transforms saved state of an older version to the current schema.
+  migrate: (persisted, fromVersion) =>
+    fromVersion < 2 ? normalizeOld(persisted) : persisted,
+
+  // middlewares? — the pipeline of ASYNC middleware (getDefault provides batching/shallowCompare/logger).
+  middlewares: (getDefault) => [getDefault().shallowCompare()],
+
+  // singleton? — one instance per name/key (enabled/mergeStrategy/warnOnConflict/key).
+  singleton: { enabled: true },
+})
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | `string` | **Required.** The object store name. |
+| `options` | `IndexedDBConfig` | **Required.** `{ dbName? }` (defaults to `'app_storage'`). |
+| `initialState?` | `T` | The default on first run. |
+| `version?` | `number` | Schema version for migrations. |
+| `migrate?` | `MigrateFn<T>` | Transform an old schema to the current one. |
+| `middlewares?` | `(getDefault) => AsyncMiddleware[]` | The async middleware pipeline. |
+| `singleton?` | `SingletonOptions` | One instance per `name`/`key`. |
+
 ## Synchronous vs asynchronous API
 
 The key difference from Memory/LocalStorage: operations return a Promise.
@@ -367,7 +589,7 @@ The key difference from Memory/LocalStorage: operations return a Promise.
 ```typescript
 // Writing
 await storage.set('filter', 'active')
-await storage.update((s) => { s.todos.push(createTodo('Новая задача')) })
+await storage.update((s) => { s.todos.push(createTodo('New task')) })
 
 // Reading
 const todos = await storage.get<Todo[]>('todos')
@@ -379,29 +601,18 @@ const cached = storage.getStateSync()
 
 Subscriptions (`subscribe`, `subscribeToAll`, `useStorageSubscribe`) are identical to synchronous storages.
 
-## When to use
-
-- Large amounts of data, arrays of thousands of items, binary data (Blob/ArrayBuffer).
-- You need persistence beyond the localStorage limit (~5 MB).
-
-## When not to use
-
-- Small state where you don't want asynchrony → [LocalStorage](./local-storage.md).
-- Ephemeral UI state → [MemoryStorage](./memory-storage.md).
-
 ## Working with data
 
-A full walkthrough of the operations is in the "Working with data" section: [Reading](./reading-data.md),
-[Writing](./writing-data.md), [remove/has/keys](./delete-has-keys.md),
-[Subscriptions](./subscriptions.md). Everywhere a synchronous storage returns a value,
-IndexedDB returns a Promise.
+A full walkthrough of the operations is in the "Working with data" section: [Reading](./reading-data.md), [Writing](./writing-data.md), [remove/has/keys](./delete-has-keys.md), [Subscriptions](./subscriptions.md). Everywhere a synchronous storage returns a value, IndexedDB returns a Promise.
 
 ## Persist migrations and SSR
 
-IndexedDB is persistent, so it supports schema migration via `version` + `migrate`
-(the version is stored as a reserved record in the same store and isn't visible in
-`getState()`/`keys()`) — see [Persist migrations](./persist-migration.md). Server state is seeded via
-[`hydrate(state)`](./ssr-hydration.md) (for IndexedDB — `await storage.hydrate(...)`).
+IndexedDB is persistent, so it supports schema migration via `version` + `migrate` (the version is stored as a reserved record in the same store and isn't visible in `getState()`/`keys()`) — see [Persist migrations](./persist-migration.md). Server state is seeded via [`hydrate(state)`](./ssr-hydration.md) (for IndexedDB — `await storage.hydrate(...)`).
+
+## See also
+
+- [MemoryStorage](./memory-storage.md) · [LocalStorage](./local-storage.md)
+- [Persist migrations](./persist-migration.md) · [SSR hydration](./ssr-hydration.md)
 
 ---
 
@@ -535,10 +746,23 @@ interface WorkerStorageOptions {
 # StorageFactory
 
 
-A factory for creating storages — an alternative to calling `new MemoryStorage()` / `new LocalStorage()` /
-`new IndexedDBStorage()` directly. Handy when the storage type is chosen in a single place or at runtime.
+**TL;DR:** a static storage factory — an alternative to calling `new MemoryStorage()` / `new LocalStorage()` / `new IndexedDBStorage()` directly. Useful when the storage type is chosen in a single place or at runtime.
+
+## Why
+
+A single entry point for creating stores. Either typed methods (`createMemory`/`createLocal`/`createIndexedDB`), or the universal `create({ type })`, where the type is set by a field and can depend on the environment/config. Under the hood, each method calls `.create()` of the corresponding class — behavior is identical to `new`.
 
 The same end-to-end todo domain (`TodoState`, `initialTodoState` — see [MemoryStorage](./memory-storage.md)).
+
+## When to use
+
+- The storage type is chosen in a single place or depends on configuration/environment.
+- You want a unified style for creating all of the application's stores.
+
+## When not to use
+
+- The type is fixed and known → a direct `new` / [`.create()`](./static-create.md) is just as good.
+- The store lives inside a React component → [`useCreateStorage`](./hook-memory.md) is more convenient, and it also manages the lifecycle.
 
 ## Typed methods
 
@@ -594,16 +818,54 @@ const async = StorageFactory.create<TodoState>({
 })
 ```
 
-## When to use
+## All parameters (commented)
 
-- The storage type is chosen in a single place or depends on configuration/environment.
-- You want a unified style for creating all of the application's stores.
+The universal `create` takes a `UniversalStorageConfig<T>` — the base config plus a `type` field. The set of available fields matches the config of the concrete storage.
 
-## When not to use
+```typescript
+import { StorageFactory } from 'synapse-storage/core'
 
-- Inside a component — usually [`useCreateStorage`](./hook-memory.md) is more convenient, since it
-  also manages the lifecycle.
-- If the type is fixed and known — a direct `new`/`.create()` is just as good.
+const storage = StorageFactory.create<TodoState>({
+  // type — REQUIRED (only on the universal create). Selects the adapter and the return type:
+  //   'memory' | 'localStorage' -> ISyncStorage,  'indexedDB' -> IAsyncStorage.
+  //   'worker' is NOT included here (WorkerCacheStorage is not created via the factory).
+  type: 'indexedDB',
+
+  // name — required. The store identifier.
+  name: 'todo-universal-idb',
+
+  // initialState — the initial state; TState is inferred from it.
+  initialState: initialTodoState,
+
+  // options — required ONLY for type: 'indexedDB' ({ dbName? }); ignored for memory/local.
+  options: { dbName: 'app_storage' },
+
+  // version? / migrate? — persist migrations (work for local/indexedDB, ignored for memory).
+  version: 1,
+  migrate: (persisted, fromVersion) => persisted,
+
+  // middlewares? — the middleware pipeline (sync or async depending on type).
+  middlewares: (getDefault) => [getDefault().shallowCompare()],
+
+  // singleton? — one instance per name/key (enabled/mergeStrategy/warnOnConflict/key).
+  singleton: { enabled: true },
+})
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `type` | `'memory' \| 'localStorage' \| 'indexedDB'` | **Required** (only on `create`). Selects the adapter. |
+| `name` | `string` | **Required.** The store identifier. |
+| `initialState?` | `T` | The initial state. |
+| `options?` | `IndexedDBConfig` | Required for `indexedDB`. |
+| `version?` / `migrate?` | `number` / `MigrateFn<T>` | Persist migrations (local/indexedDB). |
+| `middlewares?` | `(getDefault) => Middleware[]` | The middleware pipeline. |
+| `singleton?` | `SingletonOptions` | One instance per `name`/`key`. |
+
+## See also
+
+- [Static .create()](./static-create.md) — `new` vs `.create()` vs `StorageFactory`.
+- [MemoryStorage](./memory-storage.md) · [LocalStorage](./local-storage.md) · [IndexedDB](./indexeddb-storage.md).
 
 Reading, writing, and subscriptions — see the "Working with data" section.
 
@@ -613,65 +875,123 @@ Reading, writing, and subscriptions — see the "Working with data" section.
 # useCreateStorage (memory)
 
 
-A React hook that creates and initializes a storage right inside a component and destroys it on
-unmount. There's no need to keep the store at the module level — its lifecycle matches the
-component's lifecycle.
+**TL;DR.** `useCreateStorage({ type: 'memory', name, initialState })` — a React hook that
+**creates a storage right inside a component** and destroys it on unmount. The store's lifecycle =
+the component's lifecycle; there's no need to keep the store at the module level and manually call
+`initialize()`/`destroy()`.
+
+This is the memory variant (ephemeral, in-memory). The same hook with a different `type` gives
+persistence: [`localStorage`](./hook-local-storage.md) and [`indexedDB`](./hook-indexeddb.md).
 
 The same end-to-end todo domain (`TodoState`, `initialTodoState` — see [MemoryStorage](./memory-storage.md)).
 
-## useCreateStorage
+## Why
+
+A plain [`MemoryStorage`](./memory-storage.md) lives at the module level — one instance for the
+whole application, surviving any remounts. But sometimes a store is needed **only inside a specific
+screen** and should disappear together with it (so you don't accumulate the state of closed
+components and don't share it between instances). Doing this by hand — holding the store in
+`useState`, calling `initialize()` in `useEffect`, `destroy()` in cleanup, watching out for the
+StrictMode double-effect — is noisy and easy to get wrong. `useCreateStorage` encapsulates this
+entire lifecycle.
+
+## When to use
+
+- The store is needed **only inside a component/screen** and should disappear together with it.
+- You don't want manual `initialize()` / `destroy()` in `useEffect`.
+- You need several **independent** instances of the same store (one per mounted component).
+
+## When NOT to use
+
+- The store must be **global** and survive unmount → create it at the module level
+  ([MemoryStorage](./memory-storage.md)) or via [createSynapse](./create-synapse-basic.md).
+- You need **selectors / dispatcher / effects** (a full-fledged module) → that's [createSynapse](./create-synapse-basic.md)
+  + [createSynapseCtx](./synapse-ctx.md) or [awaitSynapse](./await-synapse.md), not a bare storage hook.
+- The state must **survive a reload** → the [localStorage](./hook-local-storage.md) /
+  [indexedDB](./hook-indexeddb.md) variant.
+
+## Usage
+
+Copy-paste minimal form:
 
 ```typescript
-import { useCreateStorage } from 'synapse-storage/react'
+import { useCreateStorage, useStorageSubscribe } from 'synapse-storage/react'
 
 function TodoApp() {
   const { storage, isReady, isLoading, hasError, status } = useCreateStorage<TodoState>({
-    type: 'memory',           // 'memory' | 'localStorage' | 'indexedDB'
+    type: 'memory',
     name: 'todo-hook-memory',
     initialState: initialTodoState,
   })
 
-  // Optional: lifecycle settings as a second argument
-  const result = useCreateStorage<TodoState>(
-    { type: 'memory', name: 'todo-hook-memory', initialState: initialTodoState },
-    {
-      autoInitialize: true,    // auto-initialize (default: true)
-      destroyOnUnmount: true,  // destroy on unmount (default: true for memory/local)
-    },
-  )
-
-  // isReady = true  -> storage is available (type: ISyncStorage<TodoState>)
-  // isReady = false -> storage = null
-  if (!isReady) return <div>Loading…</div>
+  // storage: ISyncStorage<TodoState> | null (non-null only when isReady)
+  if (isLoading) return <div>Loading…</div>
+  if (hasError) return <div>Error: {status.error?.message}</div>
+  if (!isReady) return <div>Initializing…</div>
 
   // After isReady the storage is guaranteed to be non-null
   storage.set('filter', 'active')
 }
 ```
 
-## Reading state — useStorageSubscribe
+### Reading state — useStorageSubscribe
 
 ```typescript
-import { useStorageSubscribe } from 'synapse-storage/react'
-
 // Subscribe to the whole state or to individual fields (re-renders only when the result changes)
 const state = useStorageSubscribe(storage, (s) => s)
 const filter = useStorageSubscribe(storage, (s) => s.filter)
 const activeCount = useStorageSubscribe(storage, (s) => s.todos.filter((t) => !t.done).length)
 ```
 
-`useStorageSubscribe` accepts `storage | null`, so you can call it before readiness — it returns
-`undefined`. More details in the [Subscriptions](./subscriptions.md) section.
+`useStorageSubscribe` accepts `storage | null`, so you can call it **before** readiness — it returns
+`undefined`. More details in [Subscriptions](./subscriptions.md).
 
-## When to use
+## All parameters (commented)
 
-- The store is only needed inside a specific component/screen and should disappear with it.
-- You don't want manual `initialize()` / `destroy()` in `useEffect`.
+The whole surface of the hook at once — the config (argument 1) and the lifecycle options (argument 2):
 
-## When not to use
+```typescript
+const result = useCreateStorage<TodoState>(
+  // ── Argument 1: storage config (UniversalStorageConfig) ──────────────────
+  {
+    type: 'memory',            // 'memory' | 'localStorage' | 'indexedDB' — the type selects the hook variant
+    name: 'todo-hook-memory',  // unique storage name
+    initialState: initialTodoState, // initial state; TState is inferred from it
+    // version / migrate — persist migrations; for 'memory' they are ignored (nothing to persist).
+    // middlewares — the store's middleware configurator (see Middlewares).
+  },
+  // ── Argument 2: lifecycle options (optional) ─────────────────────
+  {
+    autoInitialize: true,      // auto-initialize() on mount. Defaults to true.
+                               //   false → initialize manually by calling result.initialize().
+    destroyOnUnmount: true,    // destroy() on unmount. Default: true for memory/local,
+                               //   false for indexedDB (a persistent storage is not wiped).
+  },
+)
 
-- The store must be global and survive component unmount → create it at the module level
-  (see [MemoryStorage](./memory-storage.md)) or via [createSynapse](./create-synapse-basic.md).
+// Returned object (discriminated union on isReady):
+// storage:    ISyncStorage<TodoState> | null — non-null only when isReady === true
+// isReady:    boolean — the storage is created and initialized
+// isLoading:  boolean — initialization is in progress
+// hasError:   boolean — initialization failed
+// status:     { status, error? } — raw status (status.error?.message)
+// initialize: () => Promise<void> — manual start (when autoInitialize: false)
+// destroy:    () => Promise<void> — manual destruction
+```
+
+## Lifecycle options
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `autoInitialize` | `boolean` | `true` | Automatically call `initialize()` on mount. |
+| `destroyOnUnmount` | `boolean` | `true` (memory/local), `false` (idb) | Destroy the storage on unmount. |
+
+## See also
+
+- [MemoryStorage](./memory-storage.md) — the same storage at the module level (the global variant).
+- [useCreateStorage (localStorage)](./hook-local-storage.md) · [(indexedDB)](./hook-indexeddb.md) — the same hook with persistence.
+- [Subscriptions](./subscriptions.md) — `useStorageSubscribe` and reactive reads.
+- [createSynapse](./create-synapse-basic.md) — when you need a full-fledged module (selectors/dispatcher/effects).
 
 ---
 
@@ -679,12 +999,37 @@ const activeCount = useStorageSubscribe(storage, (s) => s.todos.filter((t) => !t
 # useCreateStorage (localStorage)
 
 
-The same [`useCreateStorage`](./hook-memory.md), only with `type: 'localStorage'` — data survives a
-page reload. The only difference from the memory variant is the `type` field.
+**TL;DR.** The same [`useCreateStorage`](./hook-memory.md), only `type: 'localStorage'` — data survives
+a page reload. The only difference from the memory variant in code is the `type` field; everything else
+(the returned object, the lifecycle options, `useStorageSubscribe`) is identical.
 
 The same end-to-end todo domain (`TodoState`, `initialTodoState` — see [MemoryStorage](./memory-storage.md)).
 
+## Why
+
+Screen state (a draft, the selected filter, local settings) should survive a reload, but setting up a
+global module-level store just for that is overkill. `useCreateStorage` with `type: 'localStorage'` gives
+a **component-scoped** store, synchronous (`ISyncStorage`), with automatic persistence to `localStorage`
+and no manual `initialize()`/`destroy()`.
+
+## When to use
+
+- A component/screen state should **survive a reload** (draft, filter, settings), but you don't want to
+  set up a global module-level store.
+- The data is small and **synchronous** (`localStorage` limit ~5 MB; everything is serialized to a string).
+
+## When not to use
+
+- The state is ephemeral (doesn't survive a reload) → [memory variant](./hook-memory.md).
+- **Large** data or binary, you need async → [IndexedDB variant](./hook-indexeddb.md).
+- You need a **global** persistent store at the module level → [LocalStorage](./local-storage.md)
+  directly or via [createSynapse](./create-synapse-basic.md).
+- The store renders on the **server** (SSR/SSG) — there's no `localStorage` there; for a module-level
+  store, wrap it in [`browserStorage`](./browser-storage.md).
+
 ## Usage
+
+Copy-paste minimal form:
 
 ```typescript
 import { useCreateStorage, useStorageSubscribe } from 'synapse-storage/react'
@@ -698,23 +1043,52 @@ function TodoApp() {
 
   if (!isReady) return <div>Loading…</div>
 
-  // Reading and writing — same as with memory
+  // Reading and writing — same as with memory (storage: ISyncStorage<TodoState>)
   const todos = useStorageSubscribe(storage, (s) => s.todos)
   storage.set('filter', 'completed')
 }
 ```
 
-## When to use
+## All parameters (commented)
 
-- A component/screen state should survive a reload (draft, selected filter, settings), but you
-  don't want to set up a global module-level store.
+Differs from [memory](./hook-memory.md) only in `type` and the `destroyOnUnmount` default; here you also
+have `version`/`migrate` available (the persist is real):
 
-## When not to use
+```typescript
+const result = useCreateStorage<TodoState>(
+  {
+    type: 'localStorage',      // the type selects the hook variant
+    name: 'todo-hook-local',   // the key in localStorage
+    initialState: initialTodoState, // TState is inferred from it
+    version: 2,                // persist schema version (see Persist migrations). Optional.
+    migrate: (old, from) => (from < 1 ? { ...old } : old), // upgrade old data to the current schema
+    // middlewares — the store's middleware configurator (see Middlewares).
+  },
+  {
+    autoInitialize: true,      // auto initialize() on mount. Defaults to true.
+    destroyOnUnmount: true,    // destroy() on unmount. Defaults to true for localStorage.
+                               //   NB: destroy() of an ephemeral store cleans only the instance; the
+                               //   data in localStorage is controlled by the adapter's clearOnDestroy
+                               //   (the default for localStorage is not to clear). See LocalStorage.
+  },
+)
+// The returned object is identical to the memory variant (storage: ISyncStorage<TodoState> | null etc.).
+```
 
-- The state is ephemeral → [memory variant](./hook-memory.md).
-- Large data → [IndexedDB variant](./hook-indexeddb.md).
+## Lifecycle options
 
-More on subscriptions and operations — the "Working with data" section.
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `autoInitialize` | `boolean` | `true` | Automatically call `initialize()` on mount. |
+| `destroyOnUnmount` | `boolean` | `true` | Destroy the storage instance on unmount. |
+
+## See also
+
+- [useCreateStorage (memory)](./hook-memory.md) — the base description of the hook and the returned object.
+- [useCreateStorage (indexedDB)](./hook-indexeddb.md) — for large/asynchronous data.
+- [LocalStorage](./local-storage.md) — the same storage at the module level (the global variant).
+- [Persist migrations](./persist-migration.md) — `version`/`migrate`.
+- [browserStorage](./browser-storage.md) — an SSR-safe wrapper for a module-level `LocalStorage`.
 
 ---
 
@@ -722,13 +1096,38 @@ More on subscriptions and operations — the "Working with data" section.
 # useCreateStorage (indexedDB)
 
 
-The same [`useCreateStorage`](./hook-memory.md) with `type: 'indexedDB'`. Returns `IAsyncStorage`.
-Note: `destroyOnUnmount` defaults to `false` for IndexedDB (a persistent storage usually doesn't
-need to be wiped on unmount).
+**TL;DR.** The same [`useCreateStorage`](./hook-memory.md) with `type: 'indexedDB'` — a component
+store for **large / persistent** data. Returns `IAsyncStorage` (writes return a `Promise`).
+Differences from the sync variants: asynchronous initialization and **`destroyOnUnmount` defaults
+to `false`** (a persistent storage usually isn't wiped on unmount).
 
 The same end-to-end todo domain (`TodoState`, `initialTodoState` — see [MemoryStorage](./memory-storage.md)).
 
+## Why
+
+When a component store needs persistence **and** a volume larger than the `localStorage` limit
+(~5 MB), or structured/binary data. `useCreateStorage` with `type: 'indexedDB'` takes on the
+asynchronous DB initialization and lifecycle; you can still read synchronously from the cache via
+`useStorageSubscribe`, while writes (`set`/`update`) go asynchronously, though `await` isn't
+required in handlers.
+
+## When to use
+
+- A component store needs **persistence and/or large volumes** of data.
+- Data is structured, doesn't fit in `localStorage`, or asynchronous writes are needed.
+
+## When not to use
+
+- Small persistent state without asynchrony → [localStorage variant](./hook-local-storage.md)
+  (simpler, synchronous).
+- Ephemeral state → [memory variant](./hook-memory.md).
+- You need a **global** IndexedDB store → [IndexedDB](./indexeddb-storage.md) at the module level.
+- The store must **render synchronously on the server** — an async storage has no sync shell
+  (see [createSynapseCtx](./synapse-ctx.md), the section on async stores).
+
 ## Usage
+
+Copy-paste minimal form:
 
 ```typescript
 import { useCreateStorage, useStorageSubscribe } from 'synapse-storage/react'
@@ -739,17 +1138,11 @@ function TodoApp() {
     name: 'todo-hook-idb',
     initialState: initialTodoState,
   })
-  // storage has type IAsyncStorage<TodoState> | null
-
-  // To destroy the store on unmount — pass the option explicitly:
-  const result = useCreateStorage<TodoState>(
-    { type: 'indexedDB', name: 'todo-hook-idb', initialState: initialTodoState },
-    { destroyOnUnmount: true },
-  )
+  // storage: IAsyncStorage<TodoState> | null
 
   if (!isReady) return <div>Loading…</div>
 
-  // useStorageSubscribe works identically for synchronous and asynchronous storages
+  // useStorageSubscribe reads state synchronously from the cache — identical to sync storages
   const todos = useStorageSubscribe(storage, (s) => s.todos)
 
   // set/update return a Promise, but await isn't required in handlers
@@ -757,16 +1150,53 @@ function TodoApp() {
 }
 ```
 
-## When to use
+## All parameters (commented)
 
-- A component store needs persistence and/or large amounts of data.
+Differences from the sync variants: `options.dbName`, the async return of `storage`, and the
+`destroyOnUnmount: false` default:
 
-## When not to use
+```typescript
+const result = useCreateStorage<TodoState>(
+  {
+    type: 'indexedDB',         // the type picks the hook variant → IAsyncStorage
+    name: 'todo-hook-idb',     // the object store name
+    initialState: initialTodoState, // TState is inferred from it
+    version: 2,                // persist schema version (see Persist migrations). Optional.
+    migrate: (old, from) => old, // upgrade old data to the current schema
+    options: { dbName: 'my-app-db' }, // the IndexedDB database name (groups several stores into one DB)
+    // middlewares — the store's async-middleware configurator (see Middlewares).
+  },
+  {
+    autoInitialize: true,      // auto initialize() on mount. Defaults to true.
+    destroyOnUnmount: false,   // DEFAULT false for indexedDB (a persistent store isn't wiped on
+                               //   unmount). Pass true to destroy it explicitly.
+  },
+)
+// The returned object is the same as the memory variant, but storage: IAsyncStorage<TodoState> | null.
+```
 
-- Small state without asynchrony → [localStorage variant](./hook-local-storage.md).
-- Ephemeral state → [memory variant](./hook-memory.md).
+To destroy the store on unmount, pass the option explicitly:
 
-More on asynchronous operations — the "Working with data" section.
+```typescript
+useCreateStorage<TodoState>(
+  { type: 'indexedDB', name: 'todo-hook-idb', initialState: initialTodoState },
+  { destroyOnUnmount: true },
+)
+```
+
+## Lifecycle options
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `autoInitialize` | `boolean` | `true` | Automatically call `initialize()` on mount. |
+| `destroyOnUnmount` | `boolean` | **`false`** | Destroy the storage on unmount. Off by default for IndexedDB. |
+
+## See also
+
+- [useCreateStorage (memory)](./hook-memory.md) — the base description of the hook and the returned object.
+- [useCreateStorage (localStorage)](./hook-local-storage.md) — for small synchronous data.
+- [IndexedDB](./indexeddb-storage.md) — the same storage at the module level (the global variant).
+- [Persist migrations](./persist-migration.md) — `version`/`migrate`.
 
 ---
 
@@ -774,10 +1204,22 @@ More on asynchronous operations — the "Working with data" section.
 # Static .create()
 
 
-Every storage class has a static `.create()` method — a full equivalent of the `new` operator.
-It's a matter of style: `new MemoryStorage(...)` and `MemoryStorage.create(...)` create identical stores.
+**TL;DR:** every storage class has a static `.create()` method — a full equivalent of the `new` operator. A matter of style, not behavior.
+
+## Why
+
+`new MemoryStorage(...)` and `MemoryStorage.create(...)` create identical stores. `.create()` is handy when you want a single "factory" style of call without the `new` keyword (for example, when passing a method reference), or when the codebase style avoids `new`.
 
 The same end-to-end todo domain (`TodoState`, `initialTodoState` — see [MemoryStorage](./memory-storage.md)).
+
+## When to use it
+
+- You need an ordinary store with a fixed type, but stylistically you want `.create()` instead of `new`.
+
+## When you don't need it
+
+- The type is chosen at runtime or in a single place → [`StorageFactory`](./storage-factory.md).
+- The store lives inside a React component → [`useCreateStorage`](./hook-memory.md) (it manages the lifecycle).
 
 ## Usage
 
@@ -810,11 +1252,19 @@ await Promise.all([
 ])
 ```
 
+The config for `.create()` is the same as for `new` of the corresponding class — every field is covered in the storage docs ([Memory](./memory-storage.md) / [Local](./local-storage.md) / [IndexedDB](./indexeddb-storage.md)).
+
 ## new, .create() or StorageFactory?
 
-- `new` / `.create()` — when the storage type is known and fixed. Fully equivalent.
-- [`StorageFactory`](./storage-factory.md) — when the type is chosen in a single place or at runtime.
-- [`useCreateStorage`](./hook-memory.md) — when the store lives inside a React component.
+| Way | When |
+|---|---|
+| `new` / `.create()` | The type is known and fixed. Fully equivalent. |
+| [`StorageFactory`](./storage-factory.md) | The type is chosen in a single place or at runtime. |
+| [`useCreateStorage`](./hook-memory.md) | The store lives inside a React component. |
+
+## See also
+
+- [StorageFactory](./storage-factory.md) · [MemoryStorage](./memory-storage.md) · [LocalStorage](./local-storage.md) · [IndexedDB](./indexeddb-storage.md)
 
 ---
 
@@ -822,32 +1272,64 @@ await Promise.all([
 # browserStorage (server-safe)
 
 
-`browserStorage(config, { client })` (exported from `synapse-storage/core`) is a **server-safe storage
-factory** for the synchronous C-form of [`createSynapse`](./create-synapse-basic.md). It returns a
-factory `() => ISyncStorage<T>` that you pass to the `storage` field as-is:
+`browserStorage(config, { client })` (exported from `synapse-storage/core`) is a **wrapper that makes a
+browser-only storage server-safe**. It returns a factory `() => ISyncStorage<T>` that you pass as-is to
+the `storage` field of the synchronous C-form of [`createSynapse`](./create-synapse-basic.md):
 
 - **on the server** (`typeof window === 'undefined'`) → builds a `MemoryStorage` from `initialState`
   (the client factory is **not** called);
-- **in the browser** → calls `client(config)` and builds a client-specific storage (`LocalStorage`,
+- **in the browser** → calls `client(config)` and builds a real client storage (`LocalStorage`,
   etc.).
+
+It's **not a separate storage type**, but an env switch on top of the ones you already have.
 
 ## Why
 
-C-form construction is synchronous and **runs on the server too** (the SSR shell is inferred from the
-sync core). But browser-only storages don't survive that: `LocalStorage` needs `localStorage`, which
-doesn't exist on the server. Previously every module had to write the branch by hand:
+The C-form of `createSynapse` is synchronous and **runs on the server too** (the SSR shell is inferred
+from the sync core, and `renderToString` builds the store from `initialState`). But browser-only
+storages don't survive that: `LocalStorage` needs the global `localStorage`, which doesn't exist on the
+server — construction crashes. Previously every module had to write the env branch by hand:
 
 ```typescript
-// before: a manual guard in every module
+// before: a manual guard in EVERY module
 storage: () => (typeof window === 'undefined'
   ? new MemoryStorage<DraftState>({ name: 'draft', initialState })
   : new LocalStorage<DraftState>({ name: 'draft', initialState })),
 ```
 
-`browserStorage` removes this ritual: both branches are a sync store of the same shape, and `TState`
-is inferred from `initialState` without manual generics.
+`browserStorage` removes this ritual: both branches are a sync store of the same shape, `TState` is
+inferred from `initialState` without manual generics, and `name`/`initialState` are written once.
+
+## When to use
+
+- A module wants **persistence in the browser** (`LocalStorage`, a sync storage over SharedWorker), but
+  it **must render on the server** (SSR/SSG) without crashing.
+- You need cross-tab sync (`syncBroadcastMiddleware`) — it's browser-only too, and goes inside `client`
+  (see below).
+
+## When you DON'T need it
+
+- **The store is in-memory anyway** → use `MemoryStorage` directly, there's nothing to wrap.
+- **No SSR** (a pure SPA, the store is built only in the browser) → you can do
+  `storage: () => new LocalStorage(...)` without the wrapper; `browserStorage` here just breaks nothing,
+  but doesn't buy you anything either.
+- **An async storage (IndexedDB)** → it has no synchronous construction, the C-form doesn't bring it up
+  synchronously; `browserStorage` is meant for sync storages.
+
+## How it differs from the other storages
+
+| | What it is | Server | Browser |
+|---|---|---|---|
+| [MemoryStorage](./memory-storage.md) | in-memory, sync | works | data lives until reload |
+| [LocalStorage](./local-storage.md) | persistence via `localStorage`, sync | **crashes** (no `localStorage`) | persistent |
+| [IndexedDB](./indexeddb-storage.md) | large data, **async** | no sync construction | persistent |
+| **`browserStorage`** | **not a storage, an env wrapper** | → `MemoryStorage` from `initialState` | → `client(config)` (e.g. `LocalStorage`) |
+
+The idea: `browserStorage` = "`LocalStorage` in the browser, `MemoryStorage` on the server" in one line.
 
 ## Usage
+
+Copy-paste minimal form:
 
 ```typescript
 import { browserStorage, LocalStorage } from 'synapse-storage/core'
@@ -870,7 +1352,7 @@ comes up from `localStorage` (LocalStorage). The SSR shell is inferred automatic
 ## Client-only middleware
 
 Add client specifics (e.g. cross-tab sync via `syncBroadcastMiddleware`) **inside `client`** — it
-won't be wired up on the server:
+won't be wired up on the server, because the `client` branch isn't executed there:
 
 ```typescript
 import { browserStorage, LocalStorage, syncBroadcastMiddleware } from 'synapse-storage/core'
@@ -879,18 +1361,47 @@ storage: browserStorage(
   { name: 'draft', initialState },
   {
     client: (cfg) => new LocalStorage({
-      ...cfg,
+      ...cfg,   // important to pass name/initialState/version further down
       middlewares: () => [syncBroadcastMiddleware({ storageType: 'localStorage', storageName: 'draft' })],
     }),
   },
 ),
 ```
 
+## All parameters (commented)
+
+The whole API surface at once — what you can pass and why:
+
+```typescript
+import { browserStorage, LocalStorage } from 'synapse-storage/core'
+
+storage: browserStorage<DraftState>(
+  // 1. config — a regular SyncStorageConfig: goes into BOTH branches (Memory on the server, client in the browser).
+  //    name/initialState are declared here once; TState is inferred from initialState.
+  {
+    name: 'draft',
+    initialState,
+    // version / migrate and the other SyncStorageConfig fields are allowed too — see Persist migrations.
+  },
+  {
+    // 2. client — REQUIRED. The client sync-storage factory, called ONLY in the browser.
+    //    This is also where client-only middleware goes (syncBroadcastMiddleware).
+    client: (cfg) => new LocalStorage(cfg),
+
+    // 3. isServer? — override for the "server" check.
+    //    Defaults to () => typeof window === 'undefined'. Rarely needed:
+    //    e.g. a custom SSR environment where window is defined but localStorage must not be used.
+    isServer: () => typeof window === 'undefined',
+  },
+)
+```
+
 ## Options
 
 | Field | Type | Description |
 |---|---|---|
-| `client` | `(config) => ISyncStorage<T>` | The client-side sync storage factory. Called **only** in the browser. |
+| `config` | `SyncStorageConfig<T>` | `name` + `initialState` (+ `version`/`migrate`). Shared across both branches. |
+| `client` | `(config) => ISyncStorage<T>` | **Required.** The client-side sync storage factory. Called **only** in the browser. |
 | `isServer?` | `() => boolean` | Override for the "server" check. Defaults to `typeof window === 'undefined'`. |
 
 ## See also
@@ -898,15 +1409,28 @@ storage: browserStorage(
 - [createSynapse (basic)](./create-synapse-basic.md) — the C-form the factory is passed to.
 - [SSR hydration](./ssr-hydration.md) — why construction runs on the server.
 - [LocalStorage](./local-storage.md) · [MemoryStorage](./memory-storage.md) — both `browserStorage` branches.
+- [Persist migrations](./persist-migration.md) — `version`/`migrate` in `config`.
 
 ---
 
 <!-- source: docs/en/reading-data.md · url: https://synapse-homepage.web.app/docs/reading-data -->
-# Reading data (get/getState)
+# Reading data (get / getState / getStateSync)
 
 
-All the ways to read data from a storage. The examples use the end-to-end `todoStorage` — the same
-store created in the [MemoryStorage](./memory-storage.md) section:
+All the ways to **read data once** from a storage. This is imperative reading "here and now"; to react
+to changes see [Subscriptions](./subscriptions.md), for computed values see [Selectors](./selector-system.md).
+
+The key distinction between the methods is **a single field vs the whole state** and **sync vs async**:
+
+| Method | What it returns | Sync storage (Memory/LocalStorage) | Async storage (IndexedDB) |
+|---|---|---|---|
+| `get(key)` | a single top-level field | value immediately | `Promise` → needs `await` |
+| `getState()` | the whole state | object immediately | `Promise` → needs `await` |
+| `getStateSync()` | the whole state **from cache** | same as `getState()` | value **immediately, without await** |
+| `has(key)` / `keys()` | existence / list of keys | immediately | `Promise` → needs `await` |
+
+The examples use the end-to-end `todoStorage` — the same store created in the
+[MemoryStorage](./memory-storage.md) section:
 
 ```typescript
 import { MemoryStorage } from 'synapse-storage/core'
@@ -925,14 +1449,17 @@ await todoStorage.initialize()
 Synchronous storages (Memory, LocalStorage) return values immediately, while the asynchronous one
 (IndexedDB) returns a `Promise`, so it needs `await`.
 
-## get(key) — Reading a single field
+## get(key) — a single top-level field
+
+**When:** you need the value of a single state key. **When not:** you need several fields at once
+(use `getState()`) or a nested/computed value (use a selector).
 
 ```typescript
 // ── Synchronous storage (MemoryStorage / LocalStorage) ──
 
 const filter = todoStorage.get<Filter>('filter')   // 'all'
 const todos = todoStorage.get<Todo[]>('todos')     // Todo[]
-const missing = todoStorage.get<string>('xxx')     // undefined
+const missing = todoStorage.get<string>('xxx')     // undefined — no such key
 
 // ── Asynchronous storage (IndexedDBStorage) ──
 
@@ -940,7 +1467,11 @@ const filter = await todoStorage.get<Filter>('filter')
 const todos = await todoStorage.get<Todo[]>('todos')
 ```
 
-## getState() — The entire state
+The type is set via the generic `get<R>(...)`; a missing key → `undefined`.
+
+## getState() — the entire state
+
+**When:** you need the whole state snapshot (several fields, serialization, debugging).
 
 ```typescript
 // ── Synchronous storage ──
@@ -953,20 +1484,29 @@ const state = todoStorage.getState()
 const state = await todoStorage.getState()
 ```
 
-## getStateSync() — Synchronous read from cache
+## getStateSync() — state from cache WITHOUT await
 
-Available on **ALL** storage types — synchronous and asynchronous. Reads from the internal cache, does not touch IndexedDB. Works only after `initialize()`.
+The key difference from `getState()`: it is **always synchronous**, even on an asynchronous (IndexedDB)
+storage — it reads from the internal cache without touching the DB itself.
+
+**When:** you need a snapshot of an async storage where `await` is inconvenient or forbidden — in `render`,
+in a synchronous handler, in a middleware. **When not:** you need the freshest data from IndexedDB itself
+rather than from the cache (then `await getState()`).
+
+**Limitation:** works only after `initialize()` — before that the cache is empty.
 
 ```typescript
-// Synchronous storage — the same as getState()
+// Synchronous storage — the same as getState().
 const state = todoStorage.getStateSync()
 
-// Asynchronous storage — synchronous access to the cache!
+// Asynchronous storage — synchronous access to the cache without await!
 const state = asyncStorage.getStateSync()
-// Useful when you don't want to await, e.g. in render
+// Useful when you can't await — for example, right in render.
 ```
 
-## has(key) / keys() — Checking and listing
+## has(key) / keys() — checking and listing
+
+**When:** to check that a key exists before reading it, or to iterate over the existing top-level keys.
 
 ```typescript
 // ── Synchronous storage ──
@@ -981,17 +1521,38 @@ await todoStorage.has('todos')   // true
 await todoStorage.keys()         // ['todos', 'filter']
 ```
 
+The same `has`/`keys` are covered in more detail (together with removal and reset) in the
+[remove / has / keys / clear / reset](./delete-has-keys.md) section.
+
+## See also
+
+- [Writing data (set / update)](./writing-data.md) — how to change what you read.
+- [Subscriptions](./subscriptions.md) — reacting to changes instead of reading once.
+- [Selectors](./selector-system.md) — computed and memoized derived values.
+
 ---
 
 <!-- source: docs/en/writing-data.md · url: https://synapse-homepage.web.app/docs/writing-data -->
-# Writing data (set/update)
+# Writing data (set / update)
 
 
-All the ways to write data to a storage. The examples use the end-to-end `todoStorage` from the
-[MemoryStorage](./memory-storage.md) section (`TodoState = { todos: Todo[]; filter: Filter }`). For
-Memory and LocalStorage writes are synchronous, for IndexedDB they need `await`.
+All the ways to **write** data to a storage. The two main methods differ in scope:
 
-## set(key, value) — Set a value by key
+| Method | What it does | Subscriber notifications | When to use |
+|---|---|---|---|
+| `set(key, value)` | replaces **one field** entirely | one per call | change/replace a single field precisely |
+| `update(updater)` | Immer-like mutation of **several fields** atomically | **one** for the whole callback | change several fields / precisely edit a nested one |
+| `reset()` | reverts to `initialState` | one | roll the store back to its original state |
+
+The examples use the end-to-end `todoStorage` from the [MemoryStorage](./memory-storage.md) section
+(`TodoState = { todos: Todo[]; filter: Filter }`). For Memory and LocalStorage writes are synchronous,
+for IndexedDB they need `await`.
+
+## set(key, value) — replace one field
+
+**When:** you need to set/replace the value of a single top-level key. **When not:** you change several
+fields at once (then `update` is one notification instead of several) or you edit a deeply nested element
+(in `update` that's done by mutation without manual copying).
 
 ```typescript
 // ── Synchronous storage (MemoryStorage / LocalStorage) ──
@@ -1004,9 +1565,16 @@ todoStorage.set('todos', [{ id: 't1', title: 'New', done: false }])
 await todoStorage.set('filter', 'completed')
 ```
 
-## update(updater) — Change several fields at once
+`set` is a **full replacement** of the value at a key: the old value is discarded entirely.
 
-`update()` uses immer-style mutations. You can mutate the state directly inside the callback. All changes are applied atomically — a single notification to subscribers.
+## update(updater) — change several fields at once
+
+`update()` uses Immer-style mutations: inside the callback you can change the state directly (`push`,
+assignment, editing nested objects) — the library assembles the immutable result itself. All changes are
+applied **atomically — one notification to subscribers** for the whole callback.
+
+**When:** change several fields at once or precisely edit a nested element. **When not:** you change
+exactly one field entirely — `set` is shorter.
 
 ```typescript
 // ── Synchronous storage ──
@@ -1016,7 +1584,7 @@ todoStorage.update((state) => {
   state.filter = 'active'
 })
 
-// Convenient for a targeted change of a nested element:
+// A targeted change of a nested element — without manually copying the array:
 todoStorage.update((state) => {
   const target = state.todos.find((t) => t.id === 't2')
   if (target) target.done = true
@@ -1029,38 +1597,40 @@ await todoStorage.update((state) => {
 })
 ```
 
-## set() vs update() — When to use which
+## set() vs update() — which to choose
+
+The main practical criterion is the **number of subscriber notifications**. Several `set` calls in a row
+= several re-renders/subscription triggers; a single `update` = one.
 
 ```typescript
-// set() — a full replacement of the value at a single key.
-// Suitable for changing one field or fully replacing an array/object.
+// set() — a full replacement of one field.
 todoStorage.set('filter', 'active')
 todoStorage.set('todos', [])
 
-// update() — mutating several fields at once.
-// Suitable for an atomic change of multiple fields.
-// A single notification to subscribers instead of several.
+// update() — several fields atomically, one notification.
 todoStorage.update((s) => {
   s.todos.push({ id: 't3', title: 'Task', done: false })
   s.filter = 'all'
 })
 
-// With set() each call = a separate notification:
+// Two set() = two notifications:
 todoStorage.set('filter', 'active')   // notification 1
 todoStorage.set('todos', [])          // notification 2
 
-// With update() — a single notification:
+// The same result via update() = one notification:
 todoStorage.update((s) => {
-  s.filter = 'active'                  // notification 1 (combined)
-  s.todos = []
+  s.filter = 'active'                  // }
+  s.todos = []                         // } one combined notification
 })
 ```
 
-## reset() — Reset to initialState
+## reset() — reset to initialState
+
+Reverts the storage to `initialState` from the config. Unlike `clear()` (which fully clears the state
+down to `{}`) — it restores the original fields. More on the difference — in
+[remove / has / keys / clear / reset](./delete-has-keys.md).
 
 ```typescript
-// Returns the storage to its initial state (initialState from the config).
-
 // Synchronously
 todoStorage.reset()
 
@@ -1068,17 +1638,35 @@ todoStorage.reset()
 await todoStorage.reset()
 ```
 
+## See also
+
+- [Reading data](./reading-data.md) — read what you wrote.
+- [remove / has / keys / clear / reset](./delete-has-keys.md) — removing keys, `clear` vs `reset`.
+- [Subscriptions](./subscriptions.md) — how writes reach subscribers.
+
 ---
 
 <!-- source: docs/en/delete-has-keys.md · url: https://synapse-homepage.web.app/docs/operations -->
 # remove / has / keys / clear / reset
 
 
-Operations for checking existence, removing keys, and resetting the storage. The examples use the
-end-to-end `todoStorage` (`TodoState = { todos: Todo[]; filter: Filter }`). They work the same way for
-all storage types — for IndexedDB the same methods return a `Promise`.
+Operations over **keys and the state lifecycle**: check existence, list, remove a single key, or reset
+the whole store. Overview:
 
-## has(key) — Check whether a key exists
+| Method | What it does | Result |
+|---|---|---|
+| `has(key)` | is the key present | `boolean` |
+| `keys()` | list of top-level keys | `string[]` |
+| `remove(key)` | remove **one** key | the key disappears from `keys()`/`has()` |
+| `clear()` | remove **all** keys | state `{}` |
+| `reset()` | return to `initialState` | the original fields from the config |
+
+The examples use the end-to-end `todoStorage` (`TodoState = { todos: Todo[]; filter: Filter }`). They work
+the same way for all storage types — for IndexedDB the same methods return a `Promise`.
+
+## has(key) — check whether a key exists
+
+**When:** you need to know whether a key exists without reading its value (for example, before `remove`).
 
 ```typescript
 // ── Synchronous storage (MemoryStorage / LocalStorage) ──
@@ -1093,7 +1681,9 @@ await todoStorage.has('todos')     // true
 await todoStorage.has('unknown')   // false
 ```
 
-## keys() — Get all keys
+## keys() — get all keys
+
+**When:** to iterate over the existing top-level keys (diagnostics, dynamic traversal).
 
 ```typescript
 // ── Synchronously ──
@@ -1104,12 +1694,12 @@ const allKeys = todoStorage.keys()
 const allKeys = await todoStorage.keys()
 ```
 
-## remove(key) — Remove a specific key
+## remove(key) — remove a single key
+
+**When:** you need to remove exactly one key while keeping the rest. After removal `has(key)` returns
+`false`, and `keys()` will not contain that key.
 
 ```typescript
-// Removes a key from the storage.
-// After removal has(key) returns false, and keys() does not contain that key.
-
 // ── Synchronously ──
 todoStorage.remove('filter')
 todoStorage.has('filter')   // false
@@ -1119,11 +1709,12 @@ todoStorage.keys()          // ['todos']
 await todoStorage.remove('filter')
 ```
 
-## clear() — Clear the storage
+## clear() — clear everything
+
+**When:** you need to fully zero out the storage — the state becomes an empty object `{}`.
+**When not:** you want to bring back the original fields — then use `reset()`.
 
 ```typescript
-// Removes ALL keys. The state becomes an empty object {}.
-
 // ── Synchronously ──
 todoStorage.clear()
 todoStorage.getState()   // {}
@@ -1133,20 +1724,23 @@ todoStorage.keys()       // []
 await todoStorage.clear()
 ```
 
-## reset() — Reset to initialState
+## reset() — reset to initialState
+
+**When:** you need to roll the store back to its original state from the config (after `clear`, on a "form reset", etc.).
 
 ```typescript
-// Returns the state to its initial value (initialState from the config).
-
 // ── Synchronously ──
 todoStorage.reset()
-todoStorage.getState()   // { todos: [...], filter: 'all' }
+todoStorage.getState()   // { todos: [], filter: 'all' }
 
 // ── Asynchronously ──
 await todoStorage.reset()
 ```
 
-## clear() vs reset() — What's the difference
+## clear() vs reset() — what's the difference
+
+Both "zero out" the store, but differently: `clear()` **removes all keys** (empty `{}`), `reset()`
+**restores `initialState`**. The choice depends on whether you need the original fields to come back.
 
 ```typescript
 const todoStorage = new MemoryStorage<TodoState>({
@@ -1156,16 +1750,21 @@ const todoStorage = new MemoryStorage<TodoState>({
 
 todoStorage.set('filter', 'completed')
 
-// clear() — a full wipe
+// clear() — a full wipe down to an empty object.
 todoStorage.clear()
 todoStorage.getState()   // {}
 todoStorage.keys()       // []
 
-// reset() — back to initialState
+// reset() — back to initialState from the config.
 todoStorage.reset()
 todoStorage.getState()   // { todos: [], filter: 'all' }
 todoStorage.keys()       // ['todos', 'filter']
 ```
+
+## See also
+
+- [Reading data](./reading-data.md) · [Writing data](./writing-data.md)
+- [Subscriptions](./subscriptions.md) — `subscribeToAll` sees `remove` / `clear` / `reset` events.
 
 ---
 
@@ -1173,13 +1772,26 @@ todoStorage.keys()       // ['todos', 'filter']
 # Subscriptions (subscribe)
 
 
-All the ways to subscribe to data changes in a storage. The examples use the end-to-end `todoStorage`
-(`TodoState = { todos: Todo[]; filter: Filter }`). They work the same way for Memory, LocalStorage and
-IndexedDB.
+Subscriptions are a **reaction to changes** in data (as opposed to a one-off [read](./reading-data.md)).
+Three low-level ways + a React hook; the choice depends on exactly what you react to:
 
-## 1. subscribe(key, callback)
+| Way | What it reacts to | When to use |
+|---|---|---|
+| `subscribe(key, cb)` | a change of a single top-level key | you need one field as-is |
+| `subscribe(selector, cb)` | a change of a selector function's result | a computed/nested value |
+| `subscribeToAll(cb)` | **any** store change | logging, syncing, debugging |
+| `useStorageSubscribe(...)` | a slice value in a React component | subscription + re-render in React |
 
-Subscribing to a specific top-level key. The callback is called on every change of that key.
+For **memoized and composable** derived values, prefer [Selectors](./selector-system.md) over an inline
+selector — here the selector is recomputed on every store change.
+
+All the ways return an **unsubscribe** function — call it to stop the subscription (in React, return it
+from `useEffect`). The examples use the end-to-end `todoStorage`
+(`TodoState = { todos: Todo[]; filter: Filter }`). They work the same way for Memory, LocalStorage and IndexedDB.
+
+## 1. subscribe(key, callback) — a single key
+
+The callback is called on every change of a specific top-level key.
 
 ```typescript
 const unsub = todoStorage.subscribe('filter', (newFilter) => {
@@ -1190,54 +1802,62 @@ const unsub2 = todoStorage.subscribe('todos', (newTodos) => {
   console.log('list changed:', newTodos)  // Todo[]
 })
 
-// Unsubscribe
-unsub()
+unsub()   // unsubscribe
 ```
 
-## 2. subscribe(selector, callback)
+## 2. subscribe(selector, callback) — a computed value
 
-Subscribing via a selector function. The callback is called when the selector's result changes.
+The selector function is computed on every store change; the callback is called **only when its result
+has changed**. This is how you subscribe to a nested or derived value.
 
 ```typescript
-// Computed value — the number of active tasks
+// Number of active tasks — the callback fires only when this exact number changes.
 const unsub = todoStorage.subscribe(
   (state) => state.todos.filter((t) => !t.done).length,
-  (activeCount) => console.log('active tasks:', activeCount)
+  (activeCount) => console.log('active tasks:', activeCount),
 )
 
-// Subscribing to a single field
+// A single field via a selector.
 const unsub2 = todoStorage.subscribe(
   (state) => state.filter,
-  (filter) => console.log('filter:', filter)
+  (filter) => console.log('filter:', filter),
 )
 
 unsub()
 ```
 
-## 3. subscribeToAll(callback)
+> If the selector returns an **object/array**, it is compared by reference — a new object on every change
+> will be treated as "changed" every time. For stable derived values with a custom comparison, use
+> [Selectors](./selector-system.md) (`this.select(..., { equals })`).
 
-Subscribing to ALL storage changes. The callback receives an event with information about the change.
+## 3. subscribeToAll(callback) — any change
+
+The callback receives an **event** on every store change — with the operation type, keys and paths.
+Suitable for logging, cross-syncing, and debugging.
 
 ```typescript
 const unsub = todoStorage.subscribeToAll((event) => {
-  console.log(event.type)          // 'set' | 'update' | 'remove' | 'clear' | 'reset'
-  console.log(event.key)           // a key or an array of keys
-  console.log(event.changedPaths)  // paths to the changed fields
+  // event.type          — operation type: 'set' | 'update' | 'remove' | 'clear' | 'reset' etc.
+  // event.key           — the affected key or array of keys (StorageKeyType | StorageKeyType[])
+  // event.changedPaths  — paths to the changed fields (string[]), e.g. ['todos', 'filter']
+  // event.value         — the new value (when applicable)
+  console.log(event.type, event.key, event.changedPaths)
 })
 
 unsub()
 ```
 
-## 4. useStorageSubscribe (React hook)
+## 4. useStorageSubscribe — React hook
+
+A subscription to a state slice with a component re-render when the result changes.
 
 ```typescript
 import { useStorageSubscribe } from 'synapse-storage/react'
 
 function TodoStats({ storage }: { storage: ISyncStorage<TodoState> }) {
-  // Subscribing to a single field
   const filter = useStorageSubscribe(storage, (s) => s.filter)
 
-  // Computed value — re-render only when the result changes
+  // Re-render only when the selector's result changes.
   const total = useStorageSubscribe(storage, (s) => s.todos.length)
   const active = useStorageSubscribe(storage, (s) => s.todos.filter((t) => !t.done).length)
 
@@ -1245,14 +1865,19 @@ function TodoStats({ storage }: { storage: ISyncStorage<TodoState> }) {
 }
 ```
 
-Pass `equals` to skip re-renders when an object/array slice is referentially unchanged:
+For object/array slices, pass `equals` to avoid re-rendering when the contents haven't changed:
 
 ```typescript
+// { equals } is supported by the useStorageSubscribe hook specifically (the low-level subscribe has none).
 const todos = useStorageSubscribe(storage, (s) => s.todos, { equals: (a, b) => a === b })
 ```
 
-See **[Reactive reads & controlled re-renders](./reactive-reads.md)** for `useStorageObservable`
-(RxJS path) and `useStorageRef` (read without re-rendering / manual trigger).
+## See also
+
+- [Selectors](./selector-system.md) — memoized composable derived values and `selector.$`.
+- [Reactive reads & controlled re-renders](./reactive-reads.md) — `useStorageObservable` (RxJS)
+  and `useStorageRef` (read without re-rendering / manual trigger).
+- [Reading data](./reading-data.md) — a one-off read instead of reacting to changes.
 
 ---
 
@@ -1260,21 +1885,40 @@ See **[Reactive reads & controlled re-renders](./reactive-reads.md)** for `useSt
 # Reactive reads & controlled re-renders
 
 
-The everyday pattern: you mutate a storage with ordinary methods (`set`/`update`) and read it
-**reactively** inside a component. Synapse gives you several hooks for this — the difference between them
-is **how much control you get over re-renders** and whether you need RxJS. This is an overview page: pick
-the right tool from the table, the details live on dedicated pages. The examples use the end-to-end
-`todoStorage` (`TodoState = { todos: Todo[]; filter: Filter }`).
+**TL;DR.** You mutate a storage with ordinary methods (`set`/`update`) and read it **reactively** inside a
+component. There are five tools, and they are easy to confuse — this page is about **which one to pick**.
+Quick answer: by default `useStorageSubscribe` (no RxJS); if you need operators — `useStorageObservable`
+or `toObservable` + `useObservable`; if you need a side effect (toast/log) — `useSubscription`; if you read
+a `SelectorAPI` — `useSelector`. The examples use the end-to-end `todoStorage`
+(`TodoState = { todos: Todo[]; filter: Filter }`).
 
-## Which tool when
+## Why
 
-| Tool | Re-renders | RxJS | Use when | Page |
-|------|-----------|------|----------|------|
-| `useStorageSubscribe` | on every slice change | no | default reactive read | [useStorageSubscribe](./use-storage-subscribe.md) |
-| `useSelector` | on every slice change | no | reading a `SelectorAPI` | [Selectors](./selector-system.md) |
-| `useStorageObservable` | on every slice change | yes | you need RxJS operators | [useStorageObservable](./use-storage-observable.md) |
-| `toObservable` | — (outside React) | yes | effects and non-React code | [toObservable](./to-observable.md) |
-| `getStateSync()` | **none** | no | read the latest on demand in a handler | see below |
+The difference between the tools is along two axes: **whether you need RxJS** (operators
+`debounceTime`/`scan`/…) and **what you do with the stream** (render a value or run a side effect). Below
+is the choice along these axes.
+
+## What to pick
+
+| Tool | Where | RxJS | Yields | Use when | Page |
+|------|-------|------|--------|----------|------|
+| `useStorageSubscribe` | React | no | a slice value into render | **default reactive read** | [→](./use-storage-subscribe.md) |
+| `useSelector` | React | no | a `SelectorAPI` value into render | you read a memoized selector | [→](./selector-system.md) |
+| `useStorageObservable` | React | yes | a slice value into render | you just need a slice via RxJS | [→](./use-storage-observable.md) |
+| `useObservable` | React | yes | any `Observable`'s value into render | your own `pipe(...)` over a stream/`selector.$` | [→](./use-storage-observable.md) |
+| `useSubscription` | React | yes | **nothing** (side effect) | toast/log/dispatch on each emit | [→](./use-subscription.md) |
+| `toObservable` | outside React | yes | an `Observable` | effects, non-React code | [→](./to-observable.md) |
+| `getStateSync()` | anywhere | no | a value **once**, no re-render | read the latest in a handler | see below |
+
+How it all fits together:
+
+- **You don't need RxJS and want a value in render** → `useStorageSubscribe` (from a store) or
+  `useSelector` (from a `SelectorAPI`). 90% of cases.
+- **You need RxJS operators** → first `toObservable(storage, selector)` builds the stream; then in React it
+  is subscribed by `useObservable` (a value into render) or `useSubscription` (a side effect).
+  `useStorageObservable` is sugar over `toObservable` + `useObservable` for the "just a slice without your
+  own operators" case.
+- **Outside React** (effects, watchers, non-React modules) → only `toObservable`.
 
 ## Reading without a re-render is not a hook
 
@@ -1295,16 +1939,63 @@ If you want a re-render only when a specific slice changes, that's `useStorageSu
 `useStorageObservable` / `toObservable`. There is deliberately no "ref hook with a manual re-render" in
 the API: all three scenarios are covered by the tools above.
 
+## When you don't need it
+
+- **You need the value once, no reaction to changes** → `getStateSync()` / `get()`, see
+  [Reading data](./reading-data.md). Reactive hooks here only spawn extra subscriptions.
+- **Logic outside React and without streams** (a plain handler, not an effect) → the low-level
+  `storage.subscribe(selector, cb)`, see [Subscriptions](./subscriptions.md).
+
+## See also
+
+- [useStorageSubscribe](./use-storage-subscribe.md) — the default reactive read.
+- [useStorageObservable / useObservable](./use-storage-observable.md) — the same, but with RxJS operators.
+- [useSubscription](./use-subscription.md) — a side effect on each emit (without render).
+- [toObservable](./to-observable.md) — a state stream outside React (effects, non-React code).
+- [Selectors](./selector-system.md) — `createSelector` + `useSelector`.
+- [Subscriptions](./subscriptions.md) — the low-level `storage.subscribe`.
+
 ---
 
 <!-- source: docs/en/use-storage-subscribe.md · url: https://synapse-homepage.web.app/docs/use-storage-subscribe -->
 # useStorageSubscribe
 
 
-The **default** way to read a storage reactively. `useSyncExternalStore` under the hood (Concurrent-safe),
-no RxJS. Re-renders the component when the selected slice changes. See also the [Reactive
-reads](./reactive-reads.md) overview. The examples use the end-to-end `todoStorage`
+**TL;DR.** `useStorageSubscribe(storage, selector[, { equals }])` — the **default** way to read a
+storage reactively in a component. `useSyncExternalStore` under the hood (Concurrent-safe), **no RxJS**.
+Re-renders the component when the selected slice changes and returns the slice value itself. This is your
+first choice for "show a value from the store"; RxJS operators and side effects live in sibling hooks (see
+the table below). The examples use the end-to-end `todoStorage`
 (`TodoState = { todos: Todo[]; filter: Filter }`).
+
+## Why
+
+99% of reactive reads are "take a store slice and render it, updating when it changes". That needs neither
+RxJS nor a manual `useEffect` + `useState`: `useStorageSubscribe` subscribes to the storage via
+`useSyncExternalStore`, hands the value straight to render, and works correctly in Concurrent Mode (no
+tearing).
+
+## When to use / when you don't need it
+
+**Use it:** you need the **value of a store slice in JSX**, updating when it changes, without RxJS.
+
+**You don't need it:**
+
+- you need **RxJS operators** on top of the stream (`debounceTime`, `scan`, …) → [`useStorageObservable`](./use-storage-observable.md);
+- you read a **`SelectorAPI`** (a memoized selector) → [`useSelector`](./selector-system.md);
+- you need a **side effect** on change (toast/log), not a value in render → [`useSubscription`](./use-subscription.md);
+- you need a **one-off read in a handler** without a re-render → `todoStorage.getStateSync()`, see the
+  [overview](./reactive-reads.md).
+
+## Signature
+
+```typescript
+useStorageSubscribe<S, R>(
+  storage: IStorageBase<S> | null,
+  selector: (state: S) => R,
+  options?: { equals?: (a: R, b: R) => boolean },
+): R | undefined
+```
 
 ## Basic usage
 
@@ -1333,26 +2024,104 @@ const todos = useStorageSubscribe(todoStorage, (s) => s.todos, {
 `equals` returns `true` when the slices are "equal" — then the snapshot keeps its reference and there is
 no re-render.
 
+## All parameters (commented)
+
+```typescript
+import { useStorageSubscribe } from 'synapse-storage/react'
+
+const todos = useStorageSubscribe(
+  // 1. storage — IStorageBase (sync/async — the shared interface). You can pass null
+  //    (before init) → the hook returns undefined.
+  todoStorage,
+
+  // 2. selector — which slice to pull out of the state. Called on every snapshot.
+  (s) => s.todos,
+
+  // 3. options.equals? — comparison of the previous and new slice. true → the snapshot does NOT
+  //    change by reference, no re-render (even if the rest of the store's state changed). Needed for
+  //    object/array slices; not needed for primitives (de-duped via Object.is).
+  { equals: (a, b) => a === b },
+)
+```
+
+## Options
+
+| Parameter | Type | Description |
+|---|---|---|
+| `storage` | `IStorageBase<S> \| null` | The storage, or `null` before init (then the hook returns `undefined`). |
+| `selector` | `(state: S) => R` | The slice we read and re-render on when it changes. |
+| `options.equals?` | `(a: R, b: R) => boolean` | Snapshot memoization. `true` → no re-render. For object/array slices. |
+
 ## Notes
 
 - `useSyncExternalStore` gives correct behavior in Concurrent Mode (no tearing).
 - Accepts `IStorageBase` — the shared interface of sync and async storages; the subscription is the same
   for all types.
 - Before init you can pass `null` instead of the storage — the hook returns `undefined`.
-- Need RxJS operators on top of the stream? That's [useStorageObservable](./use-storage-observable.md).
-  Reading a `SelectorAPI`? That's [useSelector](./selector-system.md). Need to read without a re-render
-  in a handler? `todoStorage.getStateSync()` — see the [overview](./reactive-reads.md).
+
+## See also
+
+- [useStorageObservable](./use-storage-observable.md) — the same reactive read, but with RxJS operators.
+- [useSelector](./selector-system.md) — reading a memoized `SelectorAPI`.
+- [useSubscription](./use-subscription.md) — a side effect on change (without render).
+- [Reactive reads](./reactive-reads.md) — overview and choosing a tool.
 
 ---
 
 <!-- source: docs/en/use-storage-observable.md · url: https://synapse-homepage.web.app/docs/use-storage-observable -->
-# useStorageObservable
+# useStorageObservable / useObservable
 
 
-The RxJS path for "store → reactive in a component". Equivalent to
-[useStorageSubscribe](./use-storage-subscribe.md), but you can pipe RxJS operators (`debounceTime`,
-`scan`, `bufferTime`, …) on top of the state stream. See the [Reactive reads](./reactive-reads.md)
-overview. The examples use the end-to-end `todoStorage` (`TodoState = { todos: Todo[]; filter: Filter }`).
+**TL;DR.** The RxJS path for "store → reactive in a component". Two hooks:
+
+- **`useStorageObservable(storage[, selector])`** — sugar: a store slice into render via RxJS, with no
+  operators of your own. Equivalent to [`useStorageSubscribe`](./use-storage-subscribe.md), only inside
+  RxJS.
+- **`useObservable(source, initial[, deps])`** — subscribe to **any** `Observable` (your own `pipe(...)`
+  or `selector.$`) and return its value to render. This is one level down: here you build the stream
+  yourself.
+
+Need operators (`debounceTime`, `scan`, `bufferTime`)? Reach for `toObservable` + `useObservable`. Both
+are imported from `synapse-storage/react`. The examples use the end-to-end `todoStorage`
+(`TodoState = { todos: Todo[]; filter: Filter }`).
+
+## Why
+
+`useStorageSubscribe` returns a slice as is. As soon as you need **stream processing** between the store
+and render (smooth it with a debounce, accumulate with `scan`, collapse with `bufferTime`), you need
+RxJS. `useObservable` subscribes to a ready `Observable` in `useEffect` and puts the latest value into
+state; `useStorageObservable` is a thin wrapper over `toObservable` + `useObservable` for the common case
+of "just a slice, no operators of your own".
+
+## When to use / when you don't need it
+
+**`useStorageObservable`** — you need a store slice into render, but for ideological/stylistic reasons
+through RxJS, with no operators of your own. If there are no operators and RxJS isn't important —
+[`useStorageSubscribe`](./use-storage-subscribe.md) is simpler.
+
+**`useObservable`** — you have **your own `Observable`**: an assembled `toObservable(...).pipe(...)`,
+`selector.$`, or an external RxJS source, and its value is needed **in render**.
+
+**Neither is needed** if:
+
+- reactive read without RxJS → [`useStorageSubscribe`](./use-storage-subscribe.md);
+- the result is a **side-effect**, not a render value → [`useSubscription`](./use-subscription.md);
+- the stream is needed **outside React** → [`toObservable`](./to-observable.md).
+
+## Signatures
+
+```typescript
+// sugar: a store slice into render via RxJS
+useStorageObservable<S>(storage: IStorageBase<S>): S
+useStorageObservable<S, R>(storage: IStorageBase<S>, selector: (state: S) => R): R
+
+// low level: any Observable → value into render
+useObservable<T>(
+  source: Observable<T> | (() => Observable<T>),
+  initialValue: T,
+  deps?: DependencyList,
+): T
+```
 
 ## Basic usage
 
@@ -1531,12 +2300,67 @@ So a burst of 10 messages within 2 seconds yields **one** toast "10 new messages
 "can the hook do this": once you're inside an `Observable`, the whole RxJS toolbox is available — you just
 pick the right entry point (`useObservable` to render a value, `useSubscription` to run a side-effect).
 
+## All parameters (commented)
+
+```tsx
+import { useStorageObservable, useObservable } from 'synapse-storage/react'
+import { toObservable } from 'synapse-storage/reactive'
+import { map } from 'rxjs/operators'
+
+// --- useStorageObservable: a store slice into render, no operators of your own ---
+const total = useStorageObservable(
+  // 1. storage — IStorageBase. The stream is memoized by [storage] (no re-subscribe on render).
+  todoStorage,
+  // 2. selector? — a slice (map + distinctUntilChanged). Without it — the whole state.
+  //    Deliberately NOT in deps: re-subscription happens only by storage.
+  (s) => s.todos.length,
+)
+
+// --- useObservable: any Observable → value into render ---
+const label = useObservable(
+  // 1. source — an Observable OR a factory () => Observable. A factory is needed for your own
+  //    operators (pipe). The hook memoizes the factory itself (see deps below).
+  () => toObservable(todoStorage, (s) => s.todos.length).pipe(map((n) => `${n} todos`)),
+  // 2. initialValue — what to return before the first emit (the stream emits the initial value
+  //    on subscribe, so flicker is usually zero, but the type is required).
+  '0 todos',
+  // 3. deps? — re-subscription (rebuilds the whole chain). Default: for a factory — []
+  //    (built once), for a direct Observable — [source]. Put here everything the factory
+  //    closes over that can change (a limit prop, a store from props, …).
+  [],
+)
+```
+
+## Parameters
+
+`useStorageObservable`:
+
+| Parameter | Type | Description |
+|---|---|---|
+| `storage` | `IStorageBase<S>` | Storage. The stream is memoized by `[storage]`. |
+| `selector?` | `(state: S) => R` | A slice (`map` + `distinctUntilChanged`). Without it — the whole state. Not in deps. |
+
+`useObservable`:
+
+| Parameter | Type | Description |
+|---|---|---|
+| `source` | `Observable<T> \| (() => Observable<T>)` | A ready stream or a factory. A factory is for your own operators. |
+| `initialValue` | `T` | Value before the first emit. |
+| `deps?` | `DependencyList` | Re-subscription. Default `[]` for a factory, `[source]` for a direct Observable. |
+
 ## Notes
 
 - A `toObservable` selector stream already runs through `distinctUntilChanged` — an extra
   `distinctUntilChanged` right after the selector is almost always redundant.
-- Need a simple reactive read without RxJS? Use [useStorageSubscribe](./use-storage-subscribe.md).
-- A stream outside React (effects, non-React code) — [toObservable](./to-observable.md).
+- `useObservable` also accepts `selector.$` directly (the Observable form of `SelectorAPI`) — you can do
+  `useObservable(selectors.active.$.pipe(debounceTime(300)), initial)`, see [Selectors](./selector-system.md).
+
+## See also
+
+- [useStorageSubscribe](./use-storage-subscribe.md) — a simple reactive read without RxJS.
+- [useSubscription](./use-subscription.md) — the same stream, but as a side-effect (no render).
+- [toObservable](./to-observable.md) — a stream outside React (effects, non-React code).
+- [Reactive reads](./reactive-reads.md) — overview and choosing a tool.
 
 ---
 
@@ -1544,10 +2368,38 @@ pick the right entry point (`useObservable` to render a value, `useSubscription`
 # toObservable
 
 
-Turns a storage (`IStorageBase`) into an RxJS `Observable` of the state stream — for **effects and
-non-React code**. It's the low-level utility that [useStorageObservable](./use-storage-observable.md) is
-built on. Imported from `synapse-storage/reactive`. The examples use the end-to-end `todoStorage`
-(`TodoState = { todos: Todo[]; filter: Filter }`).
+**TL;DR.** `toObservable(storage[, selector, equals])` — turns a storage into an RxJS `Observable` of
+the state stream. It's a **low-level utility for effects and non-React code**; the React hooks
+`useStorageObservable` / `useObservable` are built on it. Imported from `synapse-storage/reactive`. The
+examples use the end-to-end `todoStorage` (`TodoState = { todos: Todo[]; filter: Filter }`).
+
+## Why
+
+A storage is not an RxJS source on its own: it has `subscribe`/`getStateSync`, not `pipe`. As soon as
+you need to **run the state through operators** (`debounceTime`, `scan`, `bufferTime`, …) or **feed it
+into `createEffectConfig` as external state**, you need an `Observable`. `toObservable` builds exactly
+that bridge: it emits the current state on subscribe, then on every change.
+
+## When to use / when you DON'T need it
+
+**Use it:**
+
+- you're building a stream **outside React** — in effects, watchers, plain non-React modules;
+- you need an `Observable` of state as **external state** for `createEffectConfig.externalStates`;
+- in React you need **your own set of operators** on top of a slice — then `toObservable(...)` in a
+  factory + [`useObservable`](./use-storage-observable.md) / [`useSubscription`](./use-subscription.md).
+
+**You DON'T need it:**
+
+- **just a slice into a component without your own operators** →
+  [`useStorageObservable`](./use-storage-observable.md) (it memoizes `toObservable` for you);
+- **a reactive read with no RxJS at all** → [`useStorageSubscribe`](./use-storage-subscribe.md);
+- you're reading a memoized `SelectorAPI` — it already has `.$` (a ready-made `Observable`), no need to
+  wrap the store, see [Selectors](./selector-system.md).
+
+> In a React component, do **not** create `toObservable(...)` directly in render — a new Observable on
+> every render triggers re-subscriptions. Memoize it (which is what `useStorageObservable` does) or pass
+> it as a **factory** to `useObservable`.
 
 ## Signature
 
@@ -1562,12 +2414,6 @@ toObservable<T, R>(
   equals?: (a: R, b: R) => boolean,
 ): Observable<R>
 ```
-
-Three parameters:
-
-1. **`storage`** — the storage.
-2. **`selector`** *(optional)* — which slice to pull out of the state.
-3. **`equals`** *(optional)* — how to compare adjacent slice values to skip duplicates.
 
 ## `selector` — a slice instead of the whole state
 
@@ -1629,6 +2475,35 @@ createEffectConfig: () => ({
 })
 ```
 
+## All parameters (commented)
+
+```typescript
+import { toObservable } from 'synapse-storage/reactive'
+
+const slice$ = toObservable(
+  // 1. storage — IStorageBase (Memory/Local/IndexedDB — a shared interface).
+  //    The stream subscribes to storage.subscribeToAll and emits getStateSync().
+  todoStorage,
+
+  // 2. selector? — which slice to pull out. Without it the stream emits the WHOLE state on any
+  //    change. With it — map + distinctUntilChanged, emitting only when the slice changes.
+  (s) => s.todos.length,
+
+  // 3. equals? — comparator for distinctUntilChanged (defaults to Object.is).
+  //    Needed if the selector returns a new object/array every tick, or when you want a
+  //    coarser equivalence. Only makes sense TOGETHER with selector.
+  (a, b) => a === b,
+)
+```
+
+## Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `storage` | `IStorageBase<T>` | The storage. The stream emits `getStateSync()` on subscribe and on every change. |
+| `selector?` | `(state: T) => R` | The slice. Without it — the whole state; with it — `map` + `distinctUntilChanged`. |
+| `equals?` | `(a: R, b: R) => boolean` | Comparator for `distinctUntilChanged`. Defaults to `Object.is`. Only together with `selector`. |
+
 ## Notes
 
 - The stream emits the current state immediately on subscribe (via `getStateSync()`), then on every
@@ -1636,11 +2511,13 @@ createEffectConfig: () => ({
 - Under the hood it's `shareReplay({ refCount: true })`: multiple subscribers share a single store
   subscription, and when their count drops to zero the stream unsubscribes from the storage (no leaked
   listeners).
-- In a React component, do **not** create `toObservable(...)` directly in render — memoize it (which is
-  what [useStorageObservable](./use-storage-observable.md) does) or subscribe via `useObservable` with a
-  factory.
-- For a simple reactive read in a component without RxJS, use
-  [useStorageSubscribe](./use-storage-subscribe.md).
+
+## See also
+
+- [useStorageObservable / useObservable](./use-storage-observable.md) — the same stream in a React component.
+- [useSubscription](./use-subscription.md) — a subscription side-effect in React (the same `toObservable` inside).
+- [useStorageSubscribe](./use-storage-subscribe.md) — a reactive read in a component without RxJS.
+- [Reactive reads](./reactive-reads.md) — an overview and how to pick the tool.
 
 ---
 
@@ -1648,10 +2525,29 @@ createEffectConfig: () => ({
 # useSubscription
 
 
-An imperative **side-effect** subscription from a component: subscribe to an `Observable` and do something
-on each emit (show a toast, log, dispatch) **without returning anything to render**. It's the counterpart
-to [useObservable](./use-storage-observable.md): that one returns a value for JSX, while `useSubscription`
-is for effects. See the [Reactive reads](./reactive-reads.md) overview.
+**TL;DR.** `useSubscription(factory, deps)` is an imperative **side-effect** subscription from a component:
+subscribe to an `Observable` and do something on each emit (show a toast, log, dispatch), **without
+returning anything to render**. It's the counterpart to [`useObservable`](./use-storage-observable.md):
+that one returns a value for JSX, while `useSubscription` is for effects. Unsubscription is automatic.
+
+## Why
+
+Sometimes reacting to a store change isn't "show a value" but "do something outward": a toast, a log, an
+imperative call, a dispatch. Putting that into `useObservable` is wrong (there's no value to render), and
+hand-writing `useEffect` + `subscribe` + cleanup is noisy and easy to forget the `unsubscribe`.
+`useSubscription` encapsulates the creation of the subscription and its **guaranteed teardown** on unmount
+/ `deps` change.
+
+## When to use / when you don't need it
+
+**Use it:** when the subscription result goes **outward** (toast, log, analytics, an imperative call)
+rather than into JSX. Especially when you need RxJS operators for aggregation (`bufferTime`, `pairwise`, …).
+
+**Don't need it:**
+
+- the result is needed **in render** → [`useObservable`](./use-storage-observable.md) (a value) or
+  [`useStorageSubscribe`](./use-storage-subscribe.md) (a slice without RxJS);
+- a side effect **without a stream/RxJS** — a plain reaction to a prop/value → a regular `useEffect`.
 
 ## Signature
 
@@ -1736,6 +2632,31 @@ function MessageNotifier() {
 A detailed walkthrough of the operators lives on the
 [useStorageObservable](./use-storage-observable.md#example-a-notification-aggregator) page.
 
+## All parameters (commented)
+
+```tsx
+useSubscription(
+  // 1. factory — creates the subscription and returns it (Unsubscribable). The side effects
+  //    live inside .subscribe(...). It is recreated on a deps change: the whole chain
+  //    (including stateful operators like bufferTime) is rebuilt from scratch.
+  () =>
+    toObservable(authStorage, (s) => s.error)
+      .pipe(filter(Boolean))
+      .subscribe((msg) => toast.error(msg as string)),
+
+  // 2. deps — like in useEffect: everything the factory closes over and that can change.
+  //    [] for a singleton store; [storage] for a store from props/context.
+  [],
+)
+```
+
+## Options
+
+| Parameter | Type | Description |
+|---|---|---|
+| `factory` | `() => Unsubscribable` | Creates the subscription; returns it for auto-unsubscribe. Side effect inside `.subscribe`. |
+| `deps` | `DependencyList` | Like in `useEffect`. On change the old subscription is torn down and `factory` is called again. |
+
 ## About `deps`
 
 Same rules as [useObservable](./use-storage-observable.md#about-deps--what-goes-in): `deps` holds
@@ -1749,15 +2670,37 @@ uses `shareReplay({ refCount: true })` under the hood — when the subscriber co
 unsubscribes from the store. So sprinkling `useSubscription`/`useObservable` across the project does
 **not** accumulate listeners on the storage: everything is released on unmount.
 
+## See also
+
+- [useObservable / useStorageObservable](./use-storage-observable.md) — a stream's value into render.
+- [toObservable](./to-observable.md) — the stream itself (usually the source for `factory`).
+- [useStorageSubscribe](./use-storage-subscribe.md) — reactive reading of a slice without RxJS.
+- [Reactive reads](./reactive-reads.md) — overview and choosing a tool.
+
 ---
 
 <!-- source: docs/en/selector-system.md · url: https://synapse-homepage.web.app/docs/selector-system -->
 # Selectors
 
 
-Selectors extract and compute data from a storage. They are memoized — recomputed only when their
-dependencies change. They can be combined. In the class form, selectors are declared as **class fields** —
-the fields are real `SelectorAPI` right away (eager materialization).
+Selectors extract and compute data from a storage. They are **memoized** — recomputed only when their
+dependencies change, so expensive computations (filtering, aggregation) aren't repeated on every read.
+They can be **combined** with one another and with selectors of other stores. In the class form,
+selectors are declared as **class fields** — the fields are real `SelectorAPI` right away (eager
+materialization, no "recipes").
+
+**When to use:** a derived/computed value (counters, filtered lists, flags) that you need repeatedly and
+without redundant recomputes; a shared source for several components; cross-module relations. **When you
+DON'T need it:** a one-off read of a field as-is — [`get`/`getState`](./reading-data.md) is enough; a
+simple subscription to one field — [`subscribe`](./subscriptions.md).
+
+Three factories (all `protected`, called in the class body via `this.`):
+
+| Factory | What it creates | When |
+|---|---|---|
+| `this.select(fn, opts?)` | a simple selector over state | pull out a part/field of the state |
+| `this.combine([deps], fn, opts?)` | a combined selector over other selectors | compute a value from dependencies |
+| `this.keyed(key => fn, opts?)` | a factory of "one `SelectorAPI` per key" | parametric access (by id, etc.) |
 
 The examples use the end-to-end `todoStorage` (`TodoState = { todos: Todo[]; filter: Filter }`) from the
 [MemoryStorage](./memory-storage.md) section and its canonical `TodoSelectors` set.
@@ -1835,10 +2778,59 @@ class TodoSelectors extends Selectors<TodoState> {
 selectors.byId('t1').select()   // a SelectorAPI for a specific id
 ```
 
+By default `keyed` compares values **structurally** (`deepEquals`), not by reference: adjacent keys live
+under a shared parent, and on update the storage re-clones the whole branch — without structural
+comparison, an update to key `A` would notify subscribers of key `B`.
+
+### All options (commented)
+
+The full surface of the factories and `SelectorOptions` — what you can pass and why:
+
+```typescript
+class TodoSelectors extends Selectors<TodoState> {
+  // ── this.select(selector, options?) ──
+  // selector: (state) => R — extracts a value from state.
+  readonly titles = this.select(
+    (s) => s.todos.map((t) => t.title),
+    {
+      // equals?: (a, b) => boolean — how to compare the NEW and OLD selector value.
+      //   Defaults to reference comparison (===). For arrays/objects provide your own,
+      //   otherwise every store change = "a new reference" = a redundant notification/re-render.
+      equals: (a, b) => a.length === b.length && a.every((x, i) => x === b[i]),
+      // name?: string — an optional name for debugging (in errors/logs).
+      name: 'titles',
+    },
+  )
+
+  // ── this.combine([deps], fn, options?) ──
+  // deps: SelectorAPI[] — dependencies (your own and/or cross-store).
+  // fn: (...depValues) => R — combines their values. Recomputes only when deps change.
+  // options — the same SelectorOptions (equals / name).
+  readonly visibleTodos = this.combine(
+    [this.select((s) => s.todos), this.select((s) => s.filter)],
+    (todos, filter) => filterTodos(todos, filter),
+    { name: 'visibleTodos' },
+  )
+
+  // ── this.keyed(key => selector, options?) ──
+  // key => (state) => R — the key function returns a selector for that key.
+  // options — SelectorOptions; equals DEFAULTS to deepEquals (structural comparison),
+  //   overridden via options.equals.
+  readonly byId = this.keyed(
+    (id: string) => (s: TodoState) => s.todos.find((t) => t.id === id),
+    { name: 'todoById' },
+  )
+}
+```
+
+`SelectorOptions` in full: `{ equals?: (a, b) => boolean; name?: string }`. There are no other fields.
+
 ### Cross-store: external selectors through the constructor
 
-A selector can depend on a selector of **another store**. External selectors come in as a constructor parameter —
-parameter properties are assigned BEFORE the field initializers, so `this.core` is available in the fields.
+A selector can depend on a selector of **another store**. External selectors come in as a **constructor
+parameter** and take part in `this.combine` on equal footing with your own — the combined selector
+recomputes when any of the stores change. (In v6 there's no separate `combineAcross` — cross-store is
+done with this constructor-based DI.)
 
 ```typescript
 import type { IStorage, SelectorAPI } from 'synapse-storage/core'
@@ -1846,7 +2838,8 @@ import type { IStorage, SelectorAPI } from 'synapse-storage/core'
 class PostsSelectors extends Selectors<PostsState> {
   readonly list = this.select((s) => s.list)
 
-  // cross-store: recomputed reactively when the other store changes
+  // cross-store: recomputed reactively when the other store changes.
+  // Declare the field, but create the combine ITSELF in the constructor body — see the pitfall below.
   readonly currentUserId: SelectorAPI<number | null>
 
   constructor(storage: IStorage<PostsState>, private core: CoreSelectors) {
@@ -1855,6 +2848,14 @@ class PostsSelectors extends Selectors<PostsState> {
   }
 }
 ```
+
+> **The `useDefineForClassFields` pitfall.** With `useDefineForClassFields: true` (the default for
+> target ES2022+) field initializers run BEFORE the parameter properties are assigned — that is, at the
+> moment of `readonly x = this.combine([this.core.foo], …)` the value of `this.core` is still
+> `undefined`, and the dependency silently ends up empty. That's why you create a cross-store `combine`
+> **in the constructor body after `super()`** (as above), or set
+> `"useDefineForClassFields": false` in tsconfig. There's a dev check: `combine()` throws a clear error
+> if a dependency isn't a `SelectorAPI`.
 
 More details on cross-module relations — [Cross-module dependencies](./dependencies.md).
 
@@ -2203,6 +3204,198 @@ export const pokemonSynapse = createSynapse(
 )
 ```
 
+## A realistic large-project module: cross-store DI + several APIs + a socket
+
+The minimal examples above show the shape. But in a real app a module rarely lives in isolation: its
+selectors **combine its own state with someone else's** (data from other modules), and its effects hit
+**several APIs** at once, listen to a **WebSocket**, and react to the streams of neighboring stores.
+Here is how it all comes together, on a messenger domain (`chat`) that depends on `authSynapse` (the
+current user) and `settingsSynapse` (settings: blocked users).
+
+### 1. Selectors: `combine` from your own + foreign selectors (cross-store DI)
+
+Foreign selectors arrive as **constructor parameters** and take part in `this.combine([...])` on equal
+footing with your own — the combined selector recomputes both when your store changes and when the
+foreign one does:
+
+```typescript
+import { Selectors, type IStorage } from 'synapse-storage/core'
+import type { AuthSelectors } from '../auth/auth.selectors'
+import type { SettingsSelectors } from '../settings/settings.selectors'
+import type { ChatState } from './chat.types'
+
+export class ChatSelectors extends Selectors<ChatState> {
+  constructor(
+    storage: IStorage<ChatState>,
+    private readonly auth: AuthSelectors,          // ← selectors of a FOREIGN module
+    private readonly settings: SettingsSelectors,  // ← and one more
+  ) {
+    super(storage)
+  }
+
+  // own slices
+  private readonly messages = this.select((s) => s.messagesByConversation)
+  readonly activeId = this.select((s) => s.activeConversationId)
+  readonly connection = this.select((s) => s.connectionStatus)
+
+  readonly activeMessages = this.combine([this.messages, this.activeId], (byConv, id) =>
+    id ? byConv[id] ?? [] : [],
+  )
+
+  // cross-store: own messages + foreign currentUserId (auth) + foreign blockedUsers (settings).
+  // Recomputes when ANY of the three stores changes.
+  readonly visibleMessages = this.combine(
+    [this.activeMessages, this.auth.currentUserId, this.settings.blockedUsers],
+    (msgs, myId, blocked) =>
+      msgs
+        .filter((m) => !blocked.includes(m.authorId))
+        .map((m) => ({ ...m, mine: m.authorId === myId })),
+  )
+
+  readonly unreadCount = this.combine([this.messages, this.auth.currentUserId], (byConv, myId) =>
+    Object.values(byConv).flat().filter((m) => !m.readBy.includes(myId!)).length,
+  )
+}
+```
+
+> ⚠️ **Cross-store `combine` pitfall.** If `tsconfig` compiles with
+> `useDefineForClassFields: true` (the default at `target: ES2022+`), parameter properties
+> (`this.auth`) are assigned **after** field initializers → at the moment of
+> `this.combine([this.auth.x])` the dependency is still `undefined`. Synapse catches this with a clear
+> dev error. Fixes: either `"useDefineForClassFields": false`, or create such selectors **inside the
+> constructor body** after `super(storage)`.
+
+### 2. Effects: several APIs + a socket + a neighboring store's stream
+
+All external resources — REST endpoints of **two** APIs, a WebSocket service, an `Observable` of a
+neighboring store — arrive through the constructor and are captured in the effects' closure:
+
+```typescript
+import { type Observable, tap } from 'rxjs'
+import { Effects, apiResult, fromRequest, ofType, validateMap } from 'synapse-storage/reactive'
+import type { MessagesApiEndpoints } from './messages.api'
+import type { UsersApiEndpoints } from './users.api'
+import type { ChatSocketService } from './chat.socket'
+import type { PresenceState } from '../presence/presence.types'
+import type { ChatState } from './chat.types'
+import type { ChatDispatcher } from './chat.dispatcher'
+
+export class ChatEffects extends Effects<ChatState, ChatDispatcher> {
+  constructor(
+    private readonly messagesApi: MessagesApiEndpoints, // REST #1
+    private readonly usersApi: UsersApiEndpoints,       // REST #2
+    private readonly socket: ChatSocketService,         // WebSocket service
+    private readonly presence$: Observable<PresenceState>, // a neighboring store's stream
+  ) {
+    super()
+  }
+
+  // Conversation history on selection (REST #1)
+  readonly loadHistory = this.effect((action$, state$, { dispatcher: d }) =>
+    action$.pipe(
+      ofType(d.openConversation),
+      validateMap({
+        loadingAction: () => d.loadHistory.loading(),
+        errorAction: (err) => d.loadHistory.failure(String(err)),
+        apiCall: (action) =>
+          fromRequest(this.messagesApi.getHistory.request({ conversationId: action.payload })).pipe(
+            apiResult((data) => {
+              d.applyHistory(data)
+              d.loadHistory.success()
+            }),
+          ),
+      }),
+    ),
+  )
+
+  // Pull in author profiles (REST #2)
+  readonly loadAuthors = this.effect((action$, state$, { dispatcher: d }) =>
+    action$.pipe(
+      ofType(d.applyHistory),
+      validateMap({
+        apiCall: (action) =>
+          fromRequest(this.usersApi.getByIds.request({ ids: authorIds(action.payload) })).pipe(
+            apiResult((users) => d.applyAuthors(users)),
+          ),
+      }),
+    ),
+  )
+
+  // Incoming socket messages flow into the store. Dispatch is a side effect via tap
+  // (an effect's emissions are NOT dispatched automatically — only d.* calls are).
+  readonly incoming = this.effect((action$, state$, { dispatcher: d }) =>
+    this.socket.messages$.pipe(tap((msg) => d.messageReceived(msg))),
+  )
+
+  // Sending: action → socket.send
+  readonly send = this.effect((action$, state$, { dispatcher: d }) =>
+    action$.pipe(
+      ofType(d.sendMessage),
+      tap((action) => this.socket.send(action.payload)),
+    ),
+  )
+
+  // React to a NEIGHBORING store's stream (presence): mark interlocutors online/offline
+  readonly presenceSync = this.effect((action$, state$, { dispatcher: d }) =>
+    this.presence$.pipe(tap((presence) => d.applyPresence(presence.online))),
+  )
+
+  // Close the socket when the module is destroyed
+  override onDestroy() {
+    this.socket.disconnect()
+  }
+}
+```
+
+### 3. Wiring: pass everything into `createSynapse`
+
+`selectors` receives foreign selectors synchronously (cross-store DI), `dependencies` holds the start
+of effects until those modules are ready, and `effects` (async) lazily resolves both APIs and opens the
+socket — on the client, after the core is constructed:
+
+```typescript
+import { MemoryStorage } from 'synapse-storage/core'
+import { createSynapse } from 'synapse-storage/utils'
+
+import { authSynapse } from '../auth/auth.synapse'
+import { settingsSynapse } from '../settings/settings.synapse'
+import { presenceSynapse } from '../presence/presence.synapse'
+import { getMessagesApi } from './messages.api'
+import { getUsersApi } from './users.api'
+import { connectChatSocket } from './chat.socket'
+import { ChatDispatcher } from './chat.dispatcher'
+import { ChatSelectors } from './chat.selectors'
+import { ChatEffects } from './chat.effects'
+import { initialState } from './chat.store'
+import type { ChatState } from './chat.types'
+
+export const chatSynapse = createSynapse({
+  storage: () => new MemoryStorage<ChatState>({ name: 'chat', initialState }),
+
+  dispatcher: (s) => new ChatDispatcher(s),
+
+  // cross-store DI: foreign selectors are available SYNCHRONOUSLY (the foreign module's main core is built lazily).
+  selectors: (s) => new ChatSelectors(s, authSynapse.selectors, settingsSynapse.selectors),
+
+  // effects START gate: wait until both modules whose state we read are ready.
+  dependencies: [authSynapse, settingsSynapse, presenceSynapse],
+
+  // async prologue: resolve TWO APIs + open the socket + a neighboring store's stream — client-only.
+  effects: async () =>
+    new ChatEffects(
+      await getMessagesApi(),
+      await getUsersApi(),
+      connectChatSocket(),
+      presenceSynapse.state$,
+    ),
+})
+```
+
+What this demonstrates all at once: **combine from n selectors** (your own + two foreign modules),
+**multiple dependencies** in `dependencies`, **several APIs** and a **socket** in one effects class,
+and **reading a neighboring store's stream** via `state$`. The core construction stayed synchronous —
+everything "heavy" moved into `effects` and doesn't get in the way of SSR.
+
 ## Extras (DX)
 
 - **`browserStorage(config, { client })`** (exported from `synapse-storage/core`) — a server-safe
@@ -2253,11 +3446,39 @@ export const pokemonSynapse = createSynapse(
 # createSynapse (dispatcher)
 
 
+**TL;DR.** A dispatcher = a module's **named intents**. You write actions as class fields
+(`this.action` / `this.signal` / `this.apiActions` / `this.watcher`), the field name = the action name.
+A `store.actions.X(payload)` call changes state (for `action`) and/or throws an intent into `action$` —
+where effects catch it. You read through selectors, you write through the dispatcher.
+
+```typescript
+dispatcher: (s) => new PokemonDispatcher(s),   // one field in createSynapse
+store.actions.selectPokemon(25)                // calling an intent from the UI
+```
+
 The next brick after the [basic assembly](./create-synapse-basic.md): we add the **dispatcher**. It
 describes **intents** — named actions that change state — and **watchers** for reactive tracking.
 Effects (API calls per action) are on the [next page](./create-synapse-effects.md).
 
 Same domain — `pokemon-advanced`.
+
+## Why
+
+- **Named write entry points** instead of `storage.set/update` scattered across components: the whole
+  list of what a module can change lives in a single class.
+- **Intent ≠ mutation**: `signal`/`apiActions` may write nothing to the store and merely throw a signal
+  that an effect picks up (an API load). This way the UI knows nothing about the network — it sends an intent.
+- **A single `action$` stream** on which effects and cross-store reactions are built.
+
+## When to use / when it's NOT needed
+
+**Needed** when: named operations over state appear; there are side effects (loading from an API on a user
+action); you need a reactive watcher over a slice of state.
+
+**NOT needed** when: state is trivial and changes in one or two places — then the direct
+`store.storage.set/update` from the [basic form](./create-synapse-basic.md) is enough (you can skip adding
+a dispatcher altogether). A dispatcher without effects is just type-safe setters; its full power is
+unlocked in pair with [Effects](./create-synapse-effects.md).
 
 ## Dispatcher (`pokemon.dispatcher.ts`)
 
@@ -2422,11 +3643,36 @@ export const { contextSynapse, useSynapseSelectors, useSynapseActions } =
 More — [createSynapseCtx](./synapse-ctx.md). How intents turn into real API calls —
 [Effects](./create-synapse-effects.md).
 
+## See also
+
+- [createSynapse (basic)](./create-synapse-basic.md) — the form without a dispatcher (writing through storage directly).
+- [Dispatcher (in detail)](./dispatcher-detailed.md) — the whole surface: `action`/`signal`/`apiActions`/`keyedApiActions`/`watcher`, options (`meta`/`memoize`), the `ofType` rule, standalone use.
+- [createSynapse (effects)](./create-synapse-effects.md) — how intents get caught and turned into API calls.
+- [Selectors](./selector-system.md) — reading state (the dispatcher only writes).
+- [Pokemon (recipe)](./pokemon-advanced.md) — the dispatcher as part of a whole module.
+
 ---
 
 <!-- source: docs/en/create-synapse-effects.md · url: https://synapse-homepage.web.app/docs/synapse-effects -->
 # createSynapse (effects)
 
+
+**TL;DR.** An effect = an RxJS recipe that listens to `action$`, performs a side-effect (an API call,
+a socket) and **dispatches** the result back itself as actions. You declare effects as class fields via
+`this.effect(...)`; services and external stores come in through the constructor and are captured in the
+closure. Key rule: **an effect's emissions are NOT dispatched automatically** — dispatch happens only
+through direct `d.*` calls inside `tap`/`apiResult`.
+
+```typescript
+readonly loadList = this.effect((action$, state$, { dispatcher: d }) =>
+  action$.pipe(
+    ofType(d.loadList),                                  // catch the intent
+    validateMap({ apiCall: () => fromRequest(this.api.getList.request({ limit: 12, offset: 0 })).pipe(
+      apiResult((data) => { d.applyPokemonList(data); d.loadList.success() }),  // ← dispatch manually
+    ) }),
+  ),
+)
+```
 
 The last brick after the [dispatcher](./create-synapse-dispatcher.md): **effects** — the RxJS layer
 of side actions. The dispatcher describes *intents* (`loadList`, `selectPokemon`, `loadMore`); an
@@ -2434,6 +3680,26 @@ effect listens for them in the stream, turns them into real API calls, and feeds
 into state through the dispatcher's actions.
 
 Same domain — `pokemon-advanced`.
+
+## Why
+
+- **Decouple intent from the network**: the UI sends `loadList()`, while *how* it loads (endpoint,
+  cancellation of stale requests, statuses) is known only to the effect.
+- **RxJS orchestration**: search debounce, cancelling in-flight requests (`switchMap`), concurrency
+  strategies for writes (`exhaustMap`/`mergeMap`), merging socket streams and neighboring stores — all
+  declaratively.
+- **A single request machine**: `validateMap`/`mutationMap` give a ready
+  `validation → loading → apiCall → success/error` cycle instead of manual subscriptions.
+
+## When to use / when it's NOT needed
+
+**Needed** when: there are API calls/sockets/timers driven by user actions; you need to cancel stale
+requests, debounce, or react to streams from other modules.
+
+**NOT needed** when: an action merely changes state synchronously — that's the job of the
+[Dispatcher](./create-synapse-dispatcher.md) (`this.action`), an effect would be redundant here. A module
+with no network (pure local state) does without the effects layer entirely — the `effects` field is
+omitted.
 
 ## Effects (`pokemon.effects.ts`)
 
@@ -2758,15 +4024,33 @@ store.actions.selectPokemon(25) // → effect loadDetails → API → applyPokem
 How to hand the assembled `pokemonSynapse` to React components — [createSynapseCtx](./synapse-ctx.md).
 The full module — [Pokemon (recipe)](./pokemon-advanced.md).
 
+## See also
+
+- [createSynapse (dispatcher)](./create-synapse-dispatcher.md) — the intents that effects listen to (`ofType`).
+- [Dependencies and cross-store](./dependencies.md) — 4 ways to connect modules (including `externalDispatchers` and reading another module's `state$` in effects).
+- [ApiClient](./api-client.md) — endpoints/cache/tags, `fromRequest`/`apiResult` on top of it.
+- [createSynapse (basic)](./create-synapse-basic.md) — why the async prologue lives in the `effects` factory.
+- [Pokemon (recipe)](./pokemon-advanced.md) — effects as part of a whole module + the 5-state request protocol.
+
 ---
 
 <!-- source: docs/en/dispatcher-detailed.md · url: https://synapse-homepage.web.app/docs/dispatcher-detail -->
 # Dispatcher (in detail)
 
 
-The full surface of the `Dispatcher` class. The [assembly page](./create-synapse-dispatcher.md) shows
-the minimum; here are all the factories (`action` / `signal` / `apiActions` / `keyedApiActions` /
-`watcher`), the `ofType` rule for `apiActions`, and standalone use without `createSynapse`.
+**TL;DR.** A full reference to the `Dispatcher` factories. Picking a factory for the task:
+
+| You need | Factory |
+|---|---|
+| An action that ITSELF changes the store | `this.action((store, p) => result)` |
+| A pure intent with no write (caught by an effect) | `this.signal<P>(desc)` |
+| A group of API-request statuses (idle/loading/success/failure/reset) | `this.apiActions<P>(accessor)` |
+| The same, but status per key (parallel requests) | `this.keyedApiActions<P>(accessor)` |
+| Reactively observe a slice of state (Observable) | `this.watcher({ selector })` |
+
+The [assembly page](./create-synapse-dispatcher.md) shows the minimum; here are **all** the factories
+with their options (`meta`/`memoize`), the `ofType` rule for `apiActions`, and standalone use without
+`createSynapse`.
 
 Same domain — `pokemon-advanced`. **Action/watcher name = class field name.**
 
@@ -2833,10 +4117,11 @@ class PokemonDispatcher extends Dispatcher<PokemonState> {
     { meta: { description: 'Add/remove from favorites' } },
   )
 
-  // With memoize — a repeated call with the same argument is skipped (doesn't trigger search needlessly)
+  // With memoize — a repeated call with the same argument is skipped (doesn't trigger search needlessly).
+  // Signature: (cur, prev, prevResult) => boolean; true = "the same, skip the call".
   readonly setSearchQuery = this.action(
     (store, query: string) => { store.set('searchQuery', query); return query },
-    { memoize: (current, previous) => current === previous },
+    { memoize: (cur, prev) => cur === prev },
   )
 }
 ```
@@ -2965,16 +4250,51 @@ dispatcher.destroy()
 > In a `createSynapse` assembly the dispatcher is available as `store.dispatcher`, and `store.actions`
 > is an alias of `store.dispatcher.dispatch`. See [createSynapse (dispatcher)](./create-synapse-dispatcher.md).
 
+## See also
+
+- [createSynapse (dispatcher)](./create-synapse-dispatcher.md) — the minimal assembly of a dispatcher into a module.
+- [createSynapse (effects)](./create-synapse-effects.md) — `ofType(d.apiActions)` catches only `init`; the `.success`/`.failure` phases are listened to separately.
+- [Dependencies and cross-store](./dependencies.md) — `externalDispatchers`: other modules' actions in a shared `action$`.
+- [Pokemon (recipe)](./pokemon-advanced.md) — the dispatcher as a whole in a working module.
+
 ---
 
 <!-- source: docs/en/dependencies.md · url: https://synapse-homepage.web.app/docs/dependencies -->
 # Cross-module dependencies
 
 
+**TL;DR.** Two different questions that are often confused:
+
+- **`dependencies`** — *when* to start effects: a gate that waits for other stores to be ready
+  BEFORE starting effects (it does not delay core construction). `dependencies: [otherSynapse]`.
+- **Cross-store connection** — *how* modules exchange data: the 4 patterns below (read state,
+  read selectors, react to actions, mediator). This is independent of `dependencies`.
+
+```typescript
+createSynapse({
+  storage: () => new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+  dependencies: [settingsStorage],          // gate for the START of effects
+  effects: () => new PokemonEffects(api, toObservable(settingsStorage)),  // pattern 1: read state
+})
+```
+
+Usually both go together: since an effect reads another store — that store is also put into
+`dependencies` so that it's initialized by the time effects start.
+
 One `createSynapse` can depend on another storage or module. `dependencies` is a **gate for the
 START of effects, not for construction**: the core (storage/dispatcher/selectors) is assembled
 synchronously right away, while `waitForDependencies` runs inside `ready()` before starting the
 effects — by the time effects start, the dependencies are guaranteed to be initialized.
+
+## When you need `dependencies` / when you don't
+
+**Needed** when the starting module's effects read the state/selectors/actions of another store — so that
+by the time effects start it's ready (otherwise the first `withLatestFrom` would take an uninitialized
+value).
+
+**Not needed** when: the module doesn't depend on anyone; or the connection is purely at the `selectors`
+level (cross-store DI is synchronous and doesn't require waiting for a start). `dependencies` isn't about
+type safety and isn't about the DI itself — only about the **timing of the effects' start**.
 
 Same domain — `pokemon-advanced`. It depends on a separate `settingsStorage` (`pageSize`).
 
@@ -3127,19 +4447,43 @@ details — [createEventBus](./event-bus.md).
 How to hand the assembled `pokemonSynapse` to React and await readiness — [createSynapseCtx](./synapse-ctx.md)
 and [awaitSynapse](./await-synapse.md). The full module — [Pokemon (recipe)](./pokemon-advanced.md).
 
+## See also
+
+- [createSynapse (basic)](./create-synapse-basic.md) — a realistic cross-store module (combine from other modules' selectors + several APIs + a socket).
+- [createSynapse (effects)](./create-synapse-effects.md) — pattern 1 (`toObservable` + `withLatestFrom`) and pattern 3 (`externalDispatchers` + `ctx.external`) in action.
+- [Selectors](./selector-system.md) — pattern 2: other modules' selectors in `this.combine`.
+- [createEventBus](./event-bus.md) — pattern 4: a mediator between modules.
+- [awaitSynapse](./await-synapse.md) · [createSynapseCtx](./synapse-ctx.md) — how to await `ready()` in React.
+
 ---
 
 <!-- source: docs/en/synapse-ctx.md · url: https://synapse-homepage.web.app/docs/synapse-ctx -->
 # createSynapseCtx
 
 
-React Context + HOC for accessing a Synapse module through hooks. A lazy handle is passed in: the factory
-starts on the first mount of the Provider (not on import), with an automatic `loadingComponent` during
-initialization.
+**TL;DR.** `createSynapseCtx(module, options?)` wraps a Synapse module in a React Context + HOC:
+child components take `storage`/`selectors`/`actions`/`state$` through hooks, without threading a prop
+by hand. You pass the **handle itself** (not a call) — since v6 the C-form is synchronous, so the store
+is ready for the first frame (SSR by construction), and `loadingComponent` is only a **fallback**
+render for an async store that couldn't be built synchronously.
 
 Same domain — the `pokemonSynapse` assembled on the previous pages. This is the "provider" way to hand it
 to the tree; the alternative (manual `await` + prop) is [awaitSynapse](./await-synapse.md), which is what
 the demo in the module actually uses.
+
+## When to use it
+
+- The module is needed by **many components of a subtree**, and you don't want to thread it as a prop by hand.
+- You need **SSR with seeded data**: `dehydrate` + the `dehydratedState` prop (section below).
+- A "background" provider wraps a large subtree (the app shell) and must not block SSR.
+
+## When you don't need it
+
+- The module goes to **one or two** components → [awaitSynapse](./await-synapse.md) is simpler
+  (manual `await` + prop, no Context).
+- You need a bare **storage inside a component** without selectors/actions → [useCreateStorage](./hook-memory.md).
+- Logic lives **outside React** (effects, utilities, Node) → the programmatic
+  [createSynapseAwaiter](./synapse-awaiter.md).
 
 ## Creating the context
 
@@ -3156,9 +4500,16 @@ const {
   useSynapseState$,     // () => Observable<PokemonState> (only with effects)
   cleanupSynapse,       // () => Promise<void>
 } = createSynapseCtx(pokemonSynapse, {
-  loadingComponent: <div>Loading the pokedex...</div>,  // shown while the module isn't ready
+  loadingComponent: <div>Loading the pokedex...</div>,  // FALLBACK render: only if the store couldn't be
+                                                        // built synchronously (normally the C-form is ready at once)
 })
 ```
+
+`options` — the only optional argument:
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `loadingComponent` | `React.ReactNode` | `<div>Initializing the context...</div>` | **Fallback** render if the store couldn't be built synchronously (normally the C-form is ready for the first frame; on the server only an async store degrades this way). |
 
 ## Using the hooks in child components
 
@@ -3211,7 +4562,7 @@ function Pokedex() {
   )
 }
 
-// Wrap it — loadingComponent is shown while the module isn't ready
+// Wrap it. Normally the store is synchronously ready for the first frame; loadingComponent is just a fallback render.
 const PokedexWithContext = contextSynapse(Pokedex)
 
 // Usage in JSX:
@@ -3490,7 +4841,10 @@ The full pokemon module — [Pokemon (recipe)](./pokemon-advanced.md).
 # awaitSynapse
 
 
-A React utility for waiting until a Synapse module is ready: HOC + hook + programmatic API.
+**TL;DR.** `awaitSynapse(handle, options?)` waits until a Synapse module is ready and hands the ready
+`store` to components **without Context** — via a HOC (`withSynapseReady`), a hook (`useSynapseReady`)
+and a programmatic API. While the module initializes it shows `loadingComponent`; on error —
+`errorComponent`.
 
 `createSynapse` returns a **lazy handle** (see [create-synapse-basic](./create-synapse-basic.md)) — the
 factory starts on the first `await`/subscription, not on import. `awaitSynapse` lifts that handle: it kicks
@@ -3500,6 +4854,22 @@ once `storage` is initialized.
 Same domain — the `pokemonSynapse` assembled on the previous pages. This is the "manual" way to hand the
 module to components (no Context): an alternative to the [createSynapseCtx](./synapse-ctx.md) provider. It
 is exactly `awaitSynapse` that the module's demo uses — `PokemonAdvancedExample.tsx`.
+
+## When to use
+
+- The module is handed to **one or a few** components, and pulling in Context just for that isn't worth it.
+- You need **explicit control over the async prologue** (initPokemonApi and the like): show loading/error
+  until `storage` is ready.
+- Module readiness is needed **outside React too** (effects, utilities) — the same awaiter's programmatic API.
+
+## When it's NOT needed
+
+- The module is needed by a **large subtree** and it's more convenient to distribute it through a provider
+  and hooks → [createSynapseCtx](./synapse-ctx.md).
+- The module is **synchronous** and there's no async prologue — no waiting wrapper is needed, just take the
+  ready `store` from the handle directly.
+- The logic is entirely **outside React** (Node, vanilla JS) → use
+  [`createSynapseAwaiter`](./synapse-awaiter.md) directly, without the React wrapper.
 
 ## Creating
 
@@ -3518,8 +4888,29 @@ const pokemonAwaiter = awaitSynapse(pokemonSynapse, {
 ```
 
 `options` is optional: by default `loadingComponent` is `<div>Initializing...</div>` and `errorComponent`
-is the error text. It accepts not only a handle, but also a Promise of a ready synapse or a ready synapse
-itself.
+is the error text. The first argument accepts not only a handle, but also a Promise of a ready synapse or
+a ready synapse itself.
+
+### All parameters (commented)
+
+```typescript
+const pokemonAwaiter = awaitSynapse(
+  // 1. handle | Promise<synapse> | synapse — what to wait for. Usually the lazy handle from createSynapse.
+  pokemonSynapse,
+  // 2. options? — the styling of the waiting state (used by the HOC and the hook)
+  {
+    // Rendered while the module isn't ready. Defaults to <div>Initializing...</div>.
+    loadingComponent: <div>Initializing...</div>,
+    // Rendered on an initialization error. Defaults to the error text.
+    errorComponent: (error) => <div>Init failed: {error.message}</div>,
+  },
+)
+```
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `loadingComponent` | `React.ReactNode` | `<div>Initializing...</div>` | Rendered while the module isn't ready. |
+| `errorComponent` | `(error: Error) => React.ReactNode` | error text | Rendered on an initialization error. |
 
 ## withSynapseReady (HOC) — how the demo module is lifted
 
@@ -3624,12 +5015,24 @@ More on the framework-independent variant and the SSR sync-fast-path — on the
 # SSR hydration (hydrate)
 
 
-`storage.hydrate(state)` replaces the storage state with a ready snapshot. The main scenario is
-**SSR**: the server serializes state (for example, the first page of pokemon), the client
-initializes the storage with it to avoid flicker and an extra data request.
+**TL;DR:** `storage.hydrate(state)` seeds the store with a ready snapshot. The main scenario is **SSR**: a server snapshot lands in the client store before the first render, with no flicker and no extra request.
+
+## Why
+
+`storage.hydrate(state)` replaces the storage state with a ready snapshot. The server serializes state (for example, the first page of pokemon), the client initializes the storage with it — the first render already has data.
 
 - **Sync storages** (`MemoryStorage`, `LocalStorage`): `hydrate(state): void`
 - **Async storages** (`IndexedDBStorage`): `hydrate(state): Promise<void>`
+
+## When to use
+
+- SSR/SSG: a server snapshot needs to be carried into the client store **before** the first render (no flicker, no re-fetch).
+- SPA with server data: swapping state on navigation (`hydrate` after `initialize()` notifies subscribers).
+
+## When not to use
+
+- You work at the `createSynapse`/[`createSynapseCtx`](./synapse-ctx.md) module level — there the snapshot is seeded via the `dehydratedState` prop, and a "bare" `hydrate` call isn't needed.
+- The provider has **no** server data — there's nothing to hydrate; the C-form builds an empty store from `initialState` on the server anyway (see below).
 
 ## Server → client flow
 
@@ -3735,7 +5138,35 @@ interface IAsyncStorage<T> {
 # Middlewares
 
 
-Middlewares intercept storage operations (set, get, update, delete, clear) and can modify, filter, or group them. They are configured when the store is created — in the `middlewares` field.
+Middleware intercepts storage operations (`set`/`get`/`update`/`delete`/`clear`/`reset`) and can
+**modify, filter, group, or duplicate** them. It is set when the store is created, in the
+`middlewares` field. You get the three built-ins (`batching`, `shallowCompare`, `logger`) via
+`getDefault()`; a custom one you return as an object into the same array.
+
+## Why
+
+An extension point between "you called `storage.set(...)`" and "the data landed in the store + subscribers
+were notified". Here, without touching the components themselves, you solve cross-cutting concerns:
+suppress redundant re-renders (`shallowCompare`), collapse frequent writes into a single notification
+(`batching`), log operations (`logger`), synchronize state across tabs (`syncBroadcastMiddleware` /
+`syncSharedWorkerMiddleware`), validate/normalize a value before writing (a custom one).
+
+## When to use
+
+- You need **cross-tab synchronization** of the store → `syncBroadcastMiddleware` (BroadcastChannel) or
+  `syncSharedWorkerMiddleware` (a shared SharedWorker).
+- Frequent writes to one key overwhelm subscribers → `batching`.
+- Components re-render on "writing the same value" → `shallowCompare`.
+- You need validation/normalization/audit of writes in one place → a custom middleware.
+
+## When you don't need it
+
+- A one-off data transformation before writing — simpler to do it in the calling code/dispatcher rather
+  than introducing a middleware.
+- Side effects triggered by actions (network, sockets) — that's the [Effects](./create-synapse-effects.md)
+  level, not storage middleware.
+- Logging **dispatcher actions** (action/prev/next/diff) — for that there is `loggerDispatcherMiddleware`;
+  the storage logger is only about low-level storage operations.
 
 The examples use the end-to-end domain `TodoState = { todos: Todo[]; filter: Filter }` (see the
 [MemoryStorage](./memory-storage.md) section). Since middlewares are set at creation time, here we use
@@ -3872,6 +5303,32 @@ storage.update((s) => { s.todos.push({ id: 't1', title: 'From another tab', done
 // For LocalStorage/IndexedDB — only a subscriber notification
 // (the data is already synchronized through the storage engine)
 ```
+
+### SharedWorker variant
+
+`syncSharedWorkerMiddleware` is a mirror of `syncBroadcastMiddleware` with an identical signature
+(`{ storageType, storageName }`), but synchronization goes through a **shared SharedWorker** (one thread for
+all tabs) instead of a `BroadcastChannel`. If SharedWorker is unavailable (Firefox private mode, some
+mobile browsers, SSR) there is a **transparent fallback** to BroadcastChannel, and then to an in-process
+channel: the code doesn't crash and doesn't change.
+
+```typescript
+import { MemoryStorage, syncSharedWorkerMiddleware } from 'synapse-storage/core'
+
+const storage = new MemoryStorage<TodoState>({
+  name: 'shared-todo',
+  initialState: { todos: [], filter: 'all' },
+  middlewares: () => [
+    // storageName/type must match across all tabs — it's the key of the shared channel.
+    syncSharedWorkerMiddleware({ storageType: 'memory', storageName: 'shared-todo' }),
+  ],
+})
+```
+
+> For sync storages (`MemoryStorage`/`LocalStorage`) use the `sync` variants
+> (`syncBroadcastMiddleware`/`syncSharedWorkerMiddleware`); for async (`IndexedDB`) — `broadcastMiddleware`/`sharedWorkerMiddleware`.
+> Working examples: [SharedWorkerMiddlewareExample](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SharedWorkerMiddlewareExample.tsx),
+> [SharedWorkerFallbackExample](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SharedWorkerFallbackExample.tsx).
 
 ## 6. Logger Middleware (dev-only)
 
@@ -4089,26 +5546,62 @@ interface SyncDefaultMiddlewares {
 // LoggerMiddlewareOptions = { collapsed?: boolean; showState?: boolean }
 ```
 
+## See also
+
+- [MemoryStorage](./memory-storage.md) · [LocalStorage](./local-storage.md) · [IndexedDB](./indexeddb-storage.md) — where the `middlewares` field is set.
+- [Effects](./create-synapse-effects.md) — side effects triggered by actions (not to be confused with storage middleware).
+- [browserStorage](./browser-storage.md) — how to place client-only middleware (broadcast/shared-worker) into an SSR-safe wrapper.
+
 ---
 
 <!-- source: docs/en/shared-worker-middleware.md · url: https://synapse-homepage.web.app/docs/shared-worker -->
 # SharedWorkerMiddleware
 
 
-`sharedWorkerMiddleware` / `syncSharedWorkerMiddleware` synchronize storage state between tabs
-through a **SharedWorker**. It is a direct mirror of [`broadcastMiddleware`](./middlewares.md):
-same role, same signature — only the transport differs. Where `broadcastMiddleware` uses a
-`BroadcastChannel`, `sharedWorkerMiddleware` routes messages through a single SharedWorker shared
-by every tab of the origin.
+`syncSharedWorkerMiddleware` / `sharedWorkerMiddleware` — **cross-tab state synchronization through a
+single shared SharedWorker**. A direct mirror of [`broadcastMiddleware`](./middlewares.md): same role,
+same signature `({ storageType, storageName })`, same cross-tab result — only the transport differs.
+Where the broadcast variant raises one `BroadcastChannel` per store, the shared-worker variant
+multiplexes **all** stores over **one** SharedWorker per origin.
 
-Like all middlewares, it is wired up at store creation time in the `middlewares` field.
+It is wired up like any middleware — in the `middlewares` field at store creation time.
 
-## Which one to import
+## Why
 
-There are two factories with an identical signature:
+`broadcastMiddleware` creates a separate `BroadcastChannel` per store. When you sync many stores,
+that's many independent channels. The SharedWorker transport collapses them into **one** worker per
+tab: ten stores share a single worker, and messages are demultiplexed by the logical channel name
+`${storageType}-${storageName}`. Bonus — if a SharedWorker is already up for other tasks, you can
+reuse it instead of a parallel stack of `BroadcastChannel`s.
 
-- **`syncSharedWorkerMiddleware`** — for synchronous storages (`MemoryStorage`, `LocalStorage`).
-- **`sharedWorkerMiddleware`** — for the asynchronous `IndexedDBStorage` (and `WorkerCacheStorage`).
+The sync semantics are **identical** to the broadcast variant — migrating is a one-line swap.
+
+## When to use
+
+- You sync **many** stores between tabs and want them multiplexed over a single SharedWorker rather
+  than spawning separate channels.
+- The app **already has** a SharedWorker and you want to reuse it as the transport.
+
+## When NOT needed
+
+- **Few stores (one or two).** Use [`broadcastMiddleware`](./middlewares.md) — simpler, no worker,
+  same result.
+- **You need a live shared cache inside the worker** (not just notifications, but data living in the
+  worker itself) → that's [WorkerCacheStorage](./worker-cache-storage.md), a different tool.
+- **No cross-tab scenario at all** — the middleware isn't needed.
+
+## Two factories — which to take
+
+The signature is identical for both; the difference is a synchronous storage vs an asynchronous one:
+
+| Factory | Type | For |
+|---|---|---|
+| **`syncSharedWorkerMiddleware`** | `SyncMiddleware` | synchronous storages: `MemoryStorage`, `LocalStorage` |
+| **`sharedWorkerMiddleware`** | `Middleware` (async) | the asynchronous `IndexedDBStorage` (and `WorkerCacheStorage`) |
+
+## Usage
+
+The minimal copy-paste form (`MemoryStorage`):
 
 ```typescript
 import { MemoryStorage, syncSharedWorkerMiddleware } from 'synapse-storage/core'
@@ -4118,39 +5611,28 @@ const storage = new MemoryStorage<TodoState>({
   initialState: { todos: [], filter: 'all' },
   middlewares: () => [
     syncSharedWorkerMiddleware({
-      storageName: 'shared-worker-demo',
       storageType: 'memory',
+      storageName: 'shared-worker-demo',
     }),
   ],
 })
 await storage.initialize()
 
-// Changes are synchronized between tabs
+// Changes are synchronized between tabs through a single SharedWorker.
 storage.update((s) => { s.todos.push({ id: 't1', title: 'From another tab', done: false }) })
 ```
 
-The signature is the same `{ storageType, storageName }` as `broadcastMiddleware` — swapping one
-for the other is a one-line change.
-
-## What gets synchronized
-
-The behaviour matches `broadcastMiddleware` exactly:
-
-- **MemoryStorage** — full data synchronization. A newly opened tab requests the current state
-  from the worker (`requestSync`) and seeds itself, then stays in sync on every write.
-- **LocalStorage / IndexedDB** — only a subscriber notification. The data itself is already shared
-  by the browser storage engine; the middleware just tells the subscribers of other tabs to
-  re-read.
+Swapping `broadcastMiddleware` → `syncSharedWorkerMiddleware` (or back) is a one-line change — the
+props are the same.
 
 ## N stores over ONE SharedWorker
 
-The key difference from `broadcastMiddleware` is transport multiplexing. Each store gets its own
-logical channel named `${storageType}-${storageName}`, but **all** channels are multiplexed over a
-**single** SharedWorker instance per origin. Ten stores in a tab do not spawn ten workers — they
-share one, and messages are demultiplexed by channel name.
+The key difference from the broadcast variant is transport multiplexing. Each store gets its own
+logical channel `${storageType}-${storageName}`, but **all** channels travel over a **single**
+SharedWorker per origin:
 
 ```typescript
-// Both stores below travel through the SAME SharedWorker,
+// Both stores travel through the SAME SharedWorker,
 // isolated by their channel: 'memory-todos' vs 'memory-settings'.
 const todos = new MemoryStorage<TodoState>({
   name: 'todos',
@@ -4165,26 +5647,51 @@ const settings = new MemoryStorage<SettingsState>({
 })
 ```
 
-> The channel name is `${storageType}-${storageName}`. Two stores with the same
-> `storageType` + `storageName` share one channel — keep the pair unique per logical store.
+> The channel name is `${storageType}-${storageName}`. Two stores with the same pair share one
+> channel — keep it unique per logical store.
+
+## What exactly gets synchronized
+
+The behaviour matches `broadcastMiddleware` exactly and depends on the storage type:
+
+- **MemoryStorage** — full data synchronization. A newly opened tab requests the current state from
+  the worker (`requestSync`), seeds itself, and stays in sync on every write.
+- **LocalStorage / IndexedDB** — only a subscriber notification. The data itself is already shared by
+  the browser storage engine; the middleware just tells the subscribers of other tabs to re-read.
 
 ## Fallback and SSR
 
-- **No SharedWorker?** The transport transparently falls back to a `BroadcastChannel`, so
-  cross-tab sync keeps working in browsers/contexts without SharedWorker support.
-- **SSR / no browser APIs?** The middleware is a no-op — there is no window, no other tab to sync
-  with, and store creation does not throw.
+- **No SharedWorker?** The transport **transparently** falls back to a `BroadcastChannel` — cross-tab
+  sync keeps working in contexts without SharedWorker support. No code change needed.
+- **SSR / no browser APIs?** The middleware is a **no-op**: there is no window and no other tabs, and
+  store creation does not throw.
 
-## When to use which
+## All parameters (commented)
 
-- **`broadcastMiddleware`** — the simple default. One `BroadcastChannel` per store, no worker.
-  Fine for a handful of stores.
-- **`sharedWorkerMiddleware`** — when you sync **many** stores and want them multiplexed over a
-  single SharedWorker instead of many independent channels, or when you already run a SharedWorker
-  and want to reuse it. Cross-tab semantics are identical.
+The whole API surface at once — the props are the same for both factories:
 
-For a **live shared cache** (not just notifications) held inside the worker itself, see
-[WorkerCacheStorage](./worker-cache-storage.md).
+```typescript
+import { syncSharedWorkerMiddleware } from 'synapse-storage/core'
+
+syncSharedWorkerMiddleware({
+  // storageType — the storage type. Affects the sync strategy:
+  //   'memory'     → full data synchronization (requestSync + writes);
+  //   'localStorage' / 'indexedDB' → subscriber notification only (the browser syncs the data).
+  //   Together with storageName it forms the channel key `${storageType}-${storageName}`.
+  storageType: 'memory',   // 'memory' | 'localStorage' | 'indexedDB' | 'worker'
+
+  // storageName — the logical channel name. Keep the pair (storageType + storageName)
+  //   unique per store, otherwise two stores will share one channel.
+  storageName: 'todos',
+})
+```
+
+## Options
+
+| Field | Type | Description |
+|---|---|---|
+| `storageType` | `StorageType` (`'memory' \| 'localStorage' \| 'indexedDB' \| 'worker'`) | Storage type; sets the sync strategy. Part of the channel key. |
+| `storageName` | `string` | Logical channel name. Together with `storageType` forms the key `${storageType}-${storageName}`. |
 
 ## Types
 
@@ -4192,8 +5699,8 @@ For a **live shared cache** (not just notifications) held inside the worker itse
 import type { Middleware, SyncMiddleware } from 'synapse-storage/core'
 
 // Both factories take the same props:
-interface SharedWorkerMiddlewareProps {
-  storageType: StorageType   // 'memory' | 'localStorage' | 'indexedDB' | string
+interface SharedStateMiddlewareProps {
+  storageType: StorageType   // 'memory' | 'localStorage' | 'indexedDB' | 'worker'
   storageName: string        // used together with storageType as the channel key
 }
 
@@ -4201,16 +5708,48 @@ interface SharedWorkerMiddlewareProps {
 // sharedWorkerMiddleware(props):     Middleware       — IndexedDB (async)
 ```
 
+## See also
+
+- [Middlewares](./middlewares.md) — `broadcastMiddleware` / `syncBroadcastMiddleware`, the same API without a worker.
+- [WorkerCacheStorage](./worker-cache-storage.md) — a live shared cache **inside** the worker, not just notifications.
+- [MemoryStorage](./memory-storage.md) · [LocalStorage](./local-storage.md) — synchronous storages for `syncSharedWorkerMiddleware`.
+- [IndexedDB](./indexeddb-storage.md) — the async storage for `sharedWorkerMiddleware`.
+
 ---
 
 <!-- source: docs/en/singleton.md · url: https://synapse-homepage.web.app/docs/singleton -->
 # Singleton Pattern
 
 
-Reusing storage instances by name. Useful for shared state and when a storage is created in several places (React components, modules).
+`singleton` is a storage config field (`BaseStorageConfig.singleton`). With `enabled: true`, two
+`new MemoryStorage({ name: 'x', singleton: { enabled: true } })` with the **same key** return the **same
+instance** — the second constructor doesn't create a new storage, it hands back the existing one.
 
 The examples use the end-to-end domain `TodoState = { todos: Todo[]; filter: Filter }` (see the
 [MemoryStorage](./memory-storage.md) section).
+
+## Why
+
+A storage is often created in several places: different React components, different modules, hot-reload in
+dev. Without a singleton, each `new` is a separate store with its own state, and they drift apart. A
+singleton gives a **shared instance by name/key**: no matter who "creates" the store, everyone works with
+the same data and the same subscriptions — with no manual passing of a reference through props/context.
+
+## When to use
+
+- One logical storage is **instantiated from several points** (components, modules) and should be shared.
+- You need to survive **hot-reload** in dev without spawning copies of the store.
+- Different parts of the app want the same state, but passing a reference around is inconvenient.
+
+## When it's NOT needed
+
+- The store is created **in one place** and imported from there — then it's already a de-facto singleton,
+  the field isn't needed.
+- You need **isolated** instances of the same type (e.g. a store per entity/tab) — there a singleton would,
+  on the contrary, glue them together. If the name matches but the instances must differ — separate them
+  via `key` (see below).
+- Inside a `createSynapse` module: the handle itself is already a lazy singleton, duplicating it at the
+  storage level is usually pointless.
 
 ## Enabling Singleton
 
@@ -4348,19 +5887,44 @@ enum ConfigMergeStrategy {
 }
 ```
 
+## Options
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | `boolean` | — | Enable the singleton. Without it the field has no effect. |
+| `mergeStrategy?` | `ConfigMergeStrategy` | `FIRST_WINS` | How to merge the configs of the first and subsequent instances (see above). |
+| `warnOnConflict?` | `boolean` | `true` | `console.warn` when the configs of instances diverge. |
+| `key?` | `string` | `` `${type}_${name}` `` | Custom registry key. Different keys → different instances (even with the same `name`). |
+
+## See also
+
+- [MemoryStorage](./memory-storage.md) · [LocalStorage](./local-storage.md) · [IndexedDB](./indexeddb-storage.md) — where the `singleton` field lives.
+- [createSynapse (basic)](./create-synapse-basic.md) — a module's handle is itself a lazy singleton.
+
 ---
 
 <!-- source: docs/en/persist-migration.md · url: https://synapse-homepage.web.app/docs/persist-migration -->
 # Persist migrations (version + migrate)
 
 
-When the shape of `initialState` changes between releases, a persistent storage
-(`LocalStorage` / `IndexedDBStorage`) still holds **old-schema** data. The `version` and
-`migrate` config options transform it to the current schema on initialization — without manual
-version checks and without losing user data.
+**TL;DR:** `version` + `migrate` in a persistent storage's config move saved old-schema data to the current schema on `initialize()` — without manual version checks and without losing user data.
 
-For `MemoryStorage` these options are ignored (nothing to persist). Without `version` behavior
-is unchanged — migration is off.
+## Why
+
+When the shape of `initialState` changes between releases, a persistent storage (`LocalStorage` / `IndexedDBStorage`) still holds **old-schema** data. The `version` and `migrate` config options let you transform it to the current schema once, on initialization.
+
+For `MemoryStorage` these options are ignored (nothing to persist). Without `version` behavior is unchanged — migration is off.
+
+## When to use
+
+- A persistent store (`LocalStorage`/`IndexedDB`) whose `initialState` **shape has changed** between releases.
+- You need to preserve user data across a schema upgrade (renaming/restructuring fields).
+
+## When not to use
+
+- `MemoryStorage` — data isn't persisted, migration makes no sense (the options are ignored).
+- The schema is stable and doesn't change — `version`/`migrate` aren't needed.
+- Data is seeded with a server snapshot via [`hydrate`](./ssr-hydration.md) — the snapshot is considered already current, migration doesn't run on it.
 
 ## How it works
 
@@ -4470,6 +6034,34 @@ proxied by `awaitSynapse` straight from here.
 It takes the lazy handle from `createSynapse` (see [create-synapse-basic](./create-synapse-basic.md)),
 starts its initialization, and gives synchronous/asynchronous ways to wait for `storage` to be ready.
 
+## Why
+
+A module can be **not ready** at the moment something reaches for it: the factory is waiting on async
+dependencies, IndexedDB's `storage.initialize()` is asynchronous — while the render/script asks
+synchronously. The awaiter is a small `pending → ready | error` state machine around the store:
+synchronous getters (`isReady`, `getStoreIfReady`) for "right now" and subscriptions (`onReady`/`onError`)
+for "when it finishes building".
+
+## When to use it
+
+- **Outside React**: Node render, data preload, scripts, workers — anywhere there are no hooks.
+- You need an **SSR sync-fast-path**: an already-warmed (READY) module is served synchronously, with no
+  spinner (see below).
+- In React you want manual control of the readiness subscription instead of a HOC/hook.
+
+## When you don't need it
+
+- An ordinary React app → reach for [awaitSynapse](./await-synapse.md) (the `withSynapseReady` HOC /
+  `useSynapseReady` hook) — it encapsulates exactly this subscription.
+- The module is **always** synchronously ready (a sync store with no async prologue) → you can work with
+  the store directly, no awaiter needed.
+
+> **Build errors are neither lost nor "bubbled up".** If the factory/`storage` fails, the reject is
+> delivered via `onError(cb)` / `getError()` / `getStatus() === 'error'`. The internal init promise is
+> guarded by its own `.catch`, so even if no one `await`s it (the typical case: working only through
+> `onReady`/`onError`), it will **not produce an `unhandledRejection`**. At the same time `waitForReady()`
+> returns that same promise — and its consumer gets a `throw`.
+
 ## Imports and creation
 
 ```typescript
@@ -4571,6 +6163,13 @@ function PokemonStatus() {
 
 The full module walkthrough — in the [pokemon-advanced recipe](./pokemon-advanced.md).
 
+## See also
+
+- [awaitSynapse](./await-synapse.md) — the React wrapper (HOC/hook) over this awaiter.
+- [createSynapse (basic)](./create-synapse-basic.md) — where the lazy handle comes from.
+- [createSynapseCtx](./synapse-ctx.md) — the full SSR flow dehydrate → hydrate.
+- [pokemon-advanced](./pokemon-advanced.md) — the module as a whole.
+
 ---
 
 <!-- source: docs/en/event-bus.md · url: https://synapse-homepage.web.app/docs/event-bus -->
@@ -4590,6 +6189,23 @@ just packaged as a ready-made utility.
 
 > The reference pokemon module does **not** bake the bus in — event-bus is an optional integration on
 > top of it, so this page has no canonical pokemon file, only a runnable sandbox.
+
+## When to use
+
+- Several **independent** modules must react to domain events without knowing about each other
+  (analytics/toasts/badges listen for `POKEMON_*` without importing the pokemon synapse).
+- You need **wildcard subscriptions** (`POKEMON_*`, `*`), priorities, TTL, event history.
+- You want to **feed** external events into another synapse's action stream — via
+  `externalDispatchers` (see the end).
+
+## When NOT needed
+
+- Communication **within a single module** — that's the dispatcher/effects; the bus is an extra layer
+  here.
+- Two modules need a **direct, typed** call — a cross-store dependency is simpler
+  (see [dependencies](./dependencies.md)), without the indirection of string event names.
+- Cross-**tab** state synchronization — that's not the bus but
+  `syncBroadcastMiddleware`/`syncSharedWorkerMiddleware` (see [middlewares](./middlewares.md)).
 
 ## Imports
 
@@ -4837,6 +6453,11 @@ const mySynapse = createSynapse({
 # Caching layers
 
 
+**TL;DR:** a request is served by three independent layers, top to bottom — **(1)** the application cache
+(`ApiClient` + storage: tags/TTL/invalidation), **(2)** the transport (`baseQuery.fetchFn`: auth/metrics/axios),
+**(3)** the network (your ServiceWorker: offline/precache). A hit on an upper layer shadows the lower ones.
+Tag invalidation lives only on layer 1.
+
 A request in a synapse app can be answered from **three independent layers**, stacked on top of each
 other. They are not competing strategies — each layer solves a different problem, knows different
 things, and you enable them independently. This page explains the stack once, so the individual docs
@@ -4966,6 +6587,13 @@ The Network tab tells you which layer answered:
 | row `(from disk cache)` / `(memory cache)` | browser HTTP cache |
 | plain row with timing | real network |
 
+## See also
+
+- [ApiClient](./api-client.md) — layer 1: cache, tags, TTL, invalidation.
+- [Custom `baseQuery.fetchFn`](./custom-fetch-fn.md) — layer 2: swapping the transport.
+- [Your own ServiceWorker](./custom-fetch-service-worker.md) — layer 3: network strategies, offline.
+- [WorkerCacheStorage](./worker-cache-storage.md) — the live cross-tab cache (layer-1 storage backend).
+
 ---
 
 <!-- source: docs/en/api-client.md · url: https://synapse-homepage.web.app/docs/api-client -->
@@ -4973,6 +6601,28 @@ The Network tab tells you which layer answered:
 
 
 A typed HTTP client: endpoints, tag-based caching, request-state subscriptions, abort.
+
+## Why
+
+You describe the endpoints once (path, method, param and response types, tags) — and get a typed
+`request()`, caching out of the box, and precise tag-based invalidation after mutations. The client is
+**self-contained**: it doesn't pull in RxJS/`createSynapse`/React, and it works on the server too (SSR
+via `dehydrate`/`hydrate`). It feels close to RTK Query, but without Redux.
+
+## When to use
+
+- You need an HTTP layer with **caching and tag-based invalidation** (after a mutation the active
+  requests "come back to life").
+- You want **type-safe** endpoints and a single place for mapping the raw response into domain types.
+- SSR: warm up the cache on the server and hand it to the client with no loading flash
+  (`getCachedSync`).
+
+## When you DON'T need it
+
+- One or two one-off `fetch`es with no cache/invalidation — a native `fetch` is simpler, the client is
+  overkill.
+- The data is already cached by a ServiceWorker and a second layer isn't needed — see
+  [Caching layers](./cache-layers.md).
 
 > **New to the caching stack?** Start with [Caching layers](./cache-layers.md) — where the client's
 > cache sits relative to a ServiceWorker and `fetchFn`, and when to use which.
@@ -5223,6 +6873,70 @@ createPokemon: create<...>({
 })
 ```
 
+## All client options (commented)
+
+The whole surface of `new ApiClient({...})` at once — what you can pass and why:
+
+```typescript
+import { ApiClient } from 'synapse-storage/api'
+import { MemoryStorage } from 'synapse-storage/core'
+
+export const client = new ApiClient({
+  // 1. storage — REQUIRED. The request-cache storage. An instance OR a factory () => IStorage
+  //    (the factory is called on init() — handy for universal SSR code: Memory on the server, anything on the client).
+  storage: () => new MemoryStorage({ name: 'api-cache', initialState: {} }),
+
+  // 2. baseQuery — REQUIRED. The default transport for all endpoints.
+  baseQuery: {
+    baseUrl: 'https://api.example.com',        // base URL, the endpoint's path is glued onto it
+    timeout: 10000,                            // overall request timeout (ms)
+    credentials: 'include',                    // RequestCredentials for fetch (cookies)
+    fetchFn: customFetch,                      // your own fetch function (e.g. via a ServiceWorker) — see CustomFetchFnExample
+    prepareHeaders: async (headers, ctx) => {  // mutate headers before sending
+      headers.set('Accept', 'application/json')
+      // ctx.requestParams / ctx.context / ctx.getFromStorage(key) / ctx.getCookie(name)
+      return headers
+    },
+  },
+
+  // 3. cache? — the global cache policy. false disables the cache entirely (even if endpoints set it).
+  cache: {
+    ttl: 60000,                                // record lifetime (ms)
+    invalidateOnError: true,                   // drop the endpoint's cache when a request errors
+  },
+
+  // 4. cacheableHeaderKeys? — headers that AFFECT the cache key (globally).
+  //    Important for SSR: the set must match on the server and the client, otherwise hydration "misses".
+  cacheableHeaderKeys: ['x-lang'],
+
+  // 5. retry? — the global retry policy (inherited by endpoints; can be overridden per endpoint).
+  retry: {
+    count: 3,                                  // number of retries (0 = no retry)
+    delay: (attempt) => attempt * 500,         // delay: a number (ms) or (attempt) => ms
+    retryOn: [0, 429, 500, 502, 503, 504],     // which HTTP statuses to retry on
+  },
+
+  // 6. endpoints — the endpoints factory. create<Params, Result>({ request, cache?, tags?, invalidatesTags?, retry? })
+  endpoints: async (create) => ({
+    getList: create<{ limit: number }, ListResponse>({
+      request: (p) => ({ path: '/items', method: 'GET', query: p }),
+      cache: { ttl: 120000 },                  // this endpoint's TTL (overrides the global one); cache:true — use the global; cache:false — don't cache
+      tags: ['items'],                         // record tags (for invalidation)
+      // invalidatesTags: ['items'],           // for mutations: which tags to drop on success
+    }),
+  }),
+})
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `storage` | `IStorage \| () => IStorage` | yes | The cache storage (an instance or a lazy factory for SSR). |
+| `baseQuery` | `FetchBaseQueryArgs` | yes | `baseUrl` (+ `timeout`/`credentials`/`fetchFn`/`prepareHeaders`). |
+| `cache?` | `CacheConfig \| false` | no | Global `ttl`/`invalidateOnError`; `false` — turn the cache off completely. |
+| `cacheableHeaderKeys?` | `string[]` | no | Headers that affect the cache key (critical for SSR stability). |
+| `retry?` | `RetryConfig` | no | Default `count`/`delay`/`retryOn` for all endpoints. |
+| `endpoints?` | `(create) => Promise<T>` | no | Endpoint descriptions via `create<Params, Result>({...})`. |
+
 ## getEndpoints() — direct access to the endpoints
 
 This is the form the data layer hands to the effects: `pokemonApiClient.getEndpoints()` returns an
@@ -5428,6 +7142,9 @@ await api.init()
 # useApiQuery — React hook for GET requests
 
 
+**TL;DR:** `useApiQuery(endpoint, params, options?)` is a React Query–style GET hook. It starts on mount,
+re-runs when `params` change, and returns `{ data, isLoading, isError, error, refetch, fromCache }`.
+
 A React Query–style hook over an `ApiClient` endpoint for **reading** data (GET). It is a thin layer on
 top of `endpoint.request(params).subscribe(...)` — deduplication, the tag cache, retry and abort already
 live in the endpoint (see [ApiClient](./api-client.md)). The hook adds the React part: subscription,
@@ -5436,6 +7153,14 @@ invalidation.
 
 The `ApiClient` is standalone (it depends neither on RxJS/`reactive` nor on `createSynapse`), so you can
 use just `synapse-storage/api` + `synapse-storage/core` + these hooks — without the whole state-manager.
+
+## When to use / when you don't need it
+
+- **Use it** when a component reads data (GET) and you want loading/error states, caching, auto-refetch
+  after mutations, and an instant first render under SSR — all out of the box.
+- **Don't** use it for writes (POST/PUT/DELETE/PATCH) — that's [useApiMutation](./api-use-mutation.md).
+- **Don't** use it outside React: if the data is fetched by an effect/service, work with the native
+  `endpoint.request(...)` directly (see [ApiClient](./api-client.md)).
 
 ## Import
 
@@ -5482,27 +7207,47 @@ function PokemonCard({ id }: { id: number }) {
 | `fromCache` | `boolean` | Data came from cache rather than the network |
 | `refetch` | `() => void` | Force a re-request |
 
-## Options
+## Options (commented)
 
-Extends `QueryOptions` (`signal`, `headers`, `timeout`, `disableCache`, `retry`, …) plus:
+The third argument is `UseApiQueryOptions`: two hook-specific fields plus the endpoint's entire `QueryOptions`.
 
-- **`enabled`** (default `true`) — when `false`, the request is not performed (lazy). Useful when params
-  aren't ready yet:
+```typescript
+useApiQuery(endpoints.getDetails, { id }, {
+  // --- hook fields ---
+  enabled: id != null,       // false → the request is not performed (lazy). Wait until params are ready
+  refetchOnInvalidate: true, // auto-refetch an active query when a mutation invalidates its tags
 
-  ```typescript
-  // Won't fire until `id` is defined
-  const { data } = useApiQuery(endpoints.getDetails, { id: id! }, { enabled: id != null })
-  ```
+  // --- forwarded QueryOptions (same as for endpoint.request(...)) ---
+  disableCache: false,       // true → bypass the app cache, always a network request
+  timeout: 5000,             // timeout for this request (ms), overrides baseQuery.timeout
+  signal: controller.signal, // external AbortSignal (the hook already aborts the request on unmount)
+  headers: new Headers(),    // extra request headers
+  context: { source: 'ui' }, // passed into baseQuery.prepareHeaders
+  retry: { count: 2 },       // retry policy for this request (overrides the endpoint/global one)
+})
+```
 
-- **`refetchOnInvalidate`** (default `true`) — auto-refetch the active query after its cache tags get
-  invalidated by a mutation (see [auto-refetch](#auto-refetch-on-cache-invalidation)).
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `enabled?` | `boolean` | `true` | `false` — the request is not performed (lazy) until `params` are ready. |
+| `refetchOnInvalidate?` | `boolean` | `true` | Auto-refetch when a mutation invalidates the endpoint's tags. |
+| `disableCache?` | `boolean` | — | Bypass the app cache (a forced network request). |
+| `timeout?` | `number` | — | Request timeout (ms), overrides `baseQuery.timeout`. |
+| `signal?` | `AbortSignal` | — | External abort signal. |
+| `headers?` | `Headers` | — | Extra request headers. |
+| `retry?` | `RetryConfig` | — | Retries for this request (see [ApiClient](./api-client.md)). |
+
+```typescript
+// enabled: won't fire until `id` is defined
+const { data } = useApiQuery(endpoints.getDetails, { id: id! }, { enabled: id != null })
+```
 
 ## SSR: no loading flash after hydration
 
 The lazy initial state reads the cache **synchronously** via
 [`endpoint.getCachedSync()`](./api-client.md#synchronous-cache-read-endpointgetcachedsync). On the server
 `useEffect` doesn't run, so the very first (and only) render returns the seeded/cached data; on the client
-the first render after [hydration](./api-client.md#ssr-dehydrate-hydrate) shows the server data
+the first render after [hydration](./api-client.md#ssr-dehydrate--hydrate) shows the server data
 immediately instead of flashing `loading`.
 
 This works only for synchronous storages (`MemoryStorage`/`LocalStorage`) and endpoints without
@@ -5544,11 +7289,23 @@ const list = useApiQuery(endpoints.getList, { limit: 12 })
 # useApiMutation — React hook for mutations
 
 
+**TL;DR:** `useApiMutation(endpoint, options?)` — a write hook (POST/PUT/DELETE/PATCH). It doesn't start
+on its own; you run it via `mutate` (fire-and-forget) or `mutateAsync` (await + rethrows the error). On
+success the endpoint's `invalidatesTags` auto-refetch the related `useApiQuery`.
+
 A React hook over an `ApiClient` endpoint for **writes** (POST/PUT/DELETE/PATCH). Unlike
 [useApiQuery](./api-use-query.md), the request does **not** start automatically — you trigger it with
 `mutate`/`mutateAsync`. Mutations aren't cached (by REST method), and their `invalidatesTags` invalidate
 the cache — active `useApiQuery` hooks of neighbouring endpoints refetch on their own via the
 [invalidation bus](./api-client.md#cache-invalidation-bus-endpointoncacheinvalidate).
+
+## When to use it / when you don't need it
+
+- **Use it** for any write from a React component, when you want `isLoading`/`isError` states for a
+  button and automatic invalidation of related queries after success.
+- **Not needed** for reads (GET) — that's [useApiQuery](./api-use-query.md).
+- **Not needed** outside React or in effects — call `endpoint.request(...)` directly
+  (see [ApiClient](./api-client.md)).
 
 ## Import
 
@@ -5594,7 +7351,18 @@ function CreatePokemon() {
 | `isSuccess` | `boolean` | `status === 'success'` |
 | `reset` | `() => void` | Reset state back to `idle` |
 
-`options` is `QueryOptions` (`signal`, `headers`, `timeout`, `retry`, …).
+`options` is the endpoint's `QueryOptions` (a mutation has no `enabled`/`refetchOnInvalidate`, since it's triggered manually):
+
+```typescript
+useApiMutation(endpoints.createPokemon, {
+  timeout: 8000,             // mutation timeout (ms)
+  signal: controller.signal, // external cancellation (the hook already cancels on unmount)
+  headers: new Headers(),    // extra headers
+  context: { source: 'ui' }, // passed into baseQuery.prepareHeaders
+  retry: { count: 1 },       // retries for this mutation
+  // disableCache is irrelevant here: mutations are never cached anyway
+})
+```
 
 ## mutate vs mutateAsync
 
@@ -5647,6 +7415,11 @@ createPokemon: create({
 <!-- source: docs/en/api-ssr-pokemon.md · url: https://synapse-homepage.web.app/docs/api-ssr-pokemon -->
 # Pokémon SSR — server render + client pagination
 
+
+**TL;DR:** on the server `api.request(...)` warms the cache → `api.dehydrate()` into HTML → on the
+client `api.hydrate(state)` **before** `api.init()`. `useApiQuery` reads the seeded page synchronously
+(no loading flash), and pagination continues with ordinary client requests. You need a sync store and one
+api instance per server request.
 
 A practical recipe: fetch the **first page on the server**, ship the cache to the client, render it with no
 loading flash, and let **pagination continue on the client** from there. Built on the same Pokémon API as
@@ -5830,6 +7603,11 @@ they're safe to call from `'server only'` code — mirrors `dehydrateModule` for
 # Custom fetch-intercepting ServiceWorker
 
 
+**TL;DR:** your own `sw.js` (layer 3) transparently intercepts `fetch` below `ApiClient` — precache, offline,
+per-URL strategies. Registered separately (`navigator.serviceWorker.register`), the client doesn't know about it,
+and `baseQuery.fetchFn` is left untouched. Not to be confused with `WorkerCacheStorage` (cache across tabs) or `fetchFn`
+(transport).
+
 An **app-owned ServiceWorker** (Workbox-style) that transparently intercepts `fetch` and applies
 network strategies per URL: precache, offline routing, cache-first / network-first /
 stale-while-revalidate. It sits **below** `ApiClient`, which never knows it exists — and its
@@ -5957,19 +7735,26 @@ Where a response comes from is directly observable in DevTools → Network:
 - **Live cross-tab cache** (shared state held in a worker) → [`WorkerCacheStorage`](./worker-cache-storage.md).
 - **Replace the transport** (auth-retry, metrics, axios, worker) → [custom `baseQuery.fetchFn`](./custom-fetch-fn.md).
 
+## See also
+
+- [Cache layers](./cache-layers.md) — where the SW (layer 3) sits relative to the app cache and `fetchFn`.
+- [WorkerCacheStorage](./worker-cache-storage.md) — a live cross-tab cache (layer 1), not an offline layer.
+- [Custom `baseQuery.fetchFn`](./custom-fetch-fn.md) — replacing the transport (layer 2).
+
 ---
 
 <!-- source: docs/en/custom-fetch-fn.md · url: https://synapse-homepage.web.app/docs/custom-fetch-fn -->
 # Custom baseQuery.fetchFn
 
 
+**TL;DR:** pass `baseQuery.fetchFn?: typeof fetch` — your own function instead of the native `fetch`.
+This is the **transport** (layer 2): auth-retry, metrics, axios, a worker bridge. Cache/tags (layer 1)
+work on top unchanged; you don't need to patch the library.
+
 `ApiClient` accepts a custom transport through `baseQuery.fetchFn?: typeof fetch`. It replaces **how**
 the client performs a request — an axios wrapper, an auth-retry, a metrics probe, or a `postMessage`
 bridge to a Web Worker for heavy parsing. This is the **transport**, not a ServiceWorker interception
 (for that, see [Custom fetch-intercepting ServiceWorker](./custom-fetch-service-worker.md)).
-
-> **The library does NOT need extending.** `fetchFn` is a built-in field of `baseQuery`. You never
-> touch the library source — you pass your own function and the client uses it verbatim.
 
 ## When it makes sense
 
@@ -6079,15 +7864,42 @@ Both fetch-control axes are available without patching `synapse-storage`:
 - Need a live cross-tab response cache → [`WorkerCacheStorage`](./worker-cache-storage.md), a storage
   backend, unrelated to the transport.
 
+## See also
+
+- [Caching layers](./cache-layers.md) — where `fetchFn` (layer 2) sits relative to the cache and the SW.
+- [ApiClient](./api-client.md) — `baseQuery`, cache, tags.
+- [Custom ServiceWorker](./custom-fetch-service-worker.md) — transparent `fetch` interception (layer 3).
+
 ---
 
 <!-- source: docs/en/forms.md · url: https://synapse-homepage.web.app/docs/forms -->
 # Forms — the recipe: form state on a synapse storage
 
 
+**TL;DR.** A form as a synapse storage is form state (`values`/`errors`/`touched`/…), point-wise
+subscriptions to fields, validation as a middleware, persist and cross-tab sync **out of the box, with
+no form libraries**. It's a **recipe** (copy-paste code, not a public form API): take the level of the
+ladder you need and adapt it.
+
 Managing forms is the most common application case. This page is a **copy-paste recipe**: take the
 code, drop it into your project, and you get your own form management instead of `react-hook-form` /
 `Formik` / `Final Form` — **zero dependencies**.
+
+## When to use
+
+- The form needs **SSR + hydration**, **draft persist**, **cross-tab sync** or **centralized
+  validation** — things form libraries bolt on from the side, which a storage gives you by
+  architecture.
+- You already keep state on synapse and don't want to pull in a separate form library for one form.
+- You need **point-wise re-renders per field** without manual memoization — `useStorageSubscribe`
+  isolates them for you.
+
+## When NOT needed
+
+- **A simple form with no SSR/persist/cross-tab and no sync with the store** — native
+  `react-hook-form` / `Formik` will get it done faster; the recipe below is overkill.
+- **You need ready-made field registration** (`register('email')` for native inputs), rich async
+  validation and array fields out of the box — this is intentionally absent here (see "Honest scope").
 
 Why do it on a synapse storage at all? Because a storage gives you, **by architecture**, things a
 form library bolts on from the side:
@@ -6472,6 +8284,12 @@ Validation stays the same — the middleware re-validates the whole `values` on 
 <!-- source: docs/en/pokemon-advanced.md · url: https://synapse-homepage.web.app/docs/pokemon-advanced -->
 # Pokemon Advanced — the recipe: the whole data layer on PokeAPI
 
+
+**TL;DR.** A complete, copy-into-your-project module on a real API (PokeAPI): it shows how to split
+the data layer into responsibility files and wire all the bricks together. One domain = one folder,
+and the C-form of `createSynapse` assembles it all. Read it after
+[basic](./create-synapse-basic.md) → [dispatcher](./create-synapse-dispatcher.md) →
+[effects](./create-synapse-effects.md) as the final assembly; or right away — as a structure template.
 
 The final page of the chain. Every previous section dissected one brick on this same domain — here
 they come together into **one working module**: ApiClient with caching → mappers → storage →
