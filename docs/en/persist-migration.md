@@ -1,14 +1,25 @@
 # Persist migrations (version + migrate)
 
-> [Back to Main](../../README.md)
+> [Back to contents](./README.md) · [Working example on GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/PersistMigrationExample.tsx)
 
-When the shape of `initialState` changes between releases, a persistent storage
-(`LocalStorage` / `IndexedDBStorage`) still holds **old-schema** data. The `version` and
-`migrate` config options transform it to the current schema on initialization — without manual
-version checks and without losing user data.
+**TL;DR:** `version` + `migrate` in a persistent storage's config move saved old-schema data to the current schema on `initialize()` — without manual version checks and without losing user data.
 
-For `MemoryStorage` these options are ignored (nothing to persist). Without `version` behavior
-is unchanged — migration is off.
+## Why
+
+When the shape of `initialState` changes between releases, a persistent storage (`LocalStorage` / `IndexedDBStorage`) still holds **old-schema** data. The `version` and `migrate` config options let you transform it to the current schema once, on initialization.
+
+For `MemoryStorage` these options are ignored (nothing to persist). Without `version` behavior is unchanged — migration is off.
+
+## When to use
+
+- A persistent store (`LocalStorage`/`IndexedDB`) whose `initialState` **shape has changed** between releases.
+- You need to preserve user data across a schema upgrade (renaming/restructuring fields).
+
+## When not to use
+
+- `MemoryStorage` — data isn't persisted, migration makes no sense (the options are ignored).
+- The schema is stable and doesn't change — `version`/`migrate` aren't needed.
+- Data is seeded with a server snapshot via [`hydrate`](./ssr-hydration.md) — the snapshot is considered already current, migration doesn't run on it.
 
 ## How it works
 

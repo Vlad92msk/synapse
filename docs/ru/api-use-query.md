@@ -1,6 +1,9 @@
 # useApiQuery — React-хук для GET-запросов
 
-> [Назад на главную](../../README.md)
+> [Назад к оглавлению](./README.md)
+
+**TL;DR:** `useApiQuery(endpoint, params, options?)` — GET-хук в стиле React Query. Стартует при маунте,
+пере-запрашивается при смене `params`, отдаёт `{ data, isLoading, isError, error, refetch, fromCache }`.
 
 Хук в стиле React Query поверх эндпоинта `ApiClient` для **чтения** данных (GET). Это тонкий слой над
 `endpoint.request(params).subscribe(...)` — дедупликация, кэш по тегам, retry и отмена уже есть в
@@ -9,6 +12,14 @@
 
 `ApiClient` самодостаточен (не зависит ни от RxJS/`reactive`, ни от `createSynapse`), поэтому можно взять
 только `synapse-storage/api` + `synapse-storage/core` + эти хуки — без всего state-manager.
+
+## Когда использовать / когда НЕ нужно
+
+- **Используйте**, когда компонент читает данные (GET) и вам нужны loading/error-состояния, кэш,
+  авто-рефетч после мутаций и мгновенный первый рендер при SSR — всё из коробки.
+- **НЕ нужно** для записи (POST/PUT/DELETE/PATCH) — там [useApiMutation](./api-use-mutation.md).
+- **НЕ нужно** вне React: если данные тянет эффект/сервис — работайте с нативным
+  `endpoint.request(...)` напрямую (см. [ApiClient](./api-client.md)).
 
 ## Импорт
 
@@ -55,27 +66,47 @@ function PokemonCard({ id }: { id: number }) {
 | `fromCache` | `boolean` | Данные пришли из кэша, а не из сети |
 | `refetch` | `() => void` | Принудительный пере-запрос |
 
-## Опции
+## Опции (закомментировано)
 
-Расширяют `QueryOptions` (`signal`, `headers`, `timeout`, `disableCache`, `retry`, …) плюс:
+Третий аргумент — `UseApiQueryOptions`: два своих поля хука плюс весь `QueryOptions` эндпоинта.
 
-- **`enabled`** (по умолчанию `true`) — при `false` запрос не выполняется (lazy). Удобно, когда параметры
-  ещё не готовы:
+```typescript
+useApiQuery(endpoints.getDetails, { id }, {
+  // --- поля хука ---
+  enabled: id != null,       // false → запрос не выполняется (lazy). Ждать, пока params готовы
+  refetchOnInvalidate: true, // авто-рефетч активного запроса при инвалидации его тегов мутацией
 
-  ```typescript
-  // Не выполнится, пока `id` не определён
-  const { data } = useApiQuery(endpoints.getDetails, { id: id! }, { enabled: id != null })
-  ```
+  // --- проброшенный QueryOptions (то же, что у endpoint.request(...)) ---
+  disableCache: false,       // true → обойти кэш приложения, всегда сетевой запрос
+  timeout: 5000,             // таймаут этого запроса (мс), перекрывает baseQuery.timeout
+  signal: controller.signal, // внешний AbortSignal (хук и так отменяет запрос при unmount)
+  headers: new Headers(),    // доп. заголовки запроса
+  context: { source: 'ui' }, // прокидывается в baseQuery.prepareHeaders
+  retry: { count: 2 },       // политика повторов для этого запроса (перекрывает эндпоинт/глобаль)
+})
+```
 
-- **`refetchOnInvalidate`** (по умолчанию `true`) — авто-рефетч активного запроса после инвалидации его
-  тегов кэша мутацией (см. [авто-рефетч](#auto-refetch-on-cache-invalidation)).
+| Поле | Тип | По умолч. | Описание |
+|---|---|---|---|
+| `enabled?` | `boolean` | `true` | `false` — запрос не выполняется (lazy), пока `params` не готовы. |
+| `refetchOnInvalidate?` | `boolean` | `true` | Авто-рефетч при инвалидации тегов эндпоинта мутацией. |
+| `disableCache?` | `boolean` | — | Обойти кэш приложения (принудительный сетевой запрос). |
+| `timeout?` | `number` | — | Таймаут запроса (мс), перекрывает `baseQuery.timeout`. |
+| `signal?` | `AbortSignal` | — | Внешний сигнал отмены. |
+| `headers?` | `Headers` | — | Доп. заголовки запроса. |
+| `retry?` | `RetryConfig` | — | Повторы для этого запроса (см. [ApiClient](./api-client.md)). |
+
+```typescript
+// enabled: не выполнится, пока `id` не определён
+const { data } = useApiQuery(endpoints.getDetails, { id: id! }, { enabled: id != null })
+```
 
 ## SSR: без вспышки loading после гидрации
 
 Ленивое начальное состояние читает кэш **синхронно** через
-[`endpoint.getCachedSync()`](./api-client.md#synchronous-cache-read-endpointgetcachedsync). На сервере
+[`endpoint.getCachedSync()`](./api-client.md#синхронное-чтение-кэша-endpointgetcachedsync). На сервере
 `useEffect` не выполняется, поэтому первый (и единственный) рендер отдаёт засеянные/кэшированные данные;
-на клиенте первый рендер после [гидрации](./api-client.md#ssr-dehydrate-hydrate) сразу показывает
+на клиенте первый рендер после [гидрации](./api-client.md#ssr-dehydrate--hydrate) сразу показывает
 серверные данные, а не вспышку `loading`.
 
 Работает только для синхронных хранилищ (`MemoryStorage`/`LocalStorage`) и эндпоинтов без влияющих на
@@ -87,7 +118,7 @@ function PokemonCard({ id }: { id: number }) {
 событие инвалидации. Активный `useApiQuery`, чьи `tags` эндпоинта пересекаются с инвалидированными,
 **пере-запрашивается автоматически** (паритет с React Query — запрос «оживает», а не ждёт истечения TTL).
 Под капотом используется
-[`endpoint.onCacheInvalidate()`](./api-client.md#cache-invalidation-bus-endpointoncacheinvalidate).
+[`endpoint.onCacheInvalidate()`](./api-client.md#шина-инвалидации-кэша-endpointoncacheinvalidate).
 Отключается через `refetchOnInvalidate: false`.
 
 ```typescript

@@ -2,12 +2,29 @@
 
 > [Назад к оглавлению](./README.md) · [Песочница (Settings)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SynapseCtxExample.tsx) · [Пример SSR (Posts)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SynapseCtxSsrExample.tsx)
 
-React Context + HOC для доступа к модулю Synapse через хуки. Передаётся ленивый handle: фабрика стартует
-при первом монтировании Provider'а (не на импорте), с автоматическим `loadingComponent` на время инициализации.
+**TL;DR.** `createSynapseCtx(module, options?)` заворачивает модуль Synapse в React Context + HOC:
+дочерние компоненты берут `storage`/`selectors`/`actions`/`state$` через хуки, не прокидывая проп
+руками. Передаётся **сам handle** (не вызов) — с v6 C-форма синхронна, поэтому стор готов к первому
+кадру (SSR by construction), а `loadingComponent` — лишь **запасной** рендер для async-стора,
+который не удалось построить синхронно.
 
 Домен тот же — собранный на прошлых страницах `pokemonSynapse`. Это «провайдерный» способ отдать его в
 дерево; альтернатива (ручной `await` + проп) — [awaitSynapse](./await-synapse.md), её и использует
 демо в модуле.
+
+## Когда использовать
+
+- Модуль нужен **многим компонентам поддерева**, и не хочется прокидывать его пропом вручную.
+- Нужен **SSR с засеянными данными**: `dehydrate` + проп `dehydratedState` (секция ниже).
+- «Фоновый» провайдер оборачивает большое поддерево (шелл приложения) и не должен блокировать SSR.
+
+## Когда НЕ нужно
+
+- Модуль отдаётся **одному-двум** компонентам → проще [awaitSynapse](./await-synapse.md)
+  (ручной `await` + проп, без Context).
+- Нужно голое **хранилище внутри компонента** без selectors/actions → [useCreateStorage](./hook-memory.md).
+- Логика **вне React** (эффекты, утилиты, Node) → программный
+  [createSynapseAwaiter](./synapse-awaiter.md).
 
 ## Создание контекста
 
@@ -24,9 +41,16 @@ const {
   useSynapseState$,     // () => Observable<PokemonState> (только с effects)
   cleanupSynapse,       // () => Promise<void>
 } = createSynapseCtx(pokemonSynapse, {
-  loadingComponent: <div>Загрузка покедекса...</div>,  // пока модуль не готов
+  loadingComponent: <div>Загрузка покедекса...</div>,  // ЗАПАСНОЙ рендер: только если стор не удалось
+                                                       // построить синхронно (в норме C-форма готова сразу)
 })
 ```
+
+`options` — единственный опциональный аргумент:
+
+| Поле | Тип | По умолчанию | Описание |
+|---|---|---|---|
+| `loadingComponent` | `React.ReactNode` | `<div>Инициализация контекста...</div>` | **Запасной** рендер, если стор не удалось построить синхронно (в норме C-форма готова к первому кадру; на сервере так деградирует только async-стор). |
 
 ## Использование хуков в дочерних компонентах
 
@@ -79,7 +103,7 @@ function Pokedex() {
   )
 }
 
-// Оборачиваем — loadingComponent показывается, пока модуль не готов
+// Оборачиваем. В норме стор готов синхронно к первому кадру; loadingComponent — лишь запасной рендер.
 const PokedexWithContext = contextSynapse(Pokedex)
 
 // Использование в JSX:

@@ -1,11 +1,36 @@
 # Singleton Pattern
 
-> [Back to Main](../../README.md)
+> [Back to contents](./README.md) · [Working example on GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SingletonExample.tsx)
 
-Reusing storage instances by name. Useful for shared state and when a storage is created in several places (React components, modules).
+`singleton` is a storage config field (`BaseStorageConfig.singleton`). With `enabled: true`, two
+`new MemoryStorage({ name: 'x', singleton: { enabled: true } })` with the **same key** return the **same
+instance** — the second constructor doesn't create a new storage, it hands back the existing one.
 
 The examples use the end-to-end domain `TodoState = { todos: Todo[]; filter: Filter }` (see the
 [MemoryStorage](./memory-storage.md) section).
+
+## Why
+
+A storage is often created in several places: different React components, different modules, hot-reload in
+dev. Without a singleton, each `new` is a separate store with its own state, and they drift apart. A
+singleton gives a **shared instance by name/key**: no matter who "creates" the store, everyone works with
+the same data and the same subscriptions — with no manual passing of a reference through props/context.
+
+## When to use
+
+- One logical storage is **instantiated from several points** (components, modules) and should be shared.
+- You need to survive **hot-reload** in dev without spawning copies of the store.
+- Different parts of the app want the same state, but passing a reference around is inconvenient.
+
+## When it's NOT needed
+
+- The store is created **in one place** and imported from there — then it's already a de-facto singleton,
+  the field isn't needed.
+- You need **isolated** instances of the same type (e.g. a store per entity/tab) — there a singleton would,
+  on the contrary, glue them together. If the name matches but the instances must differ — separate them
+  via `key` (see below).
+- Inside a `createSynapse` module: the handle itself is already a lazy singleton, duplicating it at the
+  storage level is usually pointless.
 
 ## Enabling Singleton
 
@@ -142,3 +167,17 @@ enum ConfigMergeStrategy {
   WARN_AND_USE_FIRST = 'warn_and_use_first',
 }
 ```
+
+## Options
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | `boolean` | — | Enable the singleton. Without it the field has no effect. |
+| `mergeStrategy?` | `ConfigMergeStrategy` | `FIRST_WINS` | How to merge the configs of the first and subsequent instances (see above). |
+| `warnOnConflict?` | `boolean` | `true` | `console.warn` when the configs of instances diverge. |
+| `key?` | `string` | `` `${type}_${name}` `` | Custom registry key. Different keys → different instances (even with the same `name`). |
+
+## See also
+
+- [MemoryStorage](./memory-storage.md) · [LocalStorage](./local-storage.md) · [IndexedDB](./indexeddb-storage.md) — where the `singleton` field lives.
+- [createSynapse (basic)](./create-synapse-basic.md) — a module's handle is itself a lazy singleton.

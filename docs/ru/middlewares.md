@@ -2,7 +2,35 @@
 
 > [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/MiddlewaresExample.tsx)
 
-Middlewares перехватывают операции хранилища (set, get, update, delete, clear) и могут модифицировать, фильтровать или группировать их. Конфигурируются при создании стора — в поле `middlewares`.
+Middleware перехватывает операции хранилища (`set`/`get`/`update`/`delete`/`clear`/`reset`) и может
+их **модифицировать, отфильтровать, сгруппировать или продублировать**. Задаётся при создании стора
+в поле `middlewares`. Три встроенных (`batching`, `shallowCompare`, `logger`) достаёшь через
+`getDefault()`; свою — возвращаешь как объект в тот же массив.
+
+## Зачем
+
+Точка расширения между «вызвали `storage.set(...)`» и «данные легли в стор + пришло уведомление
+подписчикам». Здесь без правки самих компонентов решаются сквозные задачи: подавить лишние
+ре-рендеры (`shallowCompare`), схлопнуть частые записи в одно уведомление (`batching`), залогировать
+операции (`logger`), синхронизировать состояние между вкладками (`syncBroadcastMiddleware` /
+`syncSharedWorkerMiddleware`), провалидировать/нормализовать значение перед записью (своя).
+
+## Когда использовать
+
+- Нужна **кросс-вкладочная синхронизация** стора → `syncBroadcastMiddleware` (BroadcastChannel) или
+  `syncSharedWorkerMiddleware` (общий SharedWorker).
+- Частые записи одного ключа заваливают подписчиков → `batching`.
+- Компоненты ре-рендерятся на «запись того же значения» → `shallowCompare`.
+- Нужны валидация/нормализация/аудит записи в одном месте → своя middleware.
+
+## Когда НЕ нужно
+
+- Разовое преобразование данных перед записью — проще сделать это в вызывающем коде/диспетчере, а
+  не заводить middleware.
+- Побочные эффекты по действиям (сеть, сокеты) — это уровень [Effects](./create-synapse-effects.md),
+  не storage-middleware.
+- Лог **действий диспетчера** (action/prev/next/diff) — для этого `loggerDispatcherMiddleware`,
+  storage-logger лишь про низкоуровневые операции хранилища.
 
 Примеры используют сквозной домен `TodoState = { todos: Todo[]; filter: Filter }` (см. раздел
 [MemoryStorage](./memory-storage.md)). Поскольку middleware задаются при создании, здесь — отдельные
@@ -139,6 +167,32 @@ storage.update((s) => { s.todos.push({ id: 't1', title: 'Из другой вк�
 // Для LocalStorage/IndexedDB — только уведомление подписчиков
 // (данные уже синхронизированы через движок хранилища)
 ```
+
+### SharedWorker-вариант
+
+`syncSharedWorkerMiddleware` — зеркало `syncBroadcastMiddleware` с идентичной сигнатурой
+(`{ storageType, storageName }`), но синхронизация идёт через **общий SharedWorker** (один поток на
+все вкладки), а не через `BroadcastChannel`. Если SharedWorker недоступен (Firefox private, часть
+мобильных, SSR) — **прозрачный откат** на BroadcastChannel, а затем на in-process канал: код не
+падает и не меняется.
+
+```typescript
+import { MemoryStorage, syncSharedWorkerMiddleware } from 'synapse-storage/core'
+
+const storage = new MemoryStorage<TodoState>({
+  name: 'shared-todo',
+  initialState: { todos: [], filter: 'all' },
+  middlewares: () => [
+    // storageName/type должны совпадать во всех вкладках — это ключ общего канала.
+    syncSharedWorkerMiddleware({ storageType: 'memory', storageName: 'shared-todo' }),
+  ],
+})
+```
+
+> Для sync-хранилищ (`MemoryStorage`/`LocalStorage`) берут `sync`-варианты
+> (`syncBroadcastMiddleware`/`syncSharedWorkerMiddleware`); для async (`IndexedDB`) — `broadcastMiddleware`/`sharedWorkerMiddleware`.
+> Рабочие примеры: [SharedWorkerMiddlewareExample](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SharedWorkerMiddlewareExample.tsx),
+> [SharedWorkerFallbackExample](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SharedWorkerFallbackExample.tsx).
 
 ## 6. Logger Middleware (dev-only)
 
@@ -355,3 +409,9 @@ interface SyncDefaultMiddlewares {
 //   syncLoggerMiddleware(options?): SyncMiddleware
 // LoggerMiddlewareOptions = { collapsed?: boolean; showState?: boolean }
 ```
+
+## См. также
+
+- [MemoryStorage](./memory-storage.md) · [LocalStorage](./local-storage.md) · [IndexedDB](./indexeddb-storage.md) — где задаётся поле `middlewares`.
+- [Effects](./create-synapse-effects.md) — сайд-эффекты по действиям (не путать со storage-middleware).
+- [browserStorage](./browser-storage.md) — как класть client-only middleware (broadcast/shared-worker) в SSR-безопасную обёртку.

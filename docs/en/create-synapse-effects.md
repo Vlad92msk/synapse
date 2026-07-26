@@ -1,6 +1,23 @@
 # createSynapse (effects)
 
-> [Back to Main](../../README.md)
+> [Back to contents](./README.md) · [Module effects (`pokemon.effects.ts`)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/pokemon-advanced/pokemon.effects.ts) · [Sandbox (Search)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/CreateSynapseEffectsExample.tsx)
+
+**TL;DR.** An effect = an RxJS recipe that listens to `action$`, performs a side-effect (an API call,
+a socket) and **dispatches** the result back itself as actions. You declare effects as class fields via
+`this.effect(...)`; services and external stores come in through the constructor and are captured in the
+closure. Key rule: **an effect's emissions are NOT dispatched automatically** — dispatch happens only
+through direct `d.*` calls inside `tap`/`apiResult`.
+
+```typescript
+readonly loadList = this.effect((action$, state$, { dispatcher: d }) =>
+  action$.pipe(
+    ofType(d.loadList),                                  // catch the intent
+    validateMap({ apiCall: () => fromRequest(this.api.getList.request({ limit: 12, offset: 0 })).pipe(
+      apiResult((data) => { d.applyPokemonList(data); d.loadList.success() }),  // ← dispatch manually
+    ) }),
+  ),
+)
+```
 
 The last brick after the [dispatcher](./create-synapse-dispatcher.md): **effects** — the RxJS layer
 of side actions. The dispatcher describes *intents* (`loadList`, `selectPokemon`, `loadMore`); an
@@ -8,6 +25,26 @@ effect listens for them in the stream, turns them into real API calls, and feeds
 into state through the dispatcher's actions.
 
 Same domain — `pokemon-advanced`.
+
+## Why
+
+- **Decouple intent from the network**: the UI sends `loadList()`, while *how* it loads (endpoint,
+  cancellation of stale requests, statuses) is known only to the effect.
+- **RxJS orchestration**: search debounce, cancelling in-flight requests (`switchMap`), concurrency
+  strategies for writes (`exhaustMap`/`mergeMap`), merging socket streams and neighboring stores — all
+  declaratively.
+- **A single request machine**: `validateMap`/`mutationMap` give a ready
+  `validation → loading → apiCall → success/error` cycle instead of manual subscriptions.
+
+## When to use / when it's NOT needed
+
+**Needed** when: there are API calls/sockets/timers driven by user actions; you need to cancel stale
+requests, debounce, or react to streams from other modules.
+
+**NOT needed** when: an action merely changes state synchronously — that's the job of the
+[Dispatcher](./create-synapse-dispatcher.md) (`this.action`), an effect would be redundant here. A module
+with no network (pure local state) does without the effects layer entirely — the `effects` field is
+omitted.
 
 ## Effects (`pokemon.effects.ts`)
 
@@ -331,3 +368,11 @@ store.actions.selectPokemon(25) // → effect loadDetails → API → applyPokem
 
 How to hand the assembled `pokemonSynapse` to React components — [createSynapseCtx](./synapse-ctx.md).
 The full module — [Pokemon (recipe)](./pokemon-advanced.md).
+
+## See also
+
+- [createSynapse (dispatcher)](./create-synapse-dispatcher.md) — the intents that effects listen to (`ofType`).
+- [Dependencies and cross-store](./dependencies.md) — 4 ways to connect modules (including `externalDispatchers` and reading another module's `state$` in effects).
+- [ApiClient](./api-client.md) — endpoints/cache/tags, `fromRequest`/`apiResult` on top of it.
+- [createSynapse (basic)](./create-synapse-basic.md) — why the async prologue lives in the `effects` factory.
+- [Pokemon (recipe)](./pokemon-advanced.md) — effects as part of a whole module + the 5-state request protocol.

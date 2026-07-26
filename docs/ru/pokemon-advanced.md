@@ -2,6 +2,12 @@
 
 > [Назад к оглавлению](./README.md) · [Модуль на GitHub](https://github.com/Vlad92msk/synapse/tree/master/packages/examples/src/examples/pokemon-advanced)
 
+**TL;DR.** Полный, копируемый в проект модуль на реальном API (PokeAPI): показывает, как разложить
+слой данных по файлам-ответственностям и связать все кирпичи. Один домен = одна папка,
+`createSynapse` C-формы собирает всё воедино. Читать после
+[basic](./create-synapse-basic.md) → [dispatcher](./create-synapse-dispatcher.md) →
+[effects](./create-synapse-effects.md) как финальную сборку; либо сразу — как шаблон структуры.
+
 Итоговая страница цепочки. Все предыдущие разделы разбирали по одному кирпичу на этом же домене —
 здесь они собираются в **один работающий модуль**: ApiClient с кэшем → мапперы → storage →
 селекторы → диспетчер → эффекты → `createSynapse` → React. Это эталон того, как разложить слой
@@ -179,19 +185,19 @@ export class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {
     private readonly settings$: Observable<PokemonSettings>,
   ) { super() }
 
-  readonly loadList = this.effect((action$, state$, { dispatcher }) =>
+  readonly loadList = this.effect((action$, state$, { dispatcher: d }) =>
     action$.pipe(
-      ofType(dispatcher.loadList),                                                   // только init
+      ofType(d.loadList),                                                            // только init
       withLatestFrom(selectorObject(state$, { listStatus: (s) => s.api.listRequest.status }), this.settings$),
       validateMap({
         validator: ([, { listStatus }]) => ({ conditions: [listStatus !== 'loading'], skipAction: () => d.loadList.reset() }),
-        loadingAction: () => dispatcher.loadList.loading(),
-        errorAction: (err) => dispatcher.loadList.failure(String(err)),
+        loadingAction: () => d.loadList.loading(),
+        errorAction: (err) => d.loadList.failure(String(err)),
         apiCall: ([, , { pageSize }]) =>
           fromRequest(this.api.getList.request({ limit: pageSize, offset: 0 })).pipe(
             apiResult((data) => {
-              dispatcher.applyPokemonList({ ...mapListResponse(data), append: false })
-              dispatcher.loadList.success()
+              d.applyPokemonList({ ...mapListResponse(data), append: false })
+              d.loadList.success()
             }),
           ),
       }),

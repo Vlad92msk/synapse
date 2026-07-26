@@ -2,9 +2,19 @@
 
 > [Назад к оглавлению](./README.md) · [Диспетчер модуля (`pokemon.dispatcher.ts`)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/pokemon-advanced/pokemon.dispatcher.ts) · [Песочница (Counter)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/DispatcherDetailedExample.tsx)
 
-Полная поверхность класса `Dispatcher`. На [странице сборки](./create-synapse-dispatcher.md) показан
-минимум; здесь — все фабрики (`action` / `signal` / `apiActions` / `keyedApiActions` / `watcher`),
-правило `ofType` для `apiActions` и автономное использование без `createSynapse`.
+**TL;DR.** Полный справочник по фабрикам `Dispatcher`. Выбор фабрики под задачу:
+
+| Нужно | Фабрика |
+|---|---|
+| Экшен, который САМ меняет стор | `this.action((store, p) => result)` |
+| Чистое намерение без записи (его ловит эффект) | `this.signal<P>(desc)` |
+| Группа статусов API-запроса (idle/loading/success/failure/reset) | `this.apiActions<P>(accessor)` |
+| То же, но статус по ключу (параллельные запросы) | `this.keyedApiActions<P>(accessor)` |
+| Реактивно наблюдать срез состояния (Observable) | `this.watcher({ selector })` |
+
+На [странице сборки](./create-synapse-dispatcher.md) показан минимум; здесь — **все** фабрики
+с опциями (`meta`/`memoize`), правило `ofType` для `apiActions` и автономное использование без
+`createSynapse`.
 
 Домен тот же — `pokemon-advanced`. **Имя экшена/вотчера = имя поля класса.**
 
@@ -71,10 +81,11 @@ class PokemonDispatcher extends Dispatcher<PokemonState> {
     { meta: { description: 'Добавить/убрать из избранного' } },
   )
 
-  // С memoize — повторный вызов с тем же аргументом пропускается (не дёргает поиск зря)
+  // С memoize — повторный вызов с тем же аргументом пропускается (не дёргает поиск зря).
+  // Сигнатура: (cur, prev, prevResult) => boolean; true = «то же самое, пропустить вызов».
   readonly setSearchQuery = this.action(
     (store, query: string) => { store.set('searchQuery', query); return query },
-    { memoize: (current, previous) => current === previous },
+    { memoize: (cur, prev) => cur === prev },
   )
 }
 ```
@@ -202,3 +213,10 @@ dispatcher.destroy()
 
 > В сборке `createSynapse` диспетчер доступен как `store.dispatcher`, а `store.actions` — алиас
 > `store.dispatcher.dispatch`. См. [createSynapse (диспетчер)](./create-synapse-dispatcher.md).
+
+## См. также
+
+- [createSynapse (диспетчер)](./create-synapse-dispatcher.md) — минимальная сборка диспетчера в модуль.
+- [createSynapse (эффекты)](./create-synapse-effects.md) — `ofType(d.apiActions)` ловит только init; фазы `.success`/`.failure` слушаются отдельно.
+- [Зависимости и cross-store](./dependencies.md) — `externalDispatchers`: чужие экшены в общем `action$`.
+- [Pokemon (рецепт)](./pokemon-advanced.md) — диспетчер целиком в рабочем модуле.

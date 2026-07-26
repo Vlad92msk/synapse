@@ -2,6 +2,11 @@
 
 > [Назад к оглавлению](./README.md)
 
+**TL;DR:** свой `sw.js` (слой 3) прозрачно перехватывает `fetch` ниже `ApiClient` — precache, офлайн,
+стратегии по URL. Регистрируется отдельно (`navigator.serviceWorker.register`), клиент про него не знает,
+`baseQuery.fetchFn` не трогается. Не путать с `WorkerCacheStorage` (кэш во вкладках) и `fetchFn`
+(транспорт).
+
 **Собственный ServiceWorker приложения** (в стиле Workbox), который прозрачно перехватывает `fetch`
 и применяет сетевые стратегии по URL: precache, офлайн-роутинг, cache-first / network-first /
 stale-while-revalidate. Он живёт **ниже** `ApiClient`, который про него ничего не знает — и его
@@ -130,3 +135,9 @@ async function staleWhileRevalidate(request) {
   правок библиотеки.
 - **Живой кэш между вкладками** (общее состояние в воркере) → [`WorkerCacheStorage`](./worker-cache-storage.md).
 - **Замена транспорта** (auth-retry, метрики, axios, worker) → [кастомный `baseQuery.fetchFn`](./custom-fetch-fn.md).
+
+## См. также
+
+- [Слои кэширования](./cache-layers.md) — где SW (слой 3) стоит относительно кэша приложения и `fetchFn`.
+- [WorkerCacheStorage](./worker-cache-storage.md) — живой кросс-табный кэш (слой 1), не офлайн-слой.
+- [Кастомный `baseQuery.fetchFn`](./custom-fetch-fn.md) — замена транспорта (слой 2).

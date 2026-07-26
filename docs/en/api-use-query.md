@@ -1,6 +1,9 @@
 # useApiQuery — React hook for GET requests
 
-> [Back to Main](../../README.md)
+> [Back to contents](./README.md)
+
+**TL;DR:** `useApiQuery(endpoint, params, options?)` is a React Query–style GET hook. It starts on mount,
+re-runs when `params` change, and returns `{ data, isLoading, isError, error, refetch, fromCache }`.
 
 A React Query–style hook over an `ApiClient` endpoint for **reading** data (GET). It is a thin layer on
 top of `endpoint.request(params).subscribe(...)` — deduplication, the tag cache, retry and abort already
@@ -10,6 +13,14 @@ invalidation.
 
 The `ApiClient` is standalone (it depends neither on RxJS/`reactive` nor on `createSynapse`), so you can
 use just `synapse-storage/api` + `synapse-storage/core` + these hooks — without the whole state-manager.
+
+## When to use / when you don't need it
+
+- **Use it** when a component reads data (GET) and you want loading/error states, caching, auto-refetch
+  after mutations, and an instant first render under SSR — all out of the box.
+- **Don't** use it for writes (POST/PUT/DELETE/PATCH) — that's [useApiMutation](./api-use-mutation.md).
+- **Don't** use it outside React: if the data is fetched by an effect/service, work with the native
+  `endpoint.request(...)` directly (see [ApiClient](./api-client.md)).
 
 ## Import
 
@@ -56,27 +67,47 @@ function PokemonCard({ id }: { id: number }) {
 | `fromCache` | `boolean` | Data came from cache rather than the network |
 | `refetch` | `() => void` | Force a re-request |
 
-## Options
+## Options (commented)
 
-Extends `QueryOptions` (`signal`, `headers`, `timeout`, `disableCache`, `retry`, …) plus:
+The third argument is `UseApiQueryOptions`: two hook-specific fields plus the endpoint's entire `QueryOptions`.
 
-- **`enabled`** (default `true`) — when `false`, the request is not performed (lazy). Useful when params
-  aren't ready yet:
+```typescript
+useApiQuery(endpoints.getDetails, { id }, {
+  // --- hook fields ---
+  enabled: id != null,       // false → the request is not performed (lazy). Wait until params are ready
+  refetchOnInvalidate: true, // auto-refetch an active query when a mutation invalidates its tags
 
-  ```typescript
-  // Won't fire until `id` is defined
-  const { data } = useApiQuery(endpoints.getDetails, { id: id! }, { enabled: id != null })
-  ```
+  // --- forwarded QueryOptions (same as for endpoint.request(...)) ---
+  disableCache: false,       // true → bypass the app cache, always a network request
+  timeout: 5000,             // timeout for this request (ms), overrides baseQuery.timeout
+  signal: controller.signal, // external AbortSignal (the hook already aborts the request on unmount)
+  headers: new Headers(),    // extra request headers
+  context: { source: 'ui' }, // passed into baseQuery.prepareHeaders
+  retry: { count: 2 },       // retry policy for this request (overrides the endpoint/global one)
+})
+```
 
-- **`refetchOnInvalidate`** (default `true`) — auto-refetch the active query after its cache tags get
-  invalidated by a mutation (see [auto-refetch](#auto-refetch-on-cache-invalidation)).
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `enabled?` | `boolean` | `true` | `false` — the request is not performed (lazy) until `params` are ready. |
+| `refetchOnInvalidate?` | `boolean` | `true` | Auto-refetch when a mutation invalidates the endpoint's tags. |
+| `disableCache?` | `boolean` | — | Bypass the app cache (a forced network request). |
+| `timeout?` | `number` | — | Request timeout (ms), overrides `baseQuery.timeout`. |
+| `signal?` | `AbortSignal` | — | External abort signal. |
+| `headers?` | `Headers` | — | Extra request headers. |
+| `retry?` | `RetryConfig` | — | Retries for this request (see [ApiClient](./api-client.md)). |
+
+```typescript
+// enabled: won't fire until `id` is defined
+const { data } = useApiQuery(endpoints.getDetails, { id: id! }, { enabled: id != null })
+```
 
 ## SSR: no loading flash after hydration
 
 The lazy initial state reads the cache **synchronously** via
 [`endpoint.getCachedSync()`](./api-client.md#synchronous-cache-read-endpointgetcachedsync). On the server
 `useEffect` doesn't run, so the very first (and only) render returns the seeded/cached data; on the client
-the first render after [hydration](./api-client.md#ssr-dehydrate-hydrate) shows the server data
+the first render after [hydration](./api-client.md#ssr-dehydrate--hydrate) shows the server data
 immediately instead of flashing `loading`.
 
 This works only for synchronous storages (`MemoryStorage`/`LocalStorage`) and endpoints without

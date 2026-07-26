@@ -1,14 +1,15 @@
 # Custom baseQuery.fetchFn
 
-> [Back to Main](../../README.md)
+> [Back to contents](./README.md)
+
+**TL;DR:** pass `baseQuery.fetchFn?: typeof fetch` — your own function instead of the native `fetch`.
+This is the **transport** (layer 2): auth-retry, metrics, axios, a worker bridge. Cache/tags (layer 1)
+work on top unchanged; you don't need to patch the library.
 
 `ApiClient` accepts a custom transport through `baseQuery.fetchFn?: typeof fetch`. It replaces **how**
 the client performs a request — an axios wrapper, an auth-retry, a metrics probe, or a `postMessage`
 bridge to a Web Worker for heavy parsing. This is the **transport**, not a ServiceWorker interception
 (for that, see [Custom fetch-intercepting ServiceWorker](./custom-fetch-service-worker.md)).
-
-> **The library does NOT need extending.** `fetchFn` is a built-in field of `baseQuery`. You never
-> touch the library source — you pass your own function and the client uses it verbatim.
 
 ## When it makes sense
 
@@ -117,3 +118,9 @@ Both fetch-control axes are available without patching `synapse-storage`:
   [custom ServiceWorker](./custom-fetch-service-worker.md), not `fetchFn`.
 - Need a live cross-tab response cache → [`WorkerCacheStorage`](./worker-cache-storage.md), a storage
   backend, unrelated to the transport.
+
+## See also
+
+- [Caching layers](./cache-layers.md) — where `fetchFn` (layer 2) sits relative to the cache and the SW.
+- [ApiClient](./api-client.md) — `baseQuery`, cache, tags.
+- [Custom ServiceWorker](./custom-fetch-service-worker.md) — transparent `fetch` interception (layer 3).

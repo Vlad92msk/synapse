@@ -1,10 +1,25 @@
 # Selectors
 
-> [Back to Main](../../README.md)
+> [Back to contents](./README.md) · [Example: selectors](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SelectorSystemExample.tsx) · [Example: reactive selectors](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/ReactiveSelectorExample.tsx)
 
-Selectors extract and compute data from a storage. They are memoized — recomputed only when their
-dependencies change. They can be combined. In the class form, selectors are declared as **class fields** —
-the fields are real `SelectorAPI` right away (eager materialization).
+Selectors extract and compute data from a storage. They are **memoized** — recomputed only when their
+dependencies change, so expensive computations (filtering, aggregation) aren't repeated on every read.
+They can be **combined** with one another and with selectors of other stores. In the class form,
+selectors are declared as **class fields** — the fields are real `SelectorAPI` right away (eager
+materialization, no "recipes").
+
+**When to use:** a derived/computed value (counters, filtered lists, flags) that you need repeatedly and
+without redundant recomputes; a shared source for several components; cross-module relations. **When you
+DON'T need it:** a one-off read of a field as-is — [`get`/`getState`](./reading-data.md) is enough; a
+simple subscription to one field — [`subscribe`](./subscriptions.md).
+
+Three factories (all `protected`, called in the class body via `this.`):
+
+| Factory | What it creates | When |
+|---|---|---|
+| `this.select(fn, opts?)` | a simple selector over state | pull out a part/field of the state |
+| `this.combine([deps], fn, opts?)` | a combined selector over other selectors | compute a value from dependencies |
+| `this.keyed(key => fn, opts?)` | a factory of "one `SelectorAPI` per key" | parametric access (by id, etc.) |
 
 The examples use the end-to-end `todoStorage` (`TodoState = { todos: Todo[]; filter: Filter }`) from the
 [MemoryStorage](./memory-storage.md) section and its canonical `TodoSelectors` set.
@@ -82,10 +97,59 @@ class TodoSelectors extends Selectors<TodoState> {
 selectors.byId('t1').select()   // a SelectorAPI for a specific id
 ```
 
+By default `keyed` compares values **structurally** (`deepEquals`), not by reference: adjacent keys live
+under a shared parent, and on update the storage re-clones the whole branch — without structural
+comparison, an update to key `A` would notify subscribers of key `B`.
+
+### All options (commented)
+
+The full surface of the factories and `SelectorOptions` — what you can pass and why:
+
+```typescript
+class TodoSelectors extends Selectors<TodoState> {
+  // ── this.select(selector, options?) ──
+  // selector: (state) => R — extracts a value from state.
+  readonly titles = this.select(
+    (s) => s.todos.map((t) => t.title),
+    {
+      // equals?: (a, b) => boolean — how to compare the NEW and OLD selector value.
+      //   Defaults to reference comparison (===). For arrays/objects provide your own,
+      //   otherwise every store change = "a new reference" = a redundant notification/re-render.
+      equals: (a, b) => a.length === b.length && a.every((x, i) => x === b[i]),
+      // name?: string — an optional name for debugging (in errors/logs).
+      name: 'titles',
+    },
+  )
+
+  // ── this.combine([deps], fn, options?) ──
+  // deps: SelectorAPI[] — dependencies (your own and/or cross-store).
+  // fn: (...depValues) => R — combines their values. Recomputes only when deps change.
+  // options — the same SelectorOptions (equals / name).
+  readonly visibleTodos = this.combine(
+    [this.select((s) => s.todos), this.select((s) => s.filter)],
+    (todos, filter) => filterTodos(todos, filter),
+    { name: 'visibleTodos' },
+  )
+
+  // ── this.keyed(key => selector, options?) ──
+  // key => (state) => R — the key function returns a selector for that key.
+  // options — SelectorOptions; equals DEFAULTS to deepEquals (structural comparison),
+  //   overridden via options.equals.
+  readonly byId = this.keyed(
+    (id: string) => (s: TodoState) => s.todos.find((t) => t.id === id),
+    { name: 'todoById' },
+  )
+}
+```
+
+`SelectorOptions` in full: `{ equals?: (a, b) => boolean; name?: string }`. There are no other fields.
+
 ### Cross-store: external selectors through the constructor
 
-A selector can depend on a selector of **another store**. External selectors come in as a constructor parameter —
-parameter properties are assigned BEFORE the field initializers, so `this.core` is available in the fields.
+A selector can depend on a selector of **another store**. External selectors come in as a **constructor
+parameter** and take part in `this.combine` on equal footing with your own — the combined selector
+recomputes when any of the stores change. (In v6 there's no separate `combineAcross` — cross-store is
+done with this constructor-based DI.)
 
 ```typescript
 import type { IStorage, SelectorAPI } from 'synapse-storage/core'
@@ -93,7 +157,8 @@ import type { IStorage, SelectorAPI } from 'synapse-storage/core'
 class PostsSelectors extends Selectors<PostsState> {
   readonly list = this.select((s) => s.list)
 
-  // cross-store: recomputed reactively when the other store changes
+  // cross-store: recomputed reactively when the other store changes.
+  // Declare the field, but create the combine ITSELF in the constructor body — see the pitfall below.
   readonly currentUserId: SelectorAPI<number | null>
 
   constructor(storage: IStorage<PostsState>, private core: CoreSelectors) {
@@ -102,6 +167,14 @@ class PostsSelectors extends Selectors<PostsState> {
   }
 }
 ```
+
+> **The `useDefineForClassFields` pitfall.** With `useDefineForClassFields: true` (the default for
+> target ES2022+) field initializers run BEFORE the parameter properties are assigned — that is, at the
+> moment of `readonly x = this.combine([this.core.foo], …)` the value of `this.core` is still
+> `undefined`, and the dependency silently ends up empty. That's why you create a cross-store `combine`
+> **in the constructor body after `super()`** (as above), or set
+> `"useDefineForClassFields": false` in tsconfig. There's a dev check: `combine()` throws a clear error
+> if a dependency isn't a `SelectorAPI`.
 
 More details on cross-module relations — [Cross-module dependencies](./dependencies.md).
 

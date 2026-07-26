@@ -86,6 +86,16 @@ export const counter = createSynapse({
 | [createSynapseCtx](./synapse-ctx.md)                                  | React context интеграция + SSR (`ssr`, `dehydrate`, авто-`buildSyncShell`) |
 | [awaitSynapse](./await-synapse.md)                                    | Async synapse в компонентах |
 
+### Реактивные чтения
+
+| Тема                                                          | Описание                                  |
+|---------------------------------------------------------------|-------------------------------------------|
+| [Реактивные чтения (обзор)](./reactive-reads.md)              | Какой из инструментов выбрать             |
+| [toObservable](./to-observable.md)                            | storage / selector → RxJS Observable      |
+| [useStorageObservable / useObservable](./use-storage-observable.md) | Observable → значение в компоненте  |
+| [useStorageSubscribe](./use-storage-subscribe.md)            | Подписка на срез хранилища в React        |
+| [useSubscription](./use-subscription.md)                     | Побочный эффект по Observable              |
+
 ### Работа с данными
 
 | Тема                                                                    | Описание                       |
@@ -113,9 +123,20 @@ export const counter = createSynapse({
 |----------------------------------------------------------|--------------------------------------------|
 | [Middlewares](./middlewares.md)                           | Перехват операций чтения/записи            |
 | [Singleton](./singleton.md)                              | Общие экземпляры с merge-стратегиями       |
-| [ApiClient](./api-client.md)                             | HTTP-клиент с кэшем на основе тегов        |
 | [createSynapseAwaiter](./synapse-awaiter.md)             | Ожидание нескольких synapse                |
 | [createEventBus](./event-bus.md)                         | Декаплинг событийного общения              |
+
+### ApiClient
+
+| Тема                                                              | Описание                                  |
+|-------------------------------------------------------------------|-------------------------------------------|
+| [ApiClient](./api-client.md)                                      | HTTP-клиент с кэшем на основе тегов        |
+| [useApiQuery](./api-use-query.md)                                 | Хук чтения: кэш + авто-рефетч              |
+| [useApiMutation](./api-use-mutation.md)                           | Хук мутации + инвалидация кэша             |
+| [Слои кэша](./cache-layers.md)                                    | Как устроено кэширование запросов          |
+| [SSR с ApiClient](./api-ssr-pokemon.md)                           | dehydrate → hydrate серверного кэша        |
+| [Кастомный fetch](./custom-fetch-fn.md)                           | Своя fetch-функция (`baseQuery.fetchFn`)   |
+| [Custom fetch + Service Worker](./custom-fetch-service-worker.md) | Кэш запросов через Service Worker          |
 
 ## Примеры
 

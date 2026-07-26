@@ -1,12 +1,24 @@
 # useApiMutation — React-хук для мутаций
 
-> [Назад на главную](../../README.md)
+> [Назад к оглавлению](./README.md)
+
+**TL;DR:** `useApiMutation(endpoint, options?)` — хук записи (POST/PUT/DELETE/PATCH). Не стартует сам;
+запускается через `mutate` (fire-and-forget) или `mutateAsync` (await + пробрасывает ошибку). При успехе
+`invalidatesTags` эндпоинта сами рефетчат связанные `useApiQuery`.
 
 React-хук поверх эндпоинта `ApiClient` для **записи** (POST/PUT/DELETE/PATCH). В отличие от
 [useApiQuery](./api-use-query.md), запрос **не** стартует автоматически — его запускают `mutate`/
 `mutateAsync`. Мутации не кэшируются (по REST-методу), а их `invalidatesTags` инвалидируют кэш — активные
 `useApiQuery` соседних эндпоинтов рефетчатся сами через
-[шину инвалидации](./api-client.md#cache-invalidation-bus-endpointoncacheinvalidate).
+[шину инвалидации](./api-client.md#шина-инвалидации-кэша-endpointoncacheinvalidate).
+
+## Когда использовать / когда НЕ нужно
+
+- **Используйте** для любой записи из React-компонента, когда нужны `isLoading`/`isError`-состояния
+  кнопки и автоматическая инвалидация связанных запросов после успеха.
+- **НЕ нужно** для чтения (GET) — там [useApiQuery](./api-use-query.md).
+- **НЕ нужно** вне React или в эффектах — вызывайте `endpoint.request(...)` напрямую
+  (см. [ApiClient](./api-client.md)).
 
 ## Импорт
 
@@ -52,7 +64,18 @@ function CreatePokemon() {
 | `isSuccess` | `boolean` | `status === 'success'` |
 | `reset` | `() => void` | Сбросить состояние к `idle` |
 
-`options` — это `QueryOptions` (`signal`, `headers`, `timeout`, `retry`, …).
+`options` — это `QueryOptions` эндпоинта (у мутации нет `enabled`/`refetchOnInvalidate`, т.к. запускается вручную):
+
+```typescript
+useApiMutation(endpoints.createPokemon, {
+  timeout: 8000,             // таймаут мутации (мс)
+  signal: controller.signal, // внешняя отмена (хук и так отменяет при unmount)
+  headers: new Headers(),    // доп. заголовки
+  context: { source: 'ui' }, // прокидывается в baseQuery.prepareHeaders
+  retry: { count: 1 },       // повторы для этой мутации
+  // disableCache здесь не важен: мутации не кэшируются в принципе
+})
+```
 
 ## mutate vs mutateAsync
 

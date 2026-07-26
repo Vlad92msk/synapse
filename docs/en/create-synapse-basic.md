@@ -1,6 +1,6 @@
 # createSynapse (basic)
 
-> [Back to Main](../../README.md)
+> [Back to contents](./README.md) · [Module assembly (`pokemon.synapse.ts`)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/pokemon-advanced/pokemon.synapse.ts) · [Minimal sandbox (storage + selectors)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/CreateSynapseBasicExample.tsx)
 
 `createSynapse(config)` assembles the **data-management layer** into a single lazy module. The
 only form is a **synchronous config object** (C-form): `storage` (a factory for synchronous
@@ -223,6 +223,198 @@ export const pokemonSynapse = createSynapse(
   },
 )
 ```
+
+## A realistic large-project module: cross-store DI + several APIs + a socket
+
+The minimal examples above show the shape. But in a real app a module rarely lives in isolation: its
+selectors **combine its own state with someone else's** (data from other modules), and its effects hit
+**several APIs** at once, listen to a **WebSocket**, and react to the streams of neighboring stores.
+Here is how it all comes together, on a messenger domain (`chat`) that depends on `authSynapse` (the
+current user) and `settingsSynapse` (settings: blocked users).
+
+### 1. Selectors: `combine` from your own + foreign selectors (cross-store DI)
+
+Foreign selectors arrive as **constructor parameters** and take part in `this.combine([...])` on equal
+footing with your own — the combined selector recomputes both when your store changes and when the
+foreign one does:
+
+```typescript
+import { Selectors, type IStorage } from 'synapse-storage/core'
+import type { AuthSelectors } from '../auth/auth.selectors'
+import type { SettingsSelectors } from '../settings/settings.selectors'
+import type { ChatState } from './chat.types'
+
+export class ChatSelectors extends Selectors<ChatState> {
+  constructor(
+    storage: IStorage<ChatState>,
+    private readonly auth: AuthSelectors,          // ← selectors of a FOREIGN module
+    private readonly settings: SettingsSelectors,  // ← and one more
+  ) {
+    super(storage)
+  }
+
+  // own slices
+  private readonly messages = this.select((s) => s.messagesByConversation)
+  readonly activeId = this.select((s) => s.activeConversationId)
+  readonly connection = this.select((s) => s.connectionStatus)
+
+  readonly activeMessages = this.combine([this.messages, this.activeId], (byConv, id) =>
+    id ? byConv[id] ?? [] : [],
+  )
+
+  // cross-store: own messages + foreign currentUserId (auth) + foreign blockedUsers (settings).
+  // Recomputes when ANY of the three stores changes.
+  readonly visibleMessages = this.combine(
+    [this.activeMessages, this.auth.currentUserId, this.settings.blockedUsers],
+    (msgs, myId, blocked) =>
+      msgs
+        .filter((m) => !blocked.includes(m.authorId))
+        .map((m) => ({ ...m, mine: m.authorId === myId })),
+  )
+
+  readonly unreadCount = this.combine([this.messages, this.auth.currentUserId], (byConv, myId) =>
+    Object.values(byConv).flat().filter((m) => !m.readBy.includes(myId!)).length,
+  )
+}
+```
+
+> ⚠️ **Cross-store `combine` pitfall.** If `tsconfig` compiles with
+> `useDefineForClassFields: true` (the default at `target: ES2022+`), parameter properties
+> (`this.auth`) are assigned **after** field initializers → at the moment of
+> `this.combine([this.auth.x])` the dependency is still `undefined`. Synapse catches this with a clear
+> dev error. Fixes: either `"useDefineForClassFields": false`, or create such selectors **inside the
+> constructor body** after `super(storage)`.
+
+### 2. Effects: several APIs + a socket + a neighboring store's stream
+
+All external resources — REST endpoints of **two** APIs, a WebSocket service, an `Observable` of a
+neighboring store — arrive through the constructor and are captured in the effects' closure:
+
+```typescript
+import { type Observable, tap } from 'rxjs'
+import { Effects, apiResult, fromRequest, ofType, validateMap } from 'synapse-storage/reactive'
+import type { MessagesApiEndpoints } from './messages.api'
+import type { UsersApiEndpoints } from './users.api'
+import type { ChatSocketService } from './chat.socket'
+import type { PresenceState } from '../presence/presence.types'
+import type { ChatState } from './chat.types'
+import type { ChatDispatcher } from './chat.dispatcher'
+
+export class ChatEffects extends Effects<ChatState, ChatDispatcher> {
+  constructor(
+    private readonly messagesApi: MessagesApiEndpoints, // REST #1
+    private readonly usersApi: UsersApiEndpoints,       // REST #2
+    private readonly socket: ChatSocketService,         // WebSocket service
+    private readonly presence$: Observable<PresenceState>, // a neighboring store's stream
+  ) {
+    super()
+  }
+
+  // Conversation history on selection (REST #1)
+  readonly loadHistory = this.effect((action$, state$, { dispatcher: d }) =>
+    action$.pipe(
+      ofType(d.openConversation),
+      validateMap({
+        loadingAction: () => d.loadHistory.loading(),
+        errorAction: (err) => d.loadHistory.failure(String(err)),
+        apiCall: (action) =>
+          fromRequest(this.messagesApi.getHistory.request({ conversationId: action.payload })).pipe(
+            apiResult((data) => {
+              d.applyHistory(data)
+              d.loadHistory.success()
+            }),
+          ),
+      }),
+    ),
+  )
+
+  // Pull in author profiles (REST #2)
+  readonly loadAuthors = this.effect((action$, state$, { dispatcher: d }) =>
+    action$.pipe(
+      ofType(d.applyHistory),
+      validateMap({
+        apiCall: (action) =>
+          fromRequest(this.usersApi.getByIds.request({ ids: authorIds(action.payload) })).pipe(
+            apiResult((users) => d.applyAuthors(users)),
+          ),
+      }),
+    ),
+  )
+
+  // Incoming socket messages flow into the store. Dispatch is a side effect via tap
+  // (an effect's emissions are NOT dispatched automatically — only d.* calls are).
+  readonly incoming = this.effect((action$, state$, { dispatcher: d }) =>
+    this.socket.messages$.pipe(tap((msg) => d.messageReceived(msg))),
+  )
+
+  // Sending: action → socket.send
+  readonly send = this.effect((action$, state$, { dispatcher: d }) =>
+    action$.pipe(
+      ofType(d.sendMessage),
+      tap((action) => this.socket.send(action.payload)),
+    ),
+  )
+
+  // React to a NEIGHBORING store's stream (presence): mark interlocutors online/offline
+  readonly presenceSync = this.effect((action$, state$, { dispatcher: d }) =>
+    this.presence$.pipe(tap((presence) => d.applyPresence(presence.online))),
+  )
+
+  // Close the socket when the module is destroyed
+  override onDestroy() {
+    this.socket.disconnect()
+  }
+}
+```
+
+### 3. Wiring: pass everything into `createSynapse`
+
+`selectors` receives foreign selectors synchronously (cross-store DI), `dependencies` holds the start
+of effects until those modules are ready, and `effects` (async) lazily resolves both APIs and opens the
+socket — on the client, after the core is constructed:
+
+```typescript
+import { MemoryStorage } from 'synapse-storage/core'
+import { createSynapse } from 'synapse-storage/utils'
+
+import { authSynapse } from '../auth/auth.synapse'
+import { settingsSynapse } from '../settings/settings.synapse'
+import { presenceSynapse } from '../presence/presence.synapse'
+import { getMessagesApi } from './messages.api'
+import { getUsersApi } from './users.api'
+import { connectChatSocket } from './chat.socket'
+import { ChatDispatcher } from './chat.dispatcher'
+import { ChatSelectors } from './chat.selectors'
+import { ChatEffects } from './chat.effects'
+import { initialState } from './chat.store'
+import type { ChatState } from './chat.types'
+
+export const chatSynapse = createSynapse({
+  storage: () => new MemoryStorage<ChatState>({ name: 'chat', initialState }),
+
+  dispatcher: (s) => new ChatDispatcher(s),
+
+  // cross-store DI: foreign selectors are available SYNCHRONOUSLY (the foreign module's main core is built lazily).
+  selectors: (s) => new ChatSelectors(s, authSynapse.selectors, settingsSynapse.selectors),
+
+  // effects START gate: wait until both modules whose state we read are ready.
+  dependencies: [authSynapse, settingsSynapse, presenceSynapse],
+
+  // async prologue: resolve TWO APIs + open the socket + a neighboring store's stream — client-only.
+  effects: async () =>
+    new ChatEffects(
+      await getMessagesApi(),
+      await getUsersApi(),
+      connectChatSocket(),
+      presenceSynapse.state$,
+    ),
+})
+```
+
+What this demonstrates all at once: **combine from n selectors** (your own + two foreign modules),
+**multiple dependencies** in `dependencies`, **several APIs** and a **socket** in one effects class,
+and **reading a neighboring store's stream** via `state$`. The core construction stayed synchronous —
+everything "heavy" moved into `effects` and doesn't get in the way of SSR.
 
 ## Extras (DX)
 

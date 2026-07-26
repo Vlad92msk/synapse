@@ -1,11 +1,39 @@
 # toObservable
 
-> [Назад на главную](../../README.md)
+> [Назад к оглавлению](./README.md)
 
-Превращает хранилище (`IStorageBase`) в RxJS `Observable` потока состояния — для **эффектов и не-React
-кода**. Это низкоуровневая утилита, на которой построен [useStorageObservable](./use-storage-observable.md).
-Импортируется из `synapse-storage/reactive`. В примерах — сквозной `todoStorage`
-(`TodoState = { todos: Todo[]; filter: Filter }`).
+**TL;DR.** `toObservable(storage[, selector, equals])` — превращает хранилище в RxJS `Observable`
+потока состояния. Это **низкоуровневая утилита для эффектов и не-React кода**; на ней построены
+React-хуки `useStorageObservable` / `useObservable`. Импорт — `synapse-storage/reactive`. В примерах —
+сквозной `todoStorage` (`TodoState = { todos: Todo[]; filter: Filter }`).
+
+## Зачем
+
+Хранилище само по себе — не RxJS-источник: у него `subscribe`/`getStateSync`, а не `pipe`. Как только
+состояние нужно **прогнать через операторы** (`debounceTime`, `scan`, `bufferTime`, …) или **скормить в
+`createEffectConfig` как внешний стейт**, требуется `Observable`. `toObservable` и делает этот мост:
+эмитит текущее состояние при подписке, затем — на каждое изменение.
+
+## Когда использовать / когда НЕ нужно
+
+**Использовать:**
+
+- строишь поток **вне React** — в эффектах, watcher-ах, обычных не-React модулях;
+- нужен `Observable` состояния как **внешний стейт** для `createEffectConfig.externalStates`;
+- в React нужен **свой набор операторов** поверх среза — тогда `toObservable(...)` в фабрике +
+  [`useObservable`](./use-storage-observable.md) / [`useSubscription`](./use-subscription.md).
+
+**НЕ нужно:**
+
+- **просто срез в компонент без своих операторов** → [`useStorageObservable`](./use-storage-observable.md)
+  (он сам мемоизирует `toObservable`);
+- **реактивное чтение вообще без RxJS** → [`useStorageSubscribe`](./use-storage-subscribe.md);
+- читаешь мемоизированный `SelectorAPI` — у него уже есть `.$` (готовый `Observable`), оборачивать стор
+  не надо, см. [Селекторы](./selector-system.md).
+
+> В React-компоненте **не** создавай `toObservable(...)` прямо в рендере — новый Observable на каждый
+> рендер провоцирует переподписки. Мемоизируй (это и делает `useStorageObservable`) либо передавай
+> **фабрикой** в `useObservable`.
 
 ## Сигнатура
 
@@ -20,12 +48,6 @@ toObservable<T, R>(
   equals?: (a: R, b: R) => boolean,
 ): Observable<R>
 ```
-
-Три параметра:
-
-1. **`storage`** — хранилище.
-2. **`selector`** *(опц.)* — какой срез вытащить из состояния.
-3. **`equals`** *(опц.)* — как сравнивать соседние значения среза, чтобы пропускать повторы.
 
 ## `selector` — срез вместо всего стейта
 
@@ -87,13 +109,44 @@ createEffectConfig: () => ({
 })
 ```
 
+## Все параметры (закомментировано)
+
+```typescript
+import { toObservable } from 'synapse-storage/reactive'
+
+const slice$ = toObservable(
+  // 1. storage — IStorageBase (Memory/Local/IndexedDB — общий интерфейс).
+  //    Поток подписывается на storage.subscribeToAll и эмитит getStateSync().
+  todoStorage,
+
+  // 2. selector? — какой срез вытащить. Без него поток эмитит ВЕСЬ стейт на любое
+  //    изменение. С ним — map + distinctUntilChanged, эмит только при смене среза.
+  (s) => s.todos.length,
+
+  // 3. equals? — компаратор для distinctUntilChanged (по умолчанию Object.is).
+  //    Нужен, если selector возвращает новый объект/массив каждый тик, либо нужна
+  //    более грубая эквивалентность. Имеет смысл ТОЛЬКО вместе с selector.
+  (a, b) => a === b,
+)
+```
+
+## Параметры
+
+| Параметр | Тип | Описание |
+|---|---|---|
+| `storage` | `IStorageBase<T>` | Хранилище. Поток эмитит `getStateSync()` при подписке и на каждое изменение. |
+| `selector?` | `(state: T) => R` | Срез. Без него — весь стейт; с ним — `map` + `distinctUntilChanged`. |
+| `equals?` | `(a: R, b: R) => boolean` | Компаратор для `distinctUntilChanged`. По умолчанию `Object.is`. Только вместе с `selector`. |
+
 ## Заметки
 
-- Поток сразу эмитит текущее состояние при подписке (через `getStateSync()`), а затем — на каждое
-  изменение.
+- Поток сразу эмитит текущее состояние при подписке (через `getStateSync()`), затем — на каждое изменение.
 - Под капотом `shareReplay({ refCount: true })`: несколько подписчиков делят одну подписку на стор, а при
   падении их числа до нуля поток отписывается от хранилища (без утечки слушателей).
-- В React-компоненте **не** создавай `toObservable(...)` прямо в рендере — мемоизируй (это и делает
-  [useStorageObservable](./use-storage-observable.md)) или подписывайся через `useObservable` с фабрикой.
-- Для простого реактивного чтения в компоненте без RxJS бери
-  [useStorageSubscribe](./use-storage-subscribe.md).
+
+## См. также
+
+- [useStorageObservable / useObservable](./use-storage-observable.md) — тот же поток в React-компоненте.
+- [useSubscription](./use-subscription.md) — подписка-side-effect в React (тот же `toObservable` внутри).
+- [useStorageSubscribe](./use-storage-subscribe.md) — реактивное чтение в компоненте без RxJS.
+- [Реактивное чтение](./reactive-reads.md) — обзор и выбор инструмента.

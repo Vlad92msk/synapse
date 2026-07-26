@@ -1,11 +1,29 @@
 # useSubscription
 
-> [Назад на главную](../../README.md)
+> [Назад к оглавлению](./README.md)
 
-Императивная подписка-**side-effect** из компонента: подписаться на `Observable` и что-то сделать на
-каждый эмит (показать тост, залогировать, диспатчнуть), **ничего не возвращая в рендер**. Это пара к
-[useObservable](./use-storage-observable.md): тот отдаёт значение для JSX, а `useSubscription` — для
-эффектов. См. обзор [Реактивное чтение](./reactive-reads.md).
+**TL;DR.** `useSubscription(factory, deps)` — императивная подписка-**side-effect** из компонента:
+подписаться на `Observable` и что-то сделать на каждый эмит (показать тост, залогировать, диспатчнуть),
+**ничего не возвращая в рендер**. Пара к [`useObservable`](./use-storage-observable.md): тот отдаёт
+значение для JSX, а `useSubscription` — для эффектов. Отписка — автоматическая.
+
+## Зачем
+
+Иногда реакция на изменение стора — это не «показать значение», а «сделать что-то наружу»: тост, лог,
+императивный вызов, диспатч. Класть такое в `useObservable` неправильно (нет значения для рендера), а
+руками писать `useEffect` + `subscribe` + cleanup — шумно и легко забыть `unsubscribe`. `useSubscription`
+инкапсулирует создание подписки и **гарантированную отписку** на unmount / смену `deps`.
+
+## Когда использовать / когда НЕ нужно
+
+**Использовать:** результат подписки идёт **наружу** (тост, лог, аналитика, императивный вызов), а не в
+JSX. Особенно — когда нужны RxJS-операторы для агрегации (`bufferTime`, `pairwise`, …).
+
+**НЕ нужно:**
+
+- результат нужен **в рендере** → [`useObservable`](./use-storage-observable.md) (значение) или
+  [`useStorageSubscribe`](./use-storage-subscribe.md) (срез без RxJS);
+- side-effect **без потока/RxJS** — обычная реакция на проп/значение → штатный `useEffect`.
 
 ## Сигнатура
 
@@ -90,6 +108,31 @@ function MessageNotifier() {
 Подробный разбор операторов — на странице
 [useStorageObservable](./use-storage-observable.md#пример-агрегатор-уведомлений).
 
+## Все параметры (закомментировано)
+
+```tsx
+useSubscription(
+  // 1. factory — создаёт подписку и возвращает её (Unsubscribable). Side-effect'ы
+  //    живут внутри .subscribe(...). Пересоздаётся при смене deps: вся цепочка
+  //    (включая stateful-операторы вроде bufferTime) собирается заново.
+  () =>
+    toObservable(authStorage, (s) => s.error)
+      .pipe(filter(Boolean))
+      .subscribe((msg) => toast.error(msg as string)),
+
+  // 2. deps — как в useEffect: всё, что factory замыкает и что может поменяться.
+  //    [] для синглтон-стора; [storage] для стора из пропсов/контекста.
+  [],
+)
+```
+
+## Опции
+
+| Параметр | Тип | Описание |
+|---|---|---|
+| `factory` | `() => Unsubscribable` | Создаёт подписку; возвращает её для авто-отписки. Side-effect внутри `.subscribe`. |
+| `deps` | `DependencyList` | Как у `useEffect`. При смене — старая подписка снимается, `factory` вызывается заново. |
+
 ## Про `deps`
 
 Те же правила, что у [useObservable](./use-storage-observable.md#про-deps--что-туда-класть): в `deps` идёт
@@ -102,3 +145,10 @@ function MessageNotifier() {
 использует `shareReplay({ refCount: true })` — при падении числа подписчиков до нуля он отписывается от
 стора. Так что наставленные по проекту `useSubscription`/`useObservable` **не копят слушателей** на
 хранилище: на unmount всё снимается.
+
+## См. также
+
+- [useObservable / useStorageObservable](./use-storage-observable.md) — значение потока в рендер.
+- [toObservable](./to-observable.md) — сам поток (обычно источник для `factory`).
+- [useStorageSubscribe](./use-storage-subscribe.md) — реактивное чтение среза без RxJS.
+- [Реактивное чтение](./reactive-reads.md) — обзор и выбор инструмента.

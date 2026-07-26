@@ -2,13 +2,26 @@
 
 > [Назад к оглавлению](./README.md) · [Рабочий пример на GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SubscriptionPatternsExample.tsx)
 
-Все способы подписки на изменения данных в хранилище. Примеры используют сквозной `todoStorage`
-(`TodoState = { todos: Todo[]; filter: Filter }`). Работают одинаково для Memory, LocalStorage и
-IndexedDB.
+Подписки — это **реакция на изменения** данных (в отличие от разового [чтения](./reading-data.md)).
+Три низкоуровневых способа + React-хук; выбор зависит от того, на что именно реагируешь:
 
-## 1. subscribe(key, callback)
+| Способ | На что реагирует | Когда использовать |
+|---|---|---|
+| `subscribe(key, cb)` | изменение одного ключа верхнего уровня | нужно одно поле как есть |
+| `subscribe(selector, cb)` | изменение результата функции-селектора | вычисляемое/вложенное значение |
+| `subscribeToAll(cb)` | **любое** изменение стора | логирование, синхронизация, отладка |
+| `useStorageSubscribe(...)` | значение среза в React-компоненте | подписка + ре-рендер в React |
 
-Подписка на конкретный ключ верхнего уровня. Коллбек вызывается при каждом изменении этого ключа.
+Для **мемоизированных и комбинируемых** производных значений вместо inline-селектора лучше
+[Селекторы](./selector-system.md) — здесь же селектор пересчитывается на каждое изменение стора.
+
+Все способы возвращают функцию **отписки** — вызови её, чтобы прекратить подписку (в React —
+верни из `useEffect`). Примеры используют сквозной `todoStorage`
+(`TodoState = { todos: Todo[]; filter: Filter }`). Работают одинаково для Memory, LocalStorage и IndexedDB.
+
+## 1. subscribe(key, callback) — один ключ
+
+Коллбек вызывается при каждом изменении конкретного ключа верхнего уровня.
 
 ```typescript
 const unsub = todoStorage.subscribe('filter', (newFilter) => {
@@ -19,54 +32,62 @@ const unsub2 = todoStorage.subscribe('todos', (newTodos) => {
   console.log('список изменился:', newTodos)  // Todo[]
 })
 
-// Отписка
-unsub()
+unsub()   // отписка
 ```
 
-## 2. subscribe(selector, callback)
+## 2. subscribe(selector, callback) — вычисляемое значение
 
-Подписка через функцию-селектор. Коллбек вызывается, когда результат селектора изменяется.
+Функция-селектор считается на каждое изменение стора; коллбек вызывается, **только когда её результат
+изменился**. Так подписываются на вложенное или производное значение.
 
 ```typescript
-// Вычисляемое значение — число активных задач
+// Число активных задач — коллбек только при изменении именно этого числа.
 const unsub = todoStorage.subscribe(
   (state) => state.todos.filter((t) => !t.done).length,
-  (activeCount) => console.log('активных задач:', activeCount)
+  (activeCount) => console.log('активных задач:', activeCount),
 )
 
-// Подписка на отдельное поле
+// Отдельное поле через селектор.
 const unsub2 = todoStorage.subscribe(
   (state) => state.filter,
-  (filter) => console.log('фильтр:', filter)
+  (filter) => console.log('фильтр:', filter),
 )
 
 unsub()
 ```
 
-## 3. subscribeToAll(callback)
+> Если селектор возвращает **объект/массив**, он сравнивается по ссылке — новый объект на каждое
+> изменение будет каждый раз считаться «изменившимся». Для стабильных производных значений с
+> кастомным сравнением используй [Селекторы](./selector-system.md) (`this.select(..., { equals })`).
 
-Подписка на ВСЕ изменения хранилища. Коллбек получает событие с информацией об изменении.
+## 3. subscribeToAll(callback) — любое изменение
+
+Коллбек получает **событие** на каждое изменение стора — с типом операции, ключами и путями.
+Подходит для логирования, кросс-синхронизации, отладки.
 
 ```typescript
 const unsub = todoStorage.subscribeToAll((event) => {
-  console.log(event.type)          // 'set' | 'update' | 'remove' | 'clear' | 'reset'
-  console.log(event.key)           // ключ или массив ключей
-  console.log(event.changedPaths)  // пути к изменённым полям
+  // event.type          — тип операции: 'set' | 'update' | 'remove' | 'clear' | 'reset' и т.п.
+  // event.key           — затронутый ключ или массив ключей (StorageKeyType | StorageKeyType[])
+  // event.changedPaths  — пути к изменённым полям (string[]), напр. ['todos', 'filter']
+  // event.value         — новое значение (когда применимо)
+  console.log(event.type, event.key, event.changedPaths)
 })
 
 unsub()
 ```
 
-## 4. useStorageSubscribe (React-хук)
+## 4. useStorageSubscribe — React-хук
+
+Подписка на срез состояния с ре-рендером компонента при изменении результата.
 
 ```typescript
 import { useStorageSubscribe } from 'synapse-storage/react'
 
 function TodoStats({ storage }: { storage: ISyncStorage<TodoState> }) {
-  // Подписка на одно поле
   const filter = useStorageSubscribe(storage, (s) => s.filter)
 
-  // Вычисляемое значение — ре-рендер только при изменении результата
+  // Ре-рендер только при изменении результата селектора.
   const total = useStorageSubscribe(storage, (s) => s.todos.length)
   const active = useStorageSubscribe(storage, (s) => s.todos.filter((t) => !t.done).length)
 
@@ -74,11 +95,16 @@ function TodoStats({ storage }: { storage: ISyncStorage<TodoState> }) {
 }
 ```
 
-Передай `equals`, чтобы не ререндерить, когда объектный/массивный срез не изменился по ссылке:
+Для объектных/массивных срезов передай `equals`, чтобы не ре-рендерить, когда содержимое не изменилось:
 
 ```typescript
+// { equals } поддерживает именно хук useStorageSubscribe (у низкоуровневого subscribe его нет).
 const todos = useStorageSubscribe(storage, (s) => s.todos, { equals: (a, b) => a === b })
 ```
 
-Про `useStorageObservable` (RxJS-путь) и `useStorageRef` (чтение без ререндера / ручной триггер) — см.
-**[Реактивное чтение и управляемые ререндеры](./reactive-reads.md)**.
+## См. также
+
+- [Селекторы](./selector-system.md) — мемоизированные комбинируемые производные значения и `selector.$`.
+- [Реактивное чтение и управляемые ре-рендеры](./reactive-reads.md) — `useStorageObservable` (RxJS)
+  и `useStorageRef` (чтение без ре-рендера / ручной триггер).
+- [Чтение данных](./reading-data.md) — разовое чтение вместо реакции на изменения.

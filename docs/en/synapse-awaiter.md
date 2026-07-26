@@ -1,6 +1,6 @@
 # createSynapseAwaiter — framework-independent awaiter
 
-> [Back to Main](../../README.md)
+> [Back to contents](./README.md) · [Sandbox (Config)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SynapseAwaiterExample.tsx)
 
 A utility for waiting on a Synapse module's async initialization. Works in any JS environment: Node.js,
 browser, React Native, workers. The React wrapper over it is [awaitSynapse](./await-synapse.md) (it adds
@@ -10,6 +10,34 @@ proxied by `awaitSynapse` straight from here.
 
 It takes the lazy handle from `createSynapse` (see [create-synapse-basic](./create-synapse-basic.md)),
 starts its initialization, and gives synchronous/asynchronous ways to wait for `storage` to be ready.
+
+## Why
+
+A module can be **not ready** at the moment something reaches for it: the factory is waiting on async
+dependencies, IndexedDB's `storage.initialize()` is asynchronous — while the render/script asks
+synchronously. The awaiter is a small `pending → ready | error` state machine around the store:
+synchronous getters (`isReady`, `getStoreIfReady`) for "right now" and subscriptions (`onReady`/`onError`)
+for "when it finishes building".
+
+## When to use it
+
+- **Outside React**: Node render, data preload, scripts, workers — anywhere there are no hooks.
+- You need an **SSR sync-fast-path**: an already-warmed (READY) module is served synchronously, with no
+  spinner (see below).
+- In React you want manual control of the readiness subscription instead of a HOC/hook.
+
+## When you don't need it
+
+- An ordinary React app → reach for [awaitSynapse](./await-synapse.md) (the `withSynapseReady` HOC /
+  `useSynapseReady` hook) — it encapsulates exactly this subscription.
+- The module is **always** synchronously ready (a sync store with no async prologue) → you can work with
+  the store directly, no awaiter needed.
+
+> **Build errors are neither lost nor "bubbled up".** If the factory/`storage` fails, the reject is
+> delivered via `onError(cb)` / `getError()` / `getStatus() === 'error'`. The internal init promise is
+> guarded by its own `.catch`, so even if no one `await`s it (the typical case: working only through
+> `onReady`/`onError`), it will **not produce an `unhandledRejection`**. At the same time `waitForReady()`
+> returns that same promise — and its consumer gets a `throw`.
 
 ## Imports and creation
 
@@ -111,3 +139,10 @@ function PokemonStatus() {
 > (Node render, data preload, scripts) or where the sync-fast-path is required.
 
 The full module walkthrough — in the [pokemon-advanced recipe](./pokemon-advanced.md).
+
+## See also
+
+- [awaitSynapse](./await-synapse.md) — the React wrapper (HOC/hook) over this awaiter.
+- [createSynapse (basic)](./create-synapse-basic.md) — where the lazy handle comes from.
+- [createSynapseCtx](./synapse-ctx.md) — the full SSR flow dehydrate → hydrate.
+- [pokemon-advanced](./pokemon-advanced.md) — the module as a whole.

@@ -2,20 +2,51 @@
 
 > [Назад к оглавлению](./README.md)
 
-`sharedWorkerMiddleware` / `syncSharedWorkerMiddleware` синхронизируют состояние хранилища между
-вкладками через **SharedWorker**. Это прямое зеркало [`broadcastMiddleware`](./middlewares.md):
-та же роль, та же сигнатура — отличается только транспорт. Там, где `broadcastMiddleware`
-использует `BroadcastChannel`, `sharedWorkerMiddleware` гоняет сообщения через один общий для всех
-вкладок origin-а SharedWorker.
+`syncSharedWorkerMiddleware` / `sharedWorkerMiddleware` — **межвкладочная синхронизация состояния
+через один общий SharedWorker**. Прямое зеркало [`broadcastMiddleware`](./middlewares.md): та же
+роль, та же сигнатура `({ storageType, storageName })`, тот же результат между вкладками —
+отличается только транспорт. Там, где broadcast-вариант поднимает по одному `BroadcastChannel` на
+стор, shared-worker-вариант мультиплексирует **все** сторы поверх **одного** SharedWorker на origin.
 
-Как и все middleware, подключается при создании стора — в поле `middlewares`.
+Подключается как любой middleware — в поле `middlewares` при создании стора.
 
-## Что импортировать
+## Зачем
 
-Есть две фабрики с идентичной сигнатурой:
+`broadcastMiddleware` создаёт отдельный `BroadcastChannel` на каждый стор. Когда синхронизируемых
+сторов много, это много независимых каналов. SharedWorker-транспорт сводит их к **одному** воркеру
+на вкладку: десять сторов делят один воркер, а сообщения разбираются по имени логического канала
+`${storageType}-${storageName}`. Плюс — если SharedWorker уже поднят под другие задачи, его можно
+переиспользовать вместо параллельного стека `BroadcastChannel`.
 
-- **`syncSharedWorkerMiddleware`** — для синхронных хранилищ (`MemoryStorage`, `LocalStorage`).
-- **`sharedWorkerMiddleware`** — для асинхронного `IndexedDBStorage` (и `WorkerCacheStorage`).
+Семантика синхронизации при этом **идентична** broadcast-варианту — миграция делается заменой одной
+строки.
+
+## Когда использовать
+
+- Синхронизируете **много** сторов между вкладками и хотите мультиплексировать их через один
+  SharedWorker, а не плодить отдельные каналы.
+- В приложении **уже есть** SharedWorker, и хочется переиспользовать его как транспорт.
+
+## Когда НЕ нужно
+
+- **Сторов мало (один-два).** Берите [`broadcastMiddleware`](./middlewares.md) — проще, без воркера,
+  тот же результат.
+- **Нужен живой общий кэш внутри воркера** (не только уведомления, а данные, живущие в самом
+  воркере) → это [WorkerCacheStorage](./worker-cache-storage.md), другой инструмент.
+- **Нет межвкладочного сценария вовсе** — middleware не нужен.
+
+## Две фабрики — какую брать
+
+Сигнатура у обеих одинакова, различие — синхронное хранилище или асинхронное:
+
+| Фабрика | Тип | Для чего |
+|---|---|---|
+| **`syncSharedWorkerMiddleware`** | `SyncMiddleware` | синхронные хранилища: `MemoryStorage`, `LocalStorage` |
+| **`sharedWorkerMiddleware`** | `Middleware` (async) | асинхронный `IndexedDBStorage` (и `WorkerCacheStorage`) |
+
+## Использование
+
+Copy-paste минимальная форма (`MemoryStorage`):
 
 ```typescript
 import { MemoryStorage, syncSharedWorkerMiddleware } from 'synapse-storage/core'
@@ -25,40 +56,29 @@ const storage = new MemoryStorage<TodoState>({
   initialState: { todos: [], filter: 'all' },
   middlewares: () => [
     syncSharedWorkerMiddleware({
-      storageName: 'shared-worker-demo',
       storageType: 'memory',
+      storageName: 'shared-worker-demo',
     }),
   ],
 })
 await storage.initialize()
 
-// Изменения синхронизируются между вкладками
+// Изменения синхронизируются между вкладками через один SharedWorker.
 storage.update((s) => { s.todos.push({ id: 't1', title: 'Из другой вкладки', done: false }) })
 ```
 
-Сигнатура та же `{ storageType, storageName }`, что и у `broadcastMiddleware` — замена одного на
-другое делается в одну строку.
-
-## Что синхронизируется
-
-Поведение полностью совпадает с `broadcastMiddleware`:
-
-- **MemoryStorage** — полная синхронизация данных. Только что открытая вкладка запрашивает у
-  воркера текущее состояние (`requestSync`) и засевается им, затем остаётся в синхроне при каждой
-  записи.
-- **LocalStorage / IndexedDB** — только уведомление подписчиков. Сами данные уже синхронизированы
-  движком хранилища браузера; middleware лишь просит подписчиков других вкладок перечитать.
+Замена `broadcastMiddleware` → `syncSharedWorkerMiddleware` (или обратно) — в одну строку, props те
+же самые.
 
 ## N сторов через ОДИН SharedWorker
 
-Ключевое отличие от `broadcastMiddleware` — мультиплексирование транспорта. Каждый стор получает
-свой логический канал с именем `${storageType}-${storageName}`, но **все** каналы
-мультиплексируются поверх **одного** SharedWorker на origin. Десять сторов во вкладке не поднимают
-десять воркеров — они делят один, а сообщения разбираются по имени канала.
+Ключевое отличие от broadcast-варианта — мультиплексирование транспорта. Каждый стор получает свой
+логический канал `${storageType}-${storageName}`, но **все** каналы идут поверх **одного**
+SharedWorker на origin:
 
 ```typescript
-// Оба стора ниже идут через ОДИН SharedWorker,
-// изолированные своим каналом: 'memory-todos' vs 'memory-settings'.
+// Оба стора идут через ОДИН SharedWorker,
+// изолированные каналом: 'memory-todos' vs 'memory-settings'.
 const todos = new MemoryStorage<TodoState>({
   name: 'todos',
   initialState: { todos: [], filter: 'all' },
@@ -72,26 +92,51 @@ const settings = new MemoryStorage<SettingsState>({
 })
 ```
 
-> Имя канала — `${storageType}-${storageName}`. Два стора с одинаковыми
-> `storageType` + `storageName` делят один канал — держите пару уникальной на каждый логический стор.
+> Имя канала — `${storageType}-${storageName}`. Два стора с одинаковой парой делят один канал —
+> держите её уникальной на каждый логический стор.
+
+## Что именно синхронизируется
+
+Поведение полностью совпадает с `broadcastMiddleware` и зависит от типа хранилища:
+
+- **MemoryStorage** — полная синхронизация данных. Только что открытая вкладка запрашивает у воркера
+  текущее состояние (`requestSync`), засевается им и остаётся в синхроне при каждой записи.
+- **LocalStorage / IndexedDB** — только уведомление подписчиков. Сами данные уже синхронизированы
+  движком хранилища браузера; middleware лишь просит подписчиков в других вкладках перечитать.
 
 ## Фолбэк и SSR
 
-- **Нет SharedWorker?** Транспорт прозрачно откатывается на `BroadcastChannel`, поэтому
-  межвкладочная синхронизация продолжает работать в браузерах/контекстах без поддержки SharedWorker.
-- **SSR / нет браузерных API?** Middleware — no-op: нет окна, нет другой вкладки для синхронизации,
-  создание стора не падает.
+- **Нет SharedWorker?** Транспорт **прозрачно** откатывается на `BroadcastChannel` — межвкладочная
+  синхронизация продолжает работать в контекстах без поддержки SharedWorker. Менять код не нужно.
+- **SSR / нет браузерных API?** Middleware — **no-op**: нет окна и других вкладок, создание стора не
+  падает.
 
-## Что когда брать
+## Все параметры (закомментировано)
 
-- **`broadcastMiddleware`** — простой дефолт. Один `BroadcastChannel` на стор, без воркера.
-  Годится для небольшого числа сторов.
-- **`sharedWorkerMiddleware`** — когда синхронизируете **много** сторов и хотите мультиплексировать
-  их через один SharedWorker вместо множества независимых каналов, или когда у вас уже поднят
-  SharedWorker и хочется его переиспользовать. Семантика между вкладками идентична.
+Вся поверхность API разом — props одинаковы у обеих фабрик:
 
-Для **живого общего кэша** (не только уведомлений), живущего внутри самого воркера, см.
-[WorkerCacheStorage](./worker-cache-storage.md).
+```typescript
+import { syncSharedWorkerMiddleware } from 'synapse-storage/core'
+
+syncSharedWorkerMiddleware({
+  // storageType — тип хранилища. Влияет на стратегию синхронизации:
+  //   'memory'     → полная синхронизация данных (requestSync + запись);
+  //   'localStorage' / 'indexedDB' → только уведомление подписчиков (данные синхронит браузер).
+  //   Вместе со storageName образует ключ канала `${storageType}-${storageName}`.
+  storageType: 'memory',   // 'memory' | 'localStorage' | 'indexedDB' | 'worker'
+
+  // storageName — имя логического канала. Держите пару (storageType + storageName)
+  //   уникальной на каждый стор, иначе два стора разделят один канал.
+  storageName: 'todos',
+})
+```
+
+## Опции
+
+| Поле | Тип | Описание |
+|---|---|---|
+| `storageType` | `StorageType` (`'memory' \| 'localStorage' \| 'indexedDB' \| 'worker'`) | Тип хранилища; задаёт стратегию синхронизации. Часть ключа канала. |
+| `storageName` | `string` | Имя логического канала. Вместе с `storageType` образует ключ `${storageType}-${storageName}`. |
 
 ## Типы
 
@@ -99,11 +144,18 @@ const settings = new MemoryStorage<SettingsState>({
 import type { Middleware, SyncMiddleware } from 'synapse-storage/core'
 
 // Обе фабрики принимают одни и те же props:
-interface SharedWorkerMiddlewareProps {
-  storageType: StorageType   // 'memory' | 'localStorage' | 'indexedDB' | string
+interface SharedStateMiddlewareProps {
+  storageType: StorageType   // 'memory' | 'localStorage' | 'indexedDB' | 'worker'
   storageName: string        // вместе с storageType образует ключ канала
 }
 
 // syncSharedWorkerMiddleware(props): SyncMiddleware   — Memory / LocalStorage
 // sharedWorkerMiddleware(props):     Middleware       — IndexedDB (async)
 ```
+
+## См. также
+
+- [Middlewares](./middlewares.md) — `broadcastMiddleware` / `syncBroadcastMiddleware`, тот же API без воркера.
+- [WorkerCacheStorage](./worker-cache-storage.md) — живой общий кэш **внутри** воркера, а не только уведомления.
+- [MemoryStorage](./memory-storage.md) · [LocalStorage](./local-storage.md) — синхронные хранилища для `syncSharedWorkerMiddleware`.
+- [IndexedDB](./indexeddb-storage.md) — async-хранилище для `sharedWorkerMiddleware`.

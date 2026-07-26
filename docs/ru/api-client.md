@@ -4,6 +4,24 @@
 
 Типизированный HTTP-клиент: эндпоинты, кэширование на основе тегов, подписки на состояние запросов, отмена.
 
+## Зачем
+
+Описываешь эндпоинты один раз (путь, метод, типы параметров и ответа, теги) — получаешь
+типизированный `request()`, кэш «из коробки» и точечную инвалидацию по тегам после мутаций. Клиент
+**самодостаточен**: не тянет RxJS/`createSynapse`/React, работает и на сервере (SSR через
+`dehydrate`/`hydrate`). По ощущениям близко к RTK Query, но без Redux.
+
+## Когда использовать
+
+- Нужен HTTP-слой с **кэшем и инвалидацией по тегам** (после мутации активные запросы «оживают»).
+- Хочется **типобезопасные** эндпоинты и единое место для маппинга сырого ответа в доменные типы.
+- SSR: прогреть кэш на сервере и передать на клиент без вспышки loading (`getCachedSync`).
+
+## Когда НЕ нужно
+
+- Один-два разовых `fetch` без кэша/инвалидации — проще нативный `fetch`, клиент избыточен.
+- Данные уже кэширует ServiceWorker и второй слой не нужен — см. [Слои кэширования](./cache-layers.md).
+
 > **Впервые разбираетесь с кэшированием?** Начните со [Слоёв кэширования](./cache-layers.md) — где
 > кэш клиента находится относительно ServiceWorker и `fetchFn`, и когда что использовать.
 
@@ -252,6 +270,70 @@ createPokemon: create<...>({
                                          // с тегом 'pokemon-list'
 })
 ```
+
+## Все опции клиента (закомментировано)
+
+Вся поверхность `new ApiClient({...})` разом — что можно передать и зачем:
+
+```typescript
+import { ApiClient } from 'synapse-storage/api'
+import { MemoryStorage } from 'synapse-storage/core'
+
+export const client = new ApiClient({
+  // 1. storage — ОБЯЗАТЕЛЬНО. Хранилище кэша запросов. Инстанс ИЛИ фабрика () => IStorage
+  //    (фабрика зовётся на init() — удобно для универсального SSR-кода: Memory на сервере, любой на клиенте).
+  storage: () => new MemoryStorage({ name: 'api-cache', initialState: {} }),
+
+  // 2. baseQuery — ОБЯЗАТЕЛЬНО. Транспорт по умолчанию для всех эндпоинтов.
+  baseQuery: {
+    baseUrl: 'https://api.example.com',        // базовый URL, к нему клеится path эндпоинта
+    timeout: 10000,                            // общий таймаут запроса (мс)
+    credentials: 'include',                    // RequestCredentials для fetch (cookies)
+    fetchFn: customFetch,                      // своя fetch-функция (напр. через ServiceWorker) — см. CustomFetchFnExample
+    prepareHeaders: async (headers, ctx) => {  // мутируем заголовки перед отправкой
+      headers.set('Accept', 'application/json')
+      // ctx.requestParams / ctx.context / ctx.getFromStorage(key) / ctx.getCookie(name)
+      return headers
+    },
+  },
+
+  // 3. cache? — глобальная политика кэша. false целиком отключает кэш (даже если у эндпоинтов он задан).
+  cache: {
+    ttl: 60000,                                // время жизни записи (мс)
+    invalidateOnError: true,                   // сбрасывать кэш эндпоинта при ошибке запроса
+  },
+
+  // 4. cacheableHeaderKeys? — заголовки, ВЛИЯЮЩИЕ на ключ кэша (глобально).
+  //    Важно для SSR: набор должен совпадать на сервере и клиенте, иначе гидрация «не попадёт».
+  cacheableHeaderKeys: ['x-lang'],
+
+  // 5. retry? — глобальная политика повторов (наследуется эндпоинтами; можно переопределить в эндпоинте).
+  retry: {
+    count: 3,                                  // число повторов (0 = без retry)
+    delay: (attempt) => attempt * 500,         // задержка: число (мс) или (attempt) => мс
+    retryOn: [0, 429, 500, 502, 503, 504],     // на каких HTTP-статусах повторять
+  },
+
+  // 6. endpoints — фабрика эндпоинтов. create<Params, Result>({ request, cache?, tags?, invalidatesTags?, retry? })
+  endpoints: async (create) => ({
+    getList: create<{ limit: number }, ListResponse>({
+      request: (p) => ({ path: '/items', method: 'GET', query: p }),
+      cache: { ttl: 120000 },                  // TTL этого эндпоинта (перекрывает глобальный); cache:true — взять глобальный; cache:false — не кэшировать
+      tags: ['items'],                         // теги записи (для инвалидации)
+      // invalidatesTags: ['items'],           // для мутаций: какие теги сбросить при успехе
+    }),
+  }),
+})
+```
+
+| Поле | Тип | Обяз. | Описание |
+|---|---|---|---|
+| `storage` | `IStorage \| () => IStorage` | да | Хранилище кэша (инстанс или ленивая фабрика для SSR). |
+| `baseQuery` | `FetchBaseQueryArgs` | да | `baseUrl` (+ `timeout`/`credentials`/`fetchFn`/`prepareHeaders`). |
+| `cache?` | `CacheConfig \| false` | нет | Глобальный `ttl`/`invalidateOnError`; `false` — выключить кэш совсем. |
+| `cacheableHeaderKeys?` | `string[]` | нет | Заголовки, влияющие на ключ кэша (критично для стабильности SSR). |
+| `retry?` | `RetryConfig` | нет | `count`/`delay`/`retryOn` по умолчанию для всех эндпоинтов. |
+| `endpoints?` | `(create) => Promise<T>` | нет | Описание эндпоинтов через `create<Params, Result>({...})`. |
 
 ## getEndpoints() — прямой доступ к эндпоинтам
 

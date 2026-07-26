@@ -1,10 +1,31 @@
 # Forms — the recipe: form state on a synapse storage
 
-> [Back to Main](../../README.md)
+> [Back to contents](./README.md)
+
+**TL;DR.** A form as a synapse storage is form state (`values`/`errors`/`touched`/…), point-wise
+subscriptions to fields, validation as a middleware, persist and cross-tab sync **out of the box, with
+no form libraries**. It's a **recipe** (copy-paste code, not a public form API): take the level of the
+ladder you need and adapt it.
 
 Managing forms is the most common application case. This page is a **copy-paste recipe**: take the
 code, drop it into your project, and you get your own form management instead of `react-hook-form` /
 `Formik` / `Final Form` — **zero dependencies**.
+
+## When to use
+
+- The form needs **SSR + hydration**, **draft persist**, **cross-tab sync** or **centralized
+  validation** — things form libraries bolt on from the side, which a storage gives you by
+  architecture.
+- You already keep state on synapse and don't want to pull in a separate form library for one form.
+- You need **point-wise re-renders per field** without manual memoization — `useStorageSubscribe`
+  isolates them for you.
+
+## When NOT needed
+
+- **A simple form with no SSR/persist/cross-tab and no sync with the store** — native
+  `react-hook-form` / `Formik` will get it done faster; the recipe below is overkill.
+- **You need ready-made field registration** (`register('email')` for native inputs), rich async
+  validation and array fields out of the box — this is intentionally absent here (see "Honest scope").
 
 Why do it on a synapse storage at all? Because a storage gives you, **by architecture**, things a
 form library bolts on from the side:

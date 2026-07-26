@@ -2,7 +2,10 @@
 
 > [Назад к оглавлению](./README.md) · [Канонический модуль (`PokemonAdvancedExample.tsx`)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/pokemon-advanced/PokemonAdvancedExample.tsx) · [Песочница (Timer)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/AwaitSynapseExample.tsx)
 
-React-утилита для ожидания готовности модуля Synapse: HOC + хук + программный API.
+**TL;DR.** `awaitSynapse(handle, options?)` ожидает готовности модуля Synapse и отдаёт готовый
+`store` в компоненты **без Context** — через HOC (`withSynapseReady`), хук (`useSynapseReady`) и
+программный API. Пока модуль инициализируется — показывает `loadingComponent`; при ошибке —
+`errorComponent`.
 
 `createSynapse` возвращает **ленивый handle** (см. [create-synapse-basic](./create-synapse-basic.md)) —
 фабрика стартует при первом `await`/подписке, а не на импорте. `awaitSynapse` поднимает этот handle:
@@ -12,6 +15,22 @@ React-утилита для ожидания готовности модуля S
 Домен тот же — собранный на прошлых страницах `pokemonSynapse`. Это «ручной» способ отдать модуль в
 компоненты (без Context): альтернатива провайдеру [createSynapseCtx](./synapse-ctx.md). Именно `awaitSynapse`
 использует демо модуля — `PokemonAdvancedExample.tsx`.
+
+## Когда использовать
+
+- Модуль отдаётся **одному-нескольким** компонентам, и тянуть Context ради этого не хочется.
+- Нужен **явный контроль async-пролога** (initPokemonApi и т.п.): показать загрузку/ошибку до
+  готовности `storage`.
+- Готовность модуля нужна **и вне React** (эффекты, утилиты) — программный API того же awaiter.
+
+## Когда НЕ нужно
+
+- Модуль нужен **большому поддереву** и удобнее раздавать его через провайдер и хуки →
+  [createSynapseCtx](./synapse-ctx.md).
+- Модуль **синхронный** и никакого async-пролога нет — обёртка ожидания не нужна, бери готовый
+  `store` из handle напрямую.
+- Логика целиком **вне React** (Node, vanilla JS) → используй
+  [`createSynapseAwaiter`](./synapse-awaiter.md) напрямую, без React-обёртки.
 
 ## Создание
 
@@ -30,8 +49,29 @@ const pokemonAwaiter = awaitSynapse(pokemonSynapse, {
 ```
 
 `options` необязателен: по умолчанию `loadingComponent` — `<div>Инициализация...</div>`,
-`errorComponent` — текст ошибки. Принимается не только handle, но и Promise готового synapse или сам
-готовый synapse.
+`errorComponent` — текст ошибки. Первым аргументом принимается не только handle, но и Promise
+готового synapse или сам готовый synapse.
+
+### Все параметры (закомментировано)
+
+```typescript
+const pokemonAwaiter = awaitSynapse(
+  // 1. handle | Promise<synapse> | synapse — что ждать. Обычно ленивый handle из createSynapse.
+  pokemonSynapse,
+  // 2. options? — оформление ожидания (используется HOC-ом и хуком)
+  {
+    // Рендер, пока модуль не готов. По умолчанию <div>Инициализация...</div>.
+    loadingComponent: <div>Initializing...</div>,
+    // Рендер при ошибке инициализации. По умолчанию текст ошибки.
+    errorComponent: (error) => <div>Init failed: {error.message}</div>,
+  },
+)
+```
+
+| Поле | Тип | По умолчанию | Описание |
+|---|---|---|---|
+| `loadingComponent` | `React.ReactNode` | `<div>Инициализация...</div>` | Рендер, пока модуль не готов. |
+| `errorComponent` | `(error: Error) => React.ReactNode` | текст ошибки | Рендер при ошибке инициализации. |
 
 ## withSynapseReady (HOC) — как поднят демо-модуль
 

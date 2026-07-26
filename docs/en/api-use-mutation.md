@@ -1,12 +1,24 @@
 # useApiMutation — React hook for mutations
 
-> [Back to Main](../../README.md)
+> [Back to contents](./README.md)
+
+**TL;DR:** `useApiMutation(endpoint, options?)` — a write hook (POST/PUT/DELETE/PATCH). It doesn't start
+on its own; you run it via `mutate` (fire-and-forget) or `mutateAsync` (await + rethrows the error). On
+success the endpoint's `invalidatesTags` auto-refetch the related `useApiQuery`.
 
 A React hook over an `ApiClient` endpoint for **writes** (POST/PUT/DELETE/PATCH). Unlike
 [useApiQuery](./api-use-query.md), the request does **not** start automatically — you trigger it with
 `mutate`/`mutateAsync`. Mutations aren't cached (by REST method), and their `invalidatesTags` invalidate
 the cache — active `useApiQuery` hooks of neighbouring endpoints refetch on their own via the
 [invalidation bus](./api-client.md#cache-invalidation-bus-endpointoncacheinvalidate).
+
+## When to use it / when you don't need it
+
+- **Use it** for any write from a React component, when you want `isLoading`/`isError` states for a
+  button and automatic invalidation of related queries after success.
+- **Not needed** for reads (GET) — that's [useApiQuery](./api-use-query.md).
+- **Not needed** outside React or in effects — call `endpoint.request(...)` directly
+  (see [ApiClient](./api-client.md)).
 
 ## Import
 
@@ -52,7 +64,18 @@ function CreatePokemon() {
 | `isSuccess` | `boolean` | `status === 'success'` |
 | `reset` | `() => void` | Reset state back to `idle` |
 
-`options` is `QueryOptions` (`signal`, `headers`, `timeout`, `retry`, …).
+`options` is the endpoint's `QueryOptions` (a mutation has no `enabled`/`refetchOnInvalidate`, since it's triggered manually):
+
+```typescript
+useApiMutation(endpoints.createPokemon, {
+  timeout: 8000,             // mutation timeout (ms)
+  signal: controller.signal, // external cancellation (the hook already cancels on unmount)
+  headers: new Headers(),    // extra headers
+  context: { source: 'ui' }, // passed into baseQuery.prepareHeaders
+  retry: { count: 1 },       // retries for this mutation
+  // disableCache is irrelevant here: mutations are never cached anyway
+})
+```
 
 ## mutate vs mutateAsync
 

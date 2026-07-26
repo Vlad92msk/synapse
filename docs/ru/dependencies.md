@@ -2,10 +2,38 @@
 
 > [Назад к оглавлению](./README.md) · [Сборка модуля (`pokemon.synapse.ts`)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/pokemon-advanced/pokemon.synapse.ts) · [Песочница (Auth → Settings)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/DependenciesExample.tsx)
 
+**TL;DR.** Два разных вопроса, которые часто путают:
+
+- **`dependencies`** — *когда* стартовать эффекты: гейт, который ждёт готовности чужих сторов
+  ДО запуска эффектов (не задерживает конструкцию ядра). `dependencies: [otherSynapse]`.
+- **Cross-store связь** — *как* модули обмениваются данными: 4 паттерна ниже (читать состояние,
+  читать селекторы, реагировать на экшены, медиатор). Это независимо от `dependencies`.
+
+```typescript
+createSynapse({
+  storage: () => new MemoryStorage<PokemonState>({ name: 'pokemon-advanced', initialState }),
+  dependencies: [settingsStorage],          // гейт СТАРТА эффектов
+  effects: () => new PokemonEffects(api, toObservable(settingsStorage)),  // паттерн 1: читаем состояние
+})
+```
+
+Обычно оба идут вместе: раз эффект читает чужой стор — этот стор кладут и в `dependencies`,
+чтобы к старту эффектов он был инициализирован.
+
 Один `createSynapse` может зависеть от другого хранилища или модуля. `dependencies` — это **гейт
 СТАРТА эффектов, а не конструкции**: ядро (storage/dispatcher/selectors) собирается синхронно сразу,
 а `waitForDependencies` отрабатывает в `ready()` перед запуском эффектов — к моменту старта эффектов
 зависимости гарантированно инициализированы.
+
+## Когда нужен `dependencies` / когда НЕ нужен
+
+**Нужен**, когда эффекты стартового модуля читают состояние/селекторы/экшены другого стора —
+чтобы к моменту старта тот был готов (иначе первый `withLatestFrom` возьмёт неинициализированное
+значение).
+
+**НЕ нужен**, когда: модуль ни от кого не зависит; либо связь чисто на уровне `selectors`
+(cross-store DI синхронен и не требует ожидания старта). `dependencies` не про типобезопасность
+и не про сам DI — только про **тайминг старта эффектов**.
 
 Домен тот же — `pokemon-advanced`. Он зависит от отдельного `settingsStorage` (`pageSize`).
 
@@ -156,3 +184,11 @@ createSynapse({
 
 Как отдать собранный `pokemonSynapse` в React и дождаться готовности — [createSynapseCtx](./synapse-ctx.md)
 и [awaitSynapse](./await-synapse.md). Весь модуль целиком — [Pokemon (рецепт)](./pokemon-advanced.md).
+
+## См. также
+
+- [createSynapse (базовый)](./create-synapse-basic.md) — реалистичный cross-store модуль (combine из чужих селекторов + несколько API + сокет).
+- [createSynapse (эффекты)](./create-synapse-effects.md) — паттерн 1 (`toObservable` + `withLatestFrom`) и паттерн 3 (`externalDispatchers` + `ctx.external`) в деле.
+- [Селекторы](./selector-system.md) — паттерн 2: чужие селекторы в `this.combine`.
+- [createEventBus](./event-bus.md) — паттерн 4: медиатор между модулями.
+- [awaitSynapse](./await-synapse.md) · [createSynapseCtx](./synapse-ctx.md) — как дождаться `ready()` в React.

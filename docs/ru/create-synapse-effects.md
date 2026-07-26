@@ -2,12 +2,47 @@
 
 > [Назад к оглавлению](./README.md) · [Эффекты модуля (`pokemon.effects.ts`)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/pokemon-advanced/pokemon.effects.ts) · [Песочница (Search)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/CreateSynapseEffectsExample.tsx)
 
+**TL;DR.** Эффект = RxJS-рецепт, который слушает `action$`, делает side-effect (вызов API,
+сокет) и **сам диспатчит** результат обратно экшенами. Объявляешь эффекты полями класса через
+`this.effect(...)`; сервисы и внешние сторы приходят через конструктор и захватываются в
+замыкание. Ключевое правило: **эмиссии эффекта НЕ диспатчатся автоматически** — диспатч только
+через прямые вызовы `d.*` внутри `tap`/`apiResult`.
+
+```typescript
+readonly loadList = this.effect((action$, state$, { dispatcher: d }) =>
+  action$.pipe(
+    ofType(d.loadList),                                  // ловим намерение
+    validateMap({ apiCall: () => fromRequest(this.api.getList.request({ limit: 12, offset: 0 })).pipe(
+      apiResult((data) => { d.applyPokemonList(data); d.loadList.success() }),  // ← диспатч вручную
+    ) }),
+  ),
+)
+```
+
 Последний кирпич сборки после [диспетчера](./create-synapse-dispatcher.md): **эффекты** —
 RxJS-слой побочных действий. Диспетчер описывает *намерения* (`loadList`, `selectPokemon`,
 `loadMore`); эффект слушает их в потоке и превращает в реальные вызовы API, а результат
 возвращает в состояние через экшены диспетчера.
 
 Домен тот же — `pokemon-advanced`.
+
+## Зачем
+
+- **Развязать намерение и сеть**: UI шлёт `loadList()`, а *как* это грузится (endpoint, отмена
+  устаревших запросов, статусы) знает только эффект.
+- **RxJS-оркестрация**: debounce поиска, отмена in-flight (`switchMap`), стратегии конкуренции
+  для записи (`exhaustMap`/`mergeMap`), слияние потоков сокета и соседних сторов — всё декларативно.
+- **Единая машина запроса**: `validateMap`/`mutationMap` дают готовый цикл
+  `валидация → loading → apiCall → success/error` вместо ручных подписок.
+
+## Когда использовать / когда НЕ нужно
+
+**Нужны**, когда: есть вызовы API/сокеты/таймеры по действиям пользователя; нужна отмена
+устаревших запросов, дебаунс, реакция на потоки других модулей.
+
+**НЕ нужны**, когда: действие лишь синхронно меняет состояние — это работа
+[Dispatcher](./create-synapse-dispatcher.md) (`this.action`), эффект тут лишний. Модуль без сети
+(чистый локальный state) вообще обходится без слоя эффектов — поле `effects` опускается.
 
 ## Эффекты (`pokemon.effects.ts`)
 
@@ -330,3 +365,11 @@ store.actions.selectPokemon(25) // → effect loadDetails → API → applyPokem
 
 Как отдать собранный `pokemonSynapse` в React-компоненты — [createSynapseCtx](./synapse-ctx.md).
 Полный модуль целиком — [Pokemon (рецепт)](./pokemon-advanced.md).
+
+## См. также
+
+- [createSynapse (диспетчер)](./create-synapse-dispatcher.md) — намерения, которые слушают эффекты (`ofType`).
+- [Зависимости и cross-store](./dependencies.md) — 4 способа связать модули (в т.ч. `externalDispatchers` и чтение чужого `state$` в эффектах).
+- [ApiClient](./api-client.md) — endpoints/кэш/tags, `fromRequest`/`apiResult` поверх него.
+- [createSynapse (базовый)](./create-synapse-basic.md) — почему async-пролог живёт в фабрике `effects`.
+- [Pokemon (рецепт)](./pokemon-advanced.md) — эффекты в составе целого модуля + протокол запроса из 5 состояний.

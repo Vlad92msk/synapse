@@ -1,6 +1,11 @@
 # Caching layers
 
-> [Back to Main](../../README.md)
+> [Back to contents](./README.md)
+
+**TL;DR:** a request is served by three independent layers, top to bottom — **(1)** the application cache
+(`ApiClient` + storage: tags/TTL/invalidation), **(2)** the transport (`baseQuery.fetchFn`: auth/metrics/axios),
+**(3)** the network (your ServiceWorker: offline/precache). A hit on an upper layer shadows the lower ones.
+Tag invalidation lives only on layer 1.
 
 A request in a synapse app can be answered from **three independent layers**, stacked on top of each
 other. They are not competing strategies — each layer solves a different problem, knows different
@@ -130,3 +135,10 @@ The Network tab tells you which layer answered:
 | row tagged `(ServiceWorker)` | layer 3 — your SW (from its Cache API or network) |
 | row `(from disk cache)` / `(memory cache)` | browser HTTP cache |
 | plain row with timing | real network |
+
+## See also
+
+- [ApiClient](./api-client.md) — layer 1: cache, tags, TTL, invalidation.
+- [Custom `baseQuery.fetchFn`](./custom-fetch-fn.md) — layer 2: swapping the transport.
+- [Your own ServiceWorker](./custom-fetch-service-worker.md) — layer 3: network strategies, offline.
+- [WorkerCacheStorage](./worker-cache-storage.md) — the live cross-tab cache (layer-1 storage backend).

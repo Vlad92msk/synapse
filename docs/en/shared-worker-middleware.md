@@ -1,21 +1,51 @@
 # SharedWorkerMiddleware
 
-> [Back to Main](../../README.md)
+> [Back to contents](./README.md)
 
-`sharedWorkerMiddleware` / `syncSharedWorkerMiddleware` synchronize storage state between tabs
-through a **SharedWorker**. It is a direct mirror of [`broadcastMiddleware`](./middlewares.md):
-same role, same signature — only the transport differs. Where `broadcastMiddleware` uses a
-`BroadcastChannel`, `sharedWorkerMiddleware` routes messages through a single SharedWorker shared
-by every tab of the origin.
+`syncSharedWorkerMiddleware` / `sharedWorkerMiddleware` — **cross-tab state synchronization through a
+single shared SharedWorker**. A direct mirror of [`broadcastMiddleware`](./middlewares.md): same role,
+same signature `({ storageType, storageName })`, same cross-tab result — only the transport differs.
+Where the broadcast variant raises one `BroadcastChannel` per store, the shared-worker variant
+multiplexes **all** stores over **one** SharedWorker per origin.
 
-Like all middlewares, it is wired up at store creation time in the `middlewares` field.
+It is wired up like any middleware — in the `middlewares` field at store creation time.
 
-## Which one to import
+## Why
 
-There are two factories with an identical signature:
+`broadcastMiddleware` creates a separate `BroadcastChannel` per store. When you sync many stores,
+that's many independent channels. The SharedWorker transport collapses them into **one** worker per
+tab: ten stores share a single worker, and messages are demultiplexed by the logical channel name
+`${storageType}-${storageName}`. Bonus — if a SharedWorker is already up for other tasks, you can
+reuse it instead of a parallel stack of `BroadcastChannel`s.
 
-- **`syncSharedWorkerMiddleware`** — for synchronous storages (`MemoryStorage`, `LocalStorage`).
-- **`sharedWorkerMiddleware`** — for the asynchronous `IndexedDBStorage` (and `WorkerCacheStorage`).
+The sync semantics are **identical** to the broadcast variant — migrating is a one-line swap.
+
+## When to use
+
+- You sync **many** stores between tabs and want them multiplexed over a single SharedWorker rather
+  than spawning separate channels.
+- The app **already has** a SharedWorker and you want to reuse it as the transport.
+
+## When NOT needed
+
+- **Few stores (one or two).** Use [`broadcastMiddleware`](./middlewares.md) — simpler, no worker,
+  same result.
+- **You need a live shared cache inside the worker** (not just notifications, but data living in the
+  worker itself) → that's [WorkerCacheStorage](./worker-cache-storage.md), a different tool.
+- **No cross-tab scenario at all** — the middleware isn't needed.
+
+## Two factories — which to take
+
+The signature is identical for both; the difference is a synchronous storage vs an asynchronous one:
+
+| Factory | Type | For |
+|---|---|---|
+| **`syncSharedWorkerMiddleware`** | `SyncMiddleware` | synchronous storages: `MemoryStorage`, `LocalStorage` |
+| **`sharedWorkerMiddleware`** | `Middleware` (async) | the asynchronous `IndexedDBStorage` (and `WorkerCacheStorage`) |
+
+## Usage
+
+The minimal copy-paste form (`MemoryStorage`):
 
 ```typescript
 import { MemoryStorage, syncSharedWorkerMiddleware } from 'synapse-storage/core'
@@ -25,39 +55,28 @@ const storage = new MemoryStorage<TodoState>({
   initialState: { todos: [], filter: 'all' },
   middlewares: () => [
     syncSharedWorkerMiddleware({
-      storageName: 'shared-worker-demo',
       storageType: 'memory',
+      storageName: 'shared-worker-demo',
     }),
   ],
 })
 await storage.initialize()
 
-// Changes are synchronized between tabs
+// Changes are synchronized between tabs through a single SharedWorker.
 storage.update((s) => { s.todos.push({ id: 't1', title: 'From another tab', done: false }) })
 ```
 
-The signature is the same `{ storageType, storageName }` as `broadcastMiddleware` — swapping one
-for the other is a one-line change.
-
-## What gets synchronized
-
-The behaviour matches `broadcastMiddleware` exactly:
-
-- **MemoryStorage** — full data synchronization. A newly opened tab requests the current state
-  from the worker (`requestSync`) and seeds itself, then stays in sync on every write.
-- **LocalStorage / IndexedDB** — only a subscriber notification. The data itself is already shared
-  by the browser storage engine; the middleware just tells the subscribers of other tabs to
-  re-read.
+Swapping `broadcastMiddleware` → `syncSharedWorkerMiddleware` (or back) is a one-line change — the
+props are the same.
 
 ## N stores over ONE SharedWorker
 
-The key difference from `broadcastMiddleware` is transport multiplexing. Each store gets its own
-logical channel named `${storageType}-${storageName}`, but **all** channels are multiplexed over a
-**single** SharedWorker instance per origin. Ten stores in a tab do not spawn ten workers — they
-share one, and messages are demultiplexed by channel name.
+The key difference from the broadcast variant is transport multiplexing. Each store gets its own
+logical channel `${storageType}-${storageName}`, but **all** channels travel over a **single**
+SharedWorker per origin:
 
 ```typescript
-// Both stores below travel through the SAME SharedWorker,
+// Both stores travel through the SAME SharedWorker,
 // isolated by their channel: 'memory-todos' vs 'memory-settings'.
 const todos = new MemoryStorage<TodoState>({
   name: 'todos',
@@ -72,26 +91,51 @@ const settings = new MemoryStorage<SettingsState>({
 })
 ```
 
-> The channel name is `${storageType}-${storageName}`. Two stores with the same
-> `storageType` + `storageName` share one channel — keep the pair unique per logical store.
+> The channel name is `${storageType}-${storageName}`. Two stores with the same pair share one
+> channel — keep it unique per logical store.
+
+## What exactly gets synchronized
+
+The behaviour matches `broadcastMiddleware` exactly and depends on the storage type:
+
+- **MemoryStorage** — full data synchronization. A newly opened tab requests the current state from
+  the worker (`requestSync`), seeds itself, and stays in sync on every write.
+- **LocalStorage / IndexedDB** — only a subscriber notification. The data itself is already shared by
+  the browser storage engine; the middleware just tells the subscribers of other tabs to re-read.
 
 ## Fallback and SSR
 
-- **No SharedWorker?** The transport transparently falls back to a `BroadcastChannel`, so
-  cross-tab sync keeps working in browsers/contexts without SharedWorker support.
-- **SSR / no browser APIs?** The middleware is a no-op — there is no window, no other tab to sync
-  with, and store creation does not throw.
+- **No SharedWorker?** The transport **transparently** falls back to a `BroadcastChannel` — cross-tab
+  sync keeps working in contexts without SharedWorker support. No code change needed.
+- **SSR / no browser APIs?** The middleware is a **no-op**: there is no window and no other tabs, and
+  store creation does not throw.
 
-## When to use which
+## All parameters (commented)
 
-- **`broadcastMiddleware`** — the simple default. One `BroadcastChannel` per store, no worker.
-  Fine for a handful of stores.
-- **`sharedWorkerMiddleware`** — when you sync **many** stores and want them multiplexed over a
-  single SharedWorker instead of many independent channels, or when you already run a SharedWorker
-  and want to reuse it. Cross-tab semantics are identical.
+The whole API surface at once — the props are the same for both factories:
 
-For a **live shared cache** (not just notifications) held inside the worker itself, see
-[WorkerCacheStorage](./worker-cache-storage.md).
+```typescript
+import { syncSharedWorkerMiddleware } from 'synapse-storage/core'
+
+syncSharedWorkerMiddleware({
+  // storageType — the storage type. Affects the sync strategy:
+  //   'memory'     → full data synchronization (requestSync + writes);
+  //   'localStorage' / 'indexedDB' → subscriber notification only (the browser syncs the data).
+  //   Together with storageName it forms the channel key `${storageType}-${storageName}`.
+  storageType: 'memory',   // 'memory' | 'localStorage' | 'indexedDB' | 'worker'
+
+  // storageName — the logical channel name. Keep the pair (storageType + storageName)
+  //   unique per store, otherwise two stores will share one channel.
+  storageName: 'todos',
+})
+```
+
+## Options
+
+| Field | Type | Description |
+|---|---|---|
+| `storageType` | `StorageType` (`'memory' \| 'localStorage' \| 'indexedDB' \| 'worker'`) | Storage type; sets the sync strategy. Part of the channel key. |
+| `storageName` | `string` | Logical channel name. Together with `storageType` forms the key `${storageType}-${storageName}`. |
 
 ## Types
 
@@ -99,11 +143,18 @@ For a **live shared cache** (not just notifications) held inside the worker itse
 import type { Middleware, SyncMiddleware } from 'synapse-storage/core'
 
 // Both factories take the same props:
-interface SharedWorkerMiddlewareProps {
-  storageType: StorageType   // 'memory' | 'localStorage' | 'indexedDB' | string
+interface SharedStateMiddlewareProps {
+  storageType: StorageType   // 'memory' | 'localStorage' | 'indexedDB' | 'worker'
   storageName: string        // used together with storageType as the channel key
 }
 
 // syncSharedWorkerMiddleware(props): SyncMiddleware   — Memory / LocalStorage
 // sharedWorkerMiddleware(props):     Middleware       — IndexedDB (async)
 ```
+
+## See also
+
+- [Middlewares](./middlewares.md) — `broadcastMiddleware` / `syncBroadcastMiddleware`, the same API without a worker.
+- [WorkerCacheStorage](./worker-cache-storage.md) — a live shared cache **inside** the worker, not just notifications.
+- [MemoryStorage](./memory-storage.md) · [LocalStorage](./local-storage.md) — synchronous storages for `syncSharedWorkerMiddleware`.
+- [IndexedDB](./indexeddb-storage.md) — the async storage for `sharedWorkerMiddleware`.

@@ -1,6 +1,11 @@
 # Pokémon SSR — server render + client pagination
 
-> [Back to Main](../../README.md)
+> [Back to contents](./README.md)
+
+**TL;DR:** on the server `api.request(...)` warms the cache → `api.dehydrate()` into HTML → on the
+client `api.hydrate(state)` **before** `api.init()`. `useApiQuery` reads the seeded page synchronously
+(no loading flash), and pagination continues with ordinary client requests. You need a sync store and one
+api instance per server request.
 
 A practical recipe: fetch the **first page on the server**, ship the cache to the client, render it with no
 loading flash, and let **pagination continue on the client** from there. Built on the same Pokémon API as

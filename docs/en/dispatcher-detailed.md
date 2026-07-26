@@ -1,10 +1,20 @@
 # Dispatcher (in detail)
 
-> [Back to Main](../../README.md)
+> [Back to contents](./README.md) · [Module dispatcher (`pokemon.dispatcher.ts`)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/pokemon-advanced/pokemon.dispatcher.ts) · [Sandbox (Counter)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/DispatcherDetailedExample.tsx)
 
-The full surface of the `Dispatcher` class. The [assembly page](./create-synapse-dispatcher.md) shows
-the minimum; here are all the factories (`action` / `signal` / `apiActions` / `keyedApiActions` /
-`watcher`), the `ofType` rule for `apiActions`, and standalone use without `createSynapse`.
+**TL;DR.** A full reference to the `Dispatcher` factories. Picking a factory for the task:
+
+| You need | Factory |
+|---|---|
+| An action that ITSELF changes the store | `this.action((store, p) => result)` |
+| A pure intent with no write (caught by an effect) | `this.signal<P>(desc)` |
+| A group of API-request statuses (idle/loading/success/failure/reset) | `this.apiActions<P>(accessor)` |
+| The same, but status per key (parallel requests) | `this.keyedApiActions<P>(accessor)` |
+| Reactively observe a slice of state (Observable) | `this.watcher({ selector })` |
+
+The [assembly page](./create-synapse-dispatcher.md) shows the minimum; here are **all** the factories
+with their options (`meta`/`memoize`), the `ofType` rule for `apiActions`, and standalone use without
+`createSynapse`.
 
 Same domain — `pokemon-advanced`. **Action/watcher name = class field name.**
 
@@ -71,10 +81,11 @@ class PokemonDispatcher extends Dispatcher<PokemonState> {
     { meta: { description: 'Add/remove from favorites' } },
   )
 
-  // With memoize — a repeated call with the same argument is skipped (doesn't trigger search needlessly)
+  // With memoize — a repeated call with the same argument is skipped (doesn't trigger search needlessly).
+  // Signature: (cur, prev, prevResult) => boolean; true = "the same, skip the call".
   readonly setSearchQuery = this.action(
     (store, query: string) => { store.set('searchQuery', query); return query },
-    { memoize: (current, previous) => current === previous },
+    { memoize: (cur, prev) => cur === prev },
   )
 }
 ```
@@ -202,3 +213,10 @@ dispatcher.destroy()
 
 > In a `createSynapse` assembly the dispatcher is available as `store.dispatcher`, and `store.actions`
 > is an alias of `store.dispatcher.dispatch`. See [createSynapse (dispatcher)](./create-synapse-dispatcher.md).
+
+## See also
+
+- [createSynapse (dispatcher)](./create-synapse-dispatcher.md) — the minimal assembly of a dispatcher into a module.
+- [createSynapse (effects)](./create-synapse-effects.md) — `ofType(d.apiActions)` catches only `init`; the `.success`/`.failure` phases are listened to separately.
+- [Dependencies and cross-store](./dependencies.md) — `externalDispatchers`: other modules' actions in a shared `action$`.
+- [Pokemon (recipe)](./pokemon-advanced.md) — the dispatcher as a whole in a working module.

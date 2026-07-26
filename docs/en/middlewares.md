@@ -1,8 +1,36 @@
 # Middlewares
 
-> [Back to Main](../../README.md)
+> [Back to contents](./README.md) · [Working example on GitHub](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/MiddlewaresExample.tsx)
 
-Middlewares intercept storage operations (set, get, update, delete, clear) and can modify, filter, or group them. They are configured when the store is created — in the `middlewares` field.
+Middleware intercepts storage operations (`set`/`get`/`update`/`delete`/`clear`/`reset`) and can
+**modify, filter, group, or duplicate** them. It is set when the store is created, in the
+`middlewares` field. You get the three built-ins (`batching`, `shallowCompare`, `logger`) via
+`getDefault()`; a custom one you return as an object into the same array.
+
+## Why
+
+An extension point between "you called `storage.set(...)`" and "the data landed in the store + subscribers
+were notified". Here, without touching the components themselves, you solve cross-cutting concerns:
+suppress redundant re-renders (`shallowCompare`), collapse frequent writes into a single notification
+(`batching`), log operations (`logger`), synchronize state across tabs (`syncBroadcastMiddleware` /
+`syncSharedWorkerMiddleware`), validate/normalize a value before writing (a custom one).
+
+## When to use
+
+- You need **cross-tab synchronization** of the store → `syncBroadcastMiddleware` (BroadcastChannel) or
+  `syncSharedWorkerMiddleware` (a shared SharedWorker).
+- Frequent writes to one key overwhelm subscribers → `batching`.
+- Components re-render on "writing the same value" → `shallowCompare`.
+- You need validation/normalization/audit of writes in one place → a custom middleware.
+
+## When you don't need it
+
+- A one-off data transformation before writing — simpler to do it in the calling code/dispatcher rather
+  than introducing a middleware.
+- Side effects triggered by actions (network, sockets) — that's the [Effects](./create-synapse-effects.md)
+  level, not storage middleware.
+- Logging **dispatcher actions** (action/prev/next/diff) — for that there is `loggerDispatcherMiddleware`;
+  the storage logger is only about low-level storage operations.
 
 The examples use the end-to-end domain `TodoState = { todos: Todo[]; filter: Filter }` (see the
 [MemoryStorage](./memory-storage.md) section). Since middlewares are set at creation time, here we use
@@ -139,6 +167,32 @@ storage.update((s) => { s.todos.push({ id: 't1', title: 'From another tab', done
 // For LocalStorage/IndexedDB — only a subscriber notification
 // (the data is already synchronized through the storage engine)
 ```
+
+### SharedWorker variant
+
+`syncSharedWorkerMiddleware` is a mirror of `syncBroadcastMiddleware` with an identical signature
+(`{ storageType, storageName }`), but synchronization goes through a **shared SharedWorker** (one thread for
+all tabs) instead of a `BroadcastChannel`. If SharedWorker is unavailable (Firefox private mode, some
+mobile browsers, SSR) there is a **transparent fallback** to BroadcastChannel, and then to an in-process
+channel: the code doesn't crash and doesn't change.
+
+```typescript
+import { MemoryStorage, syncSharedWorkerMiddleware } from 'synapse-storage/core'
+
+const storage = new MemoryStorage<TodoState>({
+  name: 'shared-todo',
+  initialState: { todos: [], filter: 'all' },
+  middlewares: () => [
+    // storageName/type must match across all tabs — it's the key of the shared channel.
+    syncSharedWorkerMiddleware({ storageType: 'memory', storageName: 'shared-todo' }),
+  ],
+})
+```
+
+> For sync storages (`MemoryStorage`/`LocalStorage`) use the `sync` variants
+> (`syncBroadcastMiddleware`/`syncSharedWorkerMiddleware`); for async (`IndexedDB`) — `broadcastMiddleware`/`sharedWorkerMiddleware`.
+> Working examples: [SharedWorkerMiddlewareExample](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SharedWorkerMiddlewareExample.tsx),
+> [SharedWorkerFallbackExample](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SharedWorkerFallbackExample.tsx).
 
 ## 6. Logger Middleware (dev-only)
 
@@ -355,3 +409,9 @@ interface SyncDefaultMiddlewares {
 //   syncLoggerMiddleware(options?): SyncMiddleware
 // LoggerMiddlewareOptions = { collapsed?: boolean; showState?: boolean }
 ```
+
+## See also
+
+- [MemoryStorage](./memory-storage.md) · [LocalStorage](./local-storage.md) · [IndexedDB](./indexeddb-storage.md) — where the `middlewares` field is set.
+- [Effects](./create-synapse-effects.md) — side effects triggered by actions (not to be confused with storage middleware).
+- [browserStorage](./browser-storage.md) — how to place client-only middleware (broadcast/shared-worker) into an SSR-safe wrapper.

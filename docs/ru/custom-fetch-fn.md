@@ -1,16 +1,17 @@
-# Custom baseQuery.fetchFn
+# Кастомный baseQuery.fetchFn
 
-> [Назад к оглавлению](../../README.md)
+> [Назад к оглавлению](./README.md)
+
+**TL;DR:** передайте `baseQuery.fetchFn?: typeof fetch` — своя функция вместо нативного `fetch`. Это
+**транспорт** (слой 2): auth-retry, метрики, axios, worker-мост. Кэш/теги (слой 1) работают поверх без
+изменений; библиотеку править не нужно.
 
 `ApiClient` принимает кастомный транспорт через `baseQuery.fetchFn?: typeof fetch`. Он заменяет **то,
 КАК** клиент выполняет запрос — обёртка над axios, auth-retry, сбор метрик или мост через
 `postMessage` в Web Worker для тяжёлого парсинга. Это **транспорт**, а не перехват ServiceWorker'ом
 (для этого см. [Собственный fetch-перехватывающий ServiceWorker](./custom-fetch-service-worker.md)).
 
-> **Библиотеку расширять НЕ нужно.** `fetchFn` — встроенное поле `baseQuery`. Исходники библиотеки не
-> трогаются: вы передаёте свою функцию, и клиент использует её как есть.
-
-## When it makes sense
+## Когда это имеет смысл
 
 - **Auth-retry** — добавить заголовок `Authorization` и сделать один тихий `refresh → retry` при
   ответе `401`, чтобы остальное приложение не видело истечения токена.
@@ -20,7 +21,7 @@
 - **Worker-транспорт** — вынести `fetch` + тяжёлый парсинг в `Worker` через `postMessage` и вернуть
   готовый `Response`, не нагружая главный поток.
 
-## Configuration
+## Настройка
 
 ```typescript
 import { ApiClient } from 'synapse-storage/api'
@@ -49,7 +50,7 @@ const client = new ApiClient({
 Клиент вызывает его с уже собранным URL и `RequestInit` (метод, заголовки, сериализованное тело,
 `signal`, `credentials`) и читает возвращённый `Response` ровно так же, как нативный.
 
-## Auth-retry example
+## Пример: auth-retry
 
 `fetchFn`, который добавляет bearer-токен и делает ровно один тихий refresh-then-retry при `401`:
 
@@ -76,7 +77,7 @@ const customFetch: typeof fetch = async (input, init) => {
 Вся обработка `401` живёт внутри транспорта. `ApiClient` — его эндпоинты, кэш и теги — ничего не знает
 о ретрае: он отдаёт запрос и получает обратно успешный `Response`.
 
-## Cache and tags work on top
+## Кэш и теги работают поверх
 
 Кастомный транспорт находится **ниже** слоя кэша/тегов, поэтому кэширование, TTL, теги и инвалидация
 по тегам продолжают работать без изменений:
@@ -102,7 +103,7 @@ await client.request('getNotes', {})   // → снова рефетчит чер
 > **Кэш короткозамыкается выше транспорта.** Попадание в кэш вообще не доходит до `fetchFn` — вызова
 > транспорта нет. `fetchFn` срабатывает только при промахе кэша или инвалидированном теге.
 
-## No library extension needed
+## Библиотеку расширять не нужно
 
 Обе оси контроля fetch доступны без правок `synapse-storage`:
 
@@ -110,10 +111,16 @@ await client.request('getNotes', {})   // → снова рефетчит чер
 - **Прозрачный перехват `fetch`** → собственный [ServiceWorker](./custom-fetch-service-worker.md),
   который живёт ниже клиента и не связан с его storage.
 
-## When to use
+## Когда что использовать
 
 - Нужно изменить, **как** отправляется запрос (auth, ретраи, метрики, axios, worker) → `fetchFn`.
 - Нужно прозрачно перехватывать `fetch` для precache / офлайна / стратегий по URL → 
   [собственный ServiceWorker](./custom-fetch-service-worker.md), а не `fetchFn`.
 - Нужен живой кросс-табный кэш ответов → [`WorkerCacheStorage`](./worker-cache-storage.md), это
   storage-бэкенд, не связанный с транспортом.
+
+## См. также
+
+- [Слои кэширования](./cache-layers.md) — где `fetchFn` (слой 2) стоит относительно кэша и SW.
+- [ApiClient](./api-client.md) — `baseQuery`, кэш, теги.
+- [Собственный ServiceWorker](./custom-fetch-service-worker.md) — прозрачный перехват `fetch` (слой 3).

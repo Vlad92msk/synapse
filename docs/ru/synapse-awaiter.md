@@ -11,6 +11,33 @@ Node.js, браузер, React Native, воркеры. React-обёртка на
 Берёт ленивый handle из `createSynapse` (см. [create-synapse-basic](./create-synapse-basic.md)),
 запускает его инициализацию и даёт синхронные/асинхронные способы дождаться готовности `storage`.
 
+## Зачем
+
+Модуль может быть **не готов** в момент, когда до него дотянулись: фабрика ждёт async-зависимости,
+`storage.initialize()` у IndexedDB асинхронен — а рендер/скрипт спрашивает синхронно. Awaiter — это
+маленький автомат `pending → ready | error` вокруг стора: синхронные геттеры (`isReady`,
+`getStoreIfReady`) для «прямо сейчас» и подписки (`onReady`/`onError`) для «когда достроится».
+
+## Когда использовать
+
+- **Вне React**: Node-рендер, прелоад данных, скрипты, воркеры — там, где нет хуков.
+- Нужен **SSR sync-fast-path**: уже прогретый (READY) модуль отдаётся синхронно, без спиннера
+  (см. ниже).
+- В React нужен ручной контроль подписки на готовность вместо HOC/хука.
+
+## Когда НЕ нужно
+
+- Обычное React-приложение → бери [awaitSynapse](./await-synapse.md) (HOC `withSynapseReady` / хук
+  `useSynapseReady`) — он инкапсулирует ровно эту подписку.
+- Модуль **всегда** синхронно готов (sync-стор без async-пролога) → можно работать со стором
+  напрямую, awaiter не нужен.
+
+> **Ошибки сборки не теряются и не «всплывают».** Если фабрика/`storage` упали, reject доставляется
+> через `onError(cb)` / `getError()` / `getStatus() === 'error'`. Внутренний init-промис защищён
+> собственным `.catch`, поэтому даже если его никто не `await`'ит (типичный кейс: работа только
+> через `onReady`/`onError`), это **не породит `unhandledRejection`**. При этом `waitForReady()`
+> отдаёт тот же промис — и его потребитель получит `throw`.
+
 ## Импорты и создание
 
 ```typescript
@@ -110,3 +137,10 @@ function PokemonStatus() {
 > (Node-рендер, прелоад данных, скрипты) или где требуется sync-fast-path.
 
 Итоговый разбор модуля целиком — в [рецепте pokemon-advanced](./pokemon-advanced.md).
+
+## См. также
+
+- [awaitSynapse](./await-synapse.md) — React-обёртка (HOC/хук) над этим awaiter'ом.
+- [createSynapse (базовый)](./create-synapse-basic.md) — откуда берётся ленивый handle.
+- [createSynapseCtx](./synapse-ctx.md) — полный SSR-поток dehydrate → hydrate.
+- [pokemon-advanced](./pokemon-advanced.md) — модуль целиком.

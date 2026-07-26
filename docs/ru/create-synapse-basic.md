@@ -222,6 +222,198 @@ export const pokemonSynapse = createSynapse(
 )
 ```
 
+## Реалистичный модуль большого проекта: cross-store DI + несколько API + сокет
+
+Минимальные примеры выше показывают форму. Но в настоящем приложении модуль редко живёт
+изолированно: его селекторы **комбинируют собственное состояние с чужим** (данные других
+модулей), а эффекты одновременно ходят в **несколько API**, слушают **WebSocket** и реагируют
+на потоки соседних сторов. Ниже — как это собирается, на домене мессенджера (`chat`), который
+зависит от `authSynapse` (текущий пользователь) и `settingsSynapse` (настройки: заблокированные
+пользователи).
+
+### 1. Селекторы: `combine` из своих + чужих селекторов (cross-store DI)
+
+Чужие селекторы приходят **параметрами конструктора** и участвуют в `this.combine([...])` наравне
+со своими — combined-селектор пересчитывается и когда меняется свой стор, и когда чужой:
+
+```typescript
+import { Selectors, type IStorage } from 'synapse-storage/core'
+import type { AuthSelectors } from '../auth/auth.selectors'
+import type { SettingsSelectors } from '../settings/settings.selectors'
+import type { ChatState } from './chat.types'
+
+export class ChatSelectors extends Selectors<ChatState> {
+  constructor(
+    storage: IStorage<ChatState>,
+    private readonly auth: AuthSelectors,          // ← селекторы ЧУЖОГО модуля
+    private readonly settings: SettingsSelectors,  // ← и ещё одного
+  ) {
+    super(storage)
+  }
+
+  // свои слайсы
+  private readonly messages = this.select((s) => s.messagesByConversation)
+  readonly activeId = this.select((s) => s.activeConversationId)
+  readonly connection = this.select((s) => s.connectionStatus)
+
+  readonly activeMessages = this.combine([this.messages, this.activeId], (byConv, id) =>
+    id ? byConv[id] ?? [] : [],
+  )
+
+  // cross-store: свои сообщения + чужой currentUserId (auth) + чужой blockedUsers (settings).
+  // Пересчитается при изменении ЛЮБОГО из трёх сторов.
+  readonly visibleMessages = this.combine(
+    [this.activeMessages, this.auth.currentUserId, this.settings.blockedUsers],
+    (msgs, myId, blocked) =>
+      msgs
+        .filter((m) => !blocked.includes(m.authorId))
+        .map((m) => ({ ...m, mine: m.authorId === myId })),
+  )
+
+  readonly unreadCount = this.combine([this.messages, this.auth.currentUserId], (byConv, myId) =>
+    Object.values(byConv).flat().filter((m) => !m.readBy.includes(myId!)).length,
+  )
+}
+```
+
+> ⚠️ **Подводный камень cross-store `combine`.** Если `tsconfig` собирается с
+> `useDefineForClassFields: true` (дефолт при `target: ES2022+`), parameter properties
+> (`this.auth`) присваиваются **после** инициализаторов полей → в момент `this.combine([this.auth.x])`
+> зависимость ещё `undefined`. Synapse ловит это понятной dev-ошибкой. Решения: либо
+> `"useDefineForClassFields": false`, либо создавать такие селекторы **в теле конструктора** после
+> `super(storage)`.
+
+### 2. Эффекты: несколько API + сокет + поток чужого стора
+
+Все внешние ресурсы — REST-эндпоинты **двух** API, WebSocket-сервис, `Observable` соседнего стора —
+приходят через конструктор и захватываются в замыкание эффектов:
+
+```typescript
+import { type Observable, tap } from 'rxjs'
+import { Effects, apiResult, fromRequest, ofType, validateMap } from 'synapse-storage/reactive'
+import type { MessagesApiEndpoints } from './messages.api'
+import type { UsersApiEndpoints } from './users.api'
+import type { ChatSocketService } from './chat.socket'
+import type { PresenceState } from '../presence/presence.types'
+import type { ChatState } from './chat.types'
+import type { ChatDispatcher } from './chat.dispatcher'
+
+export class ChatEffects extends Effects<ChatState, ChatDispatcher> {
+  constructor(
+    private readonly messagesApi: MessagesApiEndpoints, // REST #1
+    private readonly usersApi: UsersApiEndpoints,       // REST #2
+    private readonly socket: ChatSocketService,         // WebSocket-сервис
+    private readonly presence$: Observable<PresenceState>, // поток соседнего стора
+  ) {
+    super()
+  }
+
+  // История беседы по выбору (REST #1)
+  readonly loadHistory = this.effect((action$, state$, { dispatcher: d }) =>
+    action$.pipe(
+      ofType(d.openConversation),
+      validateMap({
+        loadingAction: () => d.loadHistory.loading(),
+        errorAction: (err) => d.loadHistory.failure(String(err)),
+        apiCall: (action) =>
+          fromRequest(this.messagesApi.getHistory.request({ conversationId: action.payload })).pipe(
+            apiResult((data) => {
+              d.applyHistory(data)
+              d.loadHistory.success()
+            }),
+          ),
+      }),
+    ),
+  )
+
+  // Подтягиваем профили авторов (REST #2)
+  readonly loadAuthors = this.effect((action$, state$, { dispatcher: d }) =>
+    action$.pipe(
+      ofType(d.applyHistory),
+      validateMap({
+        apiCall: (action) =>
+          fromRequest(this.usersApi.getByIds.request({ ids: authorIds(action.payload) })).pipe(
+            apiResult((users) => d.applyAuthors(users)),
+          ),
+      }),
+    ),
+  )
+
+  // Входящие из сокета вливаются в стор. Диспатч — side-effect через tap
+  // (эмиссии эффекта НЕ диспатчатся автоматически — только вызовы d.*).
+  readonly incoming = this.effect((action$, state$, { dispatcher: d }) =>
+    this.socket.messages$.pipe(tap((msg) => d.messageReceived(msg))),
+  )
+
+  // Отправка: экшен → сокет.send
+  readonly send = this.effect((action$, state$, { dispatcher: d }) =>
+    action$.pipe(
+      ofType(d.sendMessage),
+      tap((action) => this.socket.send(action.payload)),
+    ),
+  )
+
+  // Реакция на поток СОСЕДНЕГО стора (presence): отметить онлайн/оффлайн собеседников
+  readonly presenceSync = this.effect((action$, state$, { dispatcher: d }) =>
+    this.presence$.pipe(tap((presence) => d.applyPresence(presence.online))),
+  )
+
+  // Сокет закрываем при уничтожении модуля
+  override onDestroy() {
+    this.socket.disconnect()
+  }
+}
+```
+
+### 3. Сборка: прокидываем всё в `createSynapse`
+
+`selectors` получает чужие селекторы синхронно (cross-store DI), `dependencies` держат старт эффектов
+до готовности этих модулей, а `effects` (async) лениво резолвит оба API и открывает сокет — уже на
+клиенте, после конструкции ядра:
+
+```typescript
+import { MemoryStorage } from 'synapse-storage/core'
+import { createSynapse } from 'synapse-storage/utils'
+
+import { authSynapse } from '../auth/auth.synapse'
+import { settingsSynapse } from '../settings/settings.synapse'
+import { presenceSynapse } from '../presence/presence.synapse'
+import { getMessagesApi } from './messages.api'
+import { getUsersApi } from './users.api'
+import { connectChatSocket } from './chat.socket'
+import { ChatDispatcher } from './chat.dispatcher'
+import { ChatSelectors } from './chat.selectors'
+import { ChatEffects } from './chat.effects'
+import { initialState } from './chat.store'
+import type { ChatState } from './chat.types'
+
+export const chatSynapse = createSynapse({
+  storage: () => new MemoryStorage<ChatState>({ name: 'chat', initialState }),
+
+  dispatcher: (s) => new ChatDispatcher(s),
+
+  // cross-store DI: чужие селекторы доступны СИНХРОННО (main-ядро чужого модуля строится лениво).
+  selectors: (s) => new ChatSelectors(s, authSynapse.selectors, settingsSynapse.selectors),
+
+  // гейт СТАРТА эффектов: ждём готовности обоих модулей, чей стейт читаем.
+  dependencies: [authSynapse, settingsSynapse, presenceSynapse],
+
+  // async-пролог: резолв ДВУХ API + открытие сокета + поток соседнего стора — только на клиенте.
+  effects: async () =>
+    new ChatEffects(
+      await getMessagesApi(),
+      await getUsersApi(),
+      connectChatSocket(),
+      presenceSynapse.state$,
+    ),
+})
+```
+
+Что здесь демонстрируется разом: **combine из n селекторов** (свои + два чужих модуля),
+**множество зависимостей** в `dependencies`, **несколько API** и **сокет** в одном классе эффектов,
+и **чтение потока соседнего стора** через `state$`. Конструкция ядра при этом осталась синхронной —
+всё «тяжёлое» уехало в `effects` и не мешает SSR.
+
 ## Дополнительно (DX)
 
 - **`browserStorage(config, { client })`** (экспорт из `synapse-storage/core`) — server-safe фабрика

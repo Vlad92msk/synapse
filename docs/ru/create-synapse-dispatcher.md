@@ -2,12 +2,40 @@
 
 > [Назад к оглавлению](./README.md) · [Диспетчер модуля (`pokemon.dispatcher.ts`)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/pokemon-advanced/pokemon.dispatcher.ts) · [Песочница (Cart)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/CreateSynapseDispatcherExample.tsx)
 
+**TL;DR.** Диспетчер = **именованные намерения** модуля. Пишешь экшены как поля класса
+(`this.action` / `this.signal` / `this.apiActions` / `this.watcher`), имя поля = имя экшена.
+Вызов `store.actions.X(payload)` меняет состояние (для `action`) и/или бросает намерение в
+`action$` — там его ловят эффекты. Читаешь через селекторы, пишешь через диспетчер.
+
+```typescript
+dispatcher: (s) => new PokemonDispatcher(s),   // одно поле в createSynapse
+store.actions.selectPokemon(25)                // вызов намерения из UI
+```
+
 Следующий кирпич после [базовой сборки](./create-synapse-basic.md): добавляем **диспетчер**.
 Он описывает **намерения** — именованные действия, меняющие состояние, — и **наблюдатели**
 (watchers) для реактивного отслеживания. Эффекты (вызовы API по экшенам) — на
 [следующей странице](./create-synapse-effects.md).
 
 Домен тот же — `pokemon-advanced`.
+
+## Зачем
+
+- **Именованные точки входа записи** вместо разбросанных `storage.set/update` по компонентам:
+  весь список того, что модуль умеет менять, — в одном классе.
+- **Намерение ≠ мутация**: `signal`/`apiActions` могут ничего не писать в стор, а лишь бросить
+  сигнал, который подхватит эффект (загрузка API). Так UI не знает про сеть — он шлёт намерение.
+- **Единый поток `action$`**, на котором строятся эффекты и cross-store реакции.
+
+## Когда использовать / когда НЕ нужно
+
+**Нужен**, когда: появляются именованные операции над состоянием; есть побочные эффекты
+(загрузка из API по действию пользователя); нужен reactive-watcher за срезом состояния.
+
+**НЕ нужен**, когда: state тривиальный и меняется в одном-двух местах — тогда хватает прямых
+`store.storage.set/update` из [базовой формы](./create-synapse-basic.md) (диспетчер можно не
+добавлять вовсе). Диспетчер без эффектов — это просто типобезопасные сеттеры; вся мощь
+раскрывается в паре с [Effects](./create-synapse-effects.md).
 
 ## Диспетчер (`pokemon.dispatcher.ts`)
 
@@ -171,3 +199,11 @@ export const { contextSynapse, useSynapseSelectors, useSynapseActions } =
 
 Подробнее — [createSynapseCtx](./synapse-ctx.md). Как намерения превращаются в реальные
 вызовы API — [Effects](./create-synapse-effects.md).
+
+## См. также
+
+- [createSynapse (базовый)](./create-synapse-basic.md) — форма без диспетчера (пишем через storage напрямую).
+- [Dispatcher (подробно)](./dispatcher-detailed.md) — вся поверхность: `action`/`signal`/`apiActions`/`keyedApiActions`/`watcher`, опции (`meta`/`memoize`), правило `ofType`, автономное использование.
+- [createSynapse (эффекты)](./create-synapse-effects.md) — как намерения ловятся и превращаются в вызовы API.
+- [Селекторы](./selector-system.md) — чтение состояния (диспетчер только пишет).
+- [Pokemon (рецепт)](./pokemon-advanced.md) — диспетчер в составе целого модуля.

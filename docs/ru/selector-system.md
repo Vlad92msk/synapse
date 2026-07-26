@@ -2,9 +2,23 @@
 
 > [Назад к оглавлению](./README.md) · [Пример: селекторы](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SelectorSystemExample.tsx) · [Пример: реактивные селекторы](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/ReactiveSelectorExample.tsx)
 
-Селекторы извлекают и вычисляют данные из хранилища. Мемоизированы — пересчитываются только при изменении
-зависимостей. Могут комбинироваться. В class-форме селекторы объявляются как **поля класса** — поля сразу
-настоящие `SelectorAPI` (eager-материализация).
+Селекторы извлекают и вычисляют данные из хранилища. **Мемоизированы** — пересчитываются только при
+изменении зависимостей, поэтому дорогие вычисления (фильтрация, агрегация) не повторяются на каждое
+чтение. Могут **комбинироваться** друг с другом и с селекторами других сторов. В class-форме селекторы
+объявляются как **поля класса** — поля сразу настоящие `SelectorAPI` (eager-материализация, без «рецептов»).
+
+**Когда использовать:** производное/вычисляемое значение (счётчики, фильтрованные списки, флаги),
+которое нужно многократно и без лишних пересчётов; общий источник для нескольких компонентов;
+кросс-модульные связи. **Когда НЕ нужно:** разовое чтение поля как есть — хватит
+[`get`/`getState`](./reading-data.md); простая подписка на одно поле — [`subscribe`](./subscriptions.md).
+
+Три фабрики (все `protected`, зовутся в теле класса через `this.`):
+
+| Фабрика | Что создаёт | Когда |
+|---|---|---|
+| `this.select(fn, opts?)` | простой селектор от состояния | извлечь часть/поле состояния |
+| `this.combine([deps], fn, opts?)` | комбинированный от других селекторов | вычислить значение из зависимостей |
+| `this.keyed(key => fn, opts?)` | фабрику «один `SelectorAPI` на ключ» | параметрический доступ (по id и т.п.) |
 
 Примеры используют сквозной `todoStorage` (`TodoState = { todos: Todo[]; filter: Filter }`) из раздела
 [MemoryStorage](./memory-storage.md) и его канонический набор селекторов `TodoSelectors`.
@@ -82,19 +96,68 @@ class TodoSelectors extends Selectors<TodoState> {
 selectors.byId('t1').select()   // SelectorAPI для конкретного id
 ```
 
+`keyed` по умолчанию сравнивает значения **структурно** (`deepEquals`), а не по ссылке: соседние ключи
+живут под общим родителем, и storage при обновлении пере-клонирует всю ветку — без структурного
+сравнения обновление ключа `A` уведомляло бы подписчиков ключа `B`.
+
+### Все опции (закомментировано)
+
+Полная поверхность фабрик и `SelectorOptions` — что можно передать и зачем:
+
+```typescript
+class TodoSelectors extends Selectors<TodoState> {
+  // ── this.select(selector, options?) ──
+  // selector: (state) => R — извлекает значение из состояния.
+  readonly titles = this.select(
+    (s) => s.todos.map((t) => t.title),
+    {
+      // equals?: (a, b) => boolean — как сравнивать НОВОЕ и СТАРОЕ значение селектора.
+      //   По умолчанию сравнение по ссылке (===). Для массивов/объектов задайте своё,
+      //   иначе каждое изменение стора = «новая ссылка» = лишнее уведомление/ре-рендер.
+      equals: (a, b) => a.length === b.length && a.every((x, i) => x === b[i]),
+      // name?: string — необязательное имя для отладки (в ошибках/логах).
+      name: 'titles',
+    },
+  )
+
+  // ── this.combine([deps], fn, options?) ──
+  // deps: SelectorAPI[] — зависимости (свои и/или cross-store).
+  // fn: (...depValues) => R — комбинирует их значения. Пересчёт только при изменении deps.
+  // options — те же SelectorOptions (equals / name).
+  readonly visibleTodos = this.combine(
+    [this.select((s) => s.todos), this.select((s) => s.filter)],
+    (todos, filter) => filterTodos(todos, filter),
+    { name: 'visibleTodos' },
+  )
+
+  // ── this.keyed(key => selector, options?) ──
+  // key => (state) => R — функция ключа возвращает селектор для этого ключа.
+  // options — SelectorOptions; equals ПО УМОЛЧАНИЮ = deepEquals (структурное сравнение),
+  //   переопределяется через options.equals.
+  readonly byId = this.keyed(
+    (id: string) => (s: TodoState) => s.todos.find((t) => t.id === id),
+    { name: 'todoById' },
+  )
+}
+```
+
+`SelectorOptions` целиком: `{ equals?: (a, b) => boolean; name?: string }`. Других полей нет.
+
 ### Cross-store: внешние селекторы через конструктор
 
-Селектор может зависеть от селектора **другого стора**. Внешние селекторы приходят параметром конструктора —
-parameter properties присваиваются ДО инициализаторов полей, поэтому `this.core` доступен в полях.
+Селектор может зависеть от селектора **другого стора**. Внешние селекторы приходят **параметром
+конструктора** и участвуют в `this.combine` наравне со своими — combined пересчитывается при изменении
+любого из сторов. (В v6 отдельного `combineAcross` нет — cross-store делается этим конструкторным DI.)
 
 ```typescript
 import type { IStorage, SelectorAPI } from 'synapse-storage/core'
 
 class PostsSelectors extends Selectors<PostsState> {
-   list = this.select((s) => s.list)
+  readonly list = this.select((s) => s.list)
 
-  // cross-store: реактивно пересчитывается при изменении чужого стора
-   currentUserId: SelectorAPI<number | null>
+  // cross-store: реактивно пересчитывается при изменении чужого стора.
+  // Объявляем поле, а САМ combine создаём в теле конструктора — см. подводный камень ниже.
+  readonly currentUserId: SelectorAPI<number | null>
 
   constructor(storage: IStorage<PostsState>, private core: CoreSelectors) {
     super(storage)
@@ -102,6 +165,13 @@ class PostsSelectors extends Selectors<PostsState> {
   }
 }
 ```
+
+> **Подводный камень `useDefineForClassFields`.** При `useDefineForClassFields: true` (дефолт для
+> target ES2022+) инициализаторы полей выполняются ДО присваивания parameter properties — то есть в
+> момент `readonly x = this.combine([this.core.foo], …)` значение `this.core` ещё `undefined`, и
+> зависимость молча оказывается пустой. Поэтому cross-store `combine` создавай **в теле конструктора
+> после `super()`** (как выше), либо выстави `"useDefineForClassFields": false` в tsconfig. Есть
+> dev-проверка: `combine()` бросает понятную ошибку, если зависимость не является `SelectorAPI`.
 
 Подробнее о межмодульных связях — [Межмодульные зависимости](./dependencies.md).
 

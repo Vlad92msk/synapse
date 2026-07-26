@@ -1,14 +1,30 @@
 # createSynapseCtx
 
-> [Back to Main](../../README.md)
+> [Back to contents](./README.md) · [Sandbox (Settings)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SynapseCtxExample.tsx) · [SSR example (Posts)](https://github.com/Vlad92msk/synapse/blob/master/packages/examples/src/examples/SynapseCtxSsrExample.tsx)
 
-React Context + HOC for accessing a Synapse module through hooks. A lazy handle is passed in: the factory
-starts on the first mount of the Provider (not on import), with an automatic `loadingComponent` during
-initialization.
+**TL;DR.** `createSynapseCtx(module, options?)` wraps a Synapse module in a React Context + HOC:
+child components take `storage`/`selectors`/`actions`/`state$` through hooks, without threading a prop
+by hand. You pass the **handle itself** (not a call) — since v6 the C-form is synchronous, so the store
+is ready for the first frame (SSR by construction), and `loadingComponent` is only a **fallback**
+render for an async store that couldn't be built synchronously.
 
 Same domain — the `pokemonSynapse` assembled on the previous pages. This is the "provider" way to hand it
 to the tree; the alternative (manual `await` + prop) is [awaitSynapse](./await-synapse.md), which is what
 the demo in the module actually uses.
+
+## When to use it
+
+- The module is needed by **many components of a subtree**, and you don't want to thread it as a prop by hand.
+- You need **SSR with seeded data**: `dehydrate` + the `dehydratedState` prop (section below).
+- A "background" provider wraps a large subtree (the app shell) and must not block SSR.
+
+## When you don't need it
+
+- The module goes to **one or two** components → [awaitSynapse](./await-synapse.md) is simpler
+  (manual `await` + prop, no Context).
+- You need a bare **storage inside a component** without selectors/actions → [useCreateStorage](./hook-memory.md).
+- Logic lives **outside React** (effects, utilities, Node) → the programmatic
+  [createSynapseAwaiter](./synapse-awaiter.md).
 
 ## Creating the context
 
@@ -25,9 +41,16 @@ const {
   useSynapseState$,     // () => Observable<PokemonState> (only with effects)
   cleanupSynapse,       // () => Promise<void>
 } = createSynapseCtx(pokemonSynapse, {
-  loadingComponent: <div>Loading the pokedex...</div>,  // shown while the module isn't ready
+  loadingComponent: <div>Loading the pokedex...</div>,  // FALLBACK render: only if the store couldn't be
+                                                        // built synchronously (normally the C-form is ready at once)
 })
 ```
+
+`options` — the only optional argument:
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `loadingComponent` | `React.ReactNode` | `<div>Initializing the context...</div>` | **Fallback** render if the store couldn't be built synchronously (normally the C-form is ready for the first frame; on the server only an async store degrades this way). |
 
 ## Using the hooks in child components
 
@@ -80,7 +103,7 @@ function Pokedex() {
   )
 }
 
-// Wrap it — loadingComponent is shown while the module isn't ready
+// Wrap it. Normally the store is synchronously ready for the first frame; loadingComponent is just a fallback render.
 const PokedexWithContext = contextSynapse(Pokedex)
 
 // Usage in JSX:

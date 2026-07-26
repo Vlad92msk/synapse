@@ -1,11 +1,56 @@
-# useStorageObservable
+# useStorageObservable / useObservable
 
-> [Назад на главную](../../README.md)
+> [Назад к оглавлению](./README.md)
 
-RxJS-путь «store → реактивно в компоненте». Эквивалент [useStorageSubscribe](./use-storage-subscribe.md),
-но поверх потока состояния можно навесить RxJS-операторы (`debounceTime`, `scan`, `bufferTime`, …). См.
-обзор [Реактивное чтение](./reactive-reads.md). В примерах — сквозной `todoStorage`
+**TL;DR.** RxJS-путь «store → реактивно в компоненте». Два хука:
+
+- **`useStorageObservable(storage[, selector])`** — сахар: срез стора в рендер через RxJS, без
+  собственных операторов. Эквивалент [`useStorageSubscribe`](./use-storage-subscribe.md), только внутри
+  RxJS.
+- **`useObservable(source, initial[, deps])`** — подписаться на **любой** `Observable` (свой `pipe(...)`
+  или `selector.$`) и вернуть его значение в рендер. Это уровень ниже: тут ты сам строишь поток.
+
+Нужны операторы (`debounceTime`, `scan`, `bufferTime`) — бери `toObservable` + `useObservable`. Оба
+импортируются из `synapse-storage/react`. В примерах — сквозной `todoStorage`
 (`TodoState = { todos: Todo[]; filter: Filter }`).
+
+## Зачем
+
+`useStorageSubscribe` отдаёт срез как есть. Как только между стором и рендером нужна **обработка потока**
+(сгладить дебаунсом, накопить `scan`-ом, схлопнуть `bufferTime`-ом), нужен RxJS. `useObservable`
+подписывается на готовый `Observable` в `useEffect` и кладёт последнее значение в стейт;
+`useStorageObservable` — тонкая обёртка над `toObservable` + `useObservable` для частого случая «просто
+срез, без своих операторов».
+
+## Когда использовать / когда НЕ нужно
+
+**`useStorageObservable`** — нужен срез стора в рендер, но по идеологическим/стилевым причинам через RxJS,
+своих операторов нет. Если операторов нет и RxJS не важен — проще
+[`useStorageSubscribe`](./use-storage-subscribe.md).
+
+**`useObservable`** — есть **свой `Observable`**: собранный `toObservable(...).pipe(...)`, `selector.$`
+или внешний RxJS-источник, и его значение нужно **в рендер**.
+
+**НЕ нужно** ни то, ни другое, если:
+
+- реактивное чтение без RxJS → [`useStorageSubscribe`](./use-storage-subscribe.md);
+- результат — **side-effect**, а не значение в рендер → [`useSubscription`](./use-subscription.md);
+- поток нужен **вне React** → [`toObservable`](./to-observable.md).
+
+## Сигнатуры
+
+```typescript
+// сахар: срез стора в рендер через RxJS
+useStorageObservable<S>(storage: IStorageBase<S>): S
+useStorageObservable<S, R>(storage: IStorageBase<S>, selector: (state: S) => R): R
+
+// низкий уровень: любой Observable → значение в рендер
+useObservable<T>(
+  source: Observable<T> | (() => Observable<T>),
+  initialValue: T,
+  deps?: DependencyList,
+): T
+```
 
 ## Базовое использование
 
@@ -185,9 +230,64 @@ function MessageNotifier() {
 выбрать правильную точку входа (`useObservable` — отрендерить значение, `useSubscription` — выполнить
 side-effect).
 
+## Все параметры (закомментировано)
+
+```tsx
+import { useStorageObservable, useObservable } from 'synapse-storage/react'
+import { toObservable } from 'synapse-storage/reactive'
+import { map } from 'rxjs/operators'
+
+// --- useStorageObservable: срез стора в рендер, без своих операторов ---
+const total = useStorageObservable(
+  // 1. storage — IStorageBase. Поток мемоизируется по [storage] (без переподписки на рендер).
+  todoStorage,
+  // 2. selector? — срез (map + distinctUntilChanged). Без него — весь стейт.
+  //    Намеренно НЕ входит в deps: переподписка идёт только по storage.
+  (s) => s.todos.length,
+)
+
+// --- useObservable: любой Observable → значение в рендер ---
+const label = useObservable(
+  // 1. source — Observable ИЛИ фабрика () => Observable. Фабрика нужна для своих
+  //    операторов (pipe). Фабрику мемоизирует сам хук (см. deps ниже).
+  () => toObservable(todoStorage, (s) => s.todos.length).pipe(map((n) => `${n} задач`)),
+  // 2. initialValue — что вернуть до первого эмита (поток эмитит начальное значение
+  //    при подписке, так что мигание обычно нулевое, но тип обязателен).
+  '0 задач',
+  // 3. deps? — переподписка (пересборка всей цепочки). По умолчанию: для фабрики — []
+  //    (строится один раз), для прямого Observable — [source]. Клади сюда всё, что
+  //    фабрика замыкает и что может поменяться (проп limit, стор из пропсов, …).
+  [],
+)
+```
+
+## Параметры
+
+`useStorageObservable`:
+
+| Параметр | Тип | Описание |
+|---|---|---|
+| `storage` | `IStorageBase<S>` | Хранилище. Поток мемоизируется по `[storage]`. |
+| `selector?` | `(state: S) => R` | Срез (`map` + `distinctUntilChanged`). Без него — весь стейт. Не входит в deps. |
+
+`useObservable`:
+
+| Параметр | Тип | Описание |
+|---|---|---|
+| `source` | `Observable<T> \| (() => Observable<T>)` | Готовый поток или фабрика. Фабрика — для своих операторов. |
+| `initialValue` | `T` | Значение до первого эмита. |
+| `deps?` | `DependencyList` | Переподписка. По умолчанию `[]` для фабрики, `[source]` для прямого Observable. |
+
 ## Заметки
 
 - Селекторный поток `toObservable` уже прогоняется через `distinctUntilChanged` — внешний
   `distinctUntilChanged` сразу после селектора почти всегда избыточен.
-- Нужно простое реактивное чтение без RxJS? Бери [useStorageSubscribe](./use-storage-subscribe.md).
-- Поток вне React (эффекты, не-React код) — [toObservable](./to-observable.md).
+- `useObservable` принимает и `selector.$` напрямую (Observable-вид `SelectorAPI`) — можно
+  `useObservable(selectors.active.$.pipe(debounceTime(300)), initial)`, см. [Селекторы](./selector-system.md).
+
+## См. также
+
+- [useStorageSubscribe](./use-storage-subscribe.md) — простое реактивное чтение без RxJS.
+- [useSubscription](./use-subscription.md) — тот же поток, но как side-effect (без рендера).
+- [toObservable](./to-observable.md) — поток вне React (эффекты, не-React код).
+- [Реактивное чтение](./reactive-reads.md) — обзор и выбор инструмента.
