@@ -437,12 +437,15 @@ const resources = {
   },
 }
 
-// SSR-safe: во время пререндера (Node) нет localStorage — берём язык по умолчанию.
-const initialLng = (typeof localStorage !== 'undefined' && localStorage.getItem('preferred-locale')) || 'en'
-
+// Инициализируемся ВСЕГДА на 'en' — тем же языком, что видит пререндер (Node без
+// localStorage). Первый клиентский рендер обязан совпасть с серверным HTML, иначе
+// hydration mismatch (React #418): чтение localStorage здесь запускало первый рендер
+// по-русски поверх английского HTML → React выбрасывал разметку и перерисовывал
+// (скачок вёрстки + подмена latin→cyrillic шрифта).
+// Сохранённую локаль применяем ПОСЛЕ гидрации — в Layout.useEffect (App.tsx).
 i18n.use(initReactI18next).init({
   resources,
-  lng: initialLng,
+  lng: 'en',
   react: {
     useSuspense: false,
   },
