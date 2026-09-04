@@ -2,6 +2,7 @@ import { batchingMiddleware } from '../middlewares/storage-batching.middleware'
 import { loggerMiddleware } from '../middlewares/storage-logger.middleware'
 import { shallowCompareMiddleware } from '../middlewares/storage-shallow-compare.middleware'
 import { AsyncDefaultMiddlewares, AsyncStorageConfig, IAsyncStorage, IEventEmitter, ILogger, StorageEvents, StorageType } from '../storage.interface'
+import { planHydration, splitHydrationMeta } from '../utils/hydration-meta.util'
 import { AsyncMiddlewareModule, Middleware, VALUE_NOT_CHANGED } from '../utils/middleware-module'
 import { decideMigration } from '../utils/migration.util'
 import { createDummyState, extractPath } from '../utils/path-selector.util'
@@ -448,14 +449,35 @@ export abstract class AsyncBaseStorage<T extends Record<string, any>> extends St
   }
 
   /**
-   * SSR-гидрация: заменяет всё состояние переданным снапшотом. Намеренно НЕ требует
+   * SSR-гидрация: применяет переданный снапшот к состоянию. Намеренно НЕ требует
    * `ready()` — типичный сценарий вызвать её до `initialize()`, чтобы инициализация
    * не перезатёрла серверное состояние `initialState`-ом (см. `initializeWithMiddlewares`).
+   *
+   * Мердж-по-свежести (`__hydratedAt`): снапшот НЕ новее уже применённого игнорируется. Стратегия
+   * из конфига (`hydrateStrategy`): `'replace'` (дефолт) — полная замена, свежесть на весь снапшот;
+   * `'merge'` — shallow-мердж по ключам, свежесть по ключу, ключи вне снапшота не трогаются.
    */
   public async hydrate(state: T): Promise<void> {
     try {
-      await this.doSet('', state)
+      const { hydratedAt, state: payload } = splitHydrationMeta(state)
+      const strategy = this.config.hydrateStrategy ?? 'replace'
+      const plan = planHydration<T>({
+        strategy,
+        hydratedAt,
+        payload,
+        current: await this.getRawState(),
+        lastHydratedAt: this._hydratedAt,
+        hydratedAtByKey: this._hydratedAtByKey,
+      })
+
+      // Метки по ключу продвигаем всегда (даже без записи), иначе устаревший ключ переспросят.
+      if (strategy === 'merge' && plan.keyStampUpdates) Object.assign(this._hydratedAtByKey, plan.keyStampUpdates)
+
+      if (!plan.apply) return
+
+      await this.doSet('', plan.merged)
       this._stateCache = await this.getRawState()
+      if (strategy === 'replace' && plan.nextHydratedAt !== undefined) this._hydratedAt = plan.nextHydratedAt
 
       // Если включён persist-migration — фиксируем текущую версию: серверный снапшот
       // уже в актуальной схеме, миграцию на нём запускать не нужно.
@@ -463,15 +485,14 @@ export abstract class AsyncBaseStorage<T extends Record<string, any>> extends St
         await this.writePersistedVersion(this.config.version)
       }
 
-      const changedPaths = Object.keys(this._stateCache)
-      for (const key of changedPaths) {
+      for (const key of plan.changedKeys) {
         this.notifySubscribers(key, (this._stateCache as Record<string, any>)[key])
       }
       this.notifySubscribers(GLOBAL_SUBSCRIPTION_KEY, {
         type: StorageEvents.STORAGE_UPDATE,
-        key: changedPaths,
+        key: plan.changedKeys,
         value: this._stateCache,
-        changedPaths,
+        changedPaths: plan.changedKeys,
       })
     } catch (error) {
       this.logger?.error('Error hydrating storage', { error })

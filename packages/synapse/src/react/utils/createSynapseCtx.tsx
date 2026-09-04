@@ -30,6 +30,25 @@ export function createSynapseCtx<TState extends Record<string, any>, TDispatcher
     return synapseModule.getSnapshot()
   }
 
+  // Трекинг засева общего клиентского main. Стор один на приложение, поэтому состояние —
+  // на уровне контекста (не пер-инстанс):
+  //  • `clientRenderSeeded` — первый клиентский маунт разрешено сеять в фазе рендера (живых
+  //    подписчиков ещё нет), чтобы первый кадр совпал с SSR-HTML; последующие маунты — только в эффекте.
+  //  • `lastClientSnapshot` — идемпотентность по ссылке: тем же снапшотом повторно не сеем.
+  let clientRenderSeeded = false
+  let lastClientSnapshot: TState | undefined
+
+  // Клиентский засев. `hydrate` синхронно нотифицирует подписчиков, поэтому в фазе рендера его
+  // можно звать только на первом маунте (подписчиков нет); при навигации — из эффекта (commit-фаза),
+  // иначе эмиссия попадёт в рендер чужого провайдера → «setState in render».
+  const seedClient = (store: ReadySynapse | undefined, snapshot: TState | undefined): void => {
+    if (!store || snapshot === undefined) return
+    if (store.storage.initStatus.status !== StorageStatus.READY) return
+    if (lastClientSnapshot === snapshot) return // уже засеяно этим снапшотом
+    lastClientSnapshot = snapshot
+    store.storage.hydrate(snapshot)
+  }
+
   const useSynapseStorage = (): IStorage<TState> => {
     const context = useContext(SynapseContext)
     if (!context) throw new Error(`useSynapseStorage: ${ERROR_HOOK_MESSAGE}`)
@@ -55,21 +74,23 @@ export function createSynapseCtx<TState extends Record<string, any>, TDispatcher
   }
 
   // Снимает серверный снапшот состояния для пропа dehydratedState (классический SSR: renderToString).
-  const dehydrate = (opts?: { initialState?: Partial<TState> }): Promise<TState> => dehydrateModule(synapseModule, { state: opts?.initialState })
+  // `hydratedAt` — метка свежести для мердж-по-свежести в `hydrate` (по умолчанию — `Date.now()`).
+  const dehydrate = (opts?: { initialState?: Partial<TState>; hydratedAt?: number }): Promise<TState> =>
+    dehydrateModule(synapseModule, { state: opts?.initialState, hydratedAt: opts?.hydratedAt })
 
   /** Декоратор для обёртки компонентов в контекст Synapse. */
   function contextSynapse<SelfComponentProps>(Component: ComponentType<SelfComponentProps>) {
     const WrappedComponent = forwardRef<unknown, SelfComponentProps & { dehydratedState?: TState }>(function WrappedComponent(props, ref) {
       const { dehydratedState, ...restProps } = props as SelfComponentProps & { dehydratedState?: TState }
 
-      // Засев эмитит подписчикам; повторный засев того же стора этим же инстансом выстрелил бы эмиссию
-      // во время рендера. Набор ПЕР-ИНСТАНСНЫЙ (не общий): на сервере каждый рендер обязан пере-сеять
-      // свой стор своим снапшотом (изоляция запросов), общий набор ошибочно бы это пропустил.
+      // Серверный засев эмитит подписчикам; повторный засев того же стора этим же инстансом выстрелил бы
+      // эмиссию во время рендера. Набор ПЕР-ИНСТАНСНЫЙ (не общий): на сервере каждый рендер обязан
+      // пере-сеять свой throwaway-стор своим снапшотом (изоляция запросов), общий набор это бы пропустил.
       const seededRef = useRef<WeakSet<object> | null>(null)
       const seeded = (seededRef.current ??= new WeakSet<object>())
 
-      // Синхронный засев снапшота до первого рендера — одинаковый HTML на сервере и клиенте. Идемпотентно.
-      const seedHydration = (store: ReadySynapse | undefined) => {
+      // Синхронный засев throwaway-стора до первого рендера на сервере — одинаковый HTML. Идемпотентно.
+      const seedServer = (store: ReadySynapse | undefined) => {
         if (store && dehydratedState !== undefined && store.storage.initStatus.status === StorageStatus.READY && !seeded.has(store)) {
           seeded.add(store)
           store.storage.hydrate(dehydratedState)
@@ -80,12 +101,16 @@ export function createSynapseCtx<TState extends Record<string, any>, TDispatcher
         // Сервер: свежий throwaway-стор на каждый рендер — изоляция запроса by construction (main не трогаем).
         if (typeof window === 'undefined') {
           const shell = synapseModule.buildSyncShell?.() ?? undefined
-          seedHydration(shell)
+          seedServer(shell)
           return shell
         }
-        // Клиент: общий main синхронно, сеем снапшотом.
+        // Клиент: общий main. Сеять в фазе рендера можно ТОЛЬКО на самом первом маунте — живых
+        // подписчиков ещё нет, а первый кадр обязан совпасть с SSR-HTML. Дальше засев уезжает в эффект.
         const main = getClientStore()
-        seedHydration(main)
+        if (!clientRenderSeeded) {
+          clientRenderSeeded = true
+          seedClient(main, dehydratedState)
+        }
         return main
       })
 
@@ -94,7 +119,11 @@ export function createSynapseCtx<TState extends Record<string, any>, TDispatcher
       useEffect(() => {
         // Эффекты стартуют только на клиенте, на общем main; идентичность стора при этом НЕ меняется.
         let cancelled = false
-        if (!store) setStore(getClientStore()) // редкий случай: main не был готов на первом кадре
+        const active = store ?? getClientStore()
+        if (!store) setStore(active) // редкий случай: main не был готов на первом кадре
+        // Клиентский засев в commit-фазе: при навигации нотификация подписчиков идёт вне рендера
+        // чужого провайдера (фикс «setState in render»). На первом маунте — no-op (тот же снапшот).
+        seedClient(active, dehydratedState)
         synapseModule.ready().catch((err) => {
           if (!cancelled) setError(err instanceof Error ? err : new Error(String(err)))
         })

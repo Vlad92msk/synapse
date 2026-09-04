@@ -2,6 +2,7 @@ import { syncBatchingMiddleware } from '../middlewares/sync-storage-batching.mid
 import { syncLoggerMiddleware } from '../middlewares/sync-storage-logger.middleware'
 import { syncShallowCompareMiddleware } from '../middlewares/sync-storage-shallow-compare.middleware'
 import { IEventEmitter, ILogger, ISyncStorage, StorageEvents, StorageType, SyncDefaultMiddlewares, SyncStorageConfig } from '../storage.interface'
+import { planHydration, splitHydrationMeta } from '../utils/hydration-meta.util'
 import { SyncMiddleware, SyncMiddlewareModule, VALUE_NOT_CHANGED } from '../utils/middleware-module'
 import { decideMigration } from '../utils/migration.util'
 import { createDummyState, extractPath } from '../utils/path-selector.util'
@@ -443,14 +444,37 @@ export abstract class SyncBaseStorage<T extends Record<string, any>> extends Sto
   }
 
   /**
-   * SSR-гидрация: заменяет всё состояние переданным снапшотом. Намеренно НЕ требует
+   * SSR-гидрация: применяет переданный снапшот к состоянию. Намеренно НЕ требует
    * `ready()` — типичный сценарий вызвать её до `initialize()`, чтобы инициализация
    * не перезатёрла серверное состояние `initialState`-ом (см. `initializeWithMiddlewares`).
+   *
+   * Мердж-по-свежести (`__hydratedAt`): снапшот НЕ новее уже применённого игнорируется — так
+   * повторный seed / клиентская навигация / прерванный React-transition не затирают более
+   * свежее клиентское состояние. Стратегия из конфига (`hydrateStrategy`):
+   *  - `'replace'` (дефолт) — полная замена объекта, свежесть на весь снапшот;
+   *  - `'merge'` — shallow-мердж по ключам, свежесть по ключу, ключи вне снапшота не трогаются.
    */
   public hydrate(state: T): void {
     try {
-      this.doSet('', state)
+      const { hydratedAt, state: payload } = splitHydrationMeta(state)
+      const strategy = this.config.hydrateStrategy ?? 'replace'
+      const plan = planHydration<T>({
+        strategy,
+        hydratedAt,
+        payload,
+        current: this.getRawState(),
+        lastHydratedAt: this._hydratedAt,
+        hydratedAtByKey: this._hydratedAtByKey,
+      })
+
+      // Метки по ключу продвигаем всегда (даже без записи), иначе устаревший ключ переспросят.
+      if (strategy === 'merge' && plan.keyStampUpdates) Object.assign(this._hydratedAtByKey, plan.keyStampUpdates)
+
+      if (!plan.apply) return
+
+      this.doSet('', plan.merged)
       this._stateCache = this.getRawState()
+      if (strategy === 'replace' && plan.nextHydratedAt !== undefined) this._hydratedAt = plan.nextHydratedAt
 
       // Если включён persist-migration — фиксируем текущую версию: серверный снапшот
       // уже в актуальной схеме, миграцию на нём запускать не нужно.
@@ -458,17 +482,15 @@ export abstract class SyncBaseStorage<T extends Record<string, any>> extends Sto
         this.writePersistedVersion(this.config.version)
       }
 
-      this.notifyHydration(this._stateCache)
+      this.notifyHydration(this._stateCache, plan.changedKeys)
     } catch (error) {
       this.logger?.error('Error hydrating storage', { error })
       throw error
     }
   }
 
-  /** Уведомляет подписчиков о замене состояния гидрацией (no-op до initialize/без подписок). */
-  private notifyHydration(state: T): void {
-    const changedPaths = Object.keys(state)
-
+  /** Уведомляет подписчиков о применённой гидрации по изменившимся ключам (no-op до initialize/без подписок). */
+  private notifyHydration(state: T, changedPaths: string[]): void {
     for (const key of changedPaths) {
       this.notifySubscribers(key, (state as Record<string, any>)[key])
     }

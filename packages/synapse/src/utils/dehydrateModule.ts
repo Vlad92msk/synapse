@@ -1,3 +1,4 @@
+import { stampHydration } from '../core/storage/utils/hydration-meta.util'
 import type { SynapseModule } from './createSynapse/index'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -20,6 +21,8 @@ import type { SynapseModule } from './createSynapse/index'
 export interface DehydrateModuleOptions<TState extends Record<string, any>> {
   // Серверные данные под запрос
   state?: Partial<TState>
+  /** Метка свежести снапшота для мердж-по-свежести в `hydrate` (по умолчанию — `Date.now()`). */
+  hydratedAt?: number
 }
 
 // Server-safe дегидрация модуля: снимает сериализуемый снапшот состояния (уровень 4) для пропа
@@ -29,7 +32,7 @@ export const dehydrateModule = async <TState extends Record<string, any>, TDispa
   externalSynapseModule: SynapseModule<TState, TDispatcher, TSelectors>,
   options?: DehydrateModuleOptions<TState>,
 ): Promise<TState> => {
-  const { state } = options ?? {}
+  const { state, hydratedAt } = options ?? {}
 
   // Форк: изоляция под запрос (новый независимый handle из той же фабрики).
   const synapseModule = externalSynapseModule.fork()
@@ -46,5 +49,6 @@ export const dehydrateModule = async <TState extends Record<string, any>, TDispa
   // Уничтожаем synapseModule
   await synapseModule.destroy()
 
-  return snapshot
+  // Метка свежести: на гидрации `hydrate` не затрёт снапшотом более свежее клиентское состояние.
+  return stampHydration(snapshot, hydratedAt)
 }

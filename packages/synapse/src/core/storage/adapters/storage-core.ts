@@ -36,6 +36,19 @@ export abstract class StorageCore<T extends Record<string, any>> implements ISto
   protected subscribers = new Map<StorageKeyType, Set<(value: any) => void>>()
   protected _stateCache: T = {} as T
 
+  /**
+   * Метка свежести последнего применённого снапшота гидрации (`hydrateStrategy: 'replace'`).
+   * `undefined` — гидраций с меткой ещё не было; тогда `hydrate` всегда применяет снапшот
+   * (backward-compat с немаркированными вызовами).
+   */
+  protected _hydratedAt?: number
+
+  /**
+   * Метки свежести ПО КЛЮЧУ для `hydrateStrategy: 'merge'`: устаревший ключ не блокирует свежие.
+   * Ключ отсутствует → его ещё не гидрировали меткой.
+   */
+  protected _hydratedAtByKey: Record<string, number> = {}
+
   constructor(
     protected readonly coreConfig: BaseStorageConfig<T>,
     protected readonly eventEmitter?: IEventEmitter,

@@ -6,6 +6,7 @@ import { createElement } from 'react'
 import { renderToString } from 'react-dom/server'
 import { afterEach, describe, expect, it } from 'vitest'
 
+import { StorageStatus } from '../../core'
 import { MemoryStorage } from '../../core/storage/adapters/memory-storage.service'
 import { Selectors } from '../../core/selector/selectors.base'
 import { Dispatcher } from '../../reactive/dispatcher/dispatcher.base'
@@ -54,7 +55,9 @@ describe('SSR — серверный renderToString', () => {
     })
 
     const dehydrated = await ctx.dehydrate({ initialState: { user: 'alice', count: 5 } })
-    expect(dehydrated).toEqual({ user: 'alice', count: 5 })
+    // Снапшот несёт метку свежести `__hydratedAt` (мердж-по-свежести), помимо данных.
+    expect(dehydrated).toMatchObject({ user: 'alice', count: 5 })
+    expect(typeof (dehydrated as any).__hydratedAt).toBe('number')
 
     const html = renderToString(createElement(View as any, { dehydratedState: dehydrated }))
     // Контент в HTML, не loadingComponent.
@@ -92,7 +95,28 @@ describe('SSR — серверный renderToString', () => {
     const a = await ctx.dehydrate({ initialState: { user: 'alice', count: 1 } })
     const b = await ctx.dehydrate({ initialState: { user: 'bob', count: 2 } })
 
-    expect(a).toEqual({ user: 'alice', count: 1 })
-    expect(b).toEqual({ user: 'bob', count: 2 })
+    expect(a).toMatchObject({ user: 'alice', count: 1 })
+    expect(b).toMatchObject({ user: 'bob', count: 2 })
+  })
+
+  it('прогрев main handle: до обращения getSnapshot пуст, после ready({withEffects:false}) — READY', async () => {
+    const handle = createSynapse<State, PostsDispatcher, PostsSelectors>({
+      storage: () => new MemoryStorage<State>({ name: `ssr_${uid++}`, initialState: { user: 'default', count: 0 } }),
+      dispatcher: (s) => new PostsDispatcher(s),
+      selectors: (s) => new PostsSelectors(s),
+    })
+    cleanups.push(() => handle.destroy())
+
+    // До обращения ядро не построено.
+    expect(handle.isReady()).toBe(false)
+    expect(handle.getSnapshot()).toBeUndefined()
+
+    // Серверный прогрев без старта эффектов → main собран и READY, доступен синхронно.
+    await handle.ready({ withEffects: false })
+    expect(handle.isReady()).toBe(true)
+    const snap = handle.getSnapshot()
+    expect(snap).toBeDefined()
+    expect(snap!.storage.initStatus.status).toBe(StorageStatus.READY)
+    expect(snap!.storage.getStateSync().user).toBe('default')
   })
 })

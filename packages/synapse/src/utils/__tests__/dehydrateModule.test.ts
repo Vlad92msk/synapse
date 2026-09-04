@@ -59,6 +59,17 @@ describe('dehydrateModule', () => {
     expect(snapshot.label).toBe('init')
   })
 
+  it('снапшот несёт метку свежести __hydratedAt (для мердж-по-свежести в hydrate)', async () => {
+    const handle = makeHandle()
+    created.push(handle)
+
+    const snapshot = await dehydrateModule(handle, { state: { count: 1 }, hydratedAt: 12345 })
+    expect((snapshot as any).__hydratedAt).toBe(12345)
+
+    const auto = await dehydrateModule(handle, { state: { count: 2 } })
+    expect(typeof (auto as any).__hydratedAt).toBe('number')
+  })
+
   it('форк изолирован: main handle не мутируется дегидрацией', async () => {
     const handle = makeHandle()
     created.push(handle)
