@@ -4,6 +4,7 @@ import { catchError, filter, map, mergeMap, retry, share, switchMap, take } from
 import { handleCallbackError, logError } from '../../_utils/error-handling.util'
 import { IStorage, IStorageBase } from '../../core'
 import { Action, ActionsResult, DispatcherCore, DispatchFunction, ExtractResultType, WatcherFunction } from '../dispatcher'
+import { PreStartActionBuffer } from './preStartActionBuffer'
 import { ChunkRequestConsistent, chunkRequestConsistent, ChunkRequestParallel, chunkRequestParallel, isStorage, toObservable } from './utils'
 
 /**
@@ -507,6 +508,12 @@ export class EffectsModule<
   private action$ = new Subject<Action>()
   private externalStates: TExternalStates
 
+  // Буфер экшенов, задиспатченных ДО start() (маунт-диспатч ребёнка до useEffect провайдера).
+  // Создаётся на уровне ЯДРА (constructSyncCore) и инъектится сюда: подписка оттуда живёт с
+  // рендера, а не с ленивой конструкции этого модуля — иначе диспатч теряется в непубличном
+  // Subject шины ещё до того, как модуль создан. Сливается один раз в action$ при старте.
+  private preStartBuffer?: PreStartActionBuffer
+
   /**
    * Поток состояния
    */
@@ -559,6 +566,16 @@ export class EffectsModule<
   }
 
   /**
+   * Инъектит буфер pre-start экшенов, собранный на уровне ядра (`constructSyncCore`). Захват там
+   * начинается с рендера — раньше, чем этот модуль вообще сконструирован. Буфер сливается один раз
+   * в `start()`. Без буфера (напр. синапс без ядерного захвата) модуль работает как обычно.
+   */
+  setPreStartBuffer(buffer: PreStartActionBuffer): this {
+    this.preStartBuffer = buffer
+    return this
+  }
+
+  /**
    * Подписывается на действия от основного dispatcher'а и внешних dispatcher'ов
    */
   private subscribeToDispatchers() {
@@ -608,10 +625,20 @@ export class EffectsModule<
     // Ждем готовности основного хранилища
     await this.storage.waitForReady()
 
-    // Переподписываемся на dispatchers (подписки были очищены в stop())
+    // Живая подписка на dispatchers (подписки были очищены в stop()) — с этого момента экшены
+    // идут в action$ напрямую. Затем гасим ядерный захват и забираем накопленное: между этими
+    // двумя синхронными шагами диспатч проскочить не может, поэтому ни дубля, ни потери.
     this.subscribeToDispatchers()
+    const buffered = this.preStartBuffer?.drain() ?? []
 
+    // Подписываем эффекты ДО слива буфера, иначе задиспатченные до старта экшены уйдут в никуда.
     this.effects.forEach((effect, index) => this.subscribeToEffect(effect, index))
+
+    // Один раз проигрываем экшены, пришедшие до подписки, в исходном порядке.
+    for (const action of buffered) {
+      this.action$.next(action)
+    }
+
     this.running = true
 
     return this
@@ -624,6 +651,9 @@ export class EffectsModule<
   stop(): this {
     this.subscriptions.forEach((sub) => sub.unsubscribe())
     this.subscriptions = []
+    // Буфер владеется ядром (constructSyncCore cleanup); к моменту stop() он уже слит drain()'ом.
+    // Гасим захват на всякий случай (если start() не доходил до drain) — drain/stop идемпотентны.
+    this.preStartBuffer?.stop()
     this.action$.complete()
     this.action$ = new Subject<Action>()
     this.running = false

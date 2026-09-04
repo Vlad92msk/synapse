@@ -7,6 +7,7 @@ import { MemoryStorage } from '../../../core/storage/adapters/memory-storage.ser
 import { Dispatcher } from '../../dispatcher/dispatcher.base'
 import { Effects } from '../effects.base'
 import { ApiError, apiResult, EffectsModule, mutationMap, ofType, ofTypes, selectorObject, validateMap } from '../effects.module'
+import { PreStartActionBuffer } from '../preStartActionBuffer'
 import { fromRequest } from '../utils/fromRequest'
 
 interface State extends Record<string, any> {
@@ -75,6 +76,53 @@ describe('EffectsModule — lifecycle', () => {
     await tick()
 
     expect(seen).toEqual([3])
+    mod.stop()
+  })
+
+  it('экшен из ядерного pre-start буфера доходит до ofType-эффекта при старте', async () => {
+    const seen: number[] = []
+    // Буфер захватывает с этого момента — как constructSyncCore на рендере, ДО конструкции модуля.
+    const buffer = new PreStartActionBuffer(d.actions)
+
+    // Диспатч ДО старта эффектов — как маунт-фетч компонента до подписки эффектов провайдером.
+    await d.increment(7)
+
+    const mod = new EffectsModule(storage, d)
+    mod.setPreStartBuffer(buffer)
+    mod.add((action$, _s$, { dispatcher }) =>
+      action$.pipe(
+        ofType(dispatcher.dispatch.increment),
+        tap((a) => seen.push(a.payload)),
+      ),
+    )
+    expect(seen).toEqual([]) // ещё не проигран
+
+    await mod.start()
+    await tick()
+
+    expect(seen).toEqual([7]) // слит из pre-start буфера при старте
+    mod.stop()
+  })
+
+  it('pre-start буфер не дублирует экшены, задиспатченные после start()', async () => {
+    const seen: number[] = []
+    const buffer = new PreStartActionBuffer(d.actions)
+
+    await d.increment(1) // до старта → в буфер
+
+    const mod = new EffectsModule(storage, d)
+    mod.setPreStartBuffer(buffer)
+    mod.add((action$, _s$, { dispatcher }) =>
+      action$.pipe(
+        ofType(dispatcher.dispatch.increment),
+        tap((a) => seen.push(a.payload)),
+      ),
+    )
+    await mod.start()
+    await d.increment(2) // после старта → живой поток (буфер уже погашен drain'ом)
+    await tick()
+
+    expect(seen).toEqual([1, 2]) // порядок сохранён, дублей нет
     mod.stop()
   })
 

@@ -3,7 +3,7 @@
 // Phase C — синхронная конструкция (createSyncSynapseModule через объектную форму БЕЗ wire):
 // расцеп конструкции и старта эффектов, синхронный доступ к main-ядру, cross-store DI через
 // конструктор (без combineAcross), гейт старта эффектов на ready() после dependencies.
-import { EMPTY, mergeMap } from 'rxjs'
+import { EMPTY, mergeMap, tap } from 'rxjs'
 import { describe, expect, it } from 'vitest'
 
 import { LocalStorage } from '../../../core/storage/adapters/local-storage.service'
@@ -114,6 +114,48 @@ describe('createSynapse — синхронная (C) форма', () => {
     const ready = await posts.ready()
     expect(ready.storage).toBe(posts.storage) // тот же самый main, не пересобран
     expect(started).toEqual(['effect-constructed-and-started'])
+
+    await posts.destroy()
+  })
+
+  it('маунт-гонка: диспатч ПОСЛЕ синхронной конструкции ядра, но ДО ready(), доходит до эффекта', async () => {
+    // Воспроизводит реальный порядок React: провайдер синхронно строит main на рендере
+    // (getClientStore → ensureMain), маунт-эффект РЕБЁНКА бежит раньше useEffect провайдера и
+    // диспатчит ДО того, как провайдер позовёт ready() → стартует эффекты. Ядерный pre-start
+    // буфер должен поймать этот диспатч и слить его эффекту на старте.
+    const seen: number[] = []
+    class PostsDispatcher extends Dispatcher<PostsState> {
+      readonly load = this.action((store, id: number) => {
+        store.update((s) => s.list.push(id))
+        return id
+      })
+    }
+    class PostsEffects extends Effects<PostsState, PostsDispatcher> {
+      readonly onLoad = this.effect((action$, _s$, { dispatcher }) =>
+        action$.pipe(
+          ofType(dispatcher.dispatch.load),
+          tap((a) => seen.push(a.payload)),
+          mergeMap(() => EMPTY),
+        ),
+      )
+    }
+
+    const posts = createSynapse({
+      storage: () => new MemoryStorage<PostsState>({ name: nm('posts'), initialState: { list: [] } }),
+      dispatcher: (s) => new PostsDispatcher(s),
+      effects: () => new PostsEffects(),
+    })
+
+    // Рендер провайдера: синхронная конструкция main-ядра (буфер захвата подписан на диспатчер).
+    const dispatcher = posts.dispatcher
+    // Маунт-диспатч ребёнка — эффекты ещё НЕ стартовали (ready не звали).
+    await dispatcher.load(42)
+    expect(seen).toEqual([]) // эффект ещё не подписан
+
+    // useEffect провайдера: ready() стартует эффекты — буфер сливается, диспатч долетает.
+    await posts.ready()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(seen).toEqual([42])
 
     await posts.destroy()
   })

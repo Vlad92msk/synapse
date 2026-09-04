@@ -1,6 +1,6 @@
 import type { IStorage, ISyncStorage, Selectors } from '../../core'
 import type { Effect } from '../../reactive'
-import { Dispatcher, Effects, EffectsModule, FINALIZE, toObservable } from '../../reactive'
+import { Dispatcher, Effects, EffectsModule, FINALIZE, PreStartActionBuffer, toObservable } from '../../reactive'
 import type { Synapse, SynapseModule, SyncSynapseModule } from './synapse.types'
 import type { DependencyInput } from './types'
 import { waitForDependencies } from './waitForDependencies'
@@ -65,11 +65,18 @@ async function teardown(cleanup: CleanupStep[]): Promise<void> {
 
 // Синхронная конструкция ядра: storage → READY (initializeSync), dispatcher финализирован,
 // селекторы материализованы, state$ всегда. Эффекты НЕ стартуют. Требует sync-хранилища.
+//
+// `captureForEffects`: вешать ли с этого момента pre-start буфер на диспетчер. Нужен только
+// клиентскому main, который позже стартует эффекты (`ready()`) — чтобы маунт-диспатч, пришедший
+// ДО подписки эффектов, не потерялся. Серверный throwaway-shell (SSR/дегидрация) эффекты не
+// стартует → буфер не вешаем, чтобы не копить впустую.
 function constructSyncCore<TState extends Record<string, any>, TDispatcher, TSelectors>(
   config: SyncSynapseConfig<any, any, any, any>,
+  captureForEffects = false,
 ): {
   synapse: Synapse<TState, TDispatcher, TSelectors>
   cleanup: CleanupStep[]
+  preStartBuffer?: PreStartActionBuffer
 } {
   const storage = config.storage() as IStorage<TState>
   if (storage.isSync !== true || typeof (storage as Partial<ISyncStorage<TState>>).initializeSync !== 'function') {
@@ -87,6 +94,14 @@ function constructSyncCore<TState extends Record<string, any>, TDispatcher, TSel
   if (dispatcher) {
     dispatcher[FINALIZE]()
     cleanup.push(() => dispatcher.destroy())
+  }
+
+  // Захват pre-start экшенов начинаем СРАЗУ после финализации диспатчера (синхронно, на рендере) —
+  // до маунт-эффектов детей. Буфер отдаётся EffectsModule в startEffects и сливается на start().
+  let preStartBuffer: PreStartActionBuffer | undefined
+  if (captureForEffects && dispatcher) {
+    preStartBuffer = new PreStartActionBuffer(dispatcher.actions)
+    cleanup.push(() => preStartBuffer?.stop())
   }
 
   const state$ = toObservable(storage)
@@ -116,7 +131,7 @@ function constructSyncCore<TState extends Record<string, any>, TDispatcher, TSel
     }
   }
 
-  return { synapse, cleanup }
+  return { synapse, cleanup, preStartBuffer }
 }
 
 /**
@@ -133,13 +148,18 @@ export function createSyncSynapseModule<TState extends Record<string, any>, TDis
   let mainCleanup: CleanupStep[] = []
   let effectsCleanup: CleanupStep[] = []
   let readyPromise: Promise<ReadySynapse> | undefined
+  // Буфер маунт-диспатчей main-ядра. Захват стартует с конструкции main (рендер), сливается в
+  // EffectsModule на старте эффектов. Только для main: shell/сервер эффекты не стартуют.
+  let mainPreStartBuffer: PreStartActionBuffer | undefined
 
   // Синхронно строит (или возвращает) main-ядро. НЕ стартует эффекты.
   const ensureMain = (): ReadySynapse => {
     if (!main) {
-      const built = constructSyncCore<TState, TDispatcher, TSelectors>(config)
+      // Буфер нужен только если у синапса вообще есть эффекты (иначе некому сливать).
+      const built = constructSyncCore<TState, TDispatcher, TSelectors>(config, config.effects != null)
       main = built.synapse
       mainCleanup = built.cleanup
+      mainPreStartBuffer = built.preStartBuffer
     }
     return main
   }
@@ -169,6 +189,8 @@ export function createSyncSynapseModule<TState extends Record<string, any>, TDis
     if (moduleEffects.length > 0) {
       if (!core.dispatcher) throw new Error('createSynapse: "effects" требуют "dispatcher".')
       const effectsModule = new EffectsModule<TState>(core.storage, core.dispatcher as any, external as any)
+      // Отдаём буфер, собранный ядром с рендера: диспатчи до этого старта (маунт) не потеряются.
+      if (mainPreStartBuffer) effectsModule.setPreStartBuffer(mainPreStartBuffer)
       effectsModule.addEffects(moduleEffects)
       effectsCleanup.push(() => {
         effectsModule.stop()
@@ -211,6 +233,7 @@ export function createSyncSynapseModule<TState extends Record<string, any>, TDis
       main = undefined
       mainCleanup = []
       effectsCleanup = []
+      mainPreStartBuffer = undefined
       readyPromise = undefined
       // Сначала эффекты (позже сконструированы), потом ядро — LIFO по общему порядку.
       await teardown(orderedCleanup).catch(() => {})
