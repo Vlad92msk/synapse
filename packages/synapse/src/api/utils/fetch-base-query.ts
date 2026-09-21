@@ -38,15 +38,23 @@ async function getResponseData<T, E extends Error>(response: Response, format?: 
     // Обработка данных в зависимости от формата
     switch (responseFormat) {
       case ResponseFormat.Json: {
-        // Пробуем получить JSON-данные
-        try {
-          const data = await response.json()
-          return response.ok ? { data: data as T, fileMetadata } : { error: data as E, fileMetadata }
-        } catch (error) {
-          // Если не удалось разобрать JSON, возвращаем текст
-          const text = await response.text()
-          return response.ok ? { data: text as unknown as T, fileMetadata } : { error: text as unknown as E, fileMetadata }
+        // Тело Response — одноразовый поток, поэтому читаем его РОВНО один раз (текстом),
+        // а затем парсим. Это исключает и двойное чтение (`.json()` → `.text()` в catch →
+        // "body stream already read"), и падение на пустом теле (204/DELETE → "Unexpected
+        // end of JSON input"). Пустое тело — не ошибка: возвращаем data/error = undefined.
+        const raw = await response.text()
+        let data: unknown
+        if (raw) {
+          try {
+            data = JSON.parse(raw)
+          } catch {
+            // Не-JSON тело → отдаём как текст (прежний fallback, но без повторного чтения потока)
+            data = raw
+          }
+        } else {
+          data = undefined
         }
+        return response.ok ? { data: data as T, fileMetadata } : { error: data as E, fileMetadata }
       }
 
       case ResponseFormat.Text: {

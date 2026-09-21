@@ -19,6 +19,12 @@ export function useSelector<T>(selector: SelectorAPI<T>, options: UseSelectorOpt
 export function useSelector<T>(selector: SelectorAPI<T>, options: UseSelectorOptions<T> & { withLoading?: false }): T
 export function useSelector<T>(selector: SelectorAPI<T>, options?: UseSelectorOptions<T>): { data: T; isLoading: boolean } | T {
   const equalsRef = useRef(options?.equals)
+  // Синхронизируем на КАЖДОМ рендере: `options.equals` — обычно новая стрелка, часто
+  // замыкающаяся над свежими пропсами/состоянием. Иначе getSnapshot (мемоизирован по
+  // `selector`) навсегда держал бы замыкание с первого рендера над устаревшими значениями
+  // и «залипал» на старом снимке. Обновление ref-а не меняет идентичность getSnapshot/
+  // subscribe → без лишних ре-подписок useSyncExternalStore.
+  equalsRef.current = options?.equals
 
   // Кеш для мемоизации результата getSnapshot (предотвращает лишние ререндеры)
   const cachedRef = useRef<T | undefined>(undefined)

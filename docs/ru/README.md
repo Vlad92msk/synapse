@@ -4,7 +4,7 @@
 
 Тулкит для управления состоянием + API-клиент
 
-[![npm version](https://badge.fury.io/js/synapse-storage.svg)](https://badge.fury.io/js/synapse-storage)
+[![npm version](https://img.shields.io/npm/v/synapse-storage)](https://www.npmjs.com/package/synapse-storage)
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/synapse-storage)](https://bundlephobia.com/package/synapse-storage)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue)](https://www.typescriptlang.org/)
 [![RxJS Version](https://img.shields.io/badge/RxJS-%5E7.8.2-red?logo=reactivex)](https://rxjs.dev/)

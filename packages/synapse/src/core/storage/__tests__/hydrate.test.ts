@@ -182,7 +182,7 @@ describe.each<Kind>(['memory', 'localStorage', 'indexedDB'])('hydrate merge-ст
     await storage.hydrate(stampHydration({ a: 'a2', c: 'c1' } as any, 100))
     await flush()
 
-    const state = await storage.getState() as any
+    const state = (await storage.getState()) as any
     expect(state.a).toBe('a1') // не перезаписан устаревшим
     expect(state.b).toBe('b1')
     expect(state.c).toBe('c1') // свежий ключ применён
@@ -190,7 +190,7 @@ describe.each<Kind>(['memory', 'localStorage', 'indexedDB'])('hydrate merge-ст
     // Строго новее — ключ 'a' обновляется.
     await storage.hydrate(stampHydration({ a: 'a3' } as any, 200))
     await flush()
-    expect((await storage.getState() as any).a).toBe('a3')
+    expect(((await storage.getState()) as any).a).toBe('a3')
   })
 
   it('merge нотифицирует подписчиков только по реально изменившимся ключам', async () => {

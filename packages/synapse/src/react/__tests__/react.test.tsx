@@ -86,6 +86,43 @@ describe('useSelector', () => {
     sm.destroy()
     await storage.destroy()
   })
+
+  // Регресс: `options.equals` должен читаться «живым» на каждом рендере, а не
+  // замораживаться замыканием первого рендера. Раньше equalsRef захватывался один раз
+  // (useRef(options?.equals)), и `equals`, замкнувшийся над коллекцией, пустой на первом
+  // рендере ([].every(...) === true), навсегда «залипал» на первом снимке.
+  it('equals читается свежим на каждом рендере (не залипает на первом снимке)', async () => {
+    const { storage, sm } = await setup({ count: 0, other: 'a' } as State)
+    // map-селектор: срез веток по родителю
+    const mapSel = sm.createSelector((s) => (s.map ?? {}) as Record<string, number>)
+
+    function Comp({ s, roots }: { s: SelectorAPI<Record<string, number>>; roots: string[] }) {
+      // equals замыкается над `roots`, который на первом рендере пуст → [].every === true
+      const map = useSelector(s, { equals: (a, b) => roots.every((k) => a[k] === b[k]) })
+      return <div data-testid="m">{JSON.stringify(map)}</div>
+    }
+
+    const { rerender } = render(<Comp s={mapSel} roots={[]} />)
+    expect(screen.getByTestId('m').textContent).toBe('{}')
+
+    // roots наполнился (через отдельную подписку в реальном коде) → перерендер с новым equals
+    rerender(<Comp s={mapSel} roots={['a']} />)
+
+    // данные в сторе изменились
+    await act(async () => {
+      storage.update((st) => {
+        st.map = { a: 1 }
+      })
+    })
+
+    // со свежим equals снимок должен обновиться, а не «залипнуть» на пустом {}
+    await waitFor(() => {
+      expect(screen.getByTestId('m').textContent).toBe('{"a":1}')
+    })
+
+    sm.destroy()
+    await storage.destroy()
+  })
 })
 
 describe('createSynapseCtx', () => {

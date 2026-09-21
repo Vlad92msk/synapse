@@ -19,12 +19,9 @@
     "build:homepage": "yarn workspace synapse-homepage build",
     "homepage:docs": "yarn workspace synapse-homepage docs:generate",
     "deploy:homepage": "yarn workspace synapse-homepage deploy",
-    "release:patch": "yarn workspace synapse-storage release:patch",
-    "release:minor": "yarn workspace synapse-storage release:minor",
-    "release:major": "yarn workspace synapse-storage release:major",
-    "release:patch:stable": "yarn workspace synapse-storage release:patch:stable",
-    "release:minor:stable": "yarn workspace synapse-storage release:minor:stable",
-    "release:major:stable": "yarn workspace synapse-storage release:major:stable"
+    "release": "bash scripts/release.sh",
+    "release:beta": "bash scripts/release.sh --beta",
+    "release:dry": "bash scripts/release.sh --dry-run"
   },
   "devDependencies": {
     "@testing-library/dom": "^10"
