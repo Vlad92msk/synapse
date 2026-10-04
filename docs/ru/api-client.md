@@ -234,6 +234,19 @@ createPokemon: create<{ name: string; type: string }, PokemonApiResponse>({
 })
 ```
 
+`query` — подмножество параметров эндпоинта (`Partial<Params>`): параметры пути уходят в `path`, в `query`
+кладётся только остальное. Имена ключей и типы значений при этом проверяются:
+
+```typescript
+getMessages: create<{ chatId: number; limit: number; before?: number }, MessagesResponse>({
+  request: ({ chatId, limit, before }) => ({
+    path: `/chats/${chatId}/messages`, // chatId — в пути
+    method: 'GET',
+    query: { limit, before },          // без chatId — ок
+  }),
+}),
+```
+
 ## Кэширование и теги
 
 ```typescript

@@ -538,11 +538,48 @@
                 "code": "// The full structure of the object returned from request()\nrequest: (params) => ({\n  path: '/pokemon',               // path (appended to baseUrl)\n  method: 'GET',                  // 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'\n  body: params,                   // request body (POST/PUT/PATCH)\n  query: { limit: 12 },          // query params (?limit=12)\n  headers: { 'X-Custom': '1' },  // headers for this request\n  responseFormat: 'json',         // 'json' | 'blob' | 'arrayBuffer' | 'text' | 'formData' | 'raw'\n})\n\n// A mutation example (POST with body + cache invalidation):\ncreatePokemon: create<{ name: string; type: string }, PokemonApiResponse>({\n  request: (params) => ({\n    path: '/pokemon',\n    method: 'POST',\n    body: params,                 // serialized to JSON\n  }),\n  invalidatesTags: ['pokemon-list'],  // on success, drops the list cache\n  cache: false,                       // don't cache mutations\n})",
                 "meta": null
               }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "query is a subset of the endpoint's params (Partial<Params>): path params go into path, and query\nholds only the rest. Key names and value types are still checked:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 5
+                    },
+                    {
+                      "start": 44,
+                      "end": 59
+                    },
+                    {
+                      "start": 82,
+                      "end": 86
+                    },
+                    {
+                      "start": 92,
+                      "end": 97
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "getMessages: create<{ chatId: number; limit: number; before?: number }, MessagesResponse>({\n  request: ({ chatId, limit, before }) => ({\n    path: `/chats/${chatId}/messages`, // chatId goes into the path\n    method: 'GET',\n    query: { limit, before },          // no chatId — fine\n  }),\n}),",
+                "meta": null
+              }
             }
           ],
           "metadata": {
-            "wordCount": 0,
-            "codeBlocksCount": 1,
+            "wordCount": 28,
+            "codeBlocksCount": 2,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
@@ -1401,11 +1438,11 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-10-04T06:50:03.594Z",
-        "wordCount": 2772,
-        "readingTime": 14,
+        "lastModified": "2026-10-04T06:56:34.785Z",
+        "wordCount": 2842,
+        "readingTime": 15,
         "sectionsCount": 20,
-        "codeBlocksCount": 16
+        "codeBlocksCount": 17
       }
     },
     "api-ssr-pokemon": {
@@ -41414,11 +41451,48 @@
                 "code": "// Полная структура объекта, возвращаемого из request()\nrequest: (params) => ({\n  path: '/pokemon',               // путь (добавляется к baseUrl)\n  method: 'GET',                  // 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'\n  body: params,                   // тело запроса (POST/PUT/PATCH)\n  query: { limit: 12 },          // query-параметры (?limit=12)\n  headers: { 'X-Custom': '1' },  // заголовки для этого запроса\n  responseFormat: 'json',         // 'json' | 'blob' | 'arrayBuffer' | 'text' | 'formData' | 'raw'\n})\n\n// Пример мутации (POST с body + инвалидация кэша):\ncreatePokemon: create<{ name: string; type: string }, PokemonApiResponse>({\n  request: (params) => ({\n    path: '/pokemon',\n    method: 'POST',\n    body: params,                 // сериализуется в JSON\n  }),\n  invalidatesTags: ['pokemon-list'],  // при успехе сбрасывает кэш списка\n  cache: false,                       // мутации не кэшируем\n})",
                 "meta": null
               }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "query — подмножество параметров эндпоинта (Partial<Params>): параметры пути уходят в path, в query\nкладётся только остальное. Имена ключей и типы значений при этом проверяются:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 5
+                    },
+                    {
+                      "start": 43,
+                      "end": 58
+                    },
+                    {
+                      "start": 85,
+                      "end": 89
+                    },
+                    {
+                      "start": 93,
+                      "end": 98
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "getMessages: create<{ chatId: number; limit: number; before?: number }, MessagesResponse>({\n  request: ({ chatId, limit, before }) => ({\n    path: `/chats/${chatId}/messages`, // chatId — в пути\n    method: 'GET',\n    query: { limit, before },          // без chatId — ок\n  }),\n}),",
+                "meta": null
+              }
             }
           ],
           "metadata": {
-            "wordCount": 0,
-            "codeBlocksCount": 1,
+            "wordCount": 24,
+            "codeBlocksCount": 2,
             "diagramsCount": 0,
             "tasksCount": 0,
             "hasTable": false,
@@ -42277,11 +42351,11 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-10-04T06:50:03.593Z",
-        "wordCount": 2498,
+        "lastModified": "2026-10-04T06:56:34.784Z",
+        "wordCount": 2563,
         "readingTime": 13,
         "sectionsCount": 20,
-        "codeBlocksCount": 16
+        "codeBlocksCount": 17
       }
     },
     "api-ssr-pokemon": {

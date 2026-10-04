@@ -50,8 +50,12 @@ export interface RequestDefinition<RequestParams extends Record<string, any>> {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
   /** Тело запроса (автоматически сериализуется) */
   body?: any
-  /** Параметры запроса (автоматически добавляются в URL) */
-  query?: RequestParams
+  /**
+   * Параметры запроса (автоматически добавляются в URL). Подмножество параметров эндпоинта:
+   * параметры пути уходят в `path`, поэтому `query` не обязан содержать все ключи — но имена
+   * и типы значений проверяются.
+   */
+  query?: Partial<RequestParams>
   /** HTTP-заголовки */
   headers?: Record<string, string>
   /** Формат ответа (по умолчанию json) */

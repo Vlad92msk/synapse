@@ -88,19 +88,16 @@ describe('fetchBaseQuery: отмена запроса', () => {
     return { controller, promise }
   }
 
-  it.each([undefined, 'text', 'blob', 'arrayBuffer'])(
-    'abort после заголовков, до конца тела (format: %s) → AbortError, без лога и без ok: true',
-    async (format) => {
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
-      const { controller, promise } = runAbortable(fetchWithHangingBody(abortError), format)
+  it.each([undefined, 'text', 'blob', 'arrayBuffer'])('abort после заголовков, до конца тела (format: %s) → AbortError, без лога и без ok: true', async (format) => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { controller, promise } = runAbortable(fetchWithHangingBody(abortError), format)
 
-      await new Promise((r) => setTimeout(r, 0)) // заголовки получены, тело читается
-      controller.abort()
+    await new Promise((r) => setTimeout(r, 0)) // заголовки получены, тело читается
+    controller.abort()
 
-      await expect(promise).rejects.toMatchObject({ name: 'AbortError' })
-      expect(consoleError).not.toHaveBeenCalled()
-    },
-  )
+    await expect(promise).rejects.toMatchObject({ name: 'AbortError' })
+    expect(consoleError).not.toHaveBeenCalled()
+  })
 
   it('abort во время чтения тела с не-AbortError причиной → всё равно трактуется как отмена (по signal)', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})

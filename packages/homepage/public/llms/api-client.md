@@ -239,6 +239,19 @@ createPokemon: create<{ name: string; type: string }, PokemonApiResponse>({
 })
 ```
 
+`query` is a subset of the endpoint's params (`Partial<Params>`): path params go into `path`, and `query`
+holds only the rest. Key names and value types are still checked:
+
+```typescript
+getMessages: create<{ chatId: number; limit: number; before?: number }, MessagesResponse>({
+  request: ({ chatId, limit, before }) => ({
+    path: `/chats/${chatId}/messages`, // chatId goes into the path
+    method: 'GET',
+    query: { limit, before },          // no chatId — fine
+  }),
+}),
+```
+
 ## Caching and tags
 
 ```typescript
