@@ -230,7 +230,8 @@ loading a resource where only the latest result matters — like `loadList`/`loa
 - **`loadingAction`** → sets the `loading` status (via the dispatcher's `apiActions` group).
 - **`apiCall`** receives the pipe's value, calls `fromRequest(this.api.X.request(...))`, and inside
   `apiResult` writes the result (`d.applyPokemon...`) + `d.X.success()`.
-- **`errorAction`** catches `ApiError` → `d.X.failure(...)`.
+- **`errorAction`** catches `ApiError` → `d.X.failure(...)`. Status — `err.meta.status`, server body — `err.originalError`.
+  A 204 / empty body is a success: the `apiResult` callback is called with `data = undefined`.
 
 ```typescript
 readonly loadDetails = this.effect((action$, state$, { dispatcher: d }) =>

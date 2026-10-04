@@ -214,12 +214,16 @@ baseQuery: {
 }
 ```
 
+If `prepareHeaders` throws (e.g. the token refresh failed), the request **fails** with `ApiError` (`meta.status === 0`,
+the thrown error in `originalError`) and is not sent — a request silently sent without auth headers is worse than a failed one.
+
 ## RequestDefinition — describing an endpoint's request
 
 ```typescript
 // The full structure of the object returned from request()
 request: (params) => ({
-  path: '/pokemon',               // path (appended to baseUrl)
+  path: '/pokemon',               // path (appended to baseUrl); an absolute URL (https://…) bypasses baseUrl —
+                                  // prepareHeaders (incl. the auth token) is applied to it too: never build it from untrusted input
   method: 'GET',                  // 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
   body: params,                   // request body (POST/PUT/PATCH)
   query: { limit: 12 },          // query params (?limit=12)
@@ -289,6 +293,23 @@ createPokemon: create<...>({
 })
 ```
 
+How the cache behaves:
+
+- **TTL by default — 5 minutes.** A global `cache` object without `ttl` extends the defaults (it no longer means "forever").
+- **Cache key** = endpoint name + the full request params (nested objects and arrays included, key order doesn't matter)
+  + the headers listed in `cacheableHeaderKeys`. Header **values are hashed**: a token in `cacheableHeaderKeys: ['authorization']`
+  separates per-user records but never lands in localStorage/IndexedDB or in the `dehydrate()` snapshot as plain text.
+- **Parallel identical requests are deduplicated** into one fetch. Aborting one of them doesn't affect the others; the shared
+  fetch is cancelled only when every caller has aborted.
+- **A request that was in flight while its tags got invalidated** (a mutation finished in the meantime) returns its result to
+  the caller but is **not** written to the cache — a stale response can't overwrite fresh data.
+- **The key also includes the final `path` and `responseFormat`** — if `request(params, context)` builds a different path
+  from `options.context`, those are different records.
+- **Binary responses (`Blob`, `ArrayBuffer`, `Raw`, `FormData`) are not cached** — a JSON storage (localStorage, `dehydrate`)
+  would silently turn them into `{}`.
+- **`invalidateOnError`** (on by default): a failed forced refetch (`disableCache: true`) drops the stored record of that key,
+  so stale data isn't served after the server reported an error.
+
 ## All client options (commented)
 
 The whole surface of `new ApiClient({...})` at once — what you can pass and why:
@@ -325,7 +346,9 @@ export const client = new ApiClient({
   //    Important for SSR: the set must match on the server and the client, otherwise hydration "misses".
   cacheableHeaderKeys: ['x-lang'],
 
-  // 5. retry? — the global retry policy (inherited by endpoints; can be overridden per endpoint).
+  // 5. retry? — the global retry policy. Applies only to idempotent methods (GET/HEAD/OPTIONS/PUT/DELETE):
+  //    retrying a POST/PATCH after a 5xx or a dropped connection could create the entity twice.
+  //    `retry` on an endpoint (or in QueryOptions) is an explicit opt-in and works for any method.
   retry: {
     count: 3,                                  // number of retries (0 = no retry)
     delay: (attempt) => attempt * 500,         // delay: a number (ms) or (attempt) => ms
@@ -367,7 +390,7 @@ const endpoints = pokemonApiClient.getEndpoints()
 //   fetchCounts: number              — number of performed requests
 //   request(params, options?)        — perform a request (returns RequestResponseModify)
 //   subscribe(callback)              — subscribe to the endpoint state
-//   reset()                          — reset the counter
+//   reset()                          — reset the counter and drop THIS endpoint's cache records (not other endpoints' with the same tags)
 //   meta: { name, tags, invalidatesTags, cache }
 //   destroy()                        — cleanup
 // }
@@ -440,6 +463,28 @@ controller.abort()  // aborts the request
 ```
 
 An aborted request (at any point — before the headers arrive or while the body is being read) rejects with an `AbortError`, and the request status becomes `'error'`. An abort is not logged as an error and never yields `ok: true` with empty data.
+
+## Errors and empty responses
+
+- **204 / empty body is a success.** `ok: true`, `data: undefined` (for an endpoint declared as `create<Params, void>()`).
+- **The library doesn't log request errors** — they are delivered to the caller (reject / `error` state), who decides what to do.
+- **Any failure rejects with `ApiError`** (`import { ApiError } from 'synapse-storage/api'`, also re-exported from `synapse-storage/reactive`):
+  HTTP 4xx/5xx, a network error or timeout (`meta.status === 0`), a connection dropped while the body is being read.
+  The same `ApiError` lands in the request state (`error`), in endpoint subscribers and in `useApiQuery`/`useApiMutation`.
+
+```typescript
+try {
+  await pokemonApiClient.request('getDetails', { id: 1 })
+} catch (err) {
+  if (err instanceof ApiError) {
+    err.meta.status        // 404 (0 — network / timeout)
+    err.originalError      // server response body (parsed JSON / text / undefined) or the original JS error
+    err.message            // `message` from the body, otherwise "Request failed with status 404 Not Found"
+  }
+}
+```
+
+The timeout (`timeout`) covers the whole request — including reading the body — and actually aborts it.
 
 ## subscribe() — subscribing to the endpoint state
 
