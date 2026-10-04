@@ -3,7 +3,7 @@ import { tap } from 'rxjs/operators'
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import { MemoryStorage } from '../../../core/storage/adapters/memory-storage.service'
-import { ofType } from '../../effects/effects.module'
+import { ofType } from '../../effects/operators'
 import { createSynapse } from '../../../utils/createSynapse/createSynapse'
 import { Dispatcher, FINALIZE } from '../dispatcher.base'
 import type { EnhancedMiddleware } from '../dispatcher.module'

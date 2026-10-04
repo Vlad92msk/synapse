@@ -2,7 +2,7 @@ import type { Observable } from 'rxjs'
 
 import type { Action } from '../dispatcher'
 import type { Dispatcher } from '../dispatcher/dispatcher.base'
-import { type Effect, EFFECT_NAME, EFFECT_OPTIONS, type EffectOptions } from './effects.module'
+import { type Effect, EFFECT_NAME, EFFECT_OPTIONS, type EffectOptions } from './effects.types'
 
 /**
  * Маркер «продукта `this.effect`» на функции-рецепте. По его отсутствию dev-проверка

@@ -7,7 +7,9 @@ import { MemoryStorage } from '../../../core/storage/adapters/memory-storage.ser
 import { Dispatcher, FINALIZE } from '../../dispatcher/dispatcher.base'
 import type { ApiRequestState } from '../../dispatcher/standalone'
 import { Effects } from '../effects.base'
-import { type Effect, EffectsModule, ofType } from '../effects.module'
+import { EffectsModule } from '../effects.module'
+import type { Effect } from '../effects.types'
+import { ofType } from '../operators'
 
 // ── Доменные типы ─────────────────────────────────────────────────────────────
 interface State extends Record<string, any> {

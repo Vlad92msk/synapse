@@ -13,7 +13,8 @@ import { IndexedDBStorage } from '../../../core/storage/adapters/indexed-DB.serv
 import { MemoryStorage } from '../../../core/storage/adapters/memory-storage.service'
 import type { IStorage } from '../../../core/storage/storage.interface'
 import { Dispatcher } from '../../dispatcher/dispatcher.base'
-import { EffectsModule, ofType, selectorObject } from '../effects.module'
+import { EffectsModule } from '../effects.module'
+import { ofType, selectorObject } from '../operators'
 import { PreStartActionBuffer } from '../preStartActionBuffer'
 
 interface State extends Record<string, any> {

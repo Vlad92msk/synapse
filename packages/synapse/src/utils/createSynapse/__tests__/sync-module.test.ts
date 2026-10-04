@@ -13,7 +13,7 @@ import { StorageStatus } from '../../../core/storage/storage.interface'
 import { Selectors } from '../../../core/selector/selectors.base'
 import { Dispatcher } from '../../../reactive/dispatcher/dispatcher.base'
 import { Effects } from '../../../reactive/effects/effects.base'
-import { ofType } from '../../../reactive/effects/effects.module'
+import { ofType } from '../../../reactive/effects/operators'
 import { createSynapse } from '../createSynapse'
 
 interface CoreState extends Record<string, any> {

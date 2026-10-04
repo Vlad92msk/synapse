@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { MemoryStorage } from '../../../core/storage/adapters/memory-storage.service'
 import { Selectors } from '../../../core/selector/selectors.base'
 import { Dispatcher } from '../../../reactive/dispatcher/dispatcher.base'
-import { ofType } from '../../../reactive/effects/effects.module'
+import { ofType } from '../../../reactive/effects/operators'
 import { createSynapse } from '../createSynapse'
 
 interface State extends Record<string, any> {
