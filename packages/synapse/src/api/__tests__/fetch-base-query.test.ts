@@ -3,7 +3,7 @@
 // `await response.text()` по уже вычитанному одноразовому потоку → "body stream already
 // read". Используем НАСТОЯЩИЙ Response — он моделирует одноразовость потока (mock из
 // api-client.test с двумя независимыми json()/text() эту проблему не воспроизвёл бы).
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { fetchBaseQuery } from '../utils/fetch-base-query'
 
@@ -51,5 +51,92 @@ describe('fetchBaseQuery: getResponseData (json)', () => {
     expect(result.ok).toBe(false)
     expect(result.status).toBe(404)
     expect(result.error).toBeUndefined()
+  })
+})
+
+// Регресс: отмена (switchMap / unsubscribe) — штатная ситуация. Раньше AbortError во время
+// чтения тела логировался как ошибка, а при 200 превращался в `ok: true, data: undefined`.
+describe('fetchBaseQuery: отмена запроса', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  /** Ошибка, которую браузер кидает из body-reader'а при abort. */
+  const abortError = () => new DOMException('signal is aborted without reason', 'AbortError')
+
+  /**
+   * fetchFn: заголовки (200, json) приходят сразу, тело — стрим, который «висит», пока signal
+   * не абортнут, после чего падает с `reason` (как браузерный fetch при abort во время чтения тела).
+   */
+  function fetchWithHangingBody(reason: () => unknown): typeof fetch {
+    return (async (_url: string, init?: RequestInit) => {
+      const signal = init?.signal
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('{"items":'))
+          signal?.addEventListener('abort', () => controller.error(reason()), { once: true })
+        },
+      })
+      return new Response(body, { status: 200, headers: { 'content-type': 'application/json' } })
+    }) as unknown as typeof fetch
+  }
+
+  function runAbortable(fetchFn: typeof fetch, responseFormat?: string) {
+    const controller = new AbortController()
+    const baseQuery = fetchBaseQuery({ baseUrl: 'http://test.local', fetchFn })
+    const promise = baseQuery({ path: '/x', method: 'GET' } as any, { signal: controller.signal, responseFormat } as any, new Headers())
+    return { controller, promise }
+  }
+
+  it.each([undefined, 'text', 'blob', 'arrayBuffer'])(
+    'abort после заголовков, до конца тела (format: %s) → AbortError, без лога и без ok: true',
+    async (format) => {
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const { controller, promise } = runAbortable(fetchWithHangingBody(abortError), format)
+
+      await new Promise((r) => setTimeout(r, 0)) // заголовки получены, тело читается
+      controller.abort()
+
+      await expect(promise).rejects.toMatchObject({ name: 'AbortError' })
+      expect(consoleError).not.toHaveBeenCalled()
+    },
+  )
+
+  it('abort во время чтения тела с не-AbortError причиной → всё равно трактуется как отмена (по signal)', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { controller, promise } = runAbortable(fetchWithHangingBody(() => new TypeError('network error')))
+
+    await new Promise((r) => setTimeout(r, 0))
+    controller.abort()
+
+    await expect(promise).rejects.toMatchObject({ name: 'AbortError' })
+    expect(consoleError).not.toHaveBeenCalled()
+  })
+
+  it('abort до прихода заголовков → AbortError, без лога', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const fetchFn = ((_url: string, init?: RequestInit) =>
+      new Promise((_, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(abortError()), { once: true })
+      })) as unknown as typeof fetch
+    const { controller, promise } = runAbortable(fetchFn)
+
+    controller.abort()
+
+    await expect(promise).rejects.toMatchObject({ name: 'AbortError' })
+    expect(consoleError).not.toHaveBeenCalled()
+  })
+
+  it('обычная сетевая ошибка (без abort) по-прежнему логируется и даёт ok: false', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const fetchFn = (async () => {
+      throw new TypeError('Failed to fetch')
+    }) as unknown as typeof fetch
+    const { promise } = runAbortable(fetchFn)
+
+    const result = await promise
+    expect(result.ok).toBe(false)
+    expect(result.status).toBe(0)
+    expect(consoleError).toHaveBeenCalled()
   })
 })

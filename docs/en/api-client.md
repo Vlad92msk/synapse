@@ -425,6 +425,8 @@ const result = pokemonApiClient.request('getDetails', { id: 25 }, {
 controller.abort()  // aborts the request
 ```
 
+An aborted request (at any point — before the headers arrive or while the body is being read) rejects with an `AbortError`, and the request status becomes `'error'`. An abort is not logged as an error and never yields `ok: true` with empty data.
+
 ## subscribe() — subscribing to the endpoint state
 
 ```typescript

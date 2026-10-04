@@ -1,5 +1,5 @@
 // Auto-generated types for structured documentation
-// Generated at: 2026-07-26T18:46:58.482Z
+// Generated at: 2026-10-04T06:50:04.937Z
 // Master locale: en
 
 export type Locale = 'en' | 'ru'

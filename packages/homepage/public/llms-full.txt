@@ -1,6 +1,6 @@
 # Synapse Storage — full documentation
 
-Source: https://synapse-homepage.web.app/docs · npm: synapse-storage · Generated: 2026-07-26
+Source: https://synapse-homepage.web.app/docs · npm: synapse-storage · Generated: 2026-10-04
 
 ---
 
@@ -7022,6 +7022,8 @@ const result = pokemonApiClient.request('getDetails', { id: 25 }, {
 })
 controller.abort()  // aborts the request
 ```
+
+An aborted request (at any point — before the headers arrive or while the body is being read) rejects with an `AbortError`, and the request status becomes `'error'`. An abort is not logged as an error and never yields `ok: true` with empty data.
 
 ## subscribe() — subscribing to the endpoint state
 

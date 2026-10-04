@@ -819,10 +819,35 @@
                 "code": "// Way 1: through the endpoint\nconst endpoints = pokemonApiClient.getEndpoints()\nconst req = endpoints.getDetails.request({ id: 25 })\nreq.abort()  // aborts the request via AbortController\n\n// Way 2: through an AbortController in the options\nconst controller = new AbortController()\nconst result = pokemonApiClient.request('getDetails', { id: 25 }, {\n  signal: controller.signal,\n})\ncontroller.abort()  // aborts the request",
                 "meta": null
               }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "An aborted request (at any point — before the headers arrive or while the body is being read) rejects with an AbortError, and the request status becomes 'error'. An abort is not logged as an error and never yields ok: true with empty data.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 110,
+                      "end": 120
+                    },
+                    {
+                      "start": 153,
+                      "end": 160
+                    },
+                    {
+                      "start": 214,
+                      "end": 222
+                    }
+                  ],
+                  "links": []
+                }
+              }
             }
           ],
           "metadata": {
-            "wordCount": 0,
+            "wordCount": 44,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -1376,8 +1401,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-07-26T18:39:34.216Z",
-        "wordCount": 2728,
+        "lastModified": "2026-10-04T06:50:03.594Z",
+        "wordCount": 2772,
         "readingTime": 14,
         "sectionsCount": 20,
         "codeBlocksCount": 16
@@ -39744,7 +39769,7 @@
                     {
                       "start": 0,
                       "end": 0,
-                      "url": "https://badge.fury.io/js/synapse-storage",
+                      "url": "https://www.npmjs.com/package/synapse-storage",
                       "title": null
                     },
                     {
@@ -40844,7 +40869,7 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-07-26T18:27:35.614Z",
+        "lastModified": "2026-09-21T07:42:05.716Z",
         "wordCount": 816,
         "readingTime": 5,
         "sectionsCount": 7,
@@ -41670,10 +41695,35 @@
                 "code": "// Способ 1: через эндпоинт\nconst endpoints = pokemonApiClient.getEndpoints()\nconst req = endpoints.getDetails.request({ id: 25 })\nreq.abort()  // отменяет запрос через AbortController\n\n// Способ 2: через AbortController в опциях\nconst controller = new AbortController()\nconst result = pokemonApiClient.request('getDetails', { id: 25 }, {\n  signal: controller.signal,\n})\ncontroller.abort()  // отменяет запрос",
                 "meta": null
               }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Отменённый запрос (в любой момент — до прихода заголовков или во время чтения тела) завершается reject с AbortError, статус запроса — 'error'. Отмена не логируется как ошибка и никогда не даёт ok: true с пустыми данными.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 105,
+                      "end": 115
+                    },
+                    {
+                      "start": 134,
+                      "end": 141
+                    },
+                    {
+                      "start": 193,
+                      "end": 201
+                    }
+                  ],
+                  "links": []
+                }
+              }
             }
           ],
           "metadata": {
-            "wordCount": 0,
+            "wordCount": 36,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -42227,8 +42277,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-07-26T18:14:38.081Z",
-        "wordCount": 2462,
+        "lastModified": "2026-10-04T06:50:03.593Z",
+        "wordCount": 2498,
         "readingTime": 13,
         "sectionsCount": 20,
         "codeBlocksCount": 16

@@ -4,12 +4,27 @@ import { FileDownloadResult, QueryOptions, QueryResult } from '../types/query.in
 import { getFileMetadataFromHeaders, getResponseFormatForMimeType, isFileResponse } from './file-utils'
 
 /**
+ * Отмена запроса (switchMap / unsubscribe / `req.abort()`) — штатная ситуация, а не ошибка:
+ * её нельзя логировать и нельзя превращать в результат (особенно в `ok: true, data: undefined`).
+ * Проверяем и имя ошибки, и сам signal: среды по-разному оформляют исключение при abort
+ * во время чтения тела.
+ */
+function isAbortError(err: unknown, signal?: AbortSignal | null): boolean {
+  return (err as { name?: unknown } | null)?.name === 'AbortError' || !!signal?.aborted
+}
+
+/**
  * Извлекает данные из response в зависимости от формата
  * @param response Объект Response
  * @param format Формат ответа
+ * @param signal Signal запроса — для распознавания отмены во время чтения тела
  * @returns Объект с данными или ошибкой
  */
-async function getResponseData<T, E extends Error>(response: Response, format?: ResponseFormat): Promise<{ data?: T; error?: E; fileMetadata?: FileDownloadResult }> {
+async function getResponseData<T, E extends Error>(
+  response: Response,
+  format?: ResponseFormat,
+  signal?: AbortSignal | null,
+): Promise<{ data?: T; error?: E; fileMetadata?: FileDownloadResult }> {
   let responseFormat = format
   const contentType = response.headers.get('content-type') || ''
 
@@ -88,6 +103,8 @@ async function getResponseData<T, E extends Error>(response: Response, format?: 
         return response.ok ? { data: blob as unknown as T, fileMetadata } : { error: blob as unknown as E, fileMetadata }
     }
   } catch (err) {
+    // Отмена во время чтения тела (заголовки уже пришли) — пробрасываем как есть
+    if (isAbortError(err, signal)) throw err
     handleCallbackError(`fetchBaseQuery: error extracting response data (format: ${responseFormat})`, err)
     return response.ok ? { data: undefined } : { error: err as E }
   }
@@ -215,7 +232,7 @@ export function fetchBaseQuery(options: Omit<FetchBaseQueryArgs, 'prepareHeaders
       const response = await Promise.race([fetchPromise, timeoutPromise])
 
       // Обрабатываем ответ
-      const { data, error, fileMetadata } = await getResponseData<RequestResult, E>(response, responseFormat as ResponseFormat)
+      const { data, error, fileMetadata } = await getResponseData<RequestResult, E>(response, responseFormat as ResponseFormat, signal)
 
       // Формируем результат запроса
       const result: QueryResult<RequestResult, E> = {
@@ -230,6 +247,12 @@ export function fetchBaseQuery(options: Omit<FetchBaseQueryArgs, 'prepareHeaders
 
       return result
     } catch (err) {
+      // Отмена — не ошибка запроса: без лога и без QueryResult. Пробрасываем AbortError,
+      // как это делает `fetchWithRetry` (перехват и статус 'error' — в `executeRequest`).
+      if (isAbortError(err, signal)) {
+        throw (err as Error | null)?.name === 'AbortError' ? err : new DOMException('The operation was aborted.', 'AbortError')
+      }
+
       // Обрабатываем ошибки сети или таймаута
       const error = err as Error
       handleCallbackError('fetchBaseQuery: request execution error', error)
