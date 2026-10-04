@@ -9831,6 +9831,32 @@
             {
               "type": "paragraph",
               "data": {
+                "text": "state$ emits the current state synchronously on subscription (for every storage, IndexedDB included)\nand replays it to late subscribers right away. So withLatestFrom(state$) has a value even for actions\ndispatched before the effects started (a child's mount dispatch is replayed from the pre-start buffer) —\nsuch actions are not lost.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 31,
+                      "end": 44
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 6
+                    },
+                    {
+                      "start": 151,
+                      "end": 173
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
                 "text": "External stores are folded in the same way — this.settings$ (from pokemon.settings) gives pageSize:",
                 "formatting": {
                   "bold": [],
@@ -9863,7 +9889,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 47,
+            "wordCount": 97,
             "codeBlocksCount": 2,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -10819,8 +10845,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-07-26T18:35:32.700Z",
-        "wordCount": 2050,
+        "lastModified": "2026-10-04T07:04:26.826Z",
+        "wordCount": 2100,
         "readingTime": 11,
         "sectionsCount": 11,
         "codeBlocksCount": 10
@@ -50740,6 +50766,32 @@
             {
               "type": "paragraph",
               "data": {
+                "text": "state$ отдаёт текущее состояние синхронно на подписке (для всех хранилищ, включая IndexedDB) и\nсразу реплеит его позднему подписчику. Поэтому withLatestFrom(state$) получает значение и для экшенов,\nзадиспатченных до старта эффектов (маунт-диспатч ребёнка проигрывается из pre-start буфера), — такие\nэкшены не теряются.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 32,
+                      "end": 41
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 0,
+                      "end": 6
+                    },
+                    {
+                      "start": 142,
+                      "end": 164
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
                 "text": "Внешние сторы подмешиваются так же — this.settings$ (из pokemon.settings) даёт pageSize:",
                 "formatting": {
                   "bold": [],
@@ -50772,7 +50824,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 37,
+            "wordCount": 77,
             "codeBlocksCount": 2,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -51724,8 +51776,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-07-26T18:14:38.075Z",
-        "wordCount": 1831,
+        "lastModified": "2026-10-04T07:04:26.824Z",
+        "wordCount": 1871,
         "readingTime": 10,
         "sectionsCount": 11,
         "codeBlocksCount": 10

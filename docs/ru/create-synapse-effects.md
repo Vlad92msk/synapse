@@ -193,6 +193,11 @@ withLatestFrom(selectorObject(state$, {
 withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId, (s) => s.api.detailsRequest.status))
 ```
 
+`state$` отдаёт текущее состояние **синхронно** на подписке (для всех хранилищ, включая IndexedDB) и
+сразу реплеит его позднему подписчику. Поэтому `withLatestFrom(state$)` получает значение и для экшенов,
+задиспатченных до старта эффектов (маунт-диспатч ребёнка проигрывается из pre-start буфера), — такие
+экшены не теряются.
+
 Внешние сторы подмешиваются так же — `this.settings$` (из `pokemon.settings`) даёт `pageSize`:
 
 ```typescript

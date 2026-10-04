@@ -1,5 +1,5 @@
 import { combineLatest, EMPTY, from, merge, Observable, of, OperatorFunction, pipe, Subject } from 'rxjs'
-import { catchError, filter, map, mergeMap, retry, share, switchMap, take } from 'rxjs/operators'
+import { catchError, filter, map, mergeMap, retry, shareReplay, switchMap, take } from 'rxjs/operators'
 
 import { handleCallbackError, logError } from '../../_utils/error-handling.util'
 import { IStorage, IStorageBase } from '../../core'
@@ -539,19 +539,17 @@ export class EffectsModule<
     // Нормализуем externalStates: конвертируем storage → Observable
     this.externalStates = this.normalizeExternalStates(externalStates)
 
-    // Создаем поток состояния
+    // Поток состояния. Читаем СИНХРОННЫЙ кэш (`getStateSync`) — он есть у всех хранилищ, включая
+    // async (IndexedDB обновляет кэш до нотификации подписчиков). Первое значение уходит сразу на
+    // подписке, без микротаска: иначе `withLatestFrom(state$)` молча отбрасывал экшены, проигранные
+    // из pre-start буфера в том же синхронном шаге `start()`. Заодно уходят гонки порядка ответов
+    // async `getState()`. `shareReplay` (refCount) отдаёт текущее состояние и позднему подписчику;
+    // при падении подписчиков до нуля отписывается от стора (как `toObservable`).
     this.state$ = new Observable<TState>((observer) => {
-      // Отправляем начальное состояние
-      Promise.resolve(this.storage.getState()).then((state: TState) => observer.next(state))
-
-      // Подписываемся на все изменения
-      const unsubscribe = this.storage.subscribeToAll(() => {
-        Promise.resolve(this.storage.getState()).then((state: TState) => observer.next(state))
-      })
-
-      // Отписываемся при завершении
+      observer.next(this.storage.getStateSync())
+      const unsubscribe = this.storage.subscribeToAll(() => observer.next(this.storage.getStateSync()))
       return () => unsubscribe()
-    }).pipe(share())
+    }).pipe(shareReplay({ bufferSize: 1, refCount: true }))
   }
 
   /**
@@ -632,6 +630,9 @@ export class EffectsModule<
     const buffered = this.preStartBuffer?.drain() ?? []
 
     // Подписываем эффекты ДО слива буфера, иначе задиспатченные до старта экшены уйдут в никуда.
+    // state$ отдаёт текущее состояние синхронно на подписке, поэтому withLatestFrom(state$) уже
+    // готов принять проигрываемые экшены. Живые экшены в этот синхронный участок не попадают:
+    // диспетчер эмитит их после await (минимум микротаск), т.е. когда все эффекты уже подписаны.
     this.effects.forEach((effect, index) => this.subscribeToEffect(effect, index))
 
     // Один раз проигрываем экшены, пришедшие до подписки, в исходном порядке.

@@ -196,6 +196,11 @@ withLatestFrom(selectorObject(state$, {
 withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId, (s) => s.api.detailsRequest.status))
 ```
 
+`state$` emits the current state **synchronously** on subscription (for every storage, IndexedDB included)
+and replays it to late subscribers right away. So `withLatestFrom(state$)` has a value even for actions
+dispatched before the effects started (a child's mount dispatch is replayed from the pre-start buffer) —
+such actions are not lost.
+
 External stores are folded in the same way — `this.settings$` (from `pokemon.settings`) gives `pageSize`:
 
 ```typescript
