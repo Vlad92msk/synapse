@@ -6,6 +6,9 @@
   ],
   "scripts": {
     "build": "yarn workspace synapse-storage build",
+    "size": "SYNAPSE_SIZE=0 yarn workspace synapse-storage build && node scripts/bundle-size/run.mjs",
+    "size:quick": "node scripts/bundle-size/run.mjs",
+    "size:full": "SYNAPSE_SIZE=0 yarn workspace synapse-storage build && node scripts/bundle-size/run.mjs --full",
     "watch": "yarn workspace synapse-storage watch",
     "test": "yarn workspace synapse-storage test",
     "test:watch": "yarn workspace synapse-storage test:watch",

@@ -1,0 +1,6493 @@
+{
+  "date": "2026-10-04T12:59:26.568Z",
+  "synapseVersion": "7.0.0",
+  "baselineVersion": "6.2.0",
+  "versions": {
+    "@babel/runtime": "7.29.7",
+    "@esbuild/darwin-arm64": "0.28.2",
+    "@jridgewell/gen-mapping": "0.3.13",
+    "@jridgewell/resolve-uri": "3.1.2",
+    "@jridgewell/source-map": "0.3.11",
+    "@jridgewell/sourcemap-codec": "1.6.0",
+    "@jridgewell/trace-mapping": "0.3.31",
+    "@oxc-project/types": "0.152.0",
+    "@redux-saga/core": "1.5.1",
+    "@redux-saga/deferred": "1.3.1",
+    "@redux-saga/delay-p": "1.3.1",
+    "@redux-saga/is": "1.2.1",
+    "@redux-saga/symbols": "1.2.1",
+    "@redux-saga/types": "1.4.1",
+    "@reduxjs/toolkit": "2.13.0",
+    "@rolldown/binding-darwin-arm64": "1.2.12",
+    "@rolldown/pluginutils": "1.0.1",
+    "@rollup/plugin-commonjs": "29.0.3",
+    "@rollup/plugin-node-resolve": "16.0.3",
+    "@rollup/plugin-replace": "6.0.3",
+    "@rollup/plugin-terser": "1.0.0",
+    "@rollup/pluginutils": "5.4.0",
+    "@rollup/rollup-darwin-arm64": "4.64.0",
+    "@standard-schema/spec": "1.1.0",
+    "@standard-schema/utils": "0.3.0",
+    "@tanstack/query-core": "5.104.1",
+    "@tanstack/react-query": "5.104.1",
+    "@types/estree": "1.0.9",
+    "@types/json-schema": "7.0.15",
+    "@types/node": "26.6.4",
+    "@types/resolve": "1.20.2",
+    "@types/use-sync-external-store": "0.0.6",
+    "@webassemblyjs/ast": "1.14.1",
+    "@webassemblyjs/floating-point-hex-parser": "1.13.2",
+    "@webassemblyjs/helper-api-error": "1.13.2",
+    "@webassemblyjs/helper-buffer": "1.14.1",
+    "@webassemblyjs/helper-numbers": "1.13.2",
+    "@webassemblyjs/helper-wasm-bytecode": "1.13.2",
+    "@webassemblyjs/helper-wasm-section": "1.14.1",
+    "@webassemblyjs/ieee754": "1.13.2",
+    "@webassemblyjs/leb128": "1.13.2",
+    "@webassemblyjs/utf8": "1.13.2",
+    "@webassemblyjs/wasm-edit": "1.14.1",
+    "@webassemblyjs/wasm-gen": "1.14.1",
+    "@webassemblyjs/wasm-opt": "1.14.1",
+    "@webassemblyjs/wasm-parser": "1.14.1",
+    "@webassemblyjs/wast-printer": "1.14.1",
+    "@xtuc/ieee754": "1.2.0",
+    "@xtuc/long": "4.2.2",
+    "acorn": "8.18.0",
+    "agent-base": "6.0.2",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "ajv-keywords": "5.1.0",
+    "asynckit": "0.4.0",
+    "axios": "1.20.0",
+    "baseline-browser-mapping": "2.11.27",
+    "browserslist": "4.29.3",
+    "buffer-from": "1.1.2",
+    "call-bind-apply-helpers": "1.0.2",
+    "caniuse-lite": "1.0.30001814",
+    "chrome-trace-event": "1.0.4",
+    "combined-stream": "1.0.8",
+    "commander": "2.20.3",
+    "commondir": "1.0.1",
+    "debug": "4.4.3",
+    "deepmerge": "4.3.1",
+    "delayed-stream": "1.0.0",
+    "dequal": "2.0.3",
+    "dunder-proto": "1.0.1",
+    "effector": "23.4.4",
+    "effector-react": "23.3.0",
+    "electron-to-chromium": "1.5.444",
+    "enhanced-resolve": "5.26.0",
+    "es-define-property": "1.0.1",
+    "es-errors": "1.3.0",
+    "es-module-lexer": "2.3.2",
+    "es-object-atoms": "1.1.2",
+    "es-set-tostringtag": "2.1.0",
+    "esbuild": "0.28.2",
+    "escalade": "3.2.0",
+    "estree-walker": "2.0.2",
+    "events": "3.3.0",
+    "fast-deep-equal": "3.1.3",
+    "fast-uri": "3.1.8",
+    "fdir": "6.5.0",
+    "follow-redirects": "1.16.1",
+    "form-data": "4.0.6",
+    "fsevents": "2.3.3",
+    "function-bind": "1.1.2",
+    "get-intrinsic": "1.3.0",
+    "get-proto": "1.0.1",
+    "gopd": "1.2.0",
+    "graceful-fs": "4.2.11",
+    "has-flag": "4.0.0",
+    "has-symbols": "1.1.0",
+    "has-tostringtag": "1.0.2",
+    "hasown": "2.0.4",
+    "https-proxy-agent": "5.0.1",
+    "immer": "11.1.21",
+    "is-core-module": "2.17.0",
+    "is-module": "1.0.0",
+    "is-reference": "1.2.1",
+    "jest-worker": "27.5.1",
+    "jotai": "3.0.1",
+    "json-schema-traverse": "1.0.0",
+    "ky": "2.1.0",
+    "magic-string": "0.30.21",
+    "math-intrinsics": "1.1.0",
+    "merge-stream": "2.0.0",
+    "mime-db": "1.52.0",
+    "mime-types": "2.1.35",
+    "minimizer-webpack-plugin": "5.13.0",
+    "mobx": "7.0.6",
+    "mobx-react-lite": "5.1.0",
+    "ms": "2.1.3",
+    "node-releases": "2.0.57",
+    "path-parse": "1.0.7",
+    "picocolors": "1.1.1",
+    "picomatch": "4.0.7",
+    "proxy-compare": "3.0.1",
+    "proxy-from-env": "2.1.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-redux": "9.3.0",
+    "redux": "5.0.1",
+    "redux-observable": "3.0.0-rc.3",
+    "redux-persist": "6.0.0",
+    "redux-saga": "1.5.1",
+    "redux-thunk": "3.1.0",
+    "require-from-string": "2.0.2",
+    "reselect": "5.3.0",
+    "resolve": "1.22.12",
+    "rolldown": "1.2.12",
+    "rollup": "4.64.0",
+    "rxjs": "7.8.2",
+    "scheduler": "0.28.0",
+    "schema-utils": "4.5.0",
+    "serialize-javascript": "7.1.2",
+    "smob": "1.6.2",
+    "source-map": "0.6.1",
+    "source-map-support": "0.5.21",
+    "supports-color": "8.1.1",
+    "supports-preserve-symlinks-flag": "1.0.0",
+    "swr": "2.5.1",
+    "tapable": "2.3.3",
+    "terser": "5.51.2",
+    "terser-webpack-plugin": "5.6.1",
+    "tslib": "2.8.1",
+    "undici-types": "8.9.0",
+    "update-browserslist-db": "1.3.3",
+    "use-sync-external-store": "1.7.0",
+    "valtio": "2.3.2",
+    "watchpack": "2.5.2",
+    "webpack": "5.111.1",
+    "webpack-sources": "3.6.0",
+    "zustand": "5.0.15"
+  },
+  "synapse": [
+    {
+      "id": "syn-memory",
+      "group": "storage",
+      "label": "MemoryStorage",
+      "imports": {
+        "synapse-storage": [
+          "MemoryStorage"
+        ]
+      },
+      "esbuild": {
+        "min": 24956,
+        "gzip": 7397,
+        "brotli": 6668
+      },
+      "rollup": {
+        "min": 24519,
+        "gzip": 7238,
+        "brotli": 6496
+      },
+      "rolldown": {
+        "min": 24590,
+        "gzip": 7265,
+        "brotli": 6529
+      },
+      "webpack": {
+        "min": 24568,
+        "gzip": 7223,
+        "brotli": 6477
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 24955,
+          "(entry)": 22
+        },
+        "byFile": [
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7538
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4114
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1695
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1526
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1214
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1073
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 640
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 524
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 519
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 513
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 398
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 323
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 222
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 153
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 24956,
+        "gzip": 7397,
+        "brotli": 6668
+      },
+      "baseline": {
+        "min": 57961,
+        "gzip": 15756,
+        "brotli": 14091
+      }
+    },
+    {
+      "id": "syn-memory-core",
+      "group": "storage",
+      "label": "MemoryStorage (из synapse-storage/core)",
+      "imports": {
+        "synapse-storage/core": [
+          "MemoryStorage"
+        ]
+      },
+      "esbuild": {
+        "min": 24956,
+        "gzip": 7400,
+        "brotli": 6681
+      },
+      "rollup": {
+        "min": 24519,
+        "gzip": 7234,
+        "brotli": 6489
+      },
+      "rolldown": {
+        "min": 24594,
+        "gzip": 7260,
+        "brotli": 6549
+      },
+      "webpack": {
+        "min": 24568,
+        "gzip": 7223,
+        "brotli": 6477
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 24955,
+          "(entry)": 22
+        },
+        "byFile": [
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7538
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4114
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1695
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1526
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1214
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1073
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 640
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 524
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 519
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 513
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 398
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 323
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 222
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 153
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 24956,
+        "gzip": 7400,
+        "brotli": 6681
+      },
+      "baseline": {
+        "min": 43680,
+        "gzip": 11698,
+        "brotli": 10410
+      }
+    },
+    {
+      "id": "syn-local",
+      "group": "storage",
+      "label": "LocalStorage",
+      "imports": {
+        "synapse-storage": [
+          "LocalStorage"
+        ]
+      },
+      "esbuild": {
+        "min": 25392,
+        "gzip": 7483,
+        "brotli": 6758
+      },
+      "rollup": {
+        "min": 24969,
+        "gzip": 7307,
+        "brotli": 6548
+      },
+      "rolldown": {
+        "min": 25017,
+        "gzip": 7336,
+        "brotli": 6615
+      },
+      "webpack": {
+        "min": 25018,
+        "gzip": 7290,
+        "brotli": 6571
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 25391,
+          "(entry)": 22
+        },
+        "byFile": [
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7538
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4114
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "core/storage/adapters/local-storage.service.js",
+            "bytes": 2116
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1695
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1526
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 640
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 607
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 524
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 519
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 513
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 398
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 323
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 222
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 153
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 25392,
+        "gzip": 7483,
+        "brotli": 6758
+      },
+      "baseline": {
+        "min": 58386,
+        "gzip": 15817,
+        "brotli": 14169
+      }
+    },
+    {
+      "id": "syn-idb",
+      "group": "storage",
+      "label": "IndexedDBStorage",
+      "imports": {
+        "synapse-storage": [
+          "IndexedDBStorage"
+        ]
+      },
+      "esbuild": {
+        "min": 34699,
+        "gzip": 9893,
+        "brotli": 8914
+      },
+      "rollup": {
+        "min": 34250,
+        "gzip": 9642,
+        "brotli": 8624
+      },
+      "rolldown": {
+        "min": 34215,
+        "gzip": 9660,
+        "brotli": 8643
+      },
+      "webpack": {
+        "min": 34305,
+        "gzip": 9617,
+        "brotli": 8639
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 34698,
+          "(entry)": 22
+        },
+        "byFile": [
+          {
+            "file": "core/storage/adapters/indexed-DB.service.js",
+            "bytes": 10166
+          },
+          {
+            "file": "core/storage/adapters/async-base-storage.service.js",
+            "bytes": 8030
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4114
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1758
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1526
+          },
+          {
+            "file": "core/storage/middlewares/storage-batching.middleware.js",
+            "bytes": 1183
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 640
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 610
+          },
+          {
+            "file": "core/storage/middlewares/storage-logger.middleware.js",
+            "bytes": 545
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 519
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 398
+          },
+          {
+            "file": "core/storage/middlewares/storage-shallow-compare.middleware.js",
+            "bytes": 329
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 222
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 155
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 34699,
+        "gzip": 9893,
+        "brotli": 8914
+      },
+      "baseline": {
+        "min": 67596,
+        "gzip": 18097,
+        "brotli": 16199
+      }
+    },
+    {
+      "id": "syn-worker",
+      "group": "storage",
+      "label": "WorkerCacheStorage",
+      "imports": {
+        "synapse-storage": [
+          "WorkerCacheStorage"
+        ]
+      },
+      "esbuild": {
+        "min": 46769,
+        "gzip": 12261,
+        "brotli": 11056
+      },
+      "rollup": {
+        "min": 42890,
+        "gzip": 11948,
+        "brotli": 10605
+      },
+      "rolldown": {
+        "min": 42997,
+        "gzip": 11989,
+        "brotli": 10659
+      },
+      "webpack": {
+        "min": 42947,
+        "gzip": 11948,
+        "brotli": 10613
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 46768,
+          "(entry)": 22
+        },
+        "byFile": [
+          {
+            "file": "core/storage/utils/worker-channel.util.js",
+            "bytes": 15315
+          },
+          {
+            "file": "core/storage/adapters/async-base-storage.service.js",
+            "bytes": 8039
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4114
+          },
+          {
+            "file": "core/storage/adapters/worker-storage.service.js",
+            "bytes": 3804
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "core/storage/utils/broadcast.util.js",
+            "bytes": 1861
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1758
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1528
+          },
+          {
+            "file": "core/storage/middlewares/storage-batching.middleware.js",
+            "bytes": 1184
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1074
+          },
+          {
+            "file": "core/storage/adapters/worker-backends/shared-worker-backend.js",
+            "bytes": 769
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 645
+          },
+          {
+            "file": "core/storage/middlewares/storage-logger.middleware.js",
+            "bytes": 546
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 521
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 398
+          },
+          {
+            "file": "core/storage/middlewares/storage-shallow-compare.middleware.js",
+            "bytes": 331
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 223
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 155
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 46769,
+        "gzip": 12261,
+        "brotli": 11056
+      },
+      "baseline": {
+        "min": 62438,
+        "gzip": 16840,
+        "brotli": 15047
+      }
+    },
+    {
+      "id": "syn-browser",
+      "group": "storage",
+      "label": "browserStorage (SSR-фабрика)",
+      "imports": {
+        "synapse-storage": [
+          "browserStorage"
+        ]
+      },
+      "esbuild": {
+        "min": 25049,
+        "gzip": 7446,
+        "brotli": 6705
+      },
+      "rollup": {
+        "min": 24620,
+        "gzip": 7280,
+        "brotli": 6530
+      },
+      "rolldown": {
+        "min": 24687,
+        "gzip": 7311,
+        "brotli": 6572
+      },
+      "webpack": {
+        "min": 24669,
+        "gzip": 7265,
+        "brotli": 6519
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 25048,
+          "(entry)": 22
+        },
+        "byFile": [
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7538
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4114
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1695
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1526
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1214
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1073
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 640
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 524
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 519
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 513
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 398
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 323
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 222
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 153
+          },
+          {
+            "file": "core/storage/browser-storage.util.js",
+            "bytes": 93
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 25049,
+        "gzip": 7446,
+        "brotli": 6705
+      },
+      "baseline": {
+        "min": 58062,
+        "gzip": 15807,
+        "brotli": 14147
+      }
+    },
+    {
+      "id": "syn-all-storages",
+      "group": "storage",
+      "label": "Все 4 адаптера",
+      "imports": {
+        "synapse-storage": [
+          "MemoryStorage",
+          "LocalStorage",
+          "IndexedDBStorage",
+          "WorkerCacheStorage"
+        ]
+      },
+      "esbuild": {
+        "min": 70873,
+        "gzip": 16034,
+        "brotli": 14351
+      },
+      "rollup": {
+        "min": 66904,
+        "gzip": 15672,
+        "brotli": 13831
+      },
+      "rolldown": {
+        "min": 66815,
+        "gzip": 15590,
+        "brotli": 13818
+      },
+      "webpack": {
+        "min": 66972,
+        "gzip": 15668,
+        "brotli": 13891
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 70866,
+          "(entry)": 28
+        },
+        "byFile": [
+          {
+            "file": "core/storage/utils/worker-channel.util.js",
+            "bytes": 15343
+          },
+          {
+            "file": "core/storage/adapters/indexed-DB.service.js",
+            "bytes": 10169
+          },
+          {
+            "file": "core/storage/adapters/async-base-storage.service.js",
+            "bytes": 8034
+          },
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7542
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4114
+          },
+          {
+            "file": "core/storage/adapters/worker-storage.service.js",
+            "bytes": 3805
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 3421
+          },
+          {
+            "file": "core/storage/adapters/local-storage.service.js",
+            "bytes": 2116
+          },
+          {
+            "file": "core/storage/utils/broadcast.util.js",
+            "bytes": 1861
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1526
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1215
+          },
+          {
+            "file": "core/storage/middlewares/storage-batching.middleware.js",
+            "bytes": 1188
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1079
+          },
+          {
+            "file": "core/storage/adapters/worker-backends/shared-worker-backend.js",
+            "bytes": 770
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 643
+          },
+          {
+            "file": "core/storage/middlewares/storage-logger.middleware.js",
+            "bytes": 546
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 527
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 520
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 514
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 398
+          },
+          {
+            "file": "core/storage/middlewares/storage-shallow-compare.middleware.js",
+            "bytes": 330
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 324
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 222
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 156
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 70873,
+        "gzip": 16034,
+        "brotli": 14351
+      },
+      "baseline": {
+        "min": 86276,
+        "gzip": 20484,
+        "brotli": 18176
+      }
+    },
+    {
+      "id": "syn-memory-mw",
+      "group": "storage",
+      "label": "MemoryStorage + sync-middlewares (logger, broadcast)",
+      "imports": {
+        "synapse-storage": [
+          "MemoryStorage",
+          "syncLoggerMiddleware",
+          "syncBroadcastMiddleware"
+        ]
+      },
+      "esbuild": {
+        "min": 29336,
+        "gzip": 8627,
+        "brotli": 7762
+      },
+      "rollup": {
+        "min": 28940,
+        "gzip": 8452,
+        "brotli": 7575
+      },
+      "rolldown": {
+        "min": 28990,
+        "gzip": 8435,
+        "brotli": 7575
+      },
+      "webpack": {
+        "min": 28957,
+        "gzip": 8401,
+        "brotli": 7565
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 29331,
+          "(entry)": 26
+        },
+        "byFile": [
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7538
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4114
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "core/storage/middlewares/shared-state.factory.js",
+            "bytes": 2395
+          },
+          {
+            "file": "core/storage/utils/broadcast.util.js",
+            "bytes": 1861
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1695
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1526
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1214
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1073
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 640
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 526
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 519
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 513
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 398
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 323
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 222
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 180
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          },
+          {
+            "file": "core/storage/middlewares/sync-broadcast.middleware.js",
+            "bytes": 91
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 29336,
+        "gzip": 8627,
+        "brotli": 7762
+      },
+      "baseline": {
+        "min": 57976,
+        "gzip": 15763,
+        "brotli": 14103
+      }
+    },
+    {
+      "id": "syn-memory-selector",
+      "group": "selector",
+      "label": "MemoryStorage + Selectors",
+      "imports": {
+        "synapse-storage": [
+          "MemoryStorage",
+          "Selectors"
+        ]
+      },
+      "esbuild": {
+        "min": 34672,
+        "gzip": 9975,
+        "brotli": 8988
+      },
+      "rollup": {
+        "min": 32725,
+        "gzip": 9712,
+        "brotli": 8652
+      },
+      "rolldown": {
+        "min": 32112,
+        "gzip": 9376,
+        "brotli": 8394
+      },
+      "webpack": {
+        "min": 32770,
+        "gzip": 9678,
+        "brotli": 8643
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 34669,
+          "(entry)": 24
+        },
+        "byFile": [
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7545
+          },
+          {
+            "file": "core/selector/selector.module.js",
+            "bytes": 6772
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4114
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "core/selector/selectors.base.js",
+            "bytes": 1761
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1695
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1527
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1215
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1074
+          },
+          {
+            "file": "core/observable/interop-observable.js",
+            "bytes": 994
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 645
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 526
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 521
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 513
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 398
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 324
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 319
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 223
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 34672,
+        "gzip": 9975,
+        "brotli": 8988
+      },
+      "baseline": {
+        "min": 64704,
+        "gzip": 17577,
+        "brotli": 15720
+      }
+    },
+    {
+      "id": "syn-api",
+      "group": "api",
+      "label": "ApiClient",
+      "imports": {
+        "synapse-storage": [
+          "ApiClient"
+        ]
+      },
+      "esbuild": {
+        "min": 25066,
+        "gzip": 7267,
+        "brotli": 6584
+      },
+      "rollup": {
+        "min": 23900,
+        "gzip": 7111,
+        "brotli": 6378
+      },
+      "rolldown": {
+        "min": 23708,
+        "gzip": 7084,
+        "brotli": 6340
+      },
+      "webpack": {
+        "min": 23905,
+        "gzip": 7113,
+        "brotli": 6364
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 25065,
+          "(entry)": 22
+        },
+        "byFile": [
+          {
+            "file": "api/components/endpoint.js",
+            "bytes": 7534
+          },
+          {
+            "file": "api/components/query-storage.js",
+            "bytes": 6302
+          },
+          {
+            "file": "api/utils/fetch-base-query.js",
+            "bytes": 3438
+          },
+          {
+            "file": "api/api.module.js",
+            "bytes": 2450
+          },
+          {
+            "file": "api/utils/cache.util.js",
+            "bytes": 1501
+          },
+          {
+            "file": "api/utils/file-utils.js",
+            "bytes": 1326
+          },
+          {
+            "file": "api/utils/create-header-context.js",
+            "bytes": 593
+          },
+          {
+            "file": "api/utils/api-error.js",
+            "bytes": 519
+          },
+          {
+            "file": "api/utils/endpoint-headers.js",
+            "bytes": 311
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 187
+          },
+          {
+            "file": "api/utils/api-helpers.js",
+            "bytes": 179
+          },
+          {
+            "file": "api/types/api.interface.js",
+            "bytes": 138
+          },
+          {
+            "file": "api/utils/get-cacheable-headers.js",
+            "bytes": 100
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 25066,
+        "gzip": 7267,
+        "brotli": 6584
+      },
+      "baseline": {
+        "min": 57286,
+        "gzip": 15817,
+        "brotli": 14076
+      }
+    },
+    {
+      "id": "syn-api-memory",
+      "group": "api",
+      "label": "ApiClient + MemoryStorage",
+      "imports": {
+        "synapse-storage": [
+          "ApiClient",
+          "MemoryStorage"
+        ]
+      },
+      "esbuild": {
+        "min": 49456,
+        "gzip": 14049,
+        "brotli": 12663
+      },
+      "rollup": {
+        "min": 47817,
+        "gzip": 13711,
+        "brotli": 12260
+      },
+      "rolldown": {
+        "min": 47683,
+        "gzip": 13658,
+        "brotli": 12284
+      },
+      "webpack": {
+        "min": 47830,
+        "gzip": 13707,
+        "brotli": 12262
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 49453,
+          "(entry)": 24
+        },
+        "byFile": [
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7548
+          },
+          {
+            "file": "api/components/endpoint.js",
+            "bytes": 7546
+          },
+          {
+            "file": "api/components/query-storage.js",
+            "bytes": 6303
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4114
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "api/utils/fetch-base-query.js",
+            "bytes": 3453
+          },
+          {
+            "file": "api/api.module.js",
+            "bytes": 2450
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1695
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1530
+          },
+          {
+            "file": "api/utils/cache.util.js",
+            "bytes": 1501
+          },
+          {
+            "file": "api/utils/file-utils.js",
+            "bytes": 1328
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1217
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1079
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 645
+          },
+          {
+            "file": "api/utils/create-header-context.js",
+            "bytes": 593
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 527
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 521
+          },
+          {
+            "file": "api/utils/api-error.js",
+            "bytes": 519
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 514
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 398
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 325
+          },
+          {
+            "file": "api/utils/endpoint-headers.js",
+            "bytes": 313
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 223
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 188
+          },
+          {
+            "file": "api/utils/api-helpers.js",
+            "bytes": 181
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          },
+          {
+            "file": "api/types/api.interface.js",
+            "bytes": 138
+          },
+          {
+            "file": "api/utils/get-cacheable-headers.js",
+            "bytes": 101
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 49456,
+        "gzip": 14049,
+        "brotli": 12663
+      },
+      "baseline": {
+        "min": 81128,
+        "gzip": 22258,
+        "brotli": 19801
+      }
+    },
+    {
+      "id": "syn-dispatcher",
+      "group": "reactive",
+      "label": "Dispatcher",
+      "imports": {
+        "synapse-storage": [
+          "Dispatcher"
+        ]
+      },
+      "esbuild": {
+        "min": 10265,
+        "gzip": 3166,
+        "brotli": 2886
+      },
+      "rollup": {
+        "min": 9405,
+        "gzip": 3073,
+        "brotli": 2722
+      },
+      "rolldown": {
+        "min": 9522,
+        "gzip": 3143,
+        "brotli": 2812
+      },
+      "webpack": {
+        "min": 9441,
+        "gzip": 3086,
+        "brotli": 2744
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 10264,
+          "(entry)": 22
+        },
+        "byFile": [
+          {
+            "file": "reactive/dispatcher/dispatcher.base.js",
+            "bytes": 3970
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.module.js",
+            "bytes": 3677
+          },
+          {
+            "file": "core/observable/interop-observable.js",
+            "bytes": 1898
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "reactive/dispatcher/path.util.js",
+            "bytes": 202
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 145
+          },
+          {
+            "file": "reactive/dispatcher/standalone.js",
+            "bytes": 84
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 10265,
+        "gzip": 3166,
+        "brotli": 2886
+      },
+      "baseline": {
+        "min": 47729,
+        "gzip": 13403,
+        "brotli": 12027
+      }
+    },
+    {
+      "id": "syn-module-norx",
+      "group": "module",
+      "label": "createSynapse + MemoryStorage + Selectors + Dispatcher (без эффектов, без rxjs)",
+      "imports": {
+        "synapse-storage": [
+          "createSynapse",
+          "MemoryStorage",
+          "Selectors",
+          "Dispatcher"
+        ]
+      },
+      "esbuild": {
+        "min": 48530,
+        "gzip": 13821,
+        "brotli": 12466
+      },
+      "rollup": {
+        "min": 45202,
+        "gzip": 13392,
+        "brotli": 11936
+      },
+      "rolldown": {
+        "min": 44730,
+        "gzip": 13133,
+        "brotli": 11722
+      },
+      "webpack": {
+        "min": 45242,
+        "gzip": 13483,
+        "brotli": 11959
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 48523,
+          "(entry)": 28
+        },
+        "byFile": [
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7548
+          },
+          {
+            "file": "core/selector/selector.module.js",
+            "bytes": 6772
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4114
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.base.js",
+            "bytes": 3980
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.module.js",
+            "bytes": 3678
+          },
+          {
+            "file": "utils/createSynapse/syncModule.js",
+            "bytes": 3606
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "core/observable/interop-observable.js",
+            "bytes": 1903
+          },
+          {
+            "file": "core/selector/selectors.base.js",
+            "bytes": 1761
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1695
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1530
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1217
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1079
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 645
+          },
+          {
+            "file": "utils/createSynapse/waitForDependencies.js",
+            "bytes": 644
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 527
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 521
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 514
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 398
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 325
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 322
+          },
+          {
+            "file": "reactive/effects/preStartActionBuffer.js",
+            "bytes": 304
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 223
+          },
+          {
+            "file": "reactive/dispatcher/path.util.js",
+            "bytes": 204
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          },
+          {
+            "file": "utils/createSynapse/createSynapse.js",
+            "bytes": 162
+          },
+          {
+            "file": "utils/createSynapse/effects-runner.js",
+            "bytes": 158
+          },
+          {
+            "file": "core/observable/storage-stream.js",
+            "bytes": 106
+          },
+          {
+            "file": "reactive/dispatcher/standalone.js",
+            "bytes": 84
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 48530,
+        "gzip": 13821,
+        "brotli": 12466
+      },
+      "baseline": {
+        "min": 89034,
+        "gzip": 24884,
+        "brotli": 22167
+      }
+    },
+    {
+      "id": "syn-eventbus",
+      "group": "reactive",
+      "label": "createEventBus",
+      "imports": {
+        "synapse-storage": [
+          "createEventBus"
+        ]
+      },
+      "esbuild": {
+        "min": 42587,
+        "gzip": 12441,
+        "brotli": 11232
+      },
+      "rollup": {
+        "min": 40152,
+        "gzip": 12111,
+        "brotli": 10770
+      },
+      "rolldown": {
+        "min": 40369,
+        "gzip": 12188,
+        "brotli": 10843
+      },
+      "webpack": {
+        "min": 40198,
+        "gzip": 12109,
+        "brotli": 10782
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 42586,
+          "(entry)": 22
+        },
+        "byFile": [
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7547
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4114
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.base.js",
+            "bytes": 3974
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.module.js",
+            "bytes": 3678
+          },
+          {
+            "file": "utils/createSynapse/syncModule.js",
+            "bytes": 3603
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "utils/createEventBus.js",
+            "bytes": 2759
+          },
+          {
+            "file": "core/observable/interop-observable.js",
+            "bytes": 1903
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1695
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1528
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1215
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1074
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 645
+          },
+          {
+            "file": "utils/createSynapse/waitForDependencies.js",
+            "bytes": 644
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 527
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 521
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 514
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 398
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 325
+          },
+          {
+            "file": "reactive/effects/preStartActionBuffer.js",
+            "bytes": 304
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 223
+          },
+          {
+            "file": "reactive/dispatcher/path.util.js",
+            "bytes": 202
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 180
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          },
+          {
+            "file": "utils/createSynapse/createSynapse.js",
+            "bytes": 162
+          },
+          {
+            "file": "utils/createSynapse/effects-runner.js",
+            "bytes": 158
+          },
+          {
+            "file": "core/observable/storage-stream.js",
+            "bytes": 106
+          },
+          {
+            "file": "reactive/dispatcher/standalone.js",
+            "bytes": 84
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 42587,
+        "gzip": 12441,
+        "brotli": 11232
+      },
+      "baseline": {
+        "min": 84658,
+        "gzip": 23903,
+        "brotli": 21307
+      }
+    },
+    {
+      "id": "syn-dispatcher-effects",
+      "group": "reactive",
+      "label": "Dispatcher + Effects + ofType/validateMap/mutationMap/fromRequest/apiResult",
+      "imports": {
+        "synapse-storage": [
+          "Dispatcher"
+        ],
+        "synapse-storage/reactive": [
+          "Effects",
+          "ofType",
+          "validateMap",
+          "mutationMap",
+          "fromRequest",
+          "apiResult"
+        ]
+      },
+      "esbuild": {
+        "min": 44953,
+        "gzip": 13894,
+        "brotli": 12476
+      },
+      "rollup": {
+        "min": 40897,
+        "gzip": 12650,
+        "brotli": 11315
+      },
+      "rolldown": {
+        "min": 42797,
+        "gzip": 13315,
+        "brotli": 11904
+      },
+      "webpack": {
+        "min": 42698,
+        "gzip": 13189,
+        "brotli": 11811
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 16928,
+          "tslib": 3992,
+          "rxjs": 24013,
+          "(entry)": 41
+        },
+        "byFile": [
+          {
+            "file": "reactive/dispatcher/dispatcher.base.js",
+            "bytes": 3982
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.module.js",
+            "bytes": 3679
+          },
+          {
+            "file": "reactive/effects/effects.module.js",
+            "bytes": 3263
+          },
+          {
+            "file": "core/observable/interop-observable.js",
+            "bytes": 1903
+          },
+          {
+            "file": "reactive/effects/operators/request-map.js",
+            "bytes": 772
+          },
+          {
+            "file": "reactive/effects/utils/toObservable.js",
+            "bytes": 601
+          },
+          {
+            "file": "api/utils/api-error.js",
+            "bytes": 520
+          },
+          {
+            "file": "reactive/effects/effects.base.js",
+            "bytes": 471
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 289
+          },
+          {
+            "file": "reactive/effects/operators/api-result.js",
+            "bytes": 207
+          },
+          {
+            "file": "reactive/dispatcher/path.util.js",
+            "bytes": 204
+          },
+          {
+            "file": "reactive/effects/operators/of-type.js",
+            "bytes": 176
+          },
+          {
+            "file": "_utils/chunk.util.js",
+            "bytes": 171
+          },
+          {
+            "file": "reactive/effects/utils/fromRequest.js",
+            "bytes": 167
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 148
+          },
+          {
+            "file": "reactive/effects/utils/chunkRequestConsistent.js",
+            "bytes": 97
+          },
+          {
+            "file": "reactive/dispatcher/standalone.js",
+            "bytes": 84
+          },
+          {
+            "file": "reactive/effects/effects.types.js",
+            "bytes": 73
+          },
+          {
+            "file": "reactive/effects/utils/chunkRequestParallel.js",
+            "bytes": 69
+          },
+          {
+            "file": "utils/createSynapse/effects-runner.js",
+            "bytes": 52
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 17716,
+        "gzip": 5651,
+        "brotli": 5155
+      },
+      "baseline": {
+        "min": 55903,
+        "gzip": 15971,
+        "brotli": 14283
+      }
+    },
+    {
+      "id": "syn-createSynapse",
+      "group": "module",
+      "label": "createSynapse + MemoryStorage + Selectors + Dispatcher + Effects + ofType",
+      "imports": {
+        "synapse-storage": [
+          "createSynapse",
+          "MemoryStorage",
+          "Selectors",
+          "Dispatcher"
+        ],
+        "synapse-storage/reactive": [
+          "Effects",
+          "ofType"
+        ]
+      },
+      "esbuild": {
+        "min": 78139,
+        "gzip": 22619,
+        "brotli": 20296
+      },
+      "rollup": {
+        "min": 72053,
+        "gzip": 21284,
+        "brotli": 18976
+      },
+      "rolldown": {
+        "min": 73115,
+        "gzip": 21439,
+        "brotli": 19178
+      },
+      "webpack": {
+        "min": 73710,
+        "gzip": 21924,
+        "brotli": 19454
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 53161,
+          "tslib": 3992,
+          "rxjs": 20969,
+          "(entry)": 38
+        },
+        "byFile": [
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7553
+          },
+          {
+            "file": "core/selector/selector.module.js",
+            "bytes": 6779
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4115
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.base.js",
+            "bytes": 3982
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.module.js",
+            "bytes": 3680
+          },
+          {
+            "file": "utils/createSynapse/syncModule.js",
+            "bytes": 3609
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "reactive/effects/effects.module.js",
+            "bytes": 3266
+          },
+          {
+            "file": "core/observable/interop-observable.js",
+            "bytes": 1905
+          },
+          {
+            "file": "core/selector/selectors.base.js",
+            "bytes": 1765
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1698
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1530
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1221
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1085
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 645
+          },
+          {
+            "file": "utils/createSynapse/waitForDependencies.js",
+            "bytes": 645
+          },
+          {
+            "file": "reactive/effects/utils/toObservable.js",
+            "bytes": 604
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 527
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 521
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 514
+          },
+          {
+            "file": "reactive/effects/effects.base.js",
+            "bytes": 471
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 399
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 326
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 324
+          },
+          {
+            "file": "reactive/effects/preStartActionBuffer.js",
+            "bytes": 305
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 223
+          },
+          {
+            "file": "reactive/dispatcher/path.util.js",
+            "bytes": 204
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "reactive/effects/operators/of-type.js",
+            "bytes": 176
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          },
+          {
+            "file": "utils/createSynapse/createSynapse.js",
+            "bytes": 165
+          },
+          {
+            "file": "utils/createSynapse/effects-runner.js",
+            "bytes": 158
+          },
+          {
+            "file": "core/observable/storage-stream.js",
+            "bytes": 106
+          },
+          {
+            "file": "reactive/dispatcher/standalone.js",
+            "bytes": 84
+          },
+          {
+            "file": "reactive/effects/effects.types.js",
+            "bytes": 73
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 53502,
+        "gzip": 15291,
+        "brotli": 13786
+      },
+      "baseline": {
+        "min": 89334,
+        "gzip": 24995,
+        "brotli": 22236
+      }
+    },
+    {
+      "id": "syn-createSynapse-api",
+      "group": "module",
+      "label": "…то же + ApiClient + validateMap/fromRequest/apiResult",
+      "imports": {
+        "synapse-storage": [
+          "createSynapse",
+          "MemoryStorage",
+          "Selectors",
+          "Dispatcher",
+          "ApiClient"
+        ],
+        "synapse-storage/reactive": [
+          "Effects",
+          "ofType",
+          "validateMap",
+          "mutationMap",
+          "fromRequest",
+          "apiResult"
+        ]
+      },
+      "esbuild": {
+        "min": 107229,
+        "gzip": 30869,
+        "brotli": 27576
+      },
+      "rollup": {
+        "min": 99645,
+        "gzip": 29164,
+        "brotli": 25755
+      },
+      "rolldown": {
+        "min": 100697,
+        "gzip": 29377,
+        "brotli": 26070
+      },
+      "webpack": {
+        "min": 101467,
+        "gzip": 29874,
+        "brotli": 26275
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 79147,
+          "tslib": 3996,
+          "rxjs": 24054,
+          "(entry)": 53
+        },
+        "byFile": [
+          {
+            "file": "api/components/endpoint.js",
+            "bytes": 7553
+          },
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7553
+          },
+          {
+            "file": "core/selector/selector.module.js",
+            "bytes": 6779
+          },
+          {
+            "file": "api/components/query-storage.js",
+            "bytes": 6305
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4117
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.base.js",
+            "bytes": 3982
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.module.js",
+            "bytes": 3680
+          },
+          {
+            "file": "utils/createSynapse/syncModule.js",
+            "bytes": 3609
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3590
+          },
+          {
+            "file": "api/utils/fetch-base-query.js",
+            "bytes": 3458
+          },
+          {
+            "file": "reactive/effects/effects.module.js",
+            "bytes": 3265
+          },
+          {
+            "file": "api/api.module.js",
+            "bytes": 2453
+          },
+          {
+            "file": "core/observable/interop-observable.js",
+            "bytes": 1905
+          },
+          {
+            "file": "core/selector/selectors.base.js",
+            "bytes": 1765
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1698
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1530
+          },
+          {
+            "file": "api/utils/cache.util.js",
+            "bytes": 1505
+          },
+          {
+            "file": "api/utils/file-utils.js",
+            "bytes": 1330
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1221
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1085
+          },
+          {
+            "file": "reactive/effects/operators/request-map.js",
+            "bytes": 775
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 645
+          },
+          {
+            "file": "utils/createSynapse/waitForDependencies.js",
+            "bytes": 645
+          },
+          {
+            "file": "reactive/effects/utils/toObservable.js",
+            "bytes": 603
+          },
+          {
+            "file": "api/utils/create-header-context.js",
+            "bytes": 594
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 527
+          },
+          {
+            "file": "api/utils/api-error.js",
+            "bytes": 523
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 521
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 514
+          },
+          {
+            "file": "reactive/effects/effects.base.js",
+            "bytes": 471
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 402
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 356
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 326
+          },
+          {
+            "file": "api/utils/endpoint-headers.js",
+            "bytes": 315
+          },
+          {
+            "file": "reactive/effects/preStartActionBuffer.js",
+            "bytes": 305
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 223
+          },
+          {
+            "file": "reactive/effects/operators/api-result.js",
+            "bytes": 207
+          },
+          {
+            "file": "reactive/dispatcher/path.util.js",
+            "bytes": 204
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "api/utils/api-helpers.js",
+            "bytes": 181
+          },
+          {
+            "file": "reactive/effects/operators/of-type.js",
+            "bytes": 175
+          },
+          {
+            "file": "_utils/chunk.util.js",
+            "bytes": 171
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 169
+          },
+          {
+            "file": "reactive/effects/utils/fromRequest.js",
+            "bytes": 167
+          },
+          {
+            "file": "utils/createSynapse/createSynapse.js",
+            "bytes": 165
+          },
+          {
+            "file": "utils/createSynapse/effects-runner.js",
+            "bytes": 158
+          },
+          {
+            "file": "api/types/api.interface.js",
+            "bytes": 138
+          },
+          {
+            "file": "core/observable/storage-stream.js",
+            "bytes": 106
+          },
+          {
+            "file": "api/utils/get-cacheable-headers.js",
+            "bytes": 101
+          },
+          {
+            "file": "reactive/effects/utils/chunkRequestConsistent.js",
+            "bytes": 97
+          },
+          {
+            "file": "reactive/dispatcher/standalone.js",
+            "bytes": 84
+          },
+          {
+            "file": "reactive/effects/effects.types.js",
+            "bytes": 73
+          },
+          {
+            "file": "reactive/effects/utils/chunkRequestParallel.js",
+            "bytes": 70
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 79968,
+        "gzip": 22635,
+        "brotli": 20283
+      },
+      "baseline": {
+        "min": 116931,
+        "gzip": 33057,
+        "brotli": 29132
+      }
+    },
+    {
+      "id": "syn-react-storage",
+      "group": "react",
+      "label": "MemoryStorage + useStorageSubscribe",
+      "imports": {
+        "synapse-storage": [
+          "MemoryStorage"
+        ],
+        "synapse-storage/react": [
+          "useStorageSubscribe"
+        ]
+      },
+      "esbuild": {
+        "min": 25427,
+        "gzip": 7602,
+        "brotli": 6852
+      },
+      "rollup": {
+        "min": 24993,
+        "gzip": 7390,
+        "brotli": 6645
+      },
+      "rolldown": {
+        "min": 25051,
+        "gzip": 7444,
+        "brotli": 6700
+      },
+      "webpack": {
+        "min": 25042,
+        "gzip": 7406,
+        "brotli": 6649
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 25424,
+          "(entry)": 24
+        },
+        "byFile": [
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7538
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4114
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1695
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1526
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1214
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1073
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 640
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 524
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 519
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 513
+          },
+          {
+            "file": "react/hooks/useStorageSubscribe.js",
+            "bytes": 469
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 398
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 323
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 222
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 153
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 25427,
+        "gzip": 7602,
+        "brotli": 6852
+      },
+      "baseline": {
+        "min": 58417,
+        "gzip": 15955,
+        "brotli": 14270
+      }
+    },
+    {
+      "id": "syn-react-selector",
+      "group": "react",
+      "label": "MemoryStorage + Selectors + useSelector",
+      "imports": {
+        "synapse-storage": [
+          "MemoryStorage",
+          "Selectors"
+        ],
+        "synapse-storage/react": [
+          "useSelector"
+        ]
+      },
+      "esbuild": {
+        "min": 35137,
+        "gzip": 10172,
+        "brotli": 9173
+      },
+      "rollup": {
+        "min": 33183,
+        "gzip": 9878,
+        "brotli": 8793
+      },
+      "rolldown": {
+        "min": 32575,
+        "gzip": 9567,
+        "brotli": 8561
+      },
+      "webpack": {
+        "min": 33228,
+        "gzip": 9857,
+        "brotli": 8804
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 35131,
+          "(entry)": 27
+        },
+        "byFile": [
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7545
+          },
+          {
+            "file": "core/selector/selector.module.js",
+            "bytes": 6772
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4114
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "core/selector/selectors.base.js",
+            "bytes": 1761
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1695
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1528
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1215
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1074
+          },
+          {
+            "file": "core/observable/interop-observable.js",
+            "bytes": 994
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 645
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 526
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 521
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 513
+          },
+          {
+            "file": "react/hooks/useSelector.js",
+            "bytes": 460
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 398
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 325
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 319
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 223
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 35137,
+        "gzip": 10172,
+        "brotli": 9173
+      },
+      "baseline": {
+        "min": 65166,
+        "gzip": 17763,
+        "brotli": 15894
+      }
+    },
+    {
+      "id": "syn-react-api",
+      "group": "react",
+      "label": "ApiClient + MemoryStorage + useApiQuery/useApiMutation",
+      "imports": {
+        "synapse-storage": [
+          "ApiClient",
+          "MemoryStorage"
+        ],
+        "synapse-storage/react": [
+          "useApiQuery",
+          "useApiMutation"
+        ]
+      },
+      "esbuild": {
+        "min": 51602,
+        "gzip": 14818,
+        "brotli": 13296
+      },
+      "rollup": {
+        "min": 49868,
+        "gzip": 14384,
+        "brotli": 12812
+      },
+      "rolldown": {
+        "min": 49742,
+        "gzip": 14368,
+        "brotli": 12888
+      },
+      "webpack": {
+        "min": 49883,
+        "gzip": 14381,
+        "brotli": 12836
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 51593,
+          "(entry)": 30
+        },
+        "byFile": [
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7548
+          },
+          {
+            "file": "api/components/endpoint.js",
+            "bytes": 7546
+          },
+          {
+            "file": "api/components/query-storage.js",
+            "bytes": 6303
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4114
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "api/utils/fetch-base-query.js",
+            "bytes": 3453
+          },
+          {
+            "file": "api/api.module.js",
+            "bytes": 2450
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1695
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1530
+          },
+          {
+            "file": "api/utils/cache.util.js",
+            "bytes": 1501
+          },
+          {
+            "file": "api/utils/file-utils.js",
+            "bytes": 1328
+          },
+          {
+            "file": "react/hooks/useApiQuery.js",
+            "bytes": 1317
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1217
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1079
+          },
+          {
+            "file": "react/hooks/useApiMutation.js",
+            "bytes": 823
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 645
+          },
+          {
+            "file": "api/utils/create-header-context.js",
+            "bytes": 593
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 527
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 521
+          },
+          {
+            "file": "api/utils/api-error.js",
+            "bytes": 519
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 514
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 398
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 325
+          },
+          {
+            "file": "api/utils/endpoint-headers.js",
+            "bytes": 313
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 223
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 188
+          },
+          {
+            "file": "api/utils/api-helpers.js",
+            "bytes": 181
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          },
+          {
+            "file": "api/types/api.interface.js",
+            "bytes": 138
+          },
+          {
+            "file": "api/utils/get-cacheable-headers.js",
+            "bytes": 101
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 51602,
+        "gzip": 14818,
+        "brotli": 13296
+      },
+      "baseline": {
+        "min": 83180,
+        "gzip": 23004,
+        "brotli": 20379
+      }
+    },
+    {
+      "id": "syn-react-module-norx",
+      "group": "react",
+      "label": "createSynapse-модуль без эффектов + createSynapseCtx + useSelector (без rxjs)",
+      "imports": {
+        "synapse-storage": [
+          "createSynapse",
+          "MemoryStorage",
+          "Selectors",
+          "Dispatcher"
+        ],
+        "synapse-storage/react": [
+          "createSynapseCtx",
+          "useSelector"
+        ]
+      },
+      "esbuild": {
+        "min": 51787,
+        "gzip": 14962,
+        "brotli": 13501
+      },
+      "rollup": {
+        "min": 48000,
+        "gzip": 14388,
+        "brotli": 12815
+      },
+      "rolldown": {
+        "min": 47648,
+        "gzip": 14179,
+        "brotli": 12689
+      },
+      "webpack": {
+        "min": 48059,
+        "gzip": 14499,
+        "brotli": 12859
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 51772,
+          "(entry)": 36
+        },
+        "byFile": [
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7548
+          },
+          {
+            "file": "core/selector/selector.module.js",
+            "bytes": 6772
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4114
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.base.js",
+            "bytes": 3982
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.module.js",
+            "bytes": 3679
+          },
+          {
+            "file": "utils/createSynapse/syncModule.js",
+            "bytes": 3609
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "react/utils/createSynapseCtx.js",
+            "bytes": 2480
+          },
+          {
+            "file": "core/observable/interop-observable.js",
+            "bytes": 1903
+          },
+          {
+            "file": "core/selector/selectors.base.js",
+            "bytes": 1761
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1695
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1530
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1217
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1079
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 678
+          },
+          {
+            "file": "utils/createSynapse/waitForDependencies.js",
+            "bytes": 644
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 527
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 521
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 514
+          },
+          {
+            "file": "react/hooks/useSelector.js",
+            "bytes": 465
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 398
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 358
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 325
+          },
+          {
+            "file": "reactive/effects/preStartActionBuffer.js",
+            "bytes": 305
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "utils/dehydrateModule.js",
+            "bytes": 225
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 223
+          },
+          {
+            "file": "reactive/dispatcher/path.util.js",
+            "bytes": 204
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          },
+          {
+            "file": "utils/createSynapse/createSynapse.js",
+            "bytes": 165
+          },
+          {
+            "file": "utils/createSynapse/effects-runner.js",
+            "bytes": 158
+          },
+          {
+            "file": "core/observable/storage-stream.js",
+            "bytes": 106
+          },
+          {
+            "file": "reactive/dispatcher/standalone.js",
+            "bytes": 84
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 51787,
+        "gzip": 14962,
+        "brotli": 13501
+      },
+      "baseline": {
+        "min": 91923,
+        "gzip": 25958,
+        "brotli": 23092
+      }
+    },
+    {
+      "id": "syn-react-ctx",
+      "group": "react",
+      "label": "createSynapse-модуль с эффектами + createSynapseCtx",
+      "imports": {
+        "synapse-storage": [
+          "createSynapse",
+          "MemoryStorage",
+          "Selectors",
+          "Dispatcher"
+        ],
+        "synapse-storage/react": [
+          "createSynapseCtx"
+        ],
+        "synapse-storage/reactive": [
+          "Effects",
+          "ofType"
+        ]
+      },
+      "esbuild": {
+        "min": 80935,
+        "gzip": 23603,
+        "brotli": 21215
+      },
+      "rollup": {
+        "min": 74428,
+        "gzip": 22186,
+        "brotli": 19725
+      },
+      "rolldown": {
+        "min": 75608,
+        "gzip": 22319,
+        "brotli": 19983
+      },
+      "webpack": {
+        "min": 76094,
+        "gzip": 22838,
+        "brotli": 20228
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 55950,
+          "tslib": 3992,
+          "rxjs": 20973,
+          "(entry)": 41
+        },
+        "byFile": [
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7553
+          },
+          {
+            "file": "core/selector/selector.module.js",
+            "bytes": 6779
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4115
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.base.js",
+            "bytes": 3982
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.module.js",
+            "bytes": 3680
+          },
+          {
+            "file": "utils/createSynapse/syncModule.js",
+            "bytes": 3609
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "reactive/effects/effects.module.js",
+            "bytes": 3266
+          },
+          {
+            "file": "react/utils/createSynapseCtx.js",
+            "bytes": 2495
+          },
+          {
+            "file": "core/observable/interop-observable.js",
+            "bytes": 1905
+          },
+          {
+            "file": "core/selector/selectors.base.js",
+            "bytes": 1765
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1698
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1530
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1221
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1085
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 678
+          },
+          {
+            "file": "utils/createSynapse/waitForDependencies.js",
+            "bytes": 645
+          },
+          {
+            "file": "reactive/effects/utils/toObservable.js",
+            "bytes": 604
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 527
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 521
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 514
+          },
+          {
+            "file": "reactive/effects/effects.base.js",
+            "bytes": 471
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 399
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 360
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 326
+          },
+          {
+            "file": "reactive/effects/preStartActionBuffer.js",
+            "bytes": 305
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "utils/dehydrateModule.js",
+            "bytes": 225
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 223
+          },
+          {
+            "file": "reactive/dispatcher/path.util.js",
+            "bytes": 204
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "reactive/effects/operators/of-type.js",
+            "bytes": 176
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          },
+          {
+            "file": "utils/createSynapse/createSynapse.js",
+            "bytes": 165
+          },
+          {
+            "file": "utils/createSynapse/effects-runner.js",
+            "bytes": 158
+          },
+          {
+            "file": "core/observable/storage-stream.js",
+            "bytes": 106
+          },
+          {
+            "file": "reactive/dispatcher/standalone.js",
+            "bytes": 84
+          },
+          {
+            "file": "reactive/effects/effects.types.js",
+            "bytes": 73
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 56290,
+        "gzip": 16251,
+        "brotli": 14648
+      },
+      "baseline": {
+        "min": 91789,
+        "gzip": 25891,
+        "brotli": 23053
+      }
+    },
+    {
+      "id": "syn-typical-norx",
+      "group": "react",
+      "label": "Приложение без rxjs: модуль + Ctx + ApiClient + хуки + LocalStorage",
+      "imports": {
+        "synapse-storage": [
+          "createSynapse",
+          "MemoryStorage",
+          "LocalStorage",
+          "Selectors",
+          "Dispatcher",
+          "ApiClient"
+        ],
+        "synapse-storage/react": [
+          "createSynapseCtx",
+          "useApiQuery",
+          "useApiMutation",
+          "useSelector"
+        ]
+      },
+      "esbuild": {
+        "min": 80508,
+        "gzip": 22663,
+        "brotli": 20304
+      },
+      "rollup": {
+        "min": 75476,
+        "gzip": 21886,
+        "brotli": 19297
+      },
+      "rolldown": {
+        "min": 74835,
+        "gzip": 21569,
+        "brotli": 19171
+      },
+      "webpack": {
+        "min": 75526,
+        "gzip": 21859,
+        "brotli": 19341
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 80481,
+          "(entry)": 48
+        },
+        "byFile": [
+          {
+            "file": "api/components/endpoint.js",
+            "bytes": 7553
+          },
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7551
+          },
+          {
+            "file": "core/selector/selector.module.js",
+            "bytes": 6779
+          },
+          {
+            "file": "api/components/query-storage.js",
+            "bytes": 6304
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4115
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.base.js",
+            "bytes": 3982
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.module.js",
+            "bytes": 3679
+          },
+          {
+            "file": "utils/createSynapse/syncModule.js",
+            "bytes": 3609
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3582
+          },
+          {
+            "file": "api/utils/fetch-base-query.js",
+            "bytes": 3446
+          },
+          {
+            "file": "react/utils/createSynapseCtx.js",
+            "bytes": 2477
+          },
+          {
+            "file": "api/api.module.js",
+            "bytes": 2453
+          },
+          {
+            "file": "core/storage/adapters/local-storage.service.js",
+            "bytes": 2116
+          },
+          {
+            "file": "core/observable/interop-observable.js",
+            "bytes": 1903
+          },
+          {
+            "file": "core/selector/selectors.base.js",
+            "bytes": 1765
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1697
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1530
+          },
+          {
+            "file": "api/utils/cache.util.js",
+            "bytes": 1505
+          },
+          {
+            "file": "api/utils/file-utils.js",
+            "bytes": 1330
+          },
+          {
+            "file": "react/hooks/useApiQuery.js",
+            "bytes": 1317
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1215
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1079
+          },
+          {
+            "file": "react/hooks/useApiMutation.js",
+            "bytes": 823
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 678
+          },
+          {
+            "file": "utils/createSynapse/waitForDependencies.js",
+            "bytes": 644
+          },
+          {
+            "file": "api/utils/create-header-context.js",
+            "bytes": 594
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 527
+          },
+          {
+            "file": "api/utils/api-error.js",
+            "bytes": 523
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 521
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 514
+          },
+          {
+            "file": "react/hooks/useSelector.js",
+            "bytes": 465
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 398
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 355
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 326
+          },
+          {
+            "file": "api/utils/endpoint-headers.js",
+            "bytes": 315
+          },
+          {
+            "file": "reactive/effects/preStartActionBuffer.js",
+            "bytes": 305
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "utils/dehydrateModule.js",
+            "bytes": 225
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 223
+          },
+          {
+            "file": "reactive/dispatcher/path.util.js",
+            "bytes": 204
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "api/utils/api-helpers.js",
+            "bytes": 181
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          },
+          {
+            "file": "utils/createSynapse/createSynapse.js",
+            "bytes": 165
+          },
+          {
+            "file": "utils/createSynapse/effects-runner.js",
+            "bytes": 158
+          },
+          {
+            "file": "api/types/api.interface.js",
+            "bytes": 138
+          },
+          {
+            "file": "core/observable/storage-stream.js",
+            "bytes": 106
+          },
+          {
+            "file": "api/utils/get-cacheable-headers.js",
+            "bytes": 101
+          },
+          {
+            "file": "reactive/dispatcher/standalone.js",
+            "bytes": 84
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 80508,
+        "gzip": 22663,
+        "brotli": 20304
+      },
+      "baseline": {
+        "min": 119146,
+        "gzip": 33552,
+        "brotli": 29475
+      }
+    },
+    {
+      "id": "syn-typical",
+      "group": "react",
+      "label": "Типичное приложение: модуль + эффекты + Ctx + ApiClient + хуки + LocalStorage",
+      "imports": {
+        "synapse-storage": [
+          "createSynapse",
+          "MemoryStorage",
+          "LocalStorage",
+          "Selectors",
+          "Dispatcher",
+          "ApiClient"
+        ],
+        "synapse-storage/react": [
+          "createSynapseCtx",
+          "useApiQuery",
+          "useApiMutation",
+          "useSelector",
+          "useObservable"
+        ],
+        "synapse-storage/reactive": [
+          "Effects",
+          "ofType",
+          "validateMap",
+          "mutationMap",
+          "fromRequest",
+          "apiResult"
+        ]
+      },
+      "esbuild": {
+        "min": 114989,
+        "gzip": 33213,
+        "brotli": 29555
+      },
+      "rollup": {
+        "min": 106785,
+        "gzip": 31377,
+        "brotli": 27504
+      },
+      "rolldown": {
+        "min": 107866,
+        "gzip": 31493,
+        "brotli": 27858
+      },
+      "webpack": {
+        "min": 108603,
+        "gzip": 32011,
+        "brotli": 28082
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 86888,
+          "tslib": 3996,
+          "rxjs": 24055,
+          "(entry)": 71
+        },
+        "byFile": [
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7554
+          },
+          {
+            "file": "api/components/endpoint.js",
+            "bytes": 7553
+          },
+          {
+            "file": "core/selector/selector.module.js",
+            "bytes": 6788
+          },
+          {
+            "file": "api/components/query-storage.js",
+            "bytes": 6305
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4117
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.base.js",
+            "bytes": 3982
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.module.js",
+            "bytes": 3680
+          },
+          {
+            "file": "utils/createSynapse/syncModule.js",
+            "bytes": 3609
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3590
+          },
+          {
+            "file": "api/utils/fetch-base-query.js",
+            "bytes": 3448
+          },
+          {
+            "file": "reactive/effects/effects.module.js",
+            "bytes": 3265
+          },
+          {
+            "file": "react/utils/createSynapseCtx.js",
+            "bytes": 2488
+          },
+          {
+            "file": "api/api.module.js",
+            "bytes": 2453
+          },
+          {
+            "file": "core/storage/adapters/local-storage.service.js",
+            "bytes": 2124
+          },
+          {
+            "file": "core/observable/interop-observable.js",
+            "bytes": 1905
+          },
+          {
+            "file": "core/selector/selectors.base.js",
+            "bytes": 1765
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 1698
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1534
+          },
+          {
+            "file": "api/utils/cache.util.js",
+            "bytes": 1505
+          },
+          {
+            "file": "api/utils/file-utils.js",
+            "bytes": 1330
+          },
+          {
+            "file": "react/hooks/useApiQuery.js",
+            "bytes": 1317
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1221
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1085
+          },
+          {
+            "file": "react/hooks/useApiMutation.js",
+            "bytes": 823
+          },
+          {
+            "file": "reactive/effects/operators/request-map.js",
+            "bytes": 775
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 679
+          },
+          {
+            "file": "utils/createSynapse/waitForDependencies.js",
+            "bytes": 645
+          },
+          {
+            "file": "reactive/effects/utils/toObservable.js",
+            "bytes": 603
+          },
+          {
+            "file": "api/utils/create-header-context.js",
+            "bytes": 594
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 527
+          },
+          {
+            "file": "api/utils/api-error.js",
+            "bytes": 523
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 521
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 514
+          },
+          {
+            "file": "reactive/effects/effects.base.js",
+            "bytes": 471
+          },
+          {
+            "file": "react/hooks/useSelector.js",
+            "bytes": 465
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 402
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 356
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 326
+          },
+          {
+            "file": "api/utils/endpoint-headers.js",
+            "bytes": 315
+          },
+          {
+            "file": "reactive/effects/preStartActionBuffer.js",
+            "bytes": 305
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "react/hooks/useObservable.js",
+            "bytes": 261
+          },
+          {
+            "file": "utils/dehydrateModule.js",
+            "bytes": 225
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 223
+          },
+          {
+            "file": "reactive/effects/operators/api-result.js",
+            "bytes": 207
+          },
+          {
+            "file": "reactive/dispatcher/path.util.js",
+            "bytes": 204
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "api/utils/api-helpers.js",
+            "bytes": 181
+          },
+          {
+            "file": "reactive/effects/operators/of-type.js",
+            "bytes": 175
+          },
+          {
+            "file": "_utils/chunk.util.js",
+            "bytes": 171
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 169
+          },
+          {
+            "file": "reactive/effects/utils/fromRequest.js",
+            "bytes": 167
+          },
+          {
+            "file": "utils/createSynapse/createSynapse.js",
+            "bytes": 165
+          },
+          {
+            "file": "utils/createSynapse/effects-runner.js",
+            "bytes": 158
+          },
+          {
+            "file": "api/types/api.interface.js",
+            "bytes": 138
+          },
+          {
+            "file": "core/observable/storage-stream.js",
+            "bytes": 106
+          },
+          {
+            "file": "api/utils/get-cacheable-headers.js",
+            "bytes": 101
+          },
+          {
+            "file": "reactive/effects/utils/chunkRequestConsistent.js",
+            "bytes": 97
+          },
+          {
+            "file": "reactive/dispatcher/standalone.js",
+            "bytes": 84
+          },
+          {
+            "file": "reactive/effects/effects.types.js",
+            "bytes": 73
+          },
+          {
+            "file": "reactive/effects/utils/chunkRequestParallel.js",
+            "bytes": 70
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 87707,
+        "gzip": 24957,
+        "brotli": 22293
+      },
+      "baseline": {
+        "min": 124065,
+        "gzip": 35170,
+        "brotli": 30897
+      }
+    },
+    {
+      "id": "syn-full-core",
+      "group": "full",
+      "label": "Весь корень (import * from synapse-storage) — без react/rxjs",
+      "imports": {
+        "synapse-storage": "*"
+      },
+      "esbuild": {
+        "min": 132870,
+        "gzip": 33113,
+        "brotli": 28991
+      },
+      "rollup": {
+        "min": 123982,
+        "gzip": 32001,
+        "brotli": 27610
+      },
+      "rolldown": {
+        "min": 123365,
+        "gzip": 31676,
+        "brotli": 27535
+      },
+      "webpack": {
+        "min": 124460,
+        "gzip": 32111,
+        "brotli": 27811
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 132775,
+          "(entry)": 23
+        },
+        "byFile": [
+          {
+            "file": "core/storage/utils/worker-channel.util.js",
+            "bytes": 15349
+          },
+          {
+            "file": "core/storage/adapters/indexed-DB.service.js",
+            "bytes": 10170
+          },
+          {
+            "file": "core/storage/adapters/async-base-storage.service.js",
+            "bytes": 8040
+          },
+          {
+            "file": "api/components/endpoint.js",
+            "bytes": 7553
+          },
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7548
+          },
+          {
+            "file": "core/selector/selector.module.js",
+            "bytes": 6779
+          },
+          {
+            "file": "api/components/query-storage.js",
+            "bytes": 6304
+          },
+          {
+            "file": "core/storage/middlewares/shared-state.factory.js",
+            "bytes": 4888
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4115
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.base.js",
+            "bytes": 3982
+          },
+          {
+            "file": "core/storage/adapters/worker-storage.service.js",
+            "bytes": 3806
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.module.js",
+            "bytes": 3680
+          },
+          {
+            "file": "utils/createSynapse/syncModule.js",
+            "bytes": 3609
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3583
+          },
+          {
+            "file": "api/utils/fetch-base-query.js",
+            "bytes": 3451
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 3421
+          },
+          {
+            "file": "reactive/dispatcher/middlewares/logger.middleware.js",
+            "bytes": 2923
+          },
+          {
+            "file": "utils/createEventBus.js",
+            "bytes": 2764
+          },
+          {
+            "file": "api/api.module.js",
+            "bytes": 2453
+          },
+          {
+            "file": "core/storage/adapters/local-storage.service.js",
+            "bytes": 2117
+          },
+          {
+            "file": "core/observable/interop-observable.js",
+            "bytes": 1905
+          },
+          {
+            "file": "core/storage/utils/broadcast.util.js",
+            "bytes": 1861
+          },
+          {
+            "file": "core/selector/selectors.base.js",
+            "bytes": 1765
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1528
+          },
+          {
+            "file": "api/utils/cache.util.js",
+            "bytes": 1505
+          },
+          {
+            "file": "api/utils/file-utils.js",
+            "bytes": 1330
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1215
+          },
+          {
+            "file": "core/storage/middlewares/storage-batching.middleware.js",
+            "bytes": 1184
+          },
+          {
+            "file": "utils/createSynapseAwaiter.js",
+            "bytes": 1115
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1079
+          },
+          {
+            "file": "index.js",
+            "bytes": 829
+          },
+          {
+            "file": "core/storage/adapters/worker-backends/shared-worker-backend.js",
+            "bytes": 770
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 678
+          },
+          {
+            "file": "utils/createSynapse/waitForDependencies.js",
+            "bytes": 644
+          },
+          {
+            "file": "api/utils/create-header-context.js",
+            "bytes": 594
+          },
+          {
+            "file": "core/storage/middlewares/storage-logger.middleware.js",
+            "bytes": 546
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 527
+          },
+          {
+            "file": "api/utils/api-error.js",
+            "bytes": 523
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 521
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 514
+          },
+          {
+            "file": "core/storage/utils/storage-factory.util.js",
+            "bytes": 415
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 399
+          },
+          {
+            "file": "api/utils/api-helpers.js",
+            "bytes": 375
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 355
+          },
+          {
+            "file": "core/storage/middlewares/storage-shallow-compare.middleware.js",
+            "bytes": 331
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 325
+          },
+          {
+            "file": "api/utils/endpoint-headers.js",
+            "bytes": 315
+          },
+          {
+            "file": "reactive/effects/preStartActionBuffer.js",
+            "bytes": 305
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "utils/dehydrateModule.js",
+            "bytes": 225
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 223
+          },
+          {
+            "file": "reactive/dispatcher/path.util.js",
+            "bytes": 204
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 168
+          },
+          {
+            "file": "utils/createSynapse/createSynapse.js",
+            "bytes": 165
+          },
+          {
+            "file": "utils/createSynapse/effects-runner.js",
+            "bytes": 158
+          },
+          {
+            "file": "api/types/api.interface.js",
+            "bytes": 138
+          },
+          {
+            "file": "core/observable/storage-stream.js",
+            "bytes": 106
+          },
+          {
+            "file": "api/utils/get-cacheable-headers.js",
+            "bytes": 101
+          },
+          {
+            "file": "core/storage/middlewares/sync-shared-worker.middleware.js",
+            "bytes": 100
+          },
+          {
+            "file": "core/storage/browser-storage.util.js",
+            "bytes": 94
+          },
+          {
+            "file": "core/storage/middlewares/sync-broadcast.middleware.js",
+            "bytes": 93
+          },
+          {
+            "file": "core/storage/middlewares/shared-worker.middleware.js",
+            "bytes": 91
+          },
+          {
+            "file": "core/storage/middlewares/broadcast.middleware.js",
+            "bytes": 84
+          },
+          {
+            "file": "reactive/dispatcher/standalone.js",
+            "bytes": 84
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 132870,
+        "gzip": 33113,
+        "brotli": 28991
+      },
+      "baseline": {
+        "min": 163343,
+        "gzip": 43972,
+        "brotli": 38269
+      }
+    },
+    {
+      "id": "syn-full",
+      "group": "full",
+      "label": "Всё: корень + /react + /reactive",
+      "imports": {
+        "synapse-storage": "*",
+        "synapse-storage/react": "*",
+        "synapse-storage/reactive": "*"
+      },
+      "esbuild": {
+        "min": 178800,
+        "gzip": 47327,
+        "brotli": 41339
+      },
+      "rollup": {
+        "min": 165861,
+        "gzip": 44751,
+        "brotli": 38761
+      },
+      "rolldown": {
+        "min": 166733,
+        "gzip": 44975,
+        "brotli": 39098
+      },
+      "webpack": {
+        "min": 168296,
+        "gzip": 45353,
+        "brotli": 39366
+      },
+      "breakdown": {
+        "byPkg": {
+          "synapse-storage": 149865,
+          "tslib": 3999,
+          "rxjs": 24835,
+          "(entry)": 29
+        },
+        "byFile": [
+          {
+            "file": "core/storage/utils/worker-channel.util.js",
+            "bytes": 15351
+          },
+          {
+            "file": "core/storage/adapters/indexed-DB.service.js",
+            "bytes": 10180
+          },
+          {
+            "file": "core/storage/adapters/async-base-storage.service.js",
+            "bytes": 8045
+          },
+          {
+            "file": "api/components/endpoint.js",
+            "bytes": 7553
+          },
+          {
+            "file": "core/storage/adapters/sync-base-storage.service.js",
+            "bytes": 7553
+          },
+          {
+            "file": "core/selector/selector.module.js",
+            "bytes": 6788
+          },
+          {
+            "file": "api/components/query-storage.js",
+            "bytes": 6305
+          },
+          {
+            "file": "core/storage/middlewares/shared-state.factory.js",
+            "bytes": 4888
+          },
+          {
+            "file": "core/storage/adapters/storage-core.js",
+            "bytes": 4117
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.base.js",
+            "bytes": 3982
+          },
+          {
+            "file": "core/storage/adapters/worker-storage.service.js",
+            "bytes": 3809
+          },
+          {
+            "file": "reactive/dispatcher/dispatcher.module.js",
+            "bytes": 3680
+          },
+          {
+            "file": "utils/createSynapse/syncModule.js",
+            "bytes": 3609
+          },
+          {
+            "file": "core/storage/modules/singleton/singleton.util.js",
+            "bytes": 3590
+          },
+          {
+            "file": "reactive/effects/effects.module.js",
+            "bytes": 3470
+          },
+          {
+            "file": "api/utils/fetch-base-query.js",
+            "bytes": 3455
+          },
+          {
+            "file": "core/storage/utils/middleware-module.js",
+            "bytes": 3424
+          },
+          {
+            "file": "reactive/dispatcher/middlewares/logger.middleware.js",
+            "bytes": 2923
+          },
+          {
+            "file": "utils/createEventBus.js",
+            "bytes": 2765
+          },
+          {
+            "file": "react/utils/createSynapseCtx.js",
+            "bytes": 2490
+          },
+          {
+            "file": "api/api.module.js",
+            "bytes": 2453
+          },
+          {
+            "file": "core/storage/adapters/local-storage.service.js",
+            "bytes": 2119
+          },
+          {
+            "file": "core/observable/interop-observable.js",
+            "bytes": 1905
+          },
+          {
+            "file": "core/storage/utils/broadcast.util.js",
+            "bytes": 1862
+          },
+          {
+            "file": "core/selector/selectors.base.js",
+            "bytes": 1765
+          },
+          {
+            "file": "core/storage/utils/state-diff.util.js",
+            "bytes": 1534
+          },
+          {
+            "file": "api/utils/cache.util.js",
+            "bytes": 1505
+          },
+          {
+            "file": "api/utils/file-utils.js",
+            "bytes": 1330
+          },
+          {
+            "file": "react/utils/awaitSynapse.js",
+            "bytes": 1328
+          },
+          {
+            "file": "react/hooks/useApiQuery.js",
+            "bytes": 1317
+          },
+          {
+            "file": "core/storage/adapters/memory-storage.service.js",
+            "bytes": 1218
+          },
+          {
+            "file": "core/storage/middlewares/storage-batching.middleware.js",
+            "bytes": 1184
+          },
+          {
+            "file": "react/hooks/useCreateStorage.js",
+            "bytes": 1149
+          },
+          {
+            "file": "utils/createSynapseAwaiter.js",
+            "bytes": 1115
+          },
+          {
+            "file": "core/storage/adapters/path.utils.js",
+            "bytes": 1079
+          },
+          {
+            "file": "index.js",
+            "bytes": 834
+          },
+          {
+            "file": "react/hooks/useApiMutation.js",
+            "bytes": 823
+          },
+          {
+            "file": "reactive/effects/operators/request-map.js",
+            "bytes": 775
+          },
+          {
+            "file": "core/storage/adapters/worker-backends/shared-worker-backend.js",
+            "bytes": 771
+          },
+          {
+            "file": "reactive/effects/operators/of-type.js",
+            "bytes": 711
+          },
+          {
+            "file": "core/storage/utils/hydration-meta.util.js",
+            "bytes": 679
+          },
+          {
+            "file": "utils/createSynapse/waitForDependencies.js",
+            "bytes": 645
+          },
+          {
+            "file": "reactive/effects/utils/toObservable.js",
+            "bytes": 603
+          },
+          {
+            "file": "api/utils/create-header-context.js",
+            "bytes": 594
+          },
+          {
+            "file": "core/storage/middlewares/storage-logger.middleware.js",
+            "bytes": 546
+          },
+          {
+            "file": "react/hooks/useSelector.js",
+            "bytes": 531
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-logger.middleware.js",
+            "bytes": 527
+          },
+          {
+            "file": "api/utils/api-error.js",
+            "bytes": 523
+          },
+          {
+            "file": "core/storage/utils/path-selector.util.js",
+            "bytes": 521
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-batching.middleware.js",
+            "bytes": 514
+          },
+          {
+            "file": "react/hooks/useStorage.js",
+            "bytes": 496
+          },
+          {
+            "file": "reactive/index.js",
+            "bytes": 492
+          },
+          {
+            "file": "react/hooks/useStorageSubscribe.js",
+            "bytes": 478
+          },
+          {
+            "file": "reactive/effects/effects.base.js",
+            "bytes": 471
+          },
+          {
+            "file": "core/storage/utils/storage-factory.util.js",
+            "bytes": 416
+          },
+          {
+            "file": "core/storage/modules/singleton/mixin.util.js",
+            "bytes": 402
+          },
+          {
+            "file": "api/utils/api-helpers.js",
+            "bytes": 375
+          },
+          {
+            "file": "_utils/error-handling.util.js",
+            "bytes": 356
+          },
+          {
+            "file": "core/storage/middlewares/storage-shallow-compare.middleware.js",
+            "bytes": 332
+          },
+          {
+            "file": "core/storage/middlewares/sync-storage-shallow-compare.middleware.js",
+            "bytes": 326
+          },
+          {
+            "file": "api/utils/endpoint-headers.js",
+            "bytes": 315
+          },
+          {
+            "file": "reactive/effects/preStartActionBuffer.js",
+            "bytes": 305
+          },
+          {
+            "file": "react/index.js",
+            "bytes": 293
+          },
+          {
+            "file": "_utils/logger-console.util.js",
+            "bytes": 288
+          },
+          {
+            "file": "react/hooks/useStorageObservable.js",
+            "bytes": 275
+          },
+          {
+            "file": "core/storage/storage.interface.js",
+            "bytes": 266
+          },
+          {
+            "file": "react/hooks/useObservable.js",
+            "bytes": 261
+          },
+          {
+            "file": "utils/dehydrateModule.js",
+            "bytes": 225
+          },
+          {
+            "file": "core/storage/utils/migration.util.js",
+            "bytes": 223
+          },
+          {
+            "file": "reactive/effects/operators/api-result.js",
+            "bytes": 207
+          },
+          {
+            "file": "reactive/dispatcher/path.util.js",
+            "bytes": 204
+          },
+          {
+            "file": "core/storage/utils/storage-key.js",
+            "bytes": 199
+          },
+          {
+            "file": "_utils/chunk.util.js",
+            "bytes": 171
+          },
+          {
+            "file": "core/storage/modules/singleton/models.js",
+            "bytes": 169
+          },
+          {
+            "file": "reactive/effects/utils/fromRequest.js",
+            "bytes": 167
+          },
+          {
+            "file": "utils/createSynapse/createSynapse.js",
+            "bytes": 165
+          },
+          {
+            "file": "utils/createSynapse/effects-runner.js",
+            "bytes": 158
+          },
+          {
+            "file": "reactive/effects/operators/selectors.js",
+            "bytes": 157
+          },
+          {
+            "file": "api/types/api.interface.js",
+            "bytes": 138
+          },
+          {
+            "file": "core/observable/storage-stream.js",
+            "bytes": 106
+          },
+          {
+            "file": "api/utils/get-cacheable-headers.js",
+            "bytes": 101
+          },
+          {
+            "file": "core/storage/middlewares/sync-shared-worker.middleware.js",
+            "bytes": 101
+          },
+          {
+            "file": "react/hooks/useSubscription.js",
+            "bytes": 100
+          },
+          {
+            "file": "reactive/effects/utils/chunkRequestConsistent.js",
+            "bytes": 97
+          },
+          {
+            "file": "core/storage/browser-storage.util.js",
+            "bytes": 95
+          },
+          {
+            "file": "core/storage/middlewares/sync-broadcast.middleware.js",
+            "bytes": 94
+          },
+          {
+            "file": "core/storage/middlewares/shared-worker.middleware.js",
+            "bytes": 92
+          },
+          {
+            "file": "core/storage/middlewares/broadcast.middleware.js",
+            "bytes": 85
+          },
+          {
+            "file": "reactive/dispatcher/standalone.js",
+            "bytes": 84
+          },
+          {
+            "file": "reactive/effects/effects.types.js",
+            "bytes": 73
+          },
+          {
+            "file": "reactive/effects/utils/chunkRequestParallel.js",
+            "bytes": 70
+          }
+        ]
+      },
+      "esbuildNoRx": {
+        "min": 150777,
+        "gzip": 38800,
+        "brotli": 33862
+      },
+      "baseline": {
+        "min": 164118,
+        "gzip": 44033,
+        "brotli": 38338
+      }
+    }
+  ],
+  "competitors": [
+    {
+      "id": "redux",
+      "group": "state",
+      "label": "redux (createStore, combineReducers)",
+      "imports": {
+        "redux": [
+          "legacy_createStore",
+          "combineReducers",
+          "applyMiddleware"
+        ]
+      },
+      "esbuild": {
+        "min": 2814,
+        "gzip": 1185,
+        "brotli": 1068
+      },
+      "rollup": {
+        "min": 2808,
+        "gzip": 1147,
+        "brotli": 1038
+      },
+      "rolldown": {
+        "min": 2763,
+        "gzip": 1157,
+        "brotli": 1046
+      },
+      "webpack": {
+        "min": 2808,
+        "gzip": 1145,
+        "brotli": 1038
+      },
+      "breakdown": {
+        "byPkg": {
+          "redux": 2809,
+          "(entry)": 26
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "rtk",
+      "group": "state",
+      "label": "RTK: configureStore + createSlice",
+      "imports": {
+        "@reduxjs/toolkit": [
+          "configureStore",
+          "createSlice"
+        ]
+      },
+      "esbuild": {
+        "min": 21979,
+        "gzip": 8500,
+        "brotli": 7822
+      },
+      "rollup": {
+        "min": 18633,
+        "gzip": 6948,
+        "brotli": 6406
+      },
+      "rolldown": {
+        "min": 19076,
+        "gzip": 7128,
+        "brotli": 6567
+      },
+      "webpack": {
+        "min": 18797,
+        "gzip": 6985,
+        "brotli": 6446
+      },
+      "breakdown": {
+        "byPkg": {
+          "redux": 2856,
+          "immer": 9352,
+          "redux-thunk": 107,
+          "@reduxjs/toolkit": 9659,
+          "(entry)": 26
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "rtk-full",
+      "group": "state",
+      "label": "RTK: + createAsyncThunk, createEntityAdapter, createSelector, createListenerMiddleware",
+      "imports": {
+        "@reduxjs/toolkit": [
+          "configureStore",
+          "createSlice",
+          "createAsyncThunk",
+          "createEntityAdapter",
+          "createSelector",
+          "createListenerMiddleware"
+        ]
+      },
+      "esbuild": {
+        "min": 33085,
+        "gzip": 12724,
+        "brotli": 11590
+      },
+      "rollup": {
+        "min": 32644,
+        "gzip": 11846,
+        "brotli": 10853
+      },
+      "rolldown": {
+        "min": 33082,
+        "gzip": 12098,
+        "brotli": 11001
+      },
+      "webpack": {
+        "min": 32784,
+        "gzip": 11867,
+        "brotli": 10855
+      },
+      "breakdown": {
+        "byPkg": {
+          "redux": 2856,
+          "immer": 9397,
+          "reselect": 2845,
+          "redux-thunk": 107,
+          "@reduxjs/toolkit": 17863,
+          "(entry)": 38
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "zustand-vanilla",
+      "group": "state",
+      "label": "zustand/vanilla (createStore)",
+      "imports": {
+        "zustand/vanilla": [
+          "createStore"
+        ]
+      },
+      "esbuild": {
+        "min": 317,
+        "gzip": 216,
+        "brotli": 206
+      },
+      "rollup": {
+        "min": 330,
+        "gzip": 218,
+        "brotli": 198
+      },
+      "rolldown": {
+        "min": 325,
+        "gzip": 221,
+        "brotli": 204
+      },
+      "webpack": {
+        "min": 330,
+        "gzip": 216,
+        "brotli": 198
+      },
+      "breakdown": {
+        "byPkg": {
+          "zustand": 316,
+          "(entry)": 22
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "jotai-vanilla",
+      "group": "state",
+      "label": "jotai/vanilla (atom, createStore)",
+      "imports": {
+        "jotai/vanilla": [
+          "atom",
+          "createStore"
+        ]
+      },
+      "esbuild": {
+        "min": 5787,
+        "gzip": 2482,
+        "brotli": 2247
+      },
+      "rollup": {
+        "min": 6192,
+        "gzip": 2605,
+        "brotli": 2356
+      },
+      "rolldown": {
+        "min": 5982,
+        "gzip": 2400,
+        "brotli": 2182
+      },
+      "webpack": {
+        "min": 6192,
+        "gzip": 2602,
+        "brotli": 2365
+      },
+      "breakdown": {
+        "byPkg": {
+          "jotai": 5784,
+          "(entry)": 24
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "valtio-vanilla",
+      "group": "state",
+      "label": "valtio/vanilla (proxy, subscribe)",
+      "imports": {
+        "valtio/vanilla": [
+          "proxy",
+          "subscribe",
+          "snapshot"
+        ]
+      },
+      "esbuild": {
+        "min": 2972,
+        "gzip": 1316,
+        "brotli": 1211
+      },
+      "rollup": {
+        "min": 2945,
+        "gzip": 1265,
+        "brotli": 1165
+      },
+      "rolldown": {
+        "min": 3054,
+        "gzip": 1282,
+        "brotli": 1178
+      },
+      "webpack": {
+        "min": 2501,
+        "gzip": 1144,
+        "brotli": 1070
+      },
+      "breakdown": {
+        "byPkg": {
+          "proxy-compare": 184,
+          "valtio": 2783,
+          "(entry)": 26
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "mobx",
+      "group": "state",
+      "label": "mobx (makeAutoObservable, autorun, computed)",
+      "imports": {
+        "mobx": [
+          "makeAutoObservable",
+          "autorun",
+          "computed",
+          "reaction"
+        ]
+      },
+      "esbuild": {
+        "min": 42781,
+        "gzip": 12172,
+        "brotli": 11054
+      },
+      "rollup": {
+        "min": 42515,
+        "gzip": 11894,
+        "brotli": 10778
+      },
+      "rolldown": {
+        "min": 42210,
+        "gzip": 11620,
+        "brotli": 10575
+      },
+      "webpack": {
+        "min": 42838,
+        "gzip": 12007,
+        "brotli": 10896
+      },
+      "breakdown": {
+        "byPkg": {
+          "mobx": 42770,
+          "(entry)": 32
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "effector",
+      "group": "state",
+      "label": "effector (createStore, createEvent, createEffect, sample)",
+      "imports": {
+        "effector": [
+          "createStore",
+          "createEvent",
+          "createEffect",
+          "sample",
+          "combine"
+        ]
+      },
+      "esbuild": {
+        "min": 18770,
+        "gzip": 8542,
+        "brotli": 7807
+      },
+      "rollup": {
+        "min": 18209,
+        "gzip": 8040,
+        "brotli": 7338
+      },
+      "rolldown": {
+        "min": 18430,
+        "gzip": 8254,
+        "brotli": 7562
+      },
+      "webpack": {
+        "min": 18851,
+        "gzip": 8360,
+        "brotli": 7659
+      },
+      "breakdown": {
+        "byPkg": {
+          "effector": 18758,
+          "(entry)": 33
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "reselect",
+      "group": "state",
+      "label": "reselect (createSelector)",
+      "imports": {
+        "reselect": [
+          "createSelector"
+        ]
+      },
+      "esbuild": {
+        "min": 2815,
+        "gzip": 1270,
+        "brotli": 1139
+      },
+      "rollup": {
+        "min": 2897,
+        "gzip": 1219,
+        "brotli": 1092
+      },
+      "rolldown": {
+        "min": 2809,
+        "gzip": 1213,
+        "brotli": 1093
+      },
+      "webpack": {
+        "min": 2897,
+        "gzip": 1217,
+        "brotli": 1093
+      },
+      "breakdown": {
+        "byPkg": {
+          "reselect": 2814,
+          "(entry)": 22
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "redux-react",
+      "group": "state-react",
+      "label": "redux + react-redux",
+      "imports": {
+        "redux": [
+          "legacy_createStore",
+          "combineReducers"
+        ],
+        "react-redux": [
+          "Provider",
+          "useSelector",
+          "useDispatch"
+        ]
+      },
+      "esbuild": {
+        "min": 7484,
+        "gzip": 3124,
+        "brotli": 2808
+      },
+      "rollup": {
+        "min": 5917,
+        "gzip": 2357,
+        "brotli": 2146
+      },
+      "rolldown": {
+        "min": 6699,
+        "gzip": 2749,
+        "brotli": 2462
+      },
+      "webpack": {
+        "min": 6162,
+        "gzip": 2427,
+        "brotli": 2195
+      },
+      "breakdown": {
+        "byPkg": {
+          "use-sync-external-store": 847,
+          "redux": 2524,
+          "react-redux": 2898,
+          "(entry)": 30
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "rtk-react",
+      "group": "state-react",
+      "label": "RTK + react-redux",
+      "imports": {
+        "@reduxjs/toolkit": [
+          "configureStore",
+          "createSlice"
+        ],
+        "react-redux": [
+          "Provider",
+          "useSelector",
+          "useDispatch"
+        ]
+      },
+      "esbuild": {
+        "min": 27002,
+        "gzip": 10476,
+        "brotli": 9625
+      },
+      "rollup": {
+        "min": 22109,
+        "gzip": 8246,
+        "brotli": 7581
+      },
+      "rolldown": {
+        "min": 23364,
+        "gzip": 8778,
+        "brotli": 8016
+      },
+      "webpack": {
+        "min": 22526,
+        "gzip": 8338,
+        "brotli": 7654
+      },
+      "breakdown": {
+        "byPkg": {
+          "use-sync-external-store": 857,
+          "redux": 2856,
+          "immer": 9367,
+          "redux-thunk": 107,
+          "@reduxjs/toolkit": 9659,
+          "react-redux": 2918,
+          "(entry)": 35
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "rtk-full-react",
+      "group": "state-react",
+      "label": "RTK (полный core) + react-redux",
+      "imports": {
+        "@reduxjs/toolkit": [
+          "configureStore",
+          "createSlice",
+          "createAsyncThunk",
+          "createEntityAdapter",
+          "createSelector",
+          "createListenerMiddleware"
+        ],
+        "react-redux": [
+          "Provider",
+          "useSelector",
+          "useDispatch"
+        ]
+      },
+      "esbuild": {
+        "min": 38108,
+        "gzip": 14694,
+        "brotli": 13338
+      },
+      "rollup": {
+        "min": 36130,
+        "gzip": 13100,
+        "brotli": 11965
+      },
+      "rolldown": {
+        "min": 37373,
+        "gzip": 13722,
+        "brotli": 12430
+      },
+      "webpack": {
+        "min": 36522,
+        "gzip": 13186,
+        "brotli": 12047
+      },
+      "breakdown": {
+        "byPkg": {
+          "use-sync-external-store": 863,
+          "redux": 2864,
+          "immer": 9397,
+          "reselect": 2845,
+          "redux-thunk": 107,
+          "@reduxjs/toolkit": 17864,
+          "react-redux": 2918,
+          "(entry)": 47
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "zustand",
+      "group": "state-react",
+      "label": "zustand (create)",
+      "imports": {
+        "zustand": [
+          "create"
+        ]
+      },
+      "esbuild": {
+        "min": 604,
+        "gzip": 351,
+        "brotli": 313
+      },
+      "rollup": {
+        "min": 606,
+        "gzip": 338,
+        "brotli": 299
+      },
+      "rolldown": {
+        "min": 610,
+        "gzip": 350,
+        "brotli": 311
+      },
+      "webpack": {
+        "min": 617,
+        "gzip": 344,
+        "brotli": 303
+      },
+      "breakdown": {
+        "byPkg": {
+          "zustand": 603,
+          "(entry)": 22
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "zustand-mw",
+      "group": "state-react",
+      "label": "zustand + persist/devtools/subscribeWithSelector/immer-less",
+      "imports": {
+        "zustand": [
+          "create"
+        ],
+        "zustand/middleware": [
+          "persist",
+          "devtools",
+          "subscribeWithSelector",
+          "createJSONStorage"
+        ]
+      },
+      "esbuild": {
+        "min": 6432,
+        "gzip": 2837,
+        "brotli": 2545
+      },
+      "rollup": {
+        "min": 6684,
+        "gzip": 2786,
+        "brotli": 2492
+      },
+      "rolldown": {
+        "min": 6299,
+        "gzip": 2678,
+        "brotli": 2394
+      },
+      "webpack": {
+        "min": 6395,
+        "gzip": 2683,
+        "brotli": 2408
+      },
+      "breakdown": {
+        "byPkg": {
+          "zustand": 6423,
+          "(entry)": 30
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "jotai",
+      "group": "state-react",
+      "label": "jotai (atom, useAtom, Provider)",
+      "imports": {
+        "jotai": [
+          "atom",
+          "useAtom",
+          "useAtomValue",
+          "Provider"
+        ]
+      },
+      "esbuild": {
+        "min": 7494,
+        "gzip": 3245,
+        "brotli": 2930
+      },
+      "rollup": {
+        "min": 7836,
+        "gzip": 3279,
+        "brotli": 2969
+      },
+      "rolldown": {
+        "min": 7602,
+        "gzip": 3084,
+        "brotli": 2799
+      },
+      "webpack": {
+        "min": 7846,
+        "gzip": 3277,
+        "brotli": 2963
+      },
+      "breakdown": {
+        "byPkg": {
+          "jotai": 7487,
+          "(entry)": 28
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "valtio",
+      "group": "state-react",
+      "label": "valtio (proxy, useSnapshot)",
+      "imports": {
+        "valtio": [
+          "proxy",
+          "useSnapshot",
+          "subscribe"
+        ]
+      },
+      "esbuild": {
+        "min": 5905,
+        "gzip": 2436,
+        "brotli": 2257
+      },
+      "rollup": {
+        "min": 5803,
+        "gzip": 2291,
+        "brotli": 2123
+      },
+      "rolldown": {
+        "min": 5918,
+        "gzip": 2297,
+        "brotli": 2124
+      },
+      "webpack": {
+        "min": 4664,
+        "gzip": 1945,
+        "brotli": 1838
+      },
+      "breakdown": {
+        "byPkg": {
+          "proxy-compare": 2476,
+          "valtio": 3423,
+          "(entry)": 27
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "mobx-react",
+      "group": "state-react",
+      "label": "mobx + mobx-react-lite",
+      "imports": {
+        "mobx": [
+          "makeAutoObservable",
+          "autorun",
+          "computed"
+        ],
+        "mobx-react-lite": [
+          "observer",
+          "useLocalObservable"
+        ]
+      },
+      "esbuild": {
+        "min": 47572,
+        "gzip": 13728,
+        "brotli": 12440
+      },
+      "rollup": {
+        "min": 46901,
+        "gzip": 13229,
+        "brotli": 11947
+      },
+      "rolldown": {
+        "min": 46806,
+        "gzip": 12986,
+        "brotli": 11782
+      },
+      "webpack": {
+        "min": 47287,
+        "gzip": 13356,
+        "brotli": 12079
+      },
+      "breakdown": {
+        "byPkg": {
+          "mobx": 43075,
+          "mobx-react-lite": 4483,
+          "(entry)": 35
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "effector-react",
+      "group": "state-react",
+      "label": "effector + effector-react",
+      "imports": {
+        "effector": [
+          "createStore",
+          "createEvent",
+          "createEffect",
+          "sample"
+        ],
+        "effector-react": [
+          "useUnit",
+          "Provider"
+        ]
+      },
+      "esbuild": {
+        "min": 25075,
+        "gzip": 11005,
+        "brotli": 10046
+      },
+      "rollup": {
+        "min": 23103,
+        "gzip": 9930,
+        "brotli": 9056
+      },
+      "rolldown": {
+        "min": 24659,
+        "gzip": 10587,
+        "brotli": 9675
+      },
+      "webpack": {
+        "min": 23700,
+        "gzip": 10102,
+        "brotli": 9245
+      },
+      "breakdown": {
+        "byPkg": {
+          "use-sync-external-store": 1707,
+          "effector": 19836,
+          "effector-react": 1934,
+          "(entry)": 36
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "redux-persist",
+      "group": "persist",
+      "label": "redux-persist (persistStore, persistReducer, storage)",
+      "imports": {
+        "redux-persist": [
+          "persistStore",
+          "persistReducer"
+        ],
+        "redux-persist/es/storage": [
+          "default"
+        ]
+      },
+      "esbuild": {
+        "min": 10388,
+        "gzip": 3512,
+        "brotli": 3133
+      },
+      "rollup": {
+        "min": 10088,
+        "gzip": 3249,
+        "brotli": 2919
+      },
+      "rolldown": {
+        "min": 10222,
+        "gzip": 3329,
+        "brotli": 3000
+      },
+      "webpack": {
+        "min": 10195,
+        "gzip": 3288,
+        "brotli": 2952
+      },
+      "breakdown": {
+        "byPkg": {
+          "redux-persist": 8487,
+          "redux": 1895,
+          "(entry)": 27
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "rtkq",
+      "group": "api",
+      "label": "RTK Query (createApi + fetchBaseQuery, без React) + configureStore",
+      "imports": {
+        "@reduxjs/toolkit/query": [
+          "createApi",
+          "fetchBaseQuery"
+        ],
+        "@reduxjs/toolkit": [
+          "configureStore"
+        ]
+      },
+      "esbuild": {
+        "min": 63828,
+        "gzip": 22637,
+        "brotli": 20640
+      },
+      "rollup": {
+        "min": 62958,
+        "gzip": 21302,
+        "brotli": 19368
+      },
+      "rolldown": {
+        "min": 63568,
+        "gzip": 21215,
+        "brotli": 19464
+      },
+      "webpack": {
+        "min": 63136,
+        "gzip": 21291,
+        "brotli": 19383
+      },
+      "breakdown": {
+        "byPkg": {
+          "redux": 2866,
+          "immer": 12834,
+          "reselect": 2851,
+          "redux-thunk": 107,
+          "@reduxjs/toolkit": 45053,
+          "@standard-schema/utils": 109,
+          "(entry)": 29
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "rtkq-react",
+      "group": "api",
+      "label": "RTK Query React (хуки) + configureStore + react-redux",
+      "imports": {
+        "@reduxjs/toolkit/query/react": [
+          "createApi",
+          "fetchBaseQuery"
+        ],
+        "@reduxjs/toolkit": [
+          "configureStore"
+        ],
+        "react-redux": [
+          "Provider"
+        ]
+      },
+      "esbuild": {
+        "min": 77175,
+        "gzip": 27225,
+        "brotli": 24652
+      },
+      "rollup": {
+        "min": 74649,
+        "gzip": 25026,
+        "brotli": 22653
+      },
+      "rolldown": {
+        "min": 76009,
+        "gzip": 25349,
+        "brotli": 23042
+      },
+      "webpack": {
+        "min": 75533,
+        "gzip": 25054,
+        "brotli": 22656
+      },
+      "breakdown": {
+        "byPkg": {
+          "use-sync-external-store": 863,
+          "redux": 2866,
+          "immer": 12848,
+          "reselect": 2851,
+          "redux-thunk": 107,
+          "@reduxjs/toolkit": 53002,
+          "@standard-schema/utils": 109,
+          "react-redux": 3294,
+          "(entry)": 32
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "query-core",
+      "group": "api",
+      "label": "@tanstack/query-core (QueryClient)",
+      "imports": {
+        "@tanstack/query-core": [
+          "QueryClient",
+          "QueryObserver",
+          "MutationObserver"
+        ]
+      },
+      "esbuild": {
+        "min": 32567,
+        "gzip": 9381,
+        "brotli": 8563
+      },
+      "rollup": {
+        "min": 32725,
+        "gzip": 9293,
+        "brotli": 8470
+      },
+      "rolldown": {
+        "min": 32591,
+        "gzip": 9182,
+        "brotli": 8394
+      },
+      "webpack": {
+        "min": 32721,
+        "gzip": 9279,
+        "brotli": 8481
+      },
+      "breakdown": {
+        "byPkg": {
+          "@tanstack/query-core": 32560,
+          "(entry)": 28
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "react-query",
+      "group": "api",
+      "label": "@tanstack/react-query (QueryClient, useQuery, useMutation)",
+      "imports": {
+        "@tanstack/react-query": [
+          "QueryClient",
+          "QueryClientProvider",
+          "useQuery",
+          "useMutation"
+        ]
+      },
+      "esbuild": {
+        "min": 35140,
+        "gzip": 10366,
+        "brotli": 9434
+      },
+      "rollup": {
+        "min": 35052,
+        "gzip": 10099,
+        "brotli": 9238
+      },
+      "rolldown": {
+        "min": 34989,
+        "gzip": 10076,
+        "brotli": 9196
+      },
+      "webpack": {
+        "min": 34960,
+        "gzip": 10076,
+        "brotli": 9232
+      },
+      "breakdown": {
+        "byPkg": {
+          "@tanstack/react-query": 2491,
+          "@tanstack/query-core": 32638,
+          "(entry)": 32
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "swr",
+      "group": "api",
+      "label": "swr (useSWR + useSWRMutation)",
+      "imports": {
+        "swr": [
+          "default"
+        ],
+        "swr/mutation": [
+          "default"
+        ]
+      },
+      "esbuild": {
+        "min": 15457,
+        "gzip": 6960,
+        "brotli": 6309
+      },
+      "rollup": {
+        "min": 13691,
+        "gzip": 5905,
+        "brotli": 5383
+      },
+      "rolldown": {
+        "min": 14627,
+        "gzip": 6413,
+        "brotli": 5795
+      },
+      "webpack": {
+        "min": 14456,
+        "gzip": 6067,
+        "brotli": 5552
+      },
+      "breakdown": {
+        "byPkg": {
+          "use-sync-external-store": 836,
+          "swr": 12941,
+          "dequal": 469,
+          "(entry)": 26
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "axios",
+      "group": "api",
+      "label": "axios",
+      "imports": {
+        "axios": [
+          "default"
+        ]
+      },
+      "esbuild": {
+        "min": 51045,
+        "gzip": 19497,
+        "brotli": 17769
+      },
+      "rollup": {
+        "min": 50827,
+        "gzip": 18561,
+        "brotli": 16770
+      },
+      "rolldown": {
+        "min": 50262,
+        "gzip": 18588,
+        "brotli": 16876
+      },
+      "webpack": {
+        "min": 51245,
+        "gzip": 18639,
+        "brotli": 16826
+      },
+      "breakdown": {
+        "byPkg": {
+          "axios": 50950,
+          "(entry)": 23
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "ky",
+      "group": "api",
+      "label": "ky",
+      "imports": {
+        "ky": [
+          "default"
+        ]
+      },
+      "esbuild": {
+        "min": 25204,
+        "gzip": 8890,
+        "brotli": 7966
+      },
+      "rollup": {
+        "min": 25153,
+        "gzip": 8594,
+        "brotli": 7670
+      },
+      "rolldown": {
+        "min": 24974,
+        "gzip": 8614,
+        "brotli": 7721
+      },
+      "webpack": {
+        "min": 25159,
+        "gzip": 8593,
+        "brotli": 7674
+      },
+      "breakdown": {
+        "byPkg": {
+          "ky": 25101,
+          "(entry)": 23
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "rxjs-ops",
+      "group": "effects",
+      "label": "rxjs (Observable, Subject + 9 операторов)",
+      "imports": {
+        "rxjs": [
+          "Observable",
+          "Subject",
+          "BehaviorSubject",
+          "map",
+          "switchMap",
+          "mergeMap",
+          "catchError",
+          "filter",
+          "from",
+          "of",
+          "takeUntil",
+          "withLatestFrom"
+        ]
+      },
+      "esbuild": {
+        "min": 21162,
+        "gzip": 6567,
+        "brotli": 5931
+      },
+      "rollup": {
+        "min": 19386,
+        "gzip": 5865,
+        "brotli": 5290
+      },
+      "rolldown": {
+        "min": 20484,
+        "gzip": 6214,
+        "brotli": 5653
+      },
+      "webpack": {
+        "min": 20322,
+        "gzip": 6161,
+        "brotli": 5579
+      },
+      "breakdown": {
+        "byPkg": {
+          "tslib": 3991,
+          "rxjs": 17140,
+          "(entry)": 52
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "redux-observable",
+      "group": "effects",
+      "label": "redux-observable + rxjs (те же операторы)",
+      "imports": {
+        "redux-observable": [
+          "createEpicMiddleware",
+          "combineEpics",
+          "ofType"
+        ],
+        "rxjs": [
+          "Observable",
+          "Subject",
+          "BehaviorSubject",
+          "map",
+          "switchMap",
+          "mergeMap",
+          "catchError",
+          "filter",
+          "from",
+          "of",
+          "takeUntil",
+          "withLatestFrom"
+        ]
+      },
+      "esbuild": {
+        "min": 26402,
+        "gzip": 8079,
+        "brotli": 7305
+      },
+      "rollup": {
+        "min": 24126,
+        "gzip": 7167,
+        "brotli": 6483
+      },
+      "rolldown": {
+        "min": 25485,
+        "gzip": 7620,
+        "brotli": 6938
+      },
+      "webpack": {
+        "min": 25383,
+        "gzip": 7566,
+        "brotli": 6867
+      },
+      "breakdown": {
+        "byPkg": {
+          "tslib": 3991,
+          "rxjs": 20633,
+          "redux": 462,
+          "redux-observable": 1278,
+          "(entry)": 59
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "redux-saga",
+      "group": "effects",
+      "label": "redux-saga (+ effects)",
+      "imports": {
+        "redux-saga": [
+          "default"
+        ],
+        "redux-saga/effects": [
+          "takeLatest",
+          "call",
+          "put",
+          "select",
+          "fork",
+          "all"
+        ]
+      },
+      "esbuild": {
+        "min": 15307,
+        "gzip": 5918,
+        "brotli": 5394
+      },
+      "rollup": {
+        "min": 14366,
+        "gzip": 5354,
+        "brotli": 4867
+      },
+      "rolldown": {
+        "min": 14870,
+        "gzip": 5589,
+        "brotli": 5109
+      },
+      "webpack": {
+        "min": 14513,
+        "gzip": 5438,
+        "brotli": 4932
+      },
+      "breakdown": {
+        "byPkg": {
+          "@redux-saga/symbols": 237,
+          "@redux-saga/core": 13934,
+          "@babel/runtime": 461,
+          "@redux-saga/is": 563,
+          "@redux-saga/deferred": 93,
+          "(entry)": 40
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "stack-rtk-rtkq",
+      "group": "stack",
+      "label": "RTK + react-redux + RTK Query React",
+      "imports": {
+        "@reduxjs/toolkit": [
+          "configureStore",
+          "createSlice",
+          "createSelector"
+        ],
+        "@reduxjs/toolkit/query/react": [
+          "createApi",
+          "fetchBaseQuery"
+        ],
+        "react-redux": [
+          "Provider",
+          "useSelector",
+          "useDispatch"
+        ]
+      },
+      "esbuild": {
+        "min": 77187,
+        "gzip": 27240,
+        "brotli": 24648
+      },
+      "rollup": {
+        "min": 74661,
+        "gzip": 25043,
+        "brotli": 22645
+      },
+      "rolldown": {
+        "min": 76020,
+        "gzip": 25356,
+        "brotli": 23076
+      },
+      "webpack": {
+        "min": 75545,
+        "gzip": 25066,
+        "brotli": 22688
+      },
+      "breakdown": {
+        "byPkg": {
+          "use-sync-external-store": 863,
+          "redux": 2866,
+          "immer": 12848,
+          "reselect": 2851,
+          "redux-thunk": 107,
+          "@reduxjs/toolkit": 53002,
+          "@standard-schema/utils": 109,
+          "react-redux": 3294,
+          "(entry)": 44
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "stack-rtk-full",
+      "group": "stack",
+      "label": "RTK + react-redux + RTK Query React + redux-observable + rxjs + redux-persist",
+      "imports": {
+        "@reduxjs/toolkit": [
+          "configureStore",
+          "createSlice",
+          "createSelector",
+          "createAsyncThunk",
+          "createEntityAdapter"
+        ],
+        "@reduxjs/toolkit/query/react": [
+          "createApi",
+          "fetchBaseQuery"
+        ],
+        "react-redux": [
+          "Provider",
+          "useSelector",
+          "useDispatch"
+        ],
+        "redux-observable": [
+          "createEpicMiddleware",
+          "combineEpics",
+          "ofType"
+        ],
+        "rxjs": [
+          "Observable",
+          "Subject",
+          "BehaviorSubject",
+          "map",
+          "switchMap",
+          "mergeMap",
+          "catchError",
+          "filter",
+          "from",
+          "of",
+          "takeUntil",
+          "withLatestFrom"
+        ],
+        "redux-persist": [
+          "persistStore",
+          "persistReducer"
+        ],
+        "redux-persist/es/storage": [
+          "default"
+        ]
+      },
+      "esbuild": {
+        "min": 116400,
+        "gzip": 39185,
+        "brotli": 35082
+      },
+      "rollup": {
+        "min": 111547,
+        "gzip": 35877,
+        "brotli": 32021
+      },
+      "rolldown": {
+        "min": 114363,
+        "gzip": 36589,
+        "brotli": 32908
+      },
+      "webpack": {
+        "min": 113742,
+        "gzip": 36281,
+        "brotli": 32412
+      },
+      "breakdown": {
+        "byPkg": {
+          "use-sync-external-store": 863,
+          "redux": 2884,
+          "immer": 12889,
+          "reselect": 2851,
+          "redux-thunk": 107,
+          "@reduxjs/toolkit": 57462,
+          "@standard-schema/utils": 109,
+          "react-redux": 3294,
+          "tslib": 4001,
+          "rxjs": 20784,
+          "redux-observable": 1290,
+          "redux-persist": 8560,
+          "(entry)": 103
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "stack-rtk-saga",
+      "group": "stack",
+      "label": "RTK + react-redux + RTK Query React + redux-saga + redux-persist",
+      "imports": {
+        "@reduxjs/toolkit": [
+          "configureStore",
+          "createSlice",
+          "createSelector"
+        ],
+        "@reduxjs/toolkit/query/react": [
+          "createApi",
+          "fetchBaseQuery"
+        ],
+        "react-redux": [
+          "Provider",
+          "useSelector",
+          "useDispatch"
+        ],
+        "redux-saga": [
+          "default"
+        ],
+        "redux-saga/effects": [
+          "takeLatest",
+          "call",
+          "put",
+          "select"
+        ],
+        "redux-persist": [
+          "persistStore",
+          "persistReducer"
+        ],
+        "redux-persist/es/storage": [
+          "default"
+        ]
+      },
+      "esbuild": {
+        "min": 101184,
+        "gzip": 35492,
+        "brotli": 31933
+      },
+      "rollup": {
+        "min": 97569,
+        "gzip": 32443,
+        "brotli": 29188
+      },
+      "rolldown": {
+        "min": 99556,
+        "gzip": 33069,
+        "brotli": 29819
+      },
+      "webpack": {
+        "min": 98636,
+        "gzip": 32582,
+        "brotli": 29253
+      },
+      "breakdown": {
+        "byPkg": {
+          "use-sync-external-store": 863,
+          "redux": 2866,
+          "immer": 12859,
+          "reselect": 2851,
+          "redux-thunk": 107,
+          "@reduxjs/toolkit": 53020,
+          "@standard-schema/utils": 109,
+          "react-redux": 3294,
+          "@redux-saga/symbols": 255,
+          "@redux-saga/core": 14000,
+          "@babel/runtime": 464,
+          "@redux-saga/is": 572,
+          "@redux-saga/deferred": 93,
+          "redux-persist": 8560,
+          "(entry)": 68
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "stack-zustand-rq",
+      "group": "stack",
+      "label": "zustand + middleware + @tanstack/react-query",
+      "imports": {
+        "zustand": [
+          "create"
+        ],
+        "zustand/middleware": [
+          "persist",
+          "devtools",
+          "createJSONStorage"
+        ],
+        "@tanstack/react-query": [
+          "QueryClient",
+          "QueryClientProvider",
+          "useQuery",
+          "useMutation"
+        ]
+      },
+      "esbuild": {
+        "min": 41399,
+        "gzip": 12882,
+        "brotli": 11679
+      },
+      "rollup": {
+        "min": 41504,
+        "gzip": 12619,
+        "brotli": 11452
+      },
+      "rolldown": {
+        "min": 41108,
+        "gzip": 12418,
+        "brotli": 11274
+      },
+      "webpack": {
+        "min": 41101,
+        "gzip": 12464,
+        "brotli": 11340
+      },
+      "breakdown": {
+        "byPkg": {
+          "zustand": 6236,
+          "@tanstack/react-query": 2494,
+          "@tanstack/query-core": 32646,
+          "(entry)": 44
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "stack-zustand-rq-axios",
+      "group": "stack",
+      "label": "zustand + middleware + react-query + axios",
+      "imports": {
+        "zustand": [
+          "create"
+        ],
+        "zustand/middleware": [
+          "persist",
+          "devtools",
+          "createJSONStorage"
+        ],
+        "@tanstack/react-query": [
+          "QueryClient",
+          "QueryClientProvider",
+          "useQuery",
+          "useMutation"
+        ],
+        "axios": [
+          "default"
+        ]
+      },
+      "esbuild": {
+        "min": 92592,
+        "gzip": 32103,
+        "brotli": 29027
+      },
+      "rollup": {
+        "min": 92748,
+        "gzip": 31131,
+        "brotli": 27857
+      },
+      "rolldown": {
+        "min": 91576,
+        "gzip": 30686,
+        "brotli": 27749
+      },
+      "webpack": {
+        "min": 92565,
+        "gzip": 31111,
+        "brotli": 27795
+      },
+      "breakdown": {
+        "byPkg": {
+          "zustand": 6252,
+          "@tanstack/react-query": 2512,
+          "@tanstack/query-core": 32704,
+          "axios": 51005,
+          "(entry)": 47
+        },
+        "byFile": []
+      }
+    },
+    {
+      "id": "stack-mobx-rq",
+      "group": "stack",
+      "label": "mobx + mobx-react-lite + @tanstack/react-query",
+      "imports": {
+        "mobx": [
+          "makeAutoObservable",
+          "autorun",
+          "computed"
+        ],
+        "mobx-react-lite": [
+          "observer"
+        ],
+        "@tanstack/react-query": [
+          "QueryClient",
+          "QueryClientProvider",
+          "useQuery",
+          "useMutation"
+        ]
+      },
+      "esbuild": {
+        "min": 82816,
+        "gzip": 23675,
+        "brotli": 21437
+      },
+      "rollup": {
+        "min": 82131,
+        "gzip": 22993,
+        "brotli": 20794
+      },
+      "rolldown": {
+        "min": 81936,
+        "gzip": 22585,
+        "brotli": 20510
+      },
+      "webpack": {
+        "min": 82358,
+        "gzip": 23059,
+        "brotli": 20882
+      },
+      "breakdown": {
+        "byPkg": {
+          "mobx": 43145,
+          "mobx-react-lite": 4426,
+          "@tanstack/react-query": 2512,
+          "@tanstack/query-core": 32710,
+          "(entry)": 44
+        },
+        "byFile": []
+      }
+    }
+  ]
+}

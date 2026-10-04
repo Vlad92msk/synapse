@@ -1,0 +1,1449 @@
+{
+  "date": "2026-10-04T12:59:26.568Z",
+  "versions": {
+    "@babel/runtime": "7.29.7",
+    "@esbuild/darwin-arm64": "0.28.2",
+    "@jridgewell/gen-mapping": "0.3.13",
+    "@jridgewell/resolve-uri": "3.1.2",
+    "@jridgewell/source-map": "0.3.11",
+    "@jridgewell/sourcemap-codec": "1.6.0",
+    "@jridgewell/trace-mapping": "0.3.31",
+    "@oxc-project/types": "0.152.0",
+    "@redux-saga/core": "1.5.1",
+    "@redux-saga/deferred": "1.3.1",
+    "@redux-saga/delay-p": "1.3.1",
+    "@redux-saga/is": "1.2.1",
+    "@redux-saga/symbols": "1.2.1",
+    "@redux-saga/types": "1.4.1",
+    "@reduxjs/toolkit": "2.13.0",
+    "@rolldown/binding-darwin-arm64": "1.2.12",
+    "@rolldown/pluginutils": "1.0.1",
+    "@rollup/plugin-commonjs": "29.0.3",
+    "@rollup/plugin-node-resolve": "16.0.3",
+    "@rollup/plugin-replace": "6.0.3",
+    "@rollup/plugin-terser": "1.0.0",
+    "@rollup/pluginutils": "5.4.0",
+    "@rollup/rollup-darwin-arm64": "4.64.0",
+    "@standard-schema/spec": "1.1.0",
+    "@standard-schema/utils": "0.3.0",
+    "@tanstack/query-core": "5.104.1",
+    "@tanstack/react-query": "5.104.1",
+    "@types/estree": "1.0.9",
+    "@types/json-schema": "7.0.15",
+    "@types/node": "26.6.4",
+    "@types/resolve": "1.20.2",
+    "@types/use-sync-external-store": "0.0.6",
+    "@webassemblyjs/ast": "1.14.1",
+    "@webassemblyjs/floating-point-hex-parser": "1.13.2",
+    "@webassemblyjs/helper-api-error": "1.13.2",
+    "@webassemblyjs/helper-buffer": "1.14.1",
+    "@webassemblyjs/helper-numbers": "1.13.2",
+    "@webassemblyjs/helper-wasm-bytecode": "1.13.2",
+    "@webassemblyjs/helper-wasm-section": "1.14.1",
+    "@webassemblyjs/ieee754": "1.13.2",
+    "@webassemblyjs/leb128": "1.13.2",
+    "@webassemblyjs/utf8": "1.13.2",
+    "@webassemblyjs/wasm-edit": "1.14.1",
+    "@webassemblyjs/wasm-gen": "1.14.1",
+    "@webassemblyjs/wasm-opt": "1.14.1",
+    "@webassemblyjs/wasm-parser": "1.14.1",
+    "@webassemblyjs/wast-printer": "1.14.1",
+    "@xtuc/ieee754": "1.2.0",
+    "@xtuc/long": "4.2.2",
+    "acorn": "8.18.0",
+    "agent-base": "6.0.2",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "ajv-keywords": "5.1.0",
+    "asynckit": "0.4.0",
+    "axios": "1.20.0",
+    "baseline-browser-mapping": "2.11.27",
+    "browserslist": "4.29.3",
+    "buffer-from": "1.1.2",
+    "call-bind-apply-helpers": "1.0.2",
+    "caniuse-lite": "1.0.30001814",
+    "chrome-trace-event": "1.0.4",
+    "combined-stream": "1.0.8",
+    "commander": "2.20.3",
+    "commondir": "1.0.1",
+    "debug": "4.4.3",
+    "deepmerge": "4.3.1",
+    "delayed-stream": "1.0.0",
+    "dequal": "2.0.3",
+    "dunder-proto": "1.0.1",
+    "effector": "23.4.4",
+    "effector-react": "23.3.0",
+    "electron-to-chromium": "1.5.444",
+    "enhanced-resolve": "5.26.0",
+    "es-define-property": "1.0.1",
+    "es-errors": "1.3.0",
+    "es-module-lexer": "2.3.2",
+    "es-object-atoms": "1.1.2",
+    "es-set-tostringtag": "2.1.0",
+    "esbuild": "0.28.2",
+    "escalade": "3.2.0",
+    "estree-walker": "2.0.2",
+    "events": "3.3.0",
+    "fast-deep-equal": "3.1.3",
+    "fast-uri": "3.1.8",
+    "fdir": "6.5.0",
+    "follow-redirects": "1.16.1",
+    "form-data": "4.0.6",
+    "fsevents": "2.3.3",
+    "function-bind": "1.1.2",
+    "get-intrinsic": "1.3.0",
+    "get-proto": "1.0.1",
+    "gopd": "1.2.0",
+    "graceful-fs": "4.2.11",
+    "has-flag": "4.0.0",
+    "has-symbols": "1.1.0",
+    "has-tostringtag": "1.0.2",
+    "hasown": "2.0.4",
+    "https-proxy-agent": "5.0.1",
+    "immer": "11.1.21",
+    "is-core-module": "2.17.0",
+    "is-module": "1.0.0",
+    "is-reference": "1.2.1",
+    "jest-worker": "27.5.1",
+    "jotai": "3.0.1",
+    "json-schema-traverse": "1.0.0",
+    "ky": "2.1.0",
+    "magic-string": "0.30.21",
+    "math-intrinsics": "1.1.0",
+    "merge-stream": "2.0.0",
+    "mime-db": "1.52.0",
+    "mime-types": "2.1.35",
+    "minimizer-webpack-plugin": "5.13.0",
+    "mobx": "7.0.6",
+    "mobx-react-lite": "5.1.0",
+    "ms": "2.1.3",
+    "node-releases": "2.0.57",
+    "path-parse": "1.0.7",
+    "picocolors": "1.1.1",
+    "picomatch": "4.0.7",
+    "proxy-compare": "3.0.1",
+    "proxy-from-env": "2.1.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-redux": "9.3.0",
+    "redux": "5.0.1",
+    "redux-observable": "3.0.0-rc.3",
+    "redux-persist": "6.0.0",
+    "redux-saga": "1.5.1",
+    "redux-thunk": "3.1.0",
+    "require-from-string": "2.0.2",
+    "reselect": "5.3.0",
+    "resolve": "1.22.12",
+    "rolldown": "1.2.12",
+    "rollup": "4.64.0",
+    "rxjs": "7.8.2",
+    "scheduler": "0.28.0",
+    "schema-utils": "4.5.0",
+    "serialize-javascript": "7.1.2",
+    "smob": "1.6.2",
+    "source-map": "0.6.1",
+    "source-map-support": "0.5.21",
+    "supports-color": "8.1.1",
+    "supports-preserve-symlinks-flag": "1.0.0",
+    "swr": "2.5.1",
+    "tapable": "2.3.3",
+    "terser": "5.51.2",
+    "terser-webpack-plugin": "5.6.1",
+    "tslib": "2.8.1",
+    "undici-types": "8.9.0",
+    "update-browserslist-db": "1.3.3",
+    "use-sync-external-store": "1.7.0",
+    "valtio": "2.3.2",
+    "watchpack": "2.5.2",
+    "webpack": "5.111.1",
+    "webpack-sources": "3.6.0",
+    "zustand": "5.0.15"
+  },
+  "competitors": [
+    {
+      "id": "redux",
+      "group": "state",
+      "label": "redux (createStore, combineReducers)",
+      "imports": {
+        "redux": [
+          "legacy_createStore",
+          "combineReducers",
+          "applyMiddleware"
+        ]
+      },
+      "esbuild": {
+        "min": 2814,
+        "gzip": 1185,
+        "brotli": 1068
+      },
+      "rollup": {
+        "min": 2808,
+        "gzip": 1147,
+        "brotli": 1038
+      },
+      "rolldown": {
+        "min": 2763,
+        "gzip": 1157,
+        "brotli": 1046
+      },
+      "webpack": {
+        "min": 2808,
+        "gzip": 1145,
+        "brotli": 1038
+      }
+    },
+    {
+      "id": "rtk",
+      "group": "state",
+      "label": "RTK: configureStore + createSlice",
+      "imports": {
+        "@reduxjs/toolkit": [
+          "configureStore",
+          "createSlice"
+        ]
+      },
+      "esbuild": {
+        "min": 21979,
+        "gzip": 8500,
+        "brotli": 7822
+      },
+      "rollup": {
+        "min": 18633,
+        "gzip": 6948,
+        "brotli": 6406
+      },
+      "rolldown": {
+        "min": 19076,
+        "gzip": 7128,
+        "brotli": 6567
+      },
+      "webpack": {
+        "min": 18797,
+        "gzip": 6985,
+        "brotli": 6446
+      }
+    },
+    {
+      "id": "rtk-full",
+      "group": "state",
+      "label": "RTK: + createAsyncThunk, createEntityAdapter, createSelector, createListenerMiddleware",
+      "imports": {
+        "@reduxjs/toolkit": [
+          "configureStore",
+          "createSlice",
+          "createAsyncThunk",
+          "createEntityAdapter",
+          "createSelector",
+          "createListenerMiddleware"
+        ]
+      },
+      "esbuild": {
+        "min": 33085,
+        "gzip": 12724,
+        "brotli": 11590
+      },
+      "rollup": {
+        "min": 32644,
+        "gzip": 11846,
+        "brotli": 10853
+      },
+      "rolldown": {
+        "min": 33082,
+        "gzip": 12098,
+        "brotli": 11001
+      },
+      "webpack": {
+        "min": 32784,
+        "gzip": 11867,
+        "brotli": 10855
+      }
+    },
+    {
+      "id": "zustand-vanilla",
+      "group": "state",
+      "label": "zustand/vanilla (createStore)",
+      "imports": {
+        "zustand/vanilla": [
+          "createStore"
+        ]
+      },
+      "esbuild": {
+        "min": 317,
+        "gzip": 216,
+        "brotli": 206
+      },
+      "rollup": {
+        "min": 330,
+        "gzip": 218,
+        "brotli": 198
+      },
+      "rolldown": {
+        "min": 325,
+        "gzip": 221,
+        "brotli": 204
+      },
+      "webpack": {
+        "min": 330,
+        "gzip": 216,
+        "brotli": 198
+      }
+    },
+    {
+      "id": "jotai-vanilla",
+      "group": "state",
+      "label": "jotai/vanilla (atom, createStore)",
+      "imports": {
+        "jotai/vanilla": [
+          "atom",
+          "createStore"
+        ]
+      },
+      "esbuild": {
+        "min": 5787,
+        "gzip": 2482,
+        "brotli": 2247
+      },
+      "rollup": {
+        "min": 6192,
+        "gzip": 2605,
+        "brotli": 2356
+      },
+      "rolldown": {
+        "min": 5982,
+        "gzip": 2400,
+        "brotli": 2182
+      },
+      "webpack": {
+        "min": 6192,
+        "gzip": 2602,
+        "brotli": 2365
+      }
+    },
+    {
+      "id": "valtio-vanilla",
+      "group": "state",
+      "label": "valtio/vanilla (proxy, subscribe)",
+      "imports": {
+        "valtio/vanilla": [
+          "proxy",
+          "subscribe",
+          "snapshot"
+        ]
+      },
+      "esbuild": {
+        "min": 2972,
+        "gzip": 1316,
+        "brotli": 1211
+      },
+      "rollup": {
+        "min": 2945,
+        "gzip": 1265,
+        "brotli": 1165
+      },
+      "rolldown": {
+        "min": 3054,
+        "gzip": 1282,
+        "brotli": 1178
+      },
+      "webpack": {
+        "min": 2501,
+        "gzip": 1144,
+        "brotli": 1070
+      }
+    },
+    {
+      "id": "mobx",
+      "group": "state",
+      "label": "mobx (makeAutoObservable, autorun, computed)",
+      "imports": {
+        "mobx": [
+          "makeAutoObservable",
+          "autorun",
+          "computed",
+          "reaction"
+        ]
+      },
+      "esbuild": {
+        "min": 42781,
+        "gzip": 12172,
+        "brotli": 11054
+      },
+      "rollup": {
+        "min": 42515,
+        "gzip": 11894,
+        "brotli": 10778
+      },
+      "rolldown": {
+        "min": 42210,
+        "gzip": 11620,
+        "brotli": 10575
+      },
+      "webpack": {
+        "min": 42838,
+        "gzip": 12007,
+        "brotli": 10896
+      }
+    },
+    {
+      "id": "effector",
+      "group": "state",
+      "label": "effector (createStore, createEvent, createEffect, sample)",
+      "imports": {
+        "effector": [
+          "createStore",
+          "createEvent",
+          "createEffect",
+          "sample",
+          "combine"
+        ]
+      },
+      "esbuild": {
+        "min": 18770,
+        "gzip": 8542,
+        "brotli": 7807
+      },
+      "rollup": {
+        "min": 18209,
+        "gzip": 8040,
+        "brotli": 7338
+      },
+      "rolldown": {
+        "min": 18430,
+        "gzip": 8254,
+        "brotli": 7562
+      },
+      "webpack": {
+        "min": 18851,
+        "gzip": 8360,
+        "brotli": 7659
+      }
+    },
+    {
+      "id": "reselect",
+      "group": "state",
+      "label": "reselect (createSelector)",
+      "imports": {
+        "reselect": [
+          "createSelector"
+        ]
+      },
+      "esbuild": {
+        "min": 2815,
+        "gzip": 1270,
+        "brotli": 1139
+      },
+      "rollup": {
+        "min": 2897,
+        "gzip": 1219,
+        "brotli": 1092
+      },
+      "rolldown": {
+        "min": 2809,
+        "gzip": 1213,
+        "brotli": 1093
+      },
+      "webpack": {
+        "min": 2897,
+        "gzip": 1217,
+        "brotli": 1093
+      }
+    },
+    {
+      "id": "redux-react",
+      "group": "state-react",
+      "label": "redux + react-redux",
+      "imports": {
+        "redux": [
+          "legacy_createStore",
+          "combineReducers"
+        ],
+        "react-redux": [
+          "Provider",
+          "useSelector",
+          "useDispatch"
+        ]
+      },
+      "esbuild": {
+        "min": 7484,
+        "gzip": 3124,
+        "brotli": 2808
+      },
+      "rollup": {
+        "min": 5917,
+        "gzip": 2357,
+        "brotli": 2146
+      },
+      "rolldown": {
+        "min": 6699,
+        "gzip": 2749,
+        "brotli": 2462
+      },
+      "webpack": {
+        "min": 6162,
+        "gzip": 2427,
+        "brotli": 2195
+      }
+    },
+    {
+      "id": "rtk-react",
+      "group": "state-react",
+      "label": "RTK + react-redux",
+      "imports": {
+        "@reduxjs/toolkit": [
+          "configureStore",
+          "createSlice"
+        ],
+        "react-redux": [
+          "Provider",
+          "useSelector",
+          "useDispatch"
+        ]
+      },
+      "esbuild": {
+        "min": 27002,
+        "gzip": 10476,
+        "brotli": 9625
+      },
+      "rollup": {
+        "min": 22109,
+        "gzip": 8246,
+        "brotli": 7581
+      },
+      "rolldown": {
+        "min": 23364,
+        "gzip": 8778,
+        "brotli": 8016
+      },
+      "webpack": {
+        "min": 22526,
+        "gzip": 8338,
+        "brotli": 7654
+      }
+    },
+    {
+      "id": "rtk-full-react",
+      "group": "state-react",
+      "label": "RTK (полный core) + react-redux",
+      "imports": {
+        "@reduxjs/toolkit": [
+          "configureStore",
+          "createSlice",
+          "createAsyncThunk",
+          "createEntityAdapter",
+          "createSelector",
+          "createListenerMiddleware"
+        ],
+        "react-redux": [
+          "Provider",
+          "useSelector",
+          "useDispatch"
+        ]
+      },
+      "esbuild": {
+        "min": 38108,
+        "gzip": 14694,
+        "brotli": 13338
+      },
+      "rollup": {
+        "min": 36130,
+        "gzip": 13100,
+        "brotli": 11965
+      },
+      "rolldown": {
+        "min": 37373,
+        "gzip": 13722,
+        "brotli": 12430
+      },
+      "webpack": {
+        "min": 36522,
+        "gzip": 13186,
+        "brotli": 12047
+      }
+    },
+    {
+      "id": "zustand",
+      "group": "state-react",
+      "label": "zustand (create)",
+      "imports": {
+        "zustand": [
+          "create"
+        ]
+      },
+      "esbuild": {
+        "min": 604,
+        "gzip": 351,
+        "brotli": 313
+      },
+      "rollup": {
+        "min": 606,
+        "gzip": 338,
+        "brotli": 299
+      },
+      "rolldown": {
+        "min": 610,
+        "gzip": 350,
+        "brotli": 311
+      },
+      "webpack": {
+        "min": 617,
+        "gzip": 344,
+        "brotli": 303
+      }
+    },
+    {
+      "id": "zustand-mw",
+      "group": "state-react",
+      "label": "zustand + persist/devtools/subscribeWithSelector/immer-less",
+      "imports": {
+        "zustand": [
+          "create"
+        ],
+        "zustand/middleware": [
+          "persist",
+          "devtools",
+          "subscribeWithSelector",
+          "createJSONStorage"
+        ]
+      },
+      "esbuild": {
+        "min": 6432,
+        "gzip": 2837,
+        "brotli": 2545
+      },
+      "rollup": {
+        "min": 6684,
+        "gzip": 2786,
+        "brotli": 2492
+      },
+      "rolldown": {
+        "min": 6299,
+        "gzip": 2678,
+        "brotli": 2394
+      },
+      "webpack": {
+        "min": 6395,
+        "gzip": 2683,
+        "brotli": 2408
+      }
+    },
+    {
+      "id": "jotai",
+      "group": "state-react",
+      "label": "jotai (atom, useAtom, Provider)",
+      "imports": {
+        "jotai": [
+          "atom",
+          "useAtom",
+          "useAtomValue",
+          "Provider"
+        ]
+      },
+      "esbuild": {
+        "min": 7494,
+        "gzip": 3245,
+        "brotli": 2930
+      },
+      "rollup": {
+        "min": 7836,
+        "gzip": 3279,
+        "brotli": 2969
+      },
+      "rolldown": {
+        "min": 7602,
+        "gzip": 3084,
+        "brotli": 2799
+      },
+      "webpack": {
+        "min": 7846,
+        "gzip": 3277,
+        "brotli": 2963
+      }
+    },
+    {
+      "id": "valtio",
+      "group": "state-react",
+      "label": "valtio (proxy, useSnapshot)",
+      "imports": {
+        "valtio": [
+          "proxy",
+          "useSnapshot",
+          "subscribe"
+        ]
+      },
+      "esbuild": {
+        "min": 5905,
+        "gzip": 2436,
+        "brotli": 2257
+      },
+      "rollup": {
+        "min": 5803,
+        "gzip": 2291,
+        "brotli": 2123
+      },
+      "rolldown": {
+        "min": 5918,
+        "gzip": 2297,
+        "brotli": 2124
+      },
+      "webpack": {
+        "min": 4664,
+        "gzip": 1945,
+        "brotli": 1838
+      }
+    },
+    {
+      "id": "mobx-react",
+      "group": "state-react",
+      "label": "mobx + mobx-react-lite",
+      "imports": {
+        "mobx": [
+          "makeAutoObservable",
+          "autorun",
+          "computed"
+        ],
+        "mobx-react-lite": [
+          "observer",
+          "useLocalObservable"
+        ]
+      },
+      "esbuild": {
+        "min": 47572,
+        "gzip": 13728,
+        "brotli": 12440
+      },
+      "rollup": {
+        "min": 46901,
+        "gzip": 13229,
+        "brotli": 11947
+      },
+      "rolldown": {
+        "min": 46806,
+        "gzip": 12986,
+        "brotli": 11782
+      },
+      "webpack": {
+        "min": 47287,
+        "gzip": 13356,
+        "brotli": 12079
+      }
+    },
+    {
+      "id": "effector-react",
+      "group": "state-react",
+      "label": "effector + effector-react",
+      "imports": {
+        "effector": [
+          "createStore",
+          "createEvent",
+          "createEffect",
+          "sample"
+        ],
+        "effector-react": [
+          "useUnit",
+          "Provider"
+        ]
+      },
+      "esbuild": {
+        "min": 25075,
+        "gzip": 11005,
+        "brotli": 10046
+      },
+      "rollup": {
+        "min": 23103,
+        "gzip": 9930,
+        "brotli": 9056
+      },
+      "rolldown": {
+        "min": 24659,
+        "gzip": 10587,
+        "brotli": 9675
+      },
+      "webpack": {
+        "min": 23700,
+        "gzip": 10102,
+        "brotli": 9245
+      }
+    },
+    {
+      "id": "redux-persist",
+      "group": "persist",
+      "label": "redux-persist (persistStore, persistReducer, storage)",
+      "imports": {
+        "redux-persist": [
+          "persistStore",
+          "persistReducer"
+        ],
+        "redux-persist/es/storage": [
+          "default"
+        ]
+      },
+      "esbuild": {
+        "min": 10388,
+        "gzip": 3512,
+        "brotli": 3133
+      },
+      "rollup": {
+        "min": 10088,
+        "gzip": 3249,
+        "brotli": 2919
+      },
+      "rolldown": {
+        "min": 10222,
+        "gzip": 3329,
+        "brotli": 3000
+      },
+      "webpack": {
+        "min": 10195,
+        "gzip": 3288,
+        "brotli": 2952
+      }
+    },
+    {
+      "id": "rtkq",
+      "group": "api",
+      "label": "RTK Query (createApi + fetchBaseQuery, без React) + configureStore",
+      "imports": {
+        "@reduxjs/toolkit/query": [
+          "createApi",
+          "fetchBaseQuery"
+        ],
+        "@reduxjs/toolkit": [
+          "configureStore"
+        ]
+      },
+      "esbuild": {
+        "min": 63828,
+        "gzip": 22637,
+        "brotli": 20640
+      },
+      "rollup": {
+        "min": 62958,
+        "gzip": 21302,
+        "brotli": 19368
+      },
+      "rolldown": {
+        "min": 63568,
+        "gzip": 21215,
+        "brotli": 19464
+      },
+      "webpack": {
+        "min": 63136,
+        "gzip": 21291,
+        "brotli": 19383
+      }
+    },
+    {
+      "id": "rtkq-react",
+      "group": "api",
+      "label": "RTK Query React (хуки) + configureStore + react-redux",
+      "imports": {
+        "@reduxjs/toolkit/query/react": [
+          "createApi",
+          "fetchBaseQuery"
+        ],
+        "@reduxjs/toolkit": [
+          "configureStore"
+        ],
+        "react-redux": [
+          "Provider"
+        ]
+      },
+      "esbuild": {
+        "min": 77175,
+        "gzip": 27225,
+        "brotli": 24652
+      },
+      "rollup": {
+        "min": 74649,
+        "gzip": 25026,
+        "brotli": 22653
+      },
+      "rolldown": {
+        "min": 76009,
+        "gzip": 25349,
+        "brotli": 23042
+      },
+      "webpack": {
+        "min": 75533,
+        "gzip": 25054,
+        "brotli": 22656
+      }
+    },
+    {
+      "id": "query-core",
+      "group": "api",
+      "label": "@tanstack/query-core (QueryClient)",
+      "imports": {
+        "@tanstack/query-core": [
+          "QueryClient",
+          "QueryObserver",
+          "MutationObserver"
+        ]
+      },
+      "esbuild": {
+        "min": 32567,
+        "gzip": 9381,
+        "brotli": 8563
+      },
+      "rollup": {
+        "min": 32725,
+        "gzip": 9293,
+        "brotli": 8470
+      },
+      "rolldown": {
+        "min": 32591,
+        "gzip": 9182,
+        "brotli": 8394
+      },
+      "webpack": {
+        "min": 32721,
+        "gzip": 9279,
+        "brotli": 8481
+      }
+    },
+    {
+      "id": "react-query",
+      "group": "api",
+      "label": "@tanstack/react-query (QueryClient, useQuery, useMutation)",
+      "imports": {
+        "@tanstack/react-query": [
+          "QueryClient",
+          "QueryClientProvider",
+          "useQuery",
+          "useMutation"
+        ]
+      },
+      "esbuild": {
+        "min": 35140,
+        "gzip": 10366,
+        "brotli": 9434
+      },
+      "rollup": {
+        "min": 35052,
+        "gzip": 10099,
+        "brotli": 9238
+      },
+      "rolldown": {
+        "min": 34989,
+        "gzip": 10076,
+        "brotli": 9196
+      },
+      "webpack": {
+        "min": 34960,
+        "gzip": 10076,
+        "brotli": 9232
+      }
+    },
+    {
+      "id": "swr",
+      "group": "api",
+      "label": "swr (useSWR + useSWRMutation)",
+      "imports": {
+        "swr": [
+          "default"
+        ],
+        "swr/mutation": [
+          "default"
+        ]
+      },
+      "esbuild": {
+        "min": 15457,
+        "gzip": 6960,
+        "brotli": 6309
+      },
+      "rollup": {
+        "min": 13691,
+        "gzip": 5905,
+        "brotli": 5383
+      },
+      "rolldown": {
+        "min": 14627,
+        "gzip": 6413,
+        "brotli": 5795
+      },
+      "webpack": {
+        "min": 14456,
+        "gzip": 6067,
+        "brotli": 5552
+      }
+    },
+    {
+      "id": "axios",
+      "group": "api",
+      "label": "axios",
+      "imports": {
+        "axios": [
+          "default"
+        ]
+      },
+      "esbuild": {
+        "min": 51045,
+        "gzip": 19497,
+        "brotli": 17769
+      },
+      "rollup": {
+        "min": 50827,
+        "gzip": 18561,
+        "brotli": 16770
+      },
+      "rolldown": {
+        "min": 50262,
+        "gzip": 18588,
+        "brotli": 16876
+      },
+      "webpack": {
+        "min": 51245,
+        "gzip": 18639,
+        "brotli": 16826
+      }
+    },
+    {
+      "id": "ky",
+      "group": "api",
+      "label": "ky",
+      "imports": {
+        "ky": [
+          "default"
+        ]
+      },
+      "esbuild": {
+        "min": 25204,
+        "gzip": 8890,
+        "brotli": 7966
+      },
+      "rollup": {
+        "min": 25153,
+        "gzip": 8594,
+        "brotli": 7670
+      },
+      "rolldown": {
+        "min": 24974,
+        "gzip": 8614,
+        "brotli": 7721
+      },
+      "webpack": {
+        "min": 25159,
+        "gzip": 8593,
+        "brotli": 7674
+      }
+    },
+    {
+      "id": "rxjs-ops",
+      "group": "effects",
+      "label": "rxjs (Observable, Subject + 9 операторов)",
+      "imports": {
+        "rxjs": [
+          "Observable",
+          "Subject",
+          "BehaviorSubject",
+          "map",
+          "switchMap",
+          "mergeMap",
+          "catchError",
+          "filter",
+          "from",
+          "of",
+          "takeUntil",
+          "withLatestFrom"
+        ]
+      },
+      "esbuild": {
+        "min": 21162,
+        "gzip": 6567,
+        "brotli": 5931
+      },
+      "rollup": {
+        "min": 19386,
+        "gzip": 5865,
+        "brotli": 5290
+      },
+      "rolldown": {
+        "min": 20484,
+        "gzip": 6214,
+        "brotli": 5653
+      },
+      "webpack": {
+        "min": 20322,
+        "gzip": 6161,
+        "brotli": 5579
+      }
+    },
+    {
+      "id": "redux-observable",
+      "group": "effects",
+      "label": "redux-observable + rxjs (те же операторы)",
+      "imports": {
+        "redux-observable": [
+          "createEpicMiddleware",
+          "combineEpics",
+          "ofType"
+        ],
+        "rxjs": [
+          "Observable",
+          "Subject",
+          "BehaviorSubject",
+          "map",
+          "switchMap",
+          "mergeMap",
+          "catchError",
+          "filter",
+          "from",
+          "of",
+          "takeUntil",
+          "withLatestFrom"
+        ]
+      },
+      "esbuild": {
+        "min": 26402,
+        "gzip": 8079,
+        "brotli": 7305
+      },
+      "rollup": {
+        "min": 24126,
+        "gzip": 7167,
+        "brotli": 6483
+      },
+      "rolldown": {
+        "min": 25485,
+        "gzip": 7620,
+        "brotli": 6938
+      },
+      "webpack": {
+        "min": 25383,
+        "gzip": 7566,
+        "brotli": 6867
+      }
+    },
+    {
+      "id": "redux-saga",
+      "group": "effects",
+      "label": "redux-saga (+ effects)",
+      "imports": {
+        "redux-saga": [
+          "default"
+        ],
+        "redux-saga/effects": [
+          "takeLatest",
+          "call",
+          "put",
+          "select",
+          "fork",
+          "all"
+        ]
+      },
+      "esbuild": {
+        "min": 15307,
+        "gzip": 5918,
+        "brotli": 5394
+      },
+      "rollup": {
+        "min": 14366,
+        "gzip": 5354,
+        "brotli": 4867
+      },
+      "rolldown": {
+        "min": 14870,
+        "gzip": 5589,
+        "brotli": 5109
+      },
+      "webpack": {
+        "min": 14513,
+        "gzip": 5438,
+        "brotli": 4932
+      }
+    },
+    {
+      "id": "stack-rtk-rtkq",
+      "group": "stack",
+      "label": "RTK + react-redux + RTK Query React",
+      "imports": {
+        "@reduxjs/toolkit": [
+          "configureStore",
+          "createSlice",
+          "createSelector"
+        ],
+        "@reduxjs/toolkit/query/react": [
+          "createApi",
+          "fetchBaseQuery"
+        ],
+        "react-redux": [
+          "Provider",
+          "useSelector",
+          "useDispatch"
+        ]
+      },
+      "esbuild": {
+        "min": 77187,
+        "gzip": 27240,
+        "brotli": 24648
+      },
+      "rollup": {
+        "min": 74661,
+        "gzip": 25043,
+        "brotli": 22645
+      },
+      "rolldown": {
+        "min": 76020,
+        "gzip": 25356,
+        "brotli": 23076
+      },
+      "webpack": {
+        "min": 75545,
+        "gzip": 25066,
+        "brotli": 22688
+      }
+    },
+    {
+      "id": "stack-rtk-full",
+      "group": "stack",
+      "label": "RTK + react-redux + RTK Query React + redux-observable + rxjs + redux-persist",
+      "imports": {
+        "@reduxjs/toolkit": [
+          "configureStore",
+          "createSlice",
+          "createSelector",
+          "createAsyncThunk",
+          "createEntityAdapter"
+        ],
+        "@reduxjs/toolkit/query/react": [
+          "createApi",
+          "fetchBaseQuery"
+        ],
+        "react-redux": [
+          "Provider",
+          "useSelector",
+          "useDispatch"
+        ],
+        "redux-observable": [
+          "createEpicMiddleware",
+          "combineEpics",
+          "ofType"
+        ],
+        "rxjs": [
+          "Observable",
+          "Subject",
+          "BehaviorSubject",
+          "map",
+          "switchMap",
+          "mergeMap",
+          "catchError",
+          "filter",
+          "from",
+          "of",
+          "takeUntil",
+          "withLatestFrom"
+        ],
+        "redux-persist": [
+          "persistStore",
+          "persistReducer"
+        ],
+        "redux-persist/es/storage": [
+          "default"
+        ]
+      },
+      "esbuild": {
+        "min": 116400,
+        "gzip": 39185,
+        "brotli": 35082
+      },
+      "rollup": {
+        "min": 111547,
+        "gzip": 35877,
+        "brotli": 32021
+      },
+      "rolldown": {
+        "min": 114363,
+        "gzip": 36589,
+        "brotli": 32908
+      },
+      "webpack": {
+        "min": 113742,
+        "gzip": 36281,
+        "brotli": 32412
+      }
+    },
+    {
+      "id": "stack-rtk-saga",
+      "group": "stack",
+      "label": "RTK + react-redux + RTK Query React + redux-saga + redux-persist",
+      "imports": {
+        "@reduxjs/toolkit": [
+          "configureStore",
+          "createSlice",
+          "createSelector"
+        ],
+        "@reduxjs/toolkit/query/react": [
+          "createApi",
+          "fetchBaseQuery"
+        ],
+        "react-redux": [
+          "Provider",
+          "useSelector",
+          "useDispatch"
+        ],
+        "redux-saga": [
+          "default"
+        ],
+        "redux-saga/effects": [
+          "takeLatest",
+          "call",
+          "put",
+          "select"
+        ],
+        "redux-persist": [
+          "persistStore",
+          "persistReducer"
+        ],
+        "redux-persist/es/storage": [
+          "default"
+        ]
+      },
+      "esbuild": {
+        "min": 101184,
+        "gzip": 35492,
+        "brotli": 31933
+      },
+      "rollup": {
+        "min": 97569,
+        "gzip": 32443,
+        "brotli": 29188
+      },
+      "rolldown": {
+        "min": 99556,
+        "gzip": 33069,
+        "brotli": 29819
+      },
+      "webpack": {
+        "min": 98636,
+        "gzip": 32582,
+        "brotli": 29253
+      }
+    },
+    {
+      "id": "stack-zustand-rq",
+      "group": "stack",
+      "label": "zustand + middleware + @tanstack/react-query",
+      "imports": {
+        "zustand": [
+          "create"
+        ],
+        "zustand/middleware": [
+          "persist",
+          "devtools",
+          "createJSONStorage"
+        ],
+        "@tanstack/react-query": [
+          "QueryClient",
+          "QueryClientProvider",
+          "useQuery",
+          "useMutation"
+        ]
+      },
+      "esbuild": {
+        "min": 41399,
+        "gzip": 12882,
+        "brotli": 11679
+      },
+      "rollup": {
+        "min": 41504,
+        "gzip": 12619,
+        "brotli": 11452
+      },
+      "rolldown": {
+        "min": 41108,
+        "gzip": 12418,
+        "brotli": 11274
+      },
+      "webpack": {
+        "min": 41101,
+        "gzip": 12464,
+        "brotli": 11340
+      }
+    },
+    {
+      "id": "stack-zustand-rq-axios",
+      "group": "stack",
+      "label": "zustand + middleware + react-query + axios",
+      "imports": {
+        "zustand": [
+          "create"
+        ],
+        "zustand/middleware": [
+          "persist",
+          "devtools",
+          "createJSONStorage"
+        ],
+        "@tanstack/react-query": [
+          "QueryClient",
+          "QueryClientProvider",
+          "useQuery",
+          "useMutation"
+        ],
+        "axios": [
+          "default"
+        ]
+      },
+      "esbuild": {
+        "min": 92592,
+        "gzip": 32103,
+        "brotli": 29027
+      },
+      "rollup": {
+        "min": 92748,
+        "gzip": 31131,
+        "brotli": 27857
+      },
+      "rolldown": {
+        "min": 91576,
+        "gzip": 30686,
+        "brotli": 27749
+      },
+      "webpack": {
+        "min": 92565,
+        "gzip": 31111,
+        "brotli": 27795
+      }
+    },
+    {
+      "id": "stack-mobx-rq",
+      "group": "stack",
+      "label": "mobx + mobx-react-lite + @tanstack/react-query",
+      "imports": {
+        "mobx": [
+          "makeAutoObservable",
+          "autorun",
+          "computed"
+        ],
+        "mobx-react-lite": [
+          "observer"
+        ],
+        "@tanstack/react-query": [
+          "QueryClient",
+          "QueryClientProvider",
+          "useQuery",
+          "useMutation"
+        ]
+      },
+      "esbuild": {
+        "min": 82816,
+        "gzip": 23675,
+        "brotli": 21437
+      },
+      "rollup": {
+        "min": 82131,
+        "gzip": 22993,
+        "brotli": 20794
+      },
+      "rolldown": {
+        "min": 81936,
+        "gzip": 22585,
+        "brotli": 20510
+      },
+      "webpack": {
+        "min": 82358,
+        "gzip": 23059,
+        "brotli": 20882
+      }
+    }
+  ]
+}
