@@ -7,7 +7,7 @@
 [![npm version](https://img.shields.io/npm/v/synapse-storage)](https://www.npmjs.com/package/synapse-storage)
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/synapse-storage)](https://bundlephobia.com/package/synapse-storage)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue)](https://www.typescriptlang.org/)
-[![RxJS Version](https://img.shields.io/badge/RxJS-%5E7.8.2-red?logo=reactivex)](https://rxjs.dev/)
+[![RxJS](https://img.shields.io/badge/RxJS-optional%20(effects%20only)-red?logo=reactivex)](https://rxjs.dev/)
 
 Фреймворк-агностик тулкит для управления состоянием и API-клиент для TypeScript-приложений.
 Объединяет реактивные хранилища, мемоизированные селекторы, эффекты в стиле Redux-Observable и HTTP-кэш на основе тегов — всё в одной библиотеке.
@@ -51,7 +51,7 @@ export const counter = createSynapse({
 - **Persist-миграции** — `version` + `migrate(oldState, oldVersion)` для localStorage/IndexedDB
 - **SSR-гидрация** — `storage.hydrate(state)` для серверного состояния
 - **React интеграция** — хуки на `useSyncExternalStore` (Concurrent Mode safe), с поддержкой **SSR** by construction (без флага `ssr`): засев серверных данных через `createSynapseCtx` + `dehydrate` + проп `dehydratedState`, а серверный рендер «фоновых» провайдеров без серверных данных работает сам (синхронная C-форма → `buildSyncShell`)
-- **RxJS эффекты** — диспетчеры, эффекты и watchers (стиль Redux-Observable)
+- **RxJS-эффекты (опционально)** — эффекты в стиле Redux-Observable в `synapse-storage/reactive`; остальной библиотеке RxJS не нужен
 - **Middleware** — расширяемые sync/async пайплайны (batching, shallowCompare, logger, broadcast)
 - **EventBus** — декаплинг межмодульного общения с wildcard-паттернами
 - **Cross-tab синхронизация** — BroadcastChannel middleware для multi-tab state
@@ -91,7 +91,7 @@ export const counter = createSynapse({
 | Тема                                                          | Описание                                  |
 |---------------------------------------------------------------|-------------------------------------------|
 | [Реактивные чтения (обзор)](./reactive-reads.md)              | Какой из инструментов выбрать             |
-| [toObservable](./to-observable.md)                            | storage / selector → RxJS Observable      |
+| [toObservable](./to-observable.md)                            | storage / selector / поток → RxJS Observable |
 | [useStorageObservable / useObservable](./use-storage-observable.md) | Observable → значение в компоненте  |
 | [useStorageSubscribe](./use-storage-subscribe.md)            | Подписка на срез хранилища в React        |
 | [useSubscription](./use-subscription.md)                     | Побочный эффект по Observable              |

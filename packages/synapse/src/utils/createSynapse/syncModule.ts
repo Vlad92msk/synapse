@@ -1,6 +1,9 @@
-import type { IStorage, ISyncStorage, Selectors } from '../../core'
-import type { Effect } from '../../reactive'
-import { Dispatcher, Effects, EffectsModule, FINALIZE, PreStartActionBuffer, toObservable } from '../../reactive'
+import { storageStream } from '../../core/observable/storage-stream'
+import type { Selectors } from '../../core/selector/selectors.base'
+import type { IStorage, ISyncStorage } from '../../core/storage/storage.interface'
+import { type Dispatcher, FINALIZE } from '../../reactive/dispatcher/dispatcher.base'
+import { PreStartActionBuffer } from '../../reactive/effects/preStartActionBuffer'
+import { type EffectFunctionLike, type EffectsLike, type EffectsRunner, getEffectsRunner, isEffectsLike, type RunningEffects } from './effects-runner'
 import type { Synapse, SynapseModule, SyncSynapseModule } from './synapse.types'
 import type { DependencyInput } from './types'
 import { waitForDependencies } from './waitForDependencies'
@@ -16,14 +19,13 @@ export interface SyncEffectsContext<TState extends Record<string, any>, TDispatc
   deps: ReadonlyArray<{ storage: IStorage<any> }>
 }
 
-type EffectsInput<TEffects> = TEffects | Array<TEffects | Effect> | undefined
+type EffectsInput = EffectsLike | EffectFunctionLike | Array<EffectsLike | EffectFunctionLike> | undefined
 
 // Конфиг C-формы: синхронная конструкция ядра + `dependencies` (гейт старта эффектов) + фабрика `effects`.
 export interface SyncSynapseConfig<
   TState extends Record<string, any>,
   TDispatcher extends Dispatcher<TState> | undefined = undefined,
   TSelectors extends Selectors<TState> | undefined = undefined,
-  TEffects extends Effects<TState, NonNullable<TDispatcher>, any> | undefined = undefined,
 > {
   storage: () => IStorage<TState>
   dispatcher?: (storage: IStorage<TState>) => TDispatcher
@@ -34,28 +36,41 @@ export interface SyncSynapseConfig<
   // функция-форма не форсит eager-конструкцию чужого стора. Пример: `() => ({ core: coreSynapse.dispatcher })`.
   externalDispatchers?: Record<string, Dispatcher<any>> | ((ctx: SyncEffectsContext<TState, TDispatcher, TSelectors>) => Record<string, Dispatcher<any>>)
   // Фабрика эффектов; зовётся только в ready() (клиент) → может быть async (ленивый резолв endpoints).
-  effects?: (ctx: SyncEffectsContext<TState, TDispatcher, TSelectors>) => EffectsInput<TEffects> | Promise<EffectsInput<TEffects>>
+  effects?: (ctx: SyncEffectsContext<TState, TDispatcher, TSelectors>) => EffectsInput | Promise<EffectsInput>
   // Синхронный хук после конструкции ядра, до первого рендера. Для нормализации persisted-состояния
   // (напр. гашение транзитных флагов). Бежит на каждую конструкцию; ошибка откатывает её (fail-fast).
   postConstruct?: (synapse: Synapse<TState, TDispatcher, TSelectors>) => void
 }
 
-/** Раскладывает effects-вход в плоский список module-эффектов + инстансы (для onDestroy). */
-function collectEffects(input: EffectsInput<any>): { moduleEffects: Effect[]; instances: Effects<any, any, any>[] } {
+/**
+ * Раскладывает effects-вход в плоский список module-эффектов + инстансы (для onDestroy) и находит
+ * раннер (его приносят сами эффекты из `synapse-storage/reactive`, см. effects-runner.ts).
+ */
+function collectEffects(input: EffectsInput): { moduleEffects: EffectFunctionLike[]; instances: EffectsLike[]; runner?: EffectsRunner } {
   const items = input === undefined ? [] : Array.isArray(input) ? input : [input]
-  const moduleEffects: Effect[] = []
-  const instances: Effects<any, any, any>[] = []
+  const moduleEffects: EffectFunctionLike[] = []
+  const instances: EffectsLike[] = []
   for (const item of items) {
-    if (item instanceof Effects) {
+    if (isEffectsLike(item)) {
       instances.push(item)
       moduleEffects.push(...item.getEffects())
     } else if (typeof item === 'function') {
-      moduleEffects.push(item as Effect)
+      moduleEffects.push(item)
     } else {
       throw new Error('createSynapse: каждый элемент "effects" должен быть инстансом Effects или функцией-эффектом.')
     }
   }
-  return { moduleEffects, instances }
+  let runner: EffectsRunner | undefined
+  for (const effect of moduleEffects) {
+    runner = getEffectsRunner(effect)
+    if (runner) break
+  }
+  if (moduleEffects.length > 0 && !runner) {
+    throw new Error(
+      'createSynapse: не удалось запустить "effects" — функции-эффекты должны быть созданы через ' + '`Effects`/`createEffect`/`combineEffects` из "synapse-storage/reactive".',
+    )
+  }
+  return { moduleEffects, instances, runner }
 }
 
 /** LIFO-teardown. */
@@ -71,7 +86,7 @@ async function teardown(cleanup: CleanupStep[]): Promise<void> {
 // ДО подписки эффектов, не потерялся. Серверный throwaway-shell (SSR/дегидрация) эффекты не
 // стартует → буфер не вешаем, чтобы не копить впустую.
 function constructSyncCore<TState extends Record<string, any>, TDispatcher, TSelectors>(
-  config: SyncSynapseConfig<any, any, any, any>,
+  config: SyncSynapseConfig<any, any, any>,
   captureForEffects = false,
 ): {
   synapse: Synapse<TState, TDispatcher, TSelectors>
@@ -104,7 +119,8 @@ function constructSyncCore<TState extends Record<string, any>, TDispatcher, TSel
     cleanup.push(() => preStartBuffer?.stop())
   }
 
-  const state$ = toObservable(storage)
+  // Поток состояния ядра — interop без rxjs (в rxjs: `toObservable(storage)` из reactive).
+  const state$ = storageStream(storage)
 
   let destroyed = false
   const synapse: Synapse<TState, TDispatcher, TSelectors> = {
@@ -140,7 +156,7 @@ function constructSyncCore<TState extends Record<string, any>, TDispatcher, TSel
  * синхронный `handle.selectors`/`.storage`/`.state$` — основа cross-store DI.
  */
 export function createSyncSynapseModule<TState extends Record<string, any>, TDispatcher extends Dispatcher<TState> | undefined, TSelectors extends Selectors<TState> | undefined>(
-  config: SyncSynapseConfig<TState, any, any, any>,
+  config: SyncSynapseConfig<TState, any, any>,
 ): SyncSynapseModule<TState, TDispatcher, TSelectors> {
   type ReadySynapse = Synapse<TState, TDispatcher, TSelectors>
 
@@ -177,7 +193,7 @@ export function createSyncSynapseModule<TState extends Record<string, any>, TDis
     }
     // Фабрика эффектов может быть async (ленивый резолв endpoints) — ждём её здесь.
     const input = await config.effects?.(ctx)
-    const { moduleEffects, instances } = collectEffects(input)
+    const { moduleEffects, instances, runner } = collectEffects(input)
 
     // Внешние диспетчеры резолвим лениво здесь же (deps уже готовы → чужой dispatcher финализирован).
     const external = typeof config.externalDispatchers === 'function' ? config.externalDispatchers(ctx) : (config.externalDispatchers ?? {})
@@ -186,16 +202,19 @@ export function createSyncSynapseModule<TState extends Record<string, any>, TDis
       if (instance.onDestroy) effectsCleanup.push(() => instance.onDestroy!())
     }
 
-    if (moduleEffects.length > 0) {
+    if (moduleEffects.length > 0 && runner) {
       if (!core.dispatcher) throw new Error('createSynapse: "effects" требуют "dispatcher".')
-      const effectsModule = new EffectsModule<TState>(core.storage, core.dispatcher as any, external as any)
       // Отдаём буфер, собранный ядром с рендера: диспатчи до этого старта (маунт) не потеряются.
-      if (mainPreStartBuffer) effectsModule.setPreStartBuffer(mainPreStartBuffer)
-      effectsModule.addEffects(moduleEffects)
-      effectsCleanup.push(() => {
-        effectsModule.stop()
+      const running: RunningEffects = runner(moduleEffects, {
+        storage: core.storage,
+        dispatcher: core.dispatcher,
+        externalDispatchers: external,
+        preStartBuffer: mainPreStartBuffer,
       })
-      await effectsModule.start()
+      effectsCleanup.push(() => {
+        running.stop()
+      })
+      await running.start()
     }
 
     return core

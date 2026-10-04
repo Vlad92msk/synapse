@@ -1,5 +1,5 @@
 // Auto-generated types for structured documentation
-// Generated at: 2026-10-04T10:42:41.600Z
+// Generated at: 2026-10-04T13:20:38.008Z
 // Master locale: en
 
 export type Locale = 'en' | 'ru'
@@ -31,7 +31,7 @@ export interface DocSectionIds {
   'hook-local-storage': 'usecreatestorage-localstorage' | 'why' | 'when-to-use' | 'when-not-to-use' | 'usage' | 'all-parameters-commented' | 'lifecycle-options' | 'see-also'
   'hook-memory': 'usecreatestorage-memory' | 'why' | 'when-to-use' | 'when-not-to-use' | 'usage' | 'all-parameters-commented' | 'lifecycle-options' | 'see-also'
   'indexeddb-storage': 'indexeddbstorage' | 'why' | 'when-to-use' | 'when-not-to-use' | 'how-it-differs-from-neighboring-storages' | 'usage' | 'all-parameters-commented' | 'synchronous-vs-asynchronous-api' | 'working-with-data' | 'persist-migrations-and-ssr' | 'see-also'
-  'install': 'install' | 'installing-the-package' | 'optional-peer-dependencies' | 'imports-by-layer-sub-entrypoints' | 'see-also'
+  'install': 'install' | 'installing-the-package' | 'peer-dependencies' | 'imports-by-layer-sub-entrypoints' | 'see-also'
   'local-storage': 'localstorage' | 'why' | 'when-to-use' | 'when-not-to-use' | 'how-it-differs-from-neighboring-storages' | 'usage' | 'all-parameters-commented' | 'destroy-and-clearondestroy' | 'working-with-data' | 'persist-migrations-and-ssr' | 'see-also'
   'memory-storage': 'memorystorage' | 'why' | 'when-to-use' | 'when-not-to-use' | 'how-it-differs-from-the-neighboring-storages' | 'domain' | 'usage' | 'all-parameters-commented' | 'working-with-data' | 'lifecycle' | 'see-also'
   'middlewares': 'middlewares' | 'why' | 'when-to-use' | 'when-you-dont-need-it' | 'configuration' | '1-batching-middleware' | '2-shallowcompare-middleware' | '3-shallowcompare-a-custom-comparator' | '4-combining-middlewares' | '5-broadcastmiddleware-cross-tab-synchronization' | '6-logger-middleware-dev-only' | '7-custom-middleware' | 'types' | 'see-also'

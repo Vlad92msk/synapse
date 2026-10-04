@@ -2,33 +2,33 @@
 
 > [Назад к оглавлению](./README.md)
 
-**TL;DR.** RxJS-путь «store → реактивно в компоненте». Два хука:
+**TL;DR.** Поток-путь «store → реактивно в компоненте». Два хука (оба без RxJS):
 
-- **`useStorageObservable(storage[, selector])`** — сахар: срез стора в рендер через RxJS, без
-  собственных операторов. Эквивалент [`useStorageSubscribe`](./use-storage-subscribe.md), только внутри
-  RxJS.
-- **`useObservable(source, initial[, deps])`** — подписаться на **любой** `Observable` (свой `pipe(...)`
-  или `selector.$`) и вернуть его значение в рендер. Это уровень ниже: тут ты сам строишь поток.
+- **`useStorageObservable(storage[, selector])`** — сахар: срез стора в рендер через подписку на поток,
+  без собственных операторов. Эквивалент [`useStorageSubscribe`](./use-storage-subscribe.md).
+- **`useObservable(source, initial[, deps])`** — подписаться на **любой** поток с `subscribe` (RxJS
+  `Observable` со своим `pipe(...)` или `selector.$`) и вернуть его значение в рендер. Это уровень ниже:
+  тут ты сам строишь поток.
 
-Нужны операторы (`debounceTime`, `scan`, `bufferTime`) — бери `toObservable` + `useObservable`. Оба
-импортируются из `synapse-storage/react`. В примерах — сквозной `todoStorage`
+Нужны операторы (`debounceTime`, `scan`, `bufferTime`) — бери `toObservable` (из
+`synapse-storage/reactive`, нужен `rxjs`) + `useObservable`. Хуки импортируются из `synapse-storage/react`. В примерах — сквозной `todoStorage`
 (`TodoState = { todos: Todo[]; filter: Filter }`).
 
 ## Зачем
 
 `useStorageSubscribe` отдаёт срез как есть. Как только между стором и рендером нужна **обработка потока**
 (сгладить дебаунсом, накопить `scan`-ом, схлопнуть `bufferTime`-ом), нужен RxJS. `useObservable`
-подписывается на готовый `Observable` в `useEffect` и кладёт последнее значение в стейт;
-`useStorageObservable` — тонкая обёртка над `toObservable` + `useObservable` для частого случая «просто
-срез, без своих операторов».
+подписывается на готовый поток в `useEffect` и кладёт последнее значение в стейт;
+`useStorageObservable` — тонкая обёртка (поток стора + `useObservable`) для частого случая «просто
+срез, без своих операторов» — RxJS ей не нужен.
 
 ## Когда использовать / когда НЕ нужно
 
-**`useStorageObservable`** — нужен срез стора в рендер, но по идеологическим/стилевым причинам через RxJS,
+**`useStorageObservable`** — нужен срез стора в рендер через подписку на поток (как в `useObservable`),
 своих операторов нет. Если операторов нет и RxJS не важен — проще
 [`useStorageSubscribe`](./use-storage-subscribe.md).
 
-**`useObservable`** — есть **свой `Observable`**: собранный `toObservable(...).pipe(...)`, `selector.$`
+**`useObservable`** — есть **свой поток**: собранный `toObservable(...).pipe(...)`, `selector.$`
 или внешний RxJS-источник, и его значение нужно **в рендер**.
 
 **НЕ нужно** ни то, ни другое, если:
@@ -40,13 +40,13 @@
 ## Сигнатуры
 
 ```typescript
-// сахар: срез стора в рендер через RxJS
+// сахар: срез стора в рендер (без RxJS)
 useStorageObservable<S>(storage: IStorageBase<S>): S
 useStorageObservable<S, R>(storage: IStorageBase<S>, selector: (state: S) => R): R
 
-// низкий уровень: любой Observable → значение в рендер
+// низкий уровень: любой поток с subscribe (RxJS Observable, selector.$, …) → значение в рендер
 useObservable<T>(
-  source: Observable<T> | (() => Observable<T>),
+  source: Subscribable<T> | (() => Subscribable<T>),
   initialValue: T,
   deps?: DependencyList,
 ): T
@@ -274,7 +274,7 @@ const label = useObservable(
 
 | Параметр | Тип | Описание |
 |---|---|---|
-| `source` | `Observable<T> \| (() => Observable<T>)` | Готовый поток или фабрика. Фабрика — для своих операторов. |
+| `source` | `Subscribable<T> \| (() => Subscribable<T>)` | Готовый поток (RxJS `Observable`, `selector.$`, …) или фабрика. Фабрика — для своих операторов. |
 | `initialValue` | `T` | Значение до первого эмита. |
 | `deps?` | `DependencyList` | Переподписка. По умолчанию `[]` для фабрики, `[source]` для прямого Observable. |
 
@@ -282,8 +282,9 @@ const label = useObservable(
 
 - Селекторный поток `toObservable` уже прогоняется через `distinctUntilChanged` — внешний
   `distinctUntilChanged` сразу после селектора почти всегда избыточен.
-- `useObservable` принимает и `selector.$` напрямую (Observable-вид `SelectorAPI`) — можно
-  `useObservable(selectors.active.$.pipe(debounceTime(300)), initial)`, см. [Селекторы](./selector-system.md).
+- `useObservable` принимает и `selector.$` напрямую (поток `SelectorAPI`, RxJS не нужен); с операторами —
+  `useObservable(() => toObservable(selectors.active).pipe(debounceTime(300)), initial, [])`,
+  см. [Селекторы](./selector-system.md).
 
 ## См. также
 

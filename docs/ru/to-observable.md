@@ -2,9 +2,10 @@
 
 > [Назад к оглавлению](./README.md)
 
-**TL;DR.** `toObservable(storage[, selector, equals])` — превращает хранилище в RxJS `Observable`
-потока состояния. Это **низкоуровневая утилита для эффектов и не-React кода**; на ней построены
-React-хуки `useStorageObservable` / `useObservable`. Импорт — `synapse-storage/reactive`. В примерах —
+**TL;DR.** `toObservable(source)` — мост из Synapse в RxJS. Превращает хранилище (опционально — его
+срез), селектор или любой поток ядра (`selector.$`, `dispatcher.action$`, вотчер, `synapse.state$`) в
+RxJS `Observable`. Это **низкоуровневая утилита для эффектов и не-React кода**. Импорт —
+`synapse-storage/reactive` (нужен `rxjs`). В примерах —
 сквозной `todoStorage` (`TodoState = { todos: Todo[]; filter: Filter }`).
 
 ## Зачем
@@ -26,14 +27,13 @@ React-хуки `useStorageObservable` / `useObservable`. Импорт — `synap
 **НЕ нужно:**
 
 - **просто срез в компонент без своих операторов** → [`useStorageObservable`](./use-storage-observable.md)
-  (он сам мемоизирует `toObservable`);
+  (RxJS не нужен);
 - **реактивное чтение вообще без RxJS** → [`useStorageSubscribe`](./use-storage-subscribe.md);
-- читаешь мемоизированный `SelectorAPI` — у него уже есть `.$` (готовый `Observable`), оборачивать стор
-  не надо, см. [Селекторы](./selector-system.md).
+- нужно лишь подписаться на мемоизированный `SelectorAPI` — `selector.$.subscribe(...)` работает без RxJS,
+  см. [Селекторы](./selector-system.md).
 
 > В React-компоненте **не** создавай `toObservable(...)` прямо в рендере — новый Observable на каждый
-> рендер провоцирует переподписки. Мемоизируй (это и делает `useStorageObservable`) либо передавай
-> **фабрикой** в `useObservable`.
+> рендер провоцирует переподписки. Мемоизируй либо передавай **фабрикой** в `useObservable`.
 
 ## Сигнатура
 
@@ -47,7 +47,35 @@ toObservable<T, R>(
   selector: (state: T) => R,
   equals?: (a: R, b: R) => boolean,
 ): Observable<R>
+
+// селектор (SelectorAPI) → поток его значений
+toObservable<T>(selector: SelectorAPI<T>): Observable<T>
+
+// любой поток ядра: selector.$, dispatcher.action$, d.someWatcher(), synapse.state$
+toObservable<T>(stream: Subscribable<T>): Observable<T>
 ```
+
+Потоки ядра — лёгкие *interop*-потоки без `pipe` (ядро не зависит от RxJS); `toObservable` эквивалентен
+rxjs `from(stream)`:
+
+```typescript
+toObservable(selectors.searchQuery).pipe(debounceTime(300))
+toObservable(dispatcher.action$).pipe(ofType(dispatcher.loadPosts))
+toObservable(coreSynapse.state$) // например, чтобы передать в конструктор Effects
+```
+
+Что подписчик получает сразу, зависит от источника — `toObservable` ничего не добавляет и не теряет:
+
+| Источник | При подписке | Дальше |
+|---|---|---|
+| хранилище (`toObservable(storage)`) | текущее состояние (общий поток, `shareReplay`) | каждое изменение |
+| `synapse.state$` / `useSynapseState$()` | текущее состояние — **каждому подписчику, в т.ч. позднему** (как BehaviorSubject) | каждое изменение |
+| селектор (`toObservable(selector)`, `selector.$`) | текущее значение | каждое реальное изменение |
+| `dispatcher.action$` | **ничего** — горячий поток без replay | только экшены после подписки |
+| вотчер `d.someWatcher()` | ничего (или текущее значение асинхронно при `notifyAfterSubscribe: true`) | каждое срабатывание |
+
+Поэтому `withLatestFrom(toObservable(otherSynapse.state$))` в эффекте безопасен: экшен, задиспатченный сразу
+после `ready()`, уже видит актуальное состояние чужого стора.
 
 ## `selector` — срез вместо всего стейта
 

@@ -113,14 +113,14 @@ const store = await pokemonSynapse
 // The result (basic — no dispatcher):
 store.storage    // IStorage<PokemonState> — the storage
 store.selectors  // a PokemonSelectors instance — fields = SelectorAPI
-store.state$     // Observable<PokemonState> — the state stream (ALWAYS present, even without effects)
+store.state$     // InteropObservable<PokemonState> — the state stream (ALWAYS present; for RxJS — toObservable(store.state$))
 store.dispatcher // undefined (no dispatcher)
 store.actions    // undefined (the dispatcher alias)
 
 // The C-form exposes the main core SYNCHRONOUSLY (no await) — the basis of cross-store DI:
 pokemonSynapse.storage        // IStorage<PokemonState> — available immediately
 pokemonSynapse.selectors      // PokemonSelectors — can be passed into other selectors' constructors
-pokemonSynapse.state$         // Observable<PokemonState>
+pokemonSynapse.state$         // InteropObservable<PokemonState>
 
 // The handle itself:
 pokemonSynapse.ready()        // Promise<store> — same as await (starts effects)
@@ -407,7 +407,7 @@ export const chatSynapse = createSynapse({
       await getMessagesApi(),
       await getUsersApi(),
       connectChatSocket(),
-      presenceSynapse.state$,
+      toObservable(presenceSynapse.state$), // core stream → RxJS Observable
     ),
 })
 ```

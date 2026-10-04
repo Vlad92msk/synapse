@@ -1,6 +1,5 @@
-import type { Observable } from 'rxjs'
-
-import type { Action } from '../dispatcher'
+import type { Subscribable } from '../../core/observable/interop-observable'
+import type { Action } from '../dispatcher/dispatcher.module'
 
 /**
  * Буфер экшенов «до старта эффектов».
@@ -23,7 +22,7 @@ export class PreStartActionBuffer {
   // Верхняя граница — страховка от утечки, если start() так и не позвали (эффекты не стартовали).
   private static readonly LIMIT = 10_000
 
-  constructor(source: Observable<Action>) {
+  constructor(source: Subscribable<Action>) {
     this.subscription = source.subscribe((action) => {
       if (this.subscription && this.buffer.length < PreStartActionBuffer.LIMIT) {
         this.buffer.push(action)

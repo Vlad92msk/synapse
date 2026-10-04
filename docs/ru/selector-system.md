@@ -184,35 +184,40 @@ class PostsSelectors extends Selectors<PostsState> {
 
 ## 4. Реактивный селектор (selector.$)
 
-У каждого селектора есть поле `.$` — это `Observable<T>`. Он эмитит текущее значение при подписке и при каждом
-**реальном** изменении (та же семантика, что у `subscribe`). Это позволяет реактивно трансформировать чтение —
-не только в React.
+У каждого селектора есть поле `.$` — лёгкий поток. Он эмитит текущее значение при подписке и при каждом
+**реальном** изменении (та же семантика, что у `subscribe`). Чтобы на него подписаться, **RxJS не нужен**.
+
+`.$` — *interop*-поток (`subscribe` + `Symbol.observable`), а не RxJS `Observable`: `pipe` у него нет. Для
+операторов RxJS превратите селектор в `Observable` через `toObservable(selector)` из
+`synapse-storage/reactive` (или rxjs `from(selector.$)`).
 
 ### Вне React
 
 ```typescript
+import { toObservable } from 'synapse-storage/reactive' // нужен rxjs — только для операторов
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators'
 
-// Обычная подписка
+// Обычная подписка — RxJS не нужен
 const sub = selectors.activeCount.$.subscribe((count) => console.log('активных:', count))
 sub.unsubscribe()
 
-// Трансформация прямо в потоке
-selectors.activeCount.$
+// Трансформация операторами RxJS
+toObservable(selectors.activeCount)
   .pipe(debounceTime(300), distinctUntilChanged())
   .subscribe((count) => console.log('debounced:', count))
 ```
 
 ### В эффектах
 
-`selector.$` удобно использовать как источник эффекта — например, дебаунс поискового запроса:
+Селектор удобно использовать как источник эффекта (`toObservable(selector)`) — например, дебаунс
+поискового запроса:
 
 ```typescript
 class SearchEffects extends Effects<SearchState, SearchDispatcher> {
   constructor(private  selectors: SearchSelectors) { super() }
 
    autoSearch = this.effect((_action$, _state$, { dispatcher: d }) =>
-    this.selectors.searchQuery.$.pipe(
+    toObservable(this.selectors.searchQuery).pipe(
       debounceTime(300),
       distinctUntilChanged(),
       tap((query) => d.search(query)),
@@ -223,22 +228,26 @@ class SearchEffects extends Effects<SearchState, SearchDispatcher> {
 
 ### В React — useObservable / useSubscription
 
+Оба хука принимают любой поток с `subscribe` — в том числе `selector.$` напрямую (без RxJS). Операторы —
+из RxJS через `toObservable`:
+
 ```typescript
 import { useObservable, useSubscription } from 'synapse-storage/react'
+import { toObservable } from 'synapse-storage/reactive'
 import { debounceTime, distinctUntilChanged, map } from 'rxjs/operators'
 
 function TodoStats() {
   // useObservable — рендерит производное значение из потока селектора.
   // deps пересоздают цепочку (важно для stateful-операторов вроде debounceTime/scan).
   const debouncedActive = useObservable(
-    () => selectors.activeCount.$.pipe(debounceTime(300), distinctUntilChanged(), map((n) => `${n}`)),
+    () => toObservable(selectors.activeCount).pipe(debounceTime(300), distinctUntilChanged(), map((n) => `${n}`)),
     '0',
     [],
   )
 
   // useSubscription — императивный side-effect без возврата значения в рендер.
   useSubscription(
-    () => selectors.activeCount.$.pipe(distinctUntilChanged()).subscribe((n) => console.log('changed:', n)),
+    () => toObservable(selectors.activeCount).pipe(distinctUntilChanged()).subscribe((n) => console.log('changed:', n)),
     [],
   )
 

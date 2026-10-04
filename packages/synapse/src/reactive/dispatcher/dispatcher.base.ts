@@ -1,6 +1,5 @@
-import type { Observable } from 'rxjs'
-
-import type { IStorage } from '../../core'
+import type { InteropObservable } from '../../core/observable/interop-observable'
+import type { IStorage } from '../../core/storage/storage.interface'
 import type { Action, DispatchFunction, EnhancedMiddleware, WatcherFunction } from './dispatcher.module'
 import { DispatcherCore } from './dispatcher.module'
 import { resolvePath, setByPath } from './path.util'
@@ -109,10 +108,25 @@ export abstract class Dispatcher<TState extends Record<string, any>> {
 
   #finalized = false
 
-  /** Поток всех экшенов модуля (его потребляет EffectsModule). */
-  readonly action$: Observable<Action>
+  /**
+   * Поток всех экшенов модуля (interop, без rxjs; его потребляет EffectsModule).
+   * В rxjs — `toObservable(dispatcher.action$)` / `from(dispatcher.action$)`.
+   */
+  readonly action$: InteropObservable<Action>
+
+  /**
+   * Финализация (см. {@link FINALIZE}). Идемпотентна.
+   *
+   * Объявлена только на уровне типов (`declare`), а назначается в конструкторе: метод класса
+   * с вычисляемым ключом `[FINALIZE]()` вычисляется при определении класса, и бандлеры
+   * (esbuild) считают это потенциальным side effect — неиспользуемый Dispatcher (и rxjs за ним)
+   * не удалялся бы из бандла потребителя.
+   */
+  declare readonly [FINALIZE]: () => void
 
   constructor(storage: IStorage<TState>, options?: DispatcherBaseOptions<TState>) {
+    // Неперечисляемое own-свойство: не попадает в скан полей при финализации и в Object.entries.
+    Object.defineProperty(this, FINALIZE, { value: () => this.#finalize(), configurable: true })
     this.storage = storage
     this.#core = new DispatcherCore<TState>({ storage, middlewares: options?.middlewares })
     this.#dispatch = this.#core.dispatch
@@ -134,7 +148,7 @@ export abstract class Dispatcher<TState extends Record<string, any>> {
   }
 
   /** Алиас потока экшенов для совместимости с EffectsModule (`dispatcher.actions`). */
-  get actions(): Observable<Action> {
+  get actions(): InteropObservable<Action> {
     return this.action$
   }
 
@@ -242,8 +256,9 @@ export abstract class Dispatcher<TState extends Record<string, any>> {
   /**
    * Финализация: скан own enumerable полей, назначение имён (`_assignType(имя поля)`)
    * и регистрация в реестрах `dispatch`/`watchers`. Идемпотентна.
+   * Публичный вход — `dispatcher[FINALIZE]()` (см. конструктор).
    */
-  [FINALIZE](): void {
+  #finalize(): void {
     if (this.#finalized) return
     this.#finalized = true
 
@@ -275,7 +290,7 @@ export abstract class Dispatcher<TState extends Record<string, any>> {
   // ── Внутреннее ───────────────────────────────────────────────────────────────
 
   #ensureFinalized(): void {
-    if (!this.#finalized) this[FINALIZE]()
+    if (!this.#finalized) this.#finalize()
   }
 
   /** Назначает имя через `_assignType` (если тип не был задан явно) и регистрирует обёртку. */

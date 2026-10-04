@@ -8,6 +8,12 @@
 замыкание. Ключевое правило: **эмиссии эффекта НЕ диспатчатся автоматически** — диспатч только
 через прямые вызовы `d.*` внутри `tap`/`apiResult`.
 
+> **Эффекты — единственная часть Synapse, которой нужен `rxjs`** (`npm install rxjs`). Всё здесь
+> импортируется из `synapse-storage/reactive`. В `createSynapse` эффекты передаются инстансами `Effects`
+> (`new XEffects(...)`) или функциями, обёрнутыми в `createEffect(...)`/`combineEffects(...)`. Потоки ядра,
+> которые эффект получает извне (`otherSynapse.state$`, `selector.$`), превращаются в `Observable` через
+> `toObservable(x)`.
+
 ```typescript
 readonly loadList = this.effect((action$, state$, { dispatcher: d }) =>
   action$.pipe(

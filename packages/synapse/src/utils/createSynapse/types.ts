@@ -1,4 +1,4 @@
-import { IStorage, IStorageBase } from '../../core'
+import type { IStorage, IStorageBase } from '../../core/storage/storage.interface'
 
 // Вспомогательные типы для извлечения типов из других типов
 export type ExtractPromiseType<T> = T extends Promise<infer U> ? U : T

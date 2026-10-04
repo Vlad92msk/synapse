@@ -9,6 +9,12 @@ a socket) and **dispatches** the result back itself as actions. You declare effe
 closure. Key rule: **an effect's emissions are NOT dispatched automatically** — dispatch happens only
 through direct `d.*` calls inside `tap`/`apiResult`.
 
+> **Effects are the only part of Synapse that needs `rxjs`** (`npm install rxjs`). Everything here is
+> imported from `synapse-storage/reactive`. Pass effects to `createSynapse` as `Effects` instances
+> (`new XEffects(...)`) or functions wrapped in `createEffect(...)`/`combineEffects(...)`. Core streams
+> handed to an effect from outside (`otherSynapse.state$`, `selector.$`) are turned into an `Observable`
+> with `toObservable(x)`.
+
 ```typescript
 readonly loadList = this.effect((action$, state$, { dispatcher: d }) =>
   action$.pipe(

@@ -188,35 +188,40 @@ More details on cross-module relations — [Cross-module dependencies](./depende
 
 ## 4. Reactive selector (selector.$)
 
-Every selector has a `.$` field — an `Observable<T>`. It emits the current value on subscription and on every
-**real** change (the same semantics as `subscribe`). This lets you transform reads reactively —
-not only in React.
+Every selector has a `.$` field — a lightweight stream. It emits the current value on subscription and on
+every **real** change (the same semantics as `subscribe`). Subscribing to it needs **no RxJS**.
+
+`.$` is an *interop* observable (`subscribe` + `Symbol.observable`), not an RxJS `Observable` — it has no
+`pipe`. For RxJS operators, turn the selector into an `Observable` with `toObservable(selector)` from
+`synapse-storage/reactive` (or rxjs `from(selector.$)`).
 
 ### Outside React
 
 ```typescript
+import { toObservable } from 'synapse-storage/reactive' // requires rxjs — only for operators
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators'
 
-// A regular subscription
+// A regular subscription — no RxJS needed
 const sub = selectors.activeCount.$.subscribe((count) => console.log('active:', count))
 sub.unsubscribe()
 
-// Transformation straight in the stream
-selectors.activeCount.$
+// Transformation with RxJS operators
+toObservable(selectors.activeCount)
   .pipe(debounceTime(300), distinctUntilChanged())
   .subscribe((count) => console.log('debounced:', count))
 ```
 
 ### In effects
 
-`selector.$` is convenient as an effect's source — for example, debouncing a search query:
+A selector is convenient as an effect's source (`toObservable(selector)`) — for example, debouncing a search
+query:
 
 ```typescript
 class SearchEffects extends Effects<SearchState, SearchDispatcher> {
   constructor(private readonly selectors: SearchSelectors) { super() }
 
   readonly autoSearch = this.effect((_action$, _state$, { dispatcher: d }) =>
-    this.selectors.searchQuery.$.pipe(
+    toObservable(this.selectors.searchQuery).pipe(
       debounceTime(300),
       distinctUntilChanged(),
       tap((query) => d.search(query)),
@@ -227,22 +232,26 @@ class SearchEffects extends Effects<SearchState, SearchDispatcher> {
 
 ### In React — useObservable / useSubscription
 
+Both hooks accept any stream with `subscribe` — including `selector.$` directly (no RxJS). Operators
+come from RxJS via `toObservable`:
+
 ```typescript
 import { useObservable, useSubscription } from 'synapse-storage/react'
+import { toObservable } from 'synapse-storage/reactive'
 import { debounceTime, distinctUntilChanged, map } from 'rxjs/operators'
 
 function TodoStats() {
   // useObservable — renders a derived value from the selector's stream.
   // deps recreate the chain (important for stateful operators like debounceTime/scan).
   const debouncedActive = useObservable(
-    () => selectors.activeCount.$.pipe(debounceTime(300), distinctUntilChanged(), map((n) => `${n}`)),
+    () => toObservable(selectors.activeCount).pipe(debounceTime(300), distinctUntilChanged(), map((n) => `${n}`)),
     '0',
     [],
   )
 
   // useSubscription — an imperative side-effect with no value returned to render.
   useSubscription(
-    () => selectors.activeCount.$.pipe(distinctUntilChanged()).subscribe((n) => console.log('changed:', n)),
+    () => toObservable(selectors.activeCount).pipe(distinctUntilChanged()).subscribe((n) => console.log('changed:', n)),
     [],
   )
 

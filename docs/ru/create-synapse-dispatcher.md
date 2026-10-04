@@ -121,7 +121,8 @@ store.actions.selectPokemon.actionType  // '[pokemon-advanced]selectPokemon'
 
 ## this.watcher
 
-`this.watcher` реактивно отслеживает изменения состояния и отдаёт RxJS `Observable`:
+`this.watcher` реактивно отслеживает изменения состояния и отдаёт поток (interop: `subscribe` работает
+без RxJS; для операторов — `toObservable(watcher())` из `synapse-storage/reactive`):
 
 ```typescript
 class PokemonDispatcher extends Dispatcher<PokemonState> {
@@ -132,7 +133,7 @@ class PokemonDispatcher extends Dispatcher<PokemonState> {
   })
 }
 
-// Подписка — через реестр watchers (вызов фабрики → Observable)
+// Подписка — через реестр watchers (вызов фабрики → поток)
 const sub = store.dispatcher.watchers.watchFavoriteCount().subscribe((action) => {
   console.log('избранных:', action.payload)
 })
@@ -181,7 +182,7 @@ store.actions     // алиас store.dispatcher.dispatch: { selectPokemon, setS
 
 // store.actions.selectPokemon === store.dispatcher.dispatch.selectPokemon
 
-// Поток всех действий (RxJS Observable) — на нём строятся эффекты
+// Поток всех действий (interop-поток, без RxJS) — на нём строятся эффекты
 store.dispatcher.actions.subscribe((action) => {
   console.log(action.type, action.payload)
 })

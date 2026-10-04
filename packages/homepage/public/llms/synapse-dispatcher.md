@@ -121,7 +121,8 @@ store.actions.selectPokemon.actionType  // '[pokemon-advanced]selectPokemon'
 
 ## this.watcher
 
-`this.watcher` reactively tracks state changes and returns an RxJS `Observable`:
+`this.watcher` reactively tracks state changes and returns a stream (an interop observable: `subscribe`
+works without RxJS; for operators — `toObservable(watcher())` from `synapse-storage/reactive`):
 
 ```typescript
 class PokemonDispatcher extends Dispatcher<PokemonState> {
@@ -132,7 +133,7 @@ class PokemonDispatcher extends Dispatcher<PokemonState> {
   })
 }
 
-// Subscribe — through the watchers registry (calling the factory → Observable)
+// Subscribe — through the watchers registry (calling the factory → stream)
 const sub = store.dispatcher.watchers.watchFavoriteCount().subscribe((action) => {
   console.log('favorites:', action.payload)
 })
@@ -181,7 +182,7 @@ store.actions     // an alias of store.dispatcher.dispatch: { selectPokemon, set
 
 // store.actions.selectPokemon === store.dispatcher.dispatch.selectPokemon
 
-// The stream of all actions (an RxJS Observable) — effects are built on it
+// The stream of all actions (an interop stream, no RxJS needed) — effects are built on it
 store.dispatcher.actions.subscribe((action) => {
   console.log(action.type, action.payload)
 })

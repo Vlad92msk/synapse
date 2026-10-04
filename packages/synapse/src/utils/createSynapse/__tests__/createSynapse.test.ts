@@ -1,11 +1,12 @@
 // Страховочные тесты createSynapse (C-форма) — жизненный цикл и waitForDependencies.
-import { firstValueFrom } from 'rxjs'
+import { firstValueFrom, from } from 'rxjs'
 import { map } from 'rxjs/operators'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { MemoryStorage } from '../../../core/storage/adapters/memory-storage.service'
 import { Selectors } from '../../../core/selector/selectors.base'
 import { Dispatcher } from '../../../reactive/dispatcher/dispatcher.base'
+import { createEffect } from '../../../reactive/effects/effects.module'
 import { ofType } from '../../../reactive/effects/operators'
 import { createSynapse } from '../createSynapse'
 
@@ -49,14 +50,16 @@ describe('createSynapse — полный жизненный цикл', () => {
       storage: () => storage,
       dispatcher: (s) => new CountDispatcher(s),
       selectors: (s) => new CountSelectors(s),
+      // Функции-эффекты — через createEffect (rxjs-слой): ядро запускает их раннером из reactive.
       effects: () => [
-        (action$, _s$, { dispatcher }) =>
+        createEffect((action$, _s$, { dispatcher }) =>
           action$.pipe(
             ofType((dispatcher as CountDispatcher).increment),
             map(() => () => {
               effectRan = true
             }),
           ),
+        ),
       ],
     })
     created.push(handle)
@@ -75,7 +78,7 @@ describe('createSynapse — полный жизненный цикл', () => {
     expect(storage.getStateSync().count).toBe(5)
     expect(effectRan).toBe(true)
 
-    const stateValue = await firstValueFrom(synapse.state$)
+    const stateValue = await firstValueFrom(from(synapse.state$))
     expect(stateValue.count).toBe(5)
   })
 
@@ -158,5 +161,17 @@ describe('createSynapse — waitForDependencies', () => {
     })
 
     await expect(handle.ready()).rejects.toThrow(/timed out/i)
+  })
+})
+
+describe('createSynapse — эффекты без раннера', () => {
+  it('голая функция-эффект (не createEffect/Effects) → понятная ошибка, а не молчание', async () => {
+    const handle = createSynapse({
+      storage: () => newStorage(),
+      dispatcher: (s) => new CountDispatcher(s),
+      effects: () => [(action$: any) => action$],
+    })
+    created.push(handle)
+    await expect(handle.ready()).rejects.toThrow(/createEffect/)
   })
 })

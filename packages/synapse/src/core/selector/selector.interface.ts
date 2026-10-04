@@ -1,4 +1,4 @@
-import type { Observable } from 'rxjs'
+import type { InteropObservable } from '../observable/interop-observable'
 
 export interface Selector<T, R> {
   (state: T): R
@@ -23,11 +23,12 @@ export interface SelectorAPI<T> {
   subscribe: (subscriber: Subscriber<T>) => VoidFunction
   getId: () => string
   /**
-   * Observable-вид селектора: эмитит текущее значение при подписке и при каждом
-   * реальном изменении (та же семантика, что у `subscribe`). Позволяет реактивно
-   * трансформировать чтение прямо в компоненте — `selector.$.pipe(debounceTime(300))`.
+   * Поток селектора (interop, без rxjs): эмитит текущее значение при подписке и при каждом
+   * реальном изменении (та же семантика, что у `subscribe`). Это не rxjs Observable — операторов
+   * у него нет; для rxjs: `toObservable(selector)` из `synapse-storage/reactive` или `from(selector.$)`,
+   * например `toObservable(selector).pipe(debounceTime(300))`.
    */
-  readonly $: Observable<T>
+  readonly $: InteropObservable<T>
   /** @internal — проверка готовности источника данных */
   isSourceReady: () => boolean
   /** @internal — подписка на изменение статуса источника */

@@ -10,7 +10,7 @@
 | Чистое намерение без записи (его ловит эффект) | `this.signal<P>(desc)` |
 | Группа статусов API-запроса (idle/loading/success/failure/reset) | `this.apiActions<P>(accessor)` |
 | То же, но статус по ключу (параллельные запросы) | `this.keyedApiActions<P>(accessor)` |
-| Реактивно наблюдать срез состояния (Observable) | `this.watcher({ selector })` |
+| Реактивно наблюдать срез состояния (поток) | `this.watcher({ selector })` |
 
 На [странице сборки](./create-synapse-dispatcher.md) показан минимум; здесь — **все** фабрики
 с опциями (`meta`/`memoize`), правило `ofType` для `apiActions` и автономное использование без
@@ -152,7 +152,8 @@ d.loadDetailsById.failure({ key: '25', error: 'msg' })
 
 ## this.watcher
 
-Реактивный наблюдатель за срезом состояния, отдаёт RxJS `Observable`. В pokemon —
+Реактивный наблюдатель за срезом состояния, отдаёт поток (interop: `subscribe` работает без RxJS,
+операторы — через `toObservable(...)`). В pokemon —
 `watchFavoriteCount` (с `meta` и `notifyAfterSubscribe`).
 
 ```typescript
@@ -171,7 +172,7 @@ class PokemonDispatcher extends Dispatcher<PokemonState> {
   })
 }
 
-// Подписка — через реестр watchers (вызов фабрики → Observable)
+// Подписка — через реестр watchers (вызов фабрики → поток)
 const sub = dispatcher.watchers.watchFavoriteCount().subscribe((action) => {
   console.log('избранных:', action.payload)
 })
@@ -196,7 +197,7 @@ dispatcher.loadMore()
 dispatcher.dispatch.selectPokemon.actionType  // '[pokemon-advanced]selectPokemon'
 dispatcher.dispatch.toggleFavorite.meta       // { description: 'Добавить/убрать из избранного' }
 
-// Подписка на наблюдатели (RxJS Observable)
+// Подписка на наблюдатели (поток; RxJS не нужен)
 const sub = dispatcher.watchers.watchFavoriteCount().subscribe((action) => {
   console.log('избранных:', action.payload)
 })

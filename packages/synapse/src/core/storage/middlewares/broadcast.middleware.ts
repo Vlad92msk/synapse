@@ -6,7 +6,7 @@ import { createSharedStateMiddleware } from './shared-state.factory'
  * Кросс-табная синхронизация через BroadcastChannel (async-хранилища).
  * Тонкая обёртка над {@link createSharedStateMiddleware} — вся логика в фабрике.
  */
-export const broadcastMiddleware = createSharedStateMiddleware({
+export const broadcastMiddleware = /*#__PURE__*/ createSharedStateMiddleware({
   name: 'broadcast',
   label: 'broadcastMiddleware',
   createChannel: (channelName) => new SyncBroadcastChannel<StorageAction>(channelName),

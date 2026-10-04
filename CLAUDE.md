@@ -15,8 +15,16 @@ tasks/, TASK_*.md   # рабочие заметки/задачи пользов�
 
 ## packages/synapse — библиотека
 
-Entry points (`package.json#exports`, каждый — `src/<name>/index.ts`): `.` (всё), `./core`, `./api`,
-`./reactive`, `./react`, `./utils`. ESM-only, сборка `rslib` bundleless (структура `dist` = структура `src`).
+Entry points (`package.json#exports`, каждый — `src/<name>/index.ts`): `.` (core+dispatcher+api+utils),
+`./core`, `./api`, `./dispatcher` (→ `src/reactive/dispatcher`), `./reactive`, `./react`, `./utils`. ESM-only,
+сборка `rslib` bundleless (структура `dist` = структура `src`), `"sideEffects": false`.
+
+**Опциональные peer-зависимости (v7):** `rxjs` импортируется ТОЛЬКО в `src/reactive/effects/**` (энтрипоинт
+`./reactive`), `react` — только в `src/react/**`. Ядро отдаёт потоки как interop-observable
+(`core/observable/interop-observable.ts`: `subscribe` + `Symbol.observable`), мост в rxjs — `toObservable`.
+`createSynapse` запускает эффекты через раннер, который приносят сами эффекты (`utils/createSynapse/effects-runner.ts`).
+Гейт — `src/__tests__/optional-peers.test.ts` (граф импортов, включая `import type`); не импортировать barrel
+`../reactive`/`../react` из ядра. Вес по сценариям — `yarn size` (печатается и после каждого `yarn build`).
 
 | Каталог `src/` | Что внутри |
 |---|---|

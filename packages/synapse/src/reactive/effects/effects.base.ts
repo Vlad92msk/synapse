@@ -2,6 +2,7 @@ import type { Observable } from 'rxjs'
 
 import type { Action } from '../dispatcher'
 import type { Dispatcher } from '../dispatcher/dispatcher.base'
+import { markEffect } from './effects.module'
 import { type Effect, EFFECT_NAME, EFFECT_OPTIONS, type EffectOptions } from './effects.types'
 
 /**
@@ -88,11 +89,13 @@ export abstract class Effects<TState extends Record<string, any>, TDispatcher, T
    */
   protected effect(fn: EffectRecipe<TState, TDispatcher, TExternalDispatchers>, options?: EffectOptions): EffectRecipe<TState, TDispatcher, TExternalDispatchers> {
     // Module-совместимая обёртка: широкий контекст EffectsModule → узкий EffectCtx рецепта.
-    const moduleEffect: Effect<TState, TDispatcher> = (action$, state$, context) =>
+    // markEffect — раннер для createSynapse (ядро без rxjs не импортирует EffectsModule).
+    const moduleEffect: Effect<TState, TDispatcher> = markEffect((action$, state$, context) =>
       fn(action$, state$, {
         dispatcher: context.dispatcher,
         external: context.externalDispatchers as unknown as TExternalDispatchers,
-      })
+      }),
+    )
 
     if (options) {
       ;(moduleEffect as { [EFFECT_OPTIONS]?: EffectOptions })[EFFECT_OPTIONS] = options

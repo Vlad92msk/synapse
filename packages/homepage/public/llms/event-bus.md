@@ -59,7 +59,7 @@ const eventBus = await eventBusHandle
 //   actions: EventBusDispatcher            — typed actions (alias of dispatcher)
 //   dispatcher: EventBusDispatcher         — the same dispatcher instance
 //   selectors: undefined                   — the bus has no selectors
-//   state$: Observable<EventBusState>      — the state stream (always present)
+//   state$: InteropObservable<EventBusState> — the state stream (always present; no RxJS needed)
 //   destroy: () => Promise<void>           — cleanup
 // }
 

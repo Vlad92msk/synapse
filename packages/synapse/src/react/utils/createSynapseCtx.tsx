@@ -1,9 +1,11 @@
 import { ComponentType, createContext, forwardRef, PropsWithChildren, useContext, useEffect, useRef, useState } from 'react'
-import { Observable } from 'rxjs'
 
 import { handleCleanupError } from '../../_utils/error-handling.util'
-import { IStorage, StorageStatus } from '../../core'
-import { dehydrateModule, type Synapse, type SynapseModule, type SyncSynapseModule } from '../../utils'
+import type { InteropObservable } from '../../core/observable/interop-observable'
+import type { IStorage } from '../../core/storage/storage.interface'
+import { StorageStatus } from '../../core/storage/storage.interface'
+import { type Synapse, type SynapseModule, type SyncSynapseModule } from '../../utils/createSynapse'
+import { dehydrateModule } from '../../utils/dehydrateModule'
 
 const ERROR_HOOK_MESSAGE = 'Хук необходимо использовать внутри компонента contextSynapse'
 const ERROR_CONTEXT_INIT = 'Ошибка при инициализации контекста:'
@@ -67,7 +69,7 @@ export function createSynapseCtx<TState extends Record<string, any>, TDispatcher
     return context.actions
   }
 
-  const useSynapseState$ = (): Observable<TState> => {
+  const useSynapseState$ = (): InteropObservable<TState> => {
     const context = useContext(SynapseContext)
     if (!context) throw new Error(`useSynapseState$: ${ERROR_HOOK_MESSAGE}`)
     return context.state$

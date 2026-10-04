@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/synapse-storage)](https://www.npmjs.com/package/synapse-storage)
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/synapse-storage)](https://bundlephobia.com/package/synapse-storage)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue)](https://www.typescriptlang.org/)
-[![RxJS Version](https://img.shields.io/badge/RxJS-%5E7.8.2-red?logo=reactivex)](https://rxjs.dev/)
+[![RxJS](https://img.shields.io/badge/RxJS-optional%20(effects%20only)-red?logo=reactivex)](https://rxjs.dev/)
 
 Framework-agnostic state management toolkit and API client for TypeScript applications.
 Combines reactive storage, memoized selectors, Redux-Observable style effects, and a tag-based HTTP cache — all in one library.
@@ -15,9 +15,8 @@ npm install synapse-storage
 ```
 
 ```typescript
-import { MemoryStorage, Selectors } from 'synapse-storage/core'
-import { Dispatcher } from 'synapse-storage/reactive'
-import { createSynapse } from 'synapse-storage/utils'
+// No rxjs, no react required — the root entry is the framework-agnostic core.
+import { MemoryStorage, Selectors, Dispatcher, createSynapse } from 'synapse-storage'
 
 class CounterDispatcher extends Dispatcher<{ count: number }> {
   inc = this.action((store) => store.update((s) => { s.count++ }))
@@ -36,8 +35,16 @@ export const counter = createSynapse({
 
 > **Two independent layers.** `synapse-storage/core` is the *State Manager* — reactive
 > storages (`MemoryStorage`/`LocalStorage`/`IndexedDB`) and selectors, usable on their own.
-> On top sits the *Business Logic Layer* — `Dispatcher` / `Effects` / `createSynapse`.
-> `rxjs` and `react` are optional peers: take only what you use.
+> On top sits the *Business Logic Layer* — `Dispatcher` / `createSynapse` / `Effects`.
+>
+> **`rxjs` and `react` are truly optional peers.** The root entry (`synapse-storage`) needs neither:
+> storages, selectors, `Dispatcher`, `createSynapse`, `createEventBus` and `ApiClient` work without them.
+> React hooks live in `synapse-storage/react` (needs `react`); RxJS effects and operators live only in
+> `synapse-storage/reactive` (needs `rxjs`). The package is tree-shakeable (`"sideEffects": false`):
+> only what you import ends up in your bundle.
+>
+> Core streams (`selector.$`, `dispatcher.action$`, watchers, `synapse.state$`) are lightweight interop
+> observables — `subscribe` works without RxJS; for operators use `toObservable(x)` (or rxjs `from(x)`).
 
 ## Key Features
 
@@ -48,7 +55,7 @@ export const counter = createSynapse({
 - **Persist Migrations** — `version` + `migrate(oldState, oldVersion)` for localStorage/IndexedDB
 - **SSR Hydration** — `storage.hydrate(state)` to seed server-rendered state; `createSynapseCtx` + `dehydratedState` prop for seeded stores (SSR on by construction, no `ssr` flag); data-less "background" providers server-render on their own (synchronous C-form → auto `buildSyncShell`)
 - **React Integration** — hooks on `useSyncExternalStore` (Concurrent Mode safe)
-- **RxJS Effects** — dispatchers, effects, and watchers (Redux-Observable style)
+- **RxJS Effects (optional)** — Redux-Observable style effects in `synapse-storage/reactive`; the rest of the library doesn't need RxJS
 - **Middleware** — extensible sync/async pipelines (batching, shallowCompare, logger, broadcast)
 - **EventBus** — decoupled inter-module communication with wildcards
 - **Cross-tab Sync** — BroadcastChannel middleware for multi-tab state
@@ -65,9 +72,8 @@ handle**.
 > table below.
 
 ```typescript
-import { Dispatcher, Effects, ofType, validateMap, fromRequest, apiResult } from 'synapse-storage/reactive'
-import { Selectors, MemoryStorage } from 'synapse-storage/core'
-import { createSynapse } from 'synapse-storage'
+import { Dispatcher, Selectors, MemoryStorage, createSynapse } from 'synapse-storage'
+import { Effects, ofType, validateMap, fromRequest, apiResult } from 'synapse-storage/reactive' // rxjs
 
 // — Dispatcher: action name = field name. apiActions returns a CALLABLE group —
 class PostsDispatcher extends Dispatcher<PostsState> {
@@ -134,45 +140,70 @@ const { storage, state$, dispatcher, actions, selectors } = await postsSynapse
 
 ```tsx
 import { createSynapseCtx, useObservable, useSubscription } from 'synapse-storage/react'
+import { toObservable } from 'synapse-storage/reactive' // only for RxJS operators
 
 // Pass the handle (not a call) — factory starts lazily on first Provider mount:
 export const { contextSynapse: withPosts, useSynapseSelectors, useSynapseActions } =
   createSynapseCtx(postsSynapse, { loadingComponent: <Spinner /> })
 
-// Reactive reads straight in the component (write still goes through actions):
-const debounced = useObservable(() => selectors.searchQuery.$.pipe(debounceTime(300), distinctUntilChanged()),
+// Reactive reads straight in the component (write still goes through actions).
+// `useObservable(selectors.searchQuery.$, '')` works without RxJS; operators need toObservable:
+const debounced = useObservable(() => toObservable(selectors.searchQuery).pipe(debounceTime(300), distinctUntilChanged()),
   '',
   [selectors],
 )
-useSubscription(() => selectors.lastId.$.pipe(skip(1), tap(scrollToEnd)), [selectors])
+useSubscription(() => toObservable(selectors.lastId).pipe(skip(1), tap(scrollToEnd)), [selectors])
 ```
 
 ### Reactive reads from a storage (controlled re-renders)
 
 Mutate the store with ordinary methods (`set`/`update`) and read it reactively in a component.
-Pick the hook by how much control over re-renders you need:
+Pick the tool by whether you need RxJS operators (only the last one needs `rxjs`):
 
 ```tsx
-import { useStorageSubscribe, useStorageObservable, useStorageRef } from 'synapse-storage/react'
+import { useStorageSubscribe, useStorageObservable } from 'synapse-storage/react'
 
 // 1. Always re-render on change (canonical, RxJS-free, Concurrent-safe).
 //    `equals` skips the re-render when the selected slice is unchanged.
 const todos = useStorageSubscribe(storage, (s) => s.todos, { equals: (a, b) => a === b })
 
-// 2. RxJS path — same, but you can pipe operators. Memoizes the observable for you,
-//    so no extra re-subscribes (don't inline `toObservable(storage)` in render).
+// 2. Stream path — same value via a stream subscription (no RxJS).
 const userId = useStorageObservable(storage, (s) => s.user.id)
 
-// 3. You control the re-renders. The ref always holds the fresh value; nothing
-//    re-renders unless you ask.
-const { ref, get, rerender } = useStorageRef(storage, (s) => s.count)
-//   - "no re-render at all":      read get() inside an event handler
-//   - "re-render when I decide":  call rerender()
-//   - "re-render conditionally":  useStorageRef(storage, sel, { shouldRerender: (prev, next) => ... })
+// 3. No re-render at all: read the latest value on demand (e.g. in an event handler).
+const onSave = () => save(storage.getStateSync().count)
 ```
 
-For non-React / effect usage, `toObservable(storage, selector?)` turns a storage into an
-`Observable` of the whole state (or a slice with `distinctUntilChanged` when a selector is given).
+Control *when* a component re-renders through the `equals` of `useStorageSubscribe` (skip
+re-renders while the slice is "equal"), or with RxJS operators (`filter`/`debounceTime`/…) via
+`useObservable(() => toObservable(storage, sel).pipe(...), initial, [storage])`.
+
+For non-React / effect usage, `toObservable(storage, selector?)` (from `synapse-storage/reactive`) turns a
+storage into an RxJS `Observable` of the whole state (or a slice with `distinctUntilChanged` when a selector
+is given); `toObservable(selector)` / `toObservable(stream)` do the same for selectors and core streams.
+
+### Migration to v7 (rxjs and react become truly optional)
+
+| Before (v6) | Now (v7) |
+|---|---|
+| `import { useSelector, createSynapseCtx } from 'synapse-storage'` | `from 'synapse-storage/react'` (the root no longer re-exports React) |
+| `import { Effects, ofType, toObservable } from 'synapse-storage'` | `from 'synapse-storage/reactive'` (the root no longer re-exports the RxJS layer) |
+| `selector.$.pipe(...)` | `toObservable(selector).pipe(...)` (or `from(selector.$)`) |
+| `dispatcher.action$.pipe(...)`, `d.someWatcher().pipe(...)` | `toObservable(dispatcher.action$)`, `toObservable(d.someWatcher())` |
+| `new XEffects(api, coreSynapse.state$)` (typed `Observable`) | `new XEffects(api, toObservable(coreSynapse.state$))` |
+| `effects: () => [(action$, state$) => …]` (a bare function) | `effects: () => [createEffect((action$, state$) => …)]` — classes (`new XEffects()`) unchanged |
+
+Core streams (`selector.$`, `dispatcher.action$`/`actions`, watchers, `synapse.state$`, `useSynapseState$()`,
+the dispatcher middleware `actions$`) are now lightweight interop observables: `subscribe()` and
+`Symbol.observable`, no `pipe`. `subscribe` works as before; `toObservable(x)` gives an RxJS `Observable`.
+
+Finding the call sites: TypeScript reports
+`Argument of type 'InteropObservable<CoreState>' is not assignable to parameter of type 'Observable<CoreState>'`,
+but only for the **first** mismatching argument of a call — when one constructor gets two streams
+(`new XEffects(a.state$, api, b.state$)`), the second shows up only after fixing the first. Search the code
+instead: `grep -rn "\.state\$\|\.\$\.pipe\|action\$\.pipe" src`.
+`toObservable(synapse.state$)` keeps the BehaviorSubject-like semantics (the current state on subscribe), so
+`withLatestFrom(core$)` in effects works exactly as before (the stream semantics table is in the `toObservable` docs).
 
 ### Migration from v4 (functional → class-based)
 

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useObservable, useSelector, useSubscription } from 'synapse-storage/react'
+import { toObservable } from 'synapse-storage/reactive'
 import { debounceTime, distinctUntilChanged, map, scan } from 'rxjs/operators'
 import { cardStyle, buttonRow, codeBlock, sectionTitle } from './styles'
 import { todoSelectors, todoStorage } from './todo/todo.store'
@@ -9,10 +10,10 @@ import { TodoList, useTodoState } from './todo/TodoDemo'
 /**
  * Реактивный селектор (selector.$).
  *
- * У каждого поля-селектора есть `.$` — это `Observable<T>`, который эмитит текущее значение
+ * У каждого поля-селектора есть `.$` — лёгкий поток ядра (без rxjs), который эмитит текущее значение
  * при подписке и при каждом реальном изменении. Это позволяет:
- *   1) подписываться вне React (`todoSelectors.x.$.subscribe(...)`);
- *   2) реактивно трансформировать чтение внутри потока (`debounceTime`, `scan`, ...);
+ *   1) подписываться вне React (`todoSelectors.x.$.subscribe(...)`) — rxjs не нужен;
+ *   2) с rxjs — трансформировать чтение в потоке: `toObservable(todoSelectors.x).pipe(debounceTime(...))`;
  *   3) в компоненте — через `useObservable` (рендер производного значения) и `useSubscription`
  *      (императивный side-effect).
  *
@@ -28,9 +29,9 @@ export function ReactiveSelectorExample() {
     <div style={cardStyle}>
       <h2>Реактивный селектор (selector.$)</h2>
       <p>
-        Поле <code>selector.$</code> — это <code>Observable&lt;T&gt;</code>. Эмитит текущее значение
-        при подписке и при каждом реальном изменении. Можно подписываться вне React и реактивно
-        трансформировать чтение прямо в потоке.
+        Поле <code>selector.$</code> — лёгкий поток ядра (rxjs не нужен). Эмитит текущее значение
+        при подписке и при каждом реальном изменении. С rxjs — <code>toObservable(selector)</code> даёт
+        Observable с операторами (<code>debounceTime</code>, <code>scan</code>, …).
       </p>
 
       <TodoList storage={todoStorage} state={state} />
@@ -50,10 +51,11 @@ function ReactivePanel() {
   // Текущее значение (без трансформации) — обычный useSelector.
   const active = useSelector(todoSelectors.activeCount)
 
-  // Производное значение из ПОТОКА селектора: debounce + distinct.
+  // Производное значение из ПОТОКА селектора: debounce + distinct. `selector.$` — лёгкий поток ядра
+  // без операторов (ядро не зависит от rxjs); toObservable(selector) превращает его в rxjs Observable.
   // deps пересоздают цепочку (важно для stateful-операторов вроде debounceTime).
   const debouncedActive = useObservable(
-    () => todoSelectors.activeCount.$.pipe(debounceTime(300), distinctUntilChanged(), map((n) => `${n}`)),
+    () => toObservable(todoSelectors.activeCount).pipe(debounceTime(300), distinctUntilChanged(), map((n) => `${n}`)),
     '0',
     [],
   )
@@ -62,7 +64,7 @@ function ReactivePanel() {
   const [changeCount, setChangeCount] = useState(0)
   useSubscription(
     () =>
-      todoSelectors.activeCount.$
+      toObservable(todoSelectors.activeCount)
         .pipe(distinctUntilChanged(), scan((acc) => acc + 1, -1))
         .subscribe((n) => setChangeCount(Math.max(0, n))),
     [],
@@ -86,7 +88,7 @@ function StandalonePanel() {
     setLog((prev) => [...prev, 'Подписались на activeCount.$ (debounceTime 200ms)'])
 
     // Подписка на реактивный селектор ВНЕ React + трансформация в потоке.
-    const sub = todoSelectors.activeCount.$
+    const sub = toObservable(todoSelectors.activeCount)
       .pipe(debounceTime(200), distinctUntilChanged())
       .subscribe((count) => setLog((prev) => [...prev.slice(-5), `activeCount.$ → ${count}`]))
 

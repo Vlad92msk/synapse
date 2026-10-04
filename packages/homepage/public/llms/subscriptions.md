@@ -106,6 +106,6 @@ const todos = useStorageSubscribe(storage, (s) => s.todos, { equals: (a, b) => a
 ## See also
 
 - [Selectors](./selector-system.md) — memoized composable derived values and `selector.$`.
-- [Reactive reads & controlled re-renders](./reactive-reads.md) — `useStorageObservable` (RxJS)
-  and `useStorageRef` (read without re-rendering / manual trigger).
+- [Reactive reads & controlled re-renders](./reactive-reads.md) — `useStorageSubscribe` (no RxJS),
+  `useStorageObservable` (RxJS) and `getStateSync()` (read without re-rendering).
 - [Reading data](./reading-data.md) — a one-off read instead of reacting to changes.

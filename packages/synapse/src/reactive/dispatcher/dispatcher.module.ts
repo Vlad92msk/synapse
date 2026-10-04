@@ -1,8 +1,6 @@
-import { Observable, share, Subject } from 'rxjs'
-
 import { handleCallbackError } from '../../_utils/error-handling.util'
-import type { IStorage } from '../../core'
-import { TypedAction } from '../effects'
+import { type InteropObservable, shareStream, SimpleObservable, SimpleSubject } from '../../core/observable/interop-observable'
+import type { IStorage } from '../../core/storage/storage.interface'
 import type { ActionExecutionOptions } from './standalone'
 
 /**
@@ -16,8 +14,8 @@ export interface EnhancedMiddlewareAPI<T extends Record<string, any>> {
   // Доступ к хранилищу напрямую
   storage: IStorage<T>
 
-  // Доступ к потоку действий
-  actions$: Observable<Action>
+  // Доступ к потоку действий (interop-поток, без rxjs; в rxjs — `from(api.actions$)`)
+  actions$: InteropObservable<Action>
 
   // Доступ к зарегистрированным действиям
   actions: Record<string, DispatchFunction<any, any>>
@@ -49,6 +47,14 @@ export interface Action<T = unknown> {
 // ActionExecutionOptions импортирован из ./standalone
 
 /**
+ * Тип действия с типизированным payload
+ */
+export interface TypedAction<P> extends Action<P> {
+  type: string
+  payload: P
+}
+
+/**
  * Параметры для создания действия
  */
 export interface ActionDefinition<TParams, TResult> {
@@ -78,7 +84,8 @@ interface WatcherDefinition<T, R> {
  * Тип для функции watcher
  */
 export interface WatcherFunction<R> {
-  (): Observable<TypedAction<R>>
+  /** Общий (shared) interop-поток вотчера; в rxjs — `from(d.watcher())` / `toObservable(d.watcher())`. */
+  (): InteropObservable<TypedAction<R>>
   actionType: string
   meta?: Record<string, any>
   unsubscribe: VoidFunction
@@ -138,10 +145,10 @@ interface DispatcherOptions<T extends Record<string, any>> {
  */
 export class DispatcherCore<T extends Record<string, any>, TActionsFn extends (...args: any[]) => any = (...args: any[]) => Record<string, DispatchFunction<any, any>>> {
   // Поток действий
-  private actions$ = new Subject<Action>()
+  private actions$ = new SimpleSubject<Action>()
 
-  // Публичный Observable для действий
-  public readonly actions: Observable<Action> = this.actions$.asObservable()
+  // Публичный поток действий (interop, без rxjs)
+  public readonly actions: InteropObservable<Action> = this.actions$.asObservable()
 
   // Методы диспетчеризации действий с типизацией
   public dispatch: Record<string, DispatchFunction<any, any>> = {}
@@ -395,70 +402,72 @@ export class DispatcherCore<T extends Record<string, any>, TActionsFn extends (.
     // Lazy-подписка: подписываемся на storage только при первом subscribe на Observable
     let storageUnsubscribe: VoidFunction | null = null
 
-    const sharedObservable = new Observable<TypedAction<R>>((subscriber) => {
-      // Инициализируем prevValue текущим значением при первой подписке
-      let prevValue: R | undefined
-      let disposed = false
+    const sharedObservable = shareStream(
+      new SimpleObservable<TypedAction<R>>((subscriber) => {
+        // Инициализируем prevValue текущим значением при первой подписке
+        let prevValue: R | undefined
+        let disposed = false
 
-      const initAndSubscribe = async () => {
-        try {
-          const currentState = await Promise.resolve(this.storage.getState())
-          prevValue = config.selector(currentState)
-        } catch {
-          // Если не удалось получить начальное значение — продолжаем с undefined
-        }
+        const initAndSubscribe = async () => {
+          try {
+            const currentState = await Promise.resolve(this.storage.getState())
+            prevValue = config.selector(currentState)
+          } catch {
+            // Если не удалось получить начальное значение — продолжаем с undefined
+          }
 
-        if (disposed) return
+          if (disposed) return
 
-        // Если нужно уведомить о текущем значении при подписке
-        if (config.notifyAfterSubscribe && prevValue !== undefined) {
-          if (!config.shouldTrigger || config.shouldTrigger(undefined, prevValue)) {
-            const initialAction: TypedAction<R> = {
-              type: actionType,
-              payload: prevValue,
-              meta: {
-                ...config.meta,
-                isInitial: true,
-              },
+          // Если нужно уведомить о текущем значении при подписке
+          if (config.notifyAfterSubscribe && prevValue !== undefined) {
+            if (!config.shouldTrigger || config.shouldTrigger(undefined, prevValue)) {
+              const initialAction: TypedAction<R> = {
+                type: actionType,
+                payload: prevValue,
+                meta: {
+                  ...config.meta,
+                  isInitial: true,
+                },
+              }
+              this.actions$.next(initialAction)
+              subscriber.next(initialAction)
             }
-            this.actions$.next(initialAction)
-            subscriber.next(initialAction)
+          }
+
+          // Подписываемся на изменения storage
+          storageUnsubscribe = this.storage.subscribe(config.selector, (value: R) => {
+            if (!config.shouldTrigger || config.shouldTrigger(prevValue, value)) {
+              const action: TypedAction<R> = {
+                type: actionType,
+                payload: value,
+                meta: config.meta,
+              }
+
+              this.actions$.next(action)
+              subscriber.next(action)
+
+              prevValue = value
+            }
+          })
+
+          // Если отписались пока шла асинхронная инициализация — сразу очищаем
+          if (disposed) {
+            storageUnsubscribe()
+            storageUnsubscribe = null
           }
         }
 
-        // Подписываемся на изменения storage
-        storageUnsubscribe = this.storage.subscribe(config.selector, (value: R) => {
-          if (!config.shouldTrigger || config.shouldTrigger(prevValue, value)) {
-            const action: TypedAction<R> = {
-              type: actionType,
-              payload: value,
-              meta: config.meta,
-            }
+        initAndSubscribe()
 
-            this.actions$.next(action)
-            subscriber.next(action)
-
-            prevValue = value
+        return () => {
+          disposed = true
+          if (storageUnsubscribe) {
+            storageUnsubscribe()
+            storageUnsubscribe = null
           }
-        })
-
-        // Если отписались пока шла асинхронная инициализация — сразу очищаем
-        if (disposed) {
-          storageUnsubscribe()
-          storageUnsubscribe = null
         }
-      }
-
-      initAndSubscribe()
-
-      return () => {
-        disposed = true
-        if (storageUnsubscribe) {
-          storageUnsubscribe()
-          storageUnsubscribe = null
-        }
-      }
-    }).pipe(share())
+      }),
+    )
 
     // Создаем функцию watcher'а
     const watcherFn = () => sharedObservable

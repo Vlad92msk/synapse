@@ -17,7 +17,7 @@ Dig deeper (machine-readable, no JS):
 ## Overview
 
 - [Two layers: State Manager and Business Logic Layer](https://synapse-homepage.web.app/docs/architecture): Synapse is not "yet another state manager".
-- [Install](https://synapse-homepage.web.app/docs/install): One package — synapse-storage. The core pulls in no extra dependencies: rxjs and react are
+- [Install](https://synapse-homepage.web.app/docs/install): One package — synapse-storage. It has no dependencies of its own: react and rxjs are optional
 - [Custom fetch-intercepting ServiceWorker](https://synapse-homepage.web.app/docs/custom-fetch-service-worker): TL;DR: your own sw.js (layer 3) transparently intercepts fetch below ApiClient — precache, offline,
 - [Custom baseQuery.fetchFn](https://synapse-homepage.web.app/docs/custom-fetch-fn): TL;DR: pass baseQuery.fetchFn?: typeof fetch — your own function instead of the native fetch.
 
@@ -39,8 +39,8 @@ Dig deeper (machine-readable, no JS):
 - [Subscriptions (subscribe)](https://synapse-homepage.web.app/docs/subscriptions): Subscriptions are a reaction to changes in data (as opposed to a one-off read).
 - [Reactive reads & controlled re-renders](https://synapse-homepage.web.app/docs/reactive-reads): TL;DR. You mutate a storage with ordinary methods (set/update) and read it reactively inside a
 - [useStorageSubscribe](https://synapse-homepage.web.app/docs/use-storage-subscribe): TL;DR. useStorageSubscribe(storage, selector[, { equals }]) — the default way to read a
-- [useStorageObservable / useObservable](https://synapse-homepage.web.app/docs/use-storage-observable): TL;DR. The RxJS path for "store → reactive in a component". Two hooks:
-- [toObservable](https://synapse-homepage.web.app/docs/to-observable): TL;DR. toObservable(storage[, selector, equals]) — turns a storage into an RxJS Observable of
+- [useStorageObservable / useObservable](https://synapse-homepage.web.app/docs/use-storage-observable): TL;DR. The stream path for "store → reactive in a component". Two hooks (neither requires RxJS):
+- [toObservable](https://synapse-homepage.web.app/docs/to-observable): TL;DR. toObservable(source) — the bridge from Synapse to RxJS. It turns a storage (optionally a
 - [useSubscription](https://synapse-homepage.web.app/docs/use-subscription): TL;DR. useSubscription(factory, deps) is an imperative side-effect subscription from a component:
 - [Selectors](https://synapse-homepage.web.app/docs/selector-system): Selectors extract and compute data from a storage.
 - [Middlewares](https://synapse-homepage.web.app/docs/middlewares): Middleware intercepts storage operations (set/get/update/delete/clear/reset) and can

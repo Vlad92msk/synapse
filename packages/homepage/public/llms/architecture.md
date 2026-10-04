@@ -31,7 +31,7 @@ subscribe to its changes*. A unified `IStorage<T>` interface over three implemen
 | `IndexedDBStorage` | asynchronous large data (cache, offline)   |
 
 This layer also includes **selectors** — memoized derived state on top of a storage (like
-`reselect`, but with cross-store dependencies and a reactive `selector.$`).
+`reselect`, but with cross-store dependencies and a subscribable `selector.$`).
 
 **This layer is self-sufficient.** You can take only `synapse-storage/core` without pulling
 in anything from the business logic:
@@ -67,7 +67,8 @@ field-methods. But without a heavy DI container — what's needed is the **shape
 mechanism.
 
 ```typescript
-import { Dispatcher, Effects, ofType, validateMap, fromRequest, apiResult } from 'synapse-storage/reactive'
+import { Dispatcher } from 'synapse-storage/dispatcher'
+import { Effects, ofType, validateMap, fromRequest, apiResult } from 'synapse-storage/reactive' // rxjs
 import { Selectors, MemoryStorage } from 'synapse-storage/core'
 import { createSynapse } from 'synapse-storage/utils'
 
@@ -112,9 +113,11 @@ export const postsSynapse = createSynapse({
 
 ## Why this separation matters
 
-1. **Take only what you need.** Need just a reactive IndexedDB cache — take the
-   State Manager and don't pull in RxJS. Need a full module with networking — add the BL
-   layer. `rxjs`/`react` are optional peer dependencies for exactly this reason.
+1. **Take only what you need.** Need just a reactive IndexedDB cache — take a storage. Need
+   actions and a module — add `Dispatcher`/`Selectors`/`createSynapse`. None of this needs RxJS:
+   `rxjs` is required only by `Effects` (`synapse-storage/reactive`), and `react` only by
+   `synapse-storage/react`. The package is tree-shakeable, so you pay only for what you import
+   (see [Install](./install.md)).
 
 2. **Responsibility boundary.** The State Manager knows nothing about intents and networking;
    the BL layer knows nothing about *how* the state is physically stored. Swap `MemoryStorage`

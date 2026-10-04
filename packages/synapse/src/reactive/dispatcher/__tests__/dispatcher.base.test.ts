@@ -3,7 +3,9 @@ import { tap } from 'rxjs/operators'
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import { MemoryStorage } from '../../../core/storage/adapters/memory-storage.service'
+import { createEffect } from '../../effects/effects.module'
 import { ofType } from '../../effects/operators'
+import { toObservable } from '../../effects/utils/toObservable'
 import { createSynapse } from '../../../utils/createSynapse/createSynapse'
 import { Dispatcher, FINALIZE } from '../dispatcher.base'
 import type { EnhancedMiddleware } from '../dispatcher.module'
@@ -122,8 +124,12 @@ describe('this.apiActions (вызываемая группа)', () => {
 
     const inits: any[] = []
     const successes: any[] = []
-    d.action$.pipe(ofType(d.loadPosts)).subscribe((a) => inits.push(a))
-    d.action$.pipe(ofType(d.loadPosts.success)).subscribe((a) => successes.push(a))
+    toObservable(d.action$)
+      .pipe(ofType(d.loadPosts))
+      .subscribe((a) => inits.push(a))
+    toObservable(d.action$)
+      .pipe(ofType(d.loadPosts.success))
+      .subscribe((a) => successes.push(a))
 
     await d.loadPosts({ ownerId: 'u1' })
     await d.loadPosts.loading()
@@ -343,11 +349,12 @@ describe('интеграция с createSynapse (C-форма)', () => {
       storage: () => storage,
       dispatcher: (s) => new TestDispatcher(s),
       effects: () => [
-        (action$: any, _state$: any, { dispatcher }: any) =>
+        createEffect((action$: any, _state$: any, { dispatcher }: any) =>
           action$.pipe(
             ofType((dispatcher as TestDispatcher).increment),
             tap((a: any) => seen.push(a.payload)),
           ),
+        ),
       ],
     })
 

@@ -1,11 +1,13 @@
 import { DependencyList, useEffect, useRef, useState } from 'react'
-import { Observable } from 'rxjs'
+
+import type { Subscribable } from '../../core/observable/interop-observable'
 
 /**
- * Подписка на Observable из компонента.
+ * Подписка на поток из компонента.
  *
- * `source` — либо готовый `Observable<T>` (например `selector.$`), либо фабрика
- * `() => Observable<T>`, собирающая цепочку (`pipe(debounceTime(...))`) при подписке.
+ * `source` — любой поток с `subscribe` (rxjs `Observable`, поток ядра `selector.$` и т.п.), либо
+ * фабрика `() => поток`, собирающая цепочку (`toObservable(sel).pipe(debounceTime(...))`) при
+ * подписке. Сам хук rxjs не требует.
  *
  * До первого эмита возвращается `initialValue`. Подписка снимается на unmount и
  * пересоздаётся при смене `deps` (вся цепочка строится заново — актуально для
@@ -15,7 +17,7 @@ import { Observable } from 'rxjs'
  *
  * @template T тип значения потока
  */
-export function useObservable<T>(source: Observable<T> | (() => Observable<T>), initialValue: T, deps?: DependencyList): T {
+export function useObservable<T>(source: Subscribable<T> | (() => Subscribable<T>), initialValue: T, deps?: DependencyList): T {
   const [value, setValue] = useState<T>(initialValue)
 
   // Держим source в ref, чтобы замыкание эффекта всегда читало актуальную фабрику,
@@ -27,7 +29,7 @@ export function useObservable<T>(source: Observable<T> | (() => Observable<T>), 
 
   useEffect(() => {
     const current = sourceRef.current
-    const observable = typeof current === 'function' ? (current as () => Observable<T>)() : current
+    const observable = typeof current === 'function' ? (current as () => Subscribable<T>)() : current
     const subscription = observable.subscribe((next) => setValue(next))
     return () => subscription.unsubscribe()
   }, effectDeps)

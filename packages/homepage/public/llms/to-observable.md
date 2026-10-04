@@ -3,9 +3,10 @@
 # toObservable
 
 
-**TL;DR.** `toObservable(storage[, selector, equals])` — turns a storage into an RxJS `Observable` of
-the state stream. It's a **low-level utility for effects and non-React code**; the React hooks
-`useStorageObservable` / `useObservable` are built on it. Imported from `synapse-storage/reactive`. The
+**TL;DR.** `toObservable(source)` — the bridge from Synapse to RxJS. It turns a storage (optionally a
+slice of it), a selector, or any core stream (`selector.$`, `dispatcher.action$`, a watcher,
+`synapse.state$`) into an RxJS `Observable`. It's a **low-level utility for effects and non-React code**.
+Imported from `synapse-storage/reactive` (requires `rxjs`). The
 examples use the end-to-end `todoStorage` (`TodoState = { todos: Todo[]; filter: Filter }`).
 
 ## Why
@@ -27,14 +28,13 @@ that bridge: it emits the current state on subscribe, then on every change.
 **You DON'T need it:**
 
 - **just a slice into a component without your own operators** →
-  [`useStorageObservable`](./use-storage-observable.md) (it memoizes `toObservable` for you);
+  [`useStorageObservable`](./use-storage-observable.md) (no RxJS needed);
 - **a reactive read with no RxJS at all** → [`useStorageSubscribe`](./use-storage-subscribe.md);
-- you're reading a memoized `SelectorAPI` — it already has `.$` (a ready-made `Observable`), no need to
-  wrap the store, see [Selectors](./selector-system.md).
+- you only need to subscribe to a memoized `SelectorAPI` — `selector.$.subscribe(...)` works without RxJS,
+  see [Selectors](./selector-system.md).
 
 > In a React component, do **not** create `toObservable(...)` directly in render — a new Observable on
-> every render triggers re-subscriptions. Memoize it (which is what `useStorageObservable` does) or pass
-> it as a **factory** to `useObservable`.
+> every render triggers re-subscriptions. Memoize it or pass it as a **factory** to `useObservable`.
 
 ## Signature
 
@@ -48,7 +48,35 @@ toObservable<T, R>(
   selector: (state: T) => R,
   equals?: (a: R, b: R) => boolean,
 ): Observable<R>
+
+// selector (SelectorAPI) → its value stream
+toObservable<T>(selector: SelectorAPI<T>): Observable<T>
+
+// any core stream: selector.$, dispatcher.action$, d.someWatcher(), synapse.state$
+toObservable<T>(stream: Subscribable<T>): Observable<T>
 ```
+
+The core streams are lightweight *interop* observables without `pipe` (the core doesn't depend on RxJS);
+`toObservable` is equivalent to rxjs `from(stream)`:
+
+```typescript
+toObservable(selectors.searchQuery).pipe(debounceTime(300))
+toObservable(dispatcher.action$).pipe(ofType(dispatcher.loadPosts))
+toObservable(coreSynapse.state$) // e.g. to pass into an Effects constructor
+```
+
+What a subscriber gets right away depends on the source — `toObservable` adds nothing and drops nothing:
+
+| Source | On subscribe | Then |
+|---|---|---|
+| storage (`toObservable(storage)`) | the current state (shared, `shareReplay`) | every change |
+| `synapse.state$` / `useSynapseState$()` | the current state — **to every subscriber, late ones too** (BehaviorSubject-like) | every change |
+| selector (`toObservable(selector)`, `selector.$`) | the current value | every real change |
+| `dispatcher.action$` | **nothing** — a hot stream without replay | only actions dispatched after subscribing |
+| watcher `d.someWatcher()` | nothing (or the current value asynchronously with `notifyAfterSubscribe: true`) | every triggering change |
+
+That's why `withLatestFrom(toObservable(otherSynapse.state$))` in an effect is safe: an action dispatched right
+after `ready()` already sees the current state of the other store.
 
 ## `selector` — a slice instead of the whole state
 

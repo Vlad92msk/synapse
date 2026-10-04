@@ -112,14 +112,14 @@ const store = await pokemonSynapse
 // Результат (базовый — без диспетчера):
 store.storage    // IStorage<PokemonState> — хранилище
 store.selectors  // экземпляр PokemonSelectors — поля = SelectorAPI
-store.state$     // Observable<PokemonState> — поток состояния (есть ВСЕГДА, даже без эффектов)
+store.state$     // InteropObservable<PokemonState> — поток состояния (есть ВСЕГДА; для RxJS — toObservable(store.state$))
 store.dispatcher // undefined (диспетчера нет)
 store.actions    // undefined (алиас диспетчера)
 
 // C-форма отдаёт main-ядро СИНХРОННО (без await) — основа cross-store DI:
 pokemonSynapse.storage        // IStorage<PokemonState> — доступно сразу
 pokemonSynapse.selectors      // PokemonSelectors — можно передать в конструктор чужих селекторов
-pokemonSynapse.state$         // Observable<PokemonState>
+pokemonSynapse.state$         // InteropObservable<PokemonState>
 
 // Сам handle:
 pokemonSynapse.ready()        // Promise<store> — то же, что await (стартует эффекты)
@@ -404,7 +404,7 @@ export const chatSynapse = createSynapse({
       await getMessagesApi(),
       await getUsersApi(),
       connectChatSocket(),
-      presenceSynapse.state$,
+      toObservable(presenceSynapse.state$), // поток ядра → RxJS Observable
     ),
 })
 ```

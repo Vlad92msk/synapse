@@ -105,6 +105,6 @@ const todos = useStorageSubscribe(storage, (s) => s.todos, { equals: (a, b) => a
 ## См. также
 
 - [Селекторы](./selector-system.md) — мемоизированные комбинируемые производные значения и `selector.$`.
-- [Реактивное чтение и управляемые ре-рендеры](./reactive-reads.md) — `useStorageObservable` (RxJS)
-  и `useStorageRef` (чтение без ре-рендера / ручной триггер).
+- [Реактивное чтение и управляемые ре-рендеры](./reactive-reads.md) — `useStorageSubscribe` (без RxJS),
+  `useStorageObservable` (RxJS) и `getStateSync()` (чтение без ре-рендера).
 - [Чтение данных](./reading-data.md) — разовое чтение вместо реакции на изменения.

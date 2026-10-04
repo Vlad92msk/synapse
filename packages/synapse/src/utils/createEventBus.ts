@@ -1,6 +1,6 @@
 import { handleCallbackError } from '../_utils/error-handling.util'
 import { ISyncStorage, MemoryStorage } from '../core'
-import { Dispatcher } from '../reactive'
+import { Dispatcher } from '../reactive/dispatcher'
 import { createSynapse } from './createSynapse'
 
 export interface EventBusEvent {

@@ -1,5 +1,55 @@
 # Changelog
 
+## [7.0.0] - 2026-10-04 — rxjs и react действительно опциональны; tree-shaking
+
+Ядро (хранилища, селекторы, `Dispatcher`, `createSynapse`, `createEventBus`, `ApiClient`, React-биндинги)
+больше не зависит от `rxjs` — ни в рантайме, ни в типах (`.d.ts`). `rxjs` нужен только слою эффектов
+`synapse-storage/reactive`. Корневой импорт `synapse-storage` не тянет ни `rxjs`, ни `react`: проект без них
+(Vue/Svelte/vanilla/Node) собирается webpack/esbuild/rolldown без ошибок «Can't resolve». Гарантия закреплена
+тестом-гейтом по графу импортов (`src/__tests__/optional-peers.test.ts`) и проверена на собранном пакете в
+песочнице без `rxjs`/`react` (Node-импорт всех энтрипоинтов, три бандлера, `tsc` со `skipLibCheck: false`).
+
+**Поведенческое изменение / миграция:**
+
+- **Корень `synapse-storage` больше не реэкспортирует React и RxJS-слой.** React-хуки и `createSynapseCtx` —
+  из `synapse-storage/react`; `Effects`, операторы (`ofType`, `validateMap`, `mutationMap`, `apiResult`, …),
+  `fromRequest`, `toObservable` — из `synapse-storage/reactive`. Новый подпуть `synapse-storage/dispatcher`
+  (`Dispatcher`, `ApiStatus`, middleware диспетчера); `reactive` по-прежнему реэкспортирует `Dispatcher`.
+- **Потоки ядра — interop-потоки, не rxjs `Observable`:** `selector.$`, `dispatcher.action$`/`actions`,
+  результат вотчера `d.someWatcher()`, `synapse.state$`/`handle.state$`, `useSynapseState$()`, `actions$` в API
+  middleware диспетчера. У них есть `subscribe()` (как раньше) и `Symbol.observable`, но нет `pipe`.
+  Операторы — через `toObservable(x)` (или rxjs `from(x)`): `selector.$.pipe(…)` → `toObservable(selector).pipe(…)`;
+  `new XEffects(api, coreSynapse.state$)` → `new XEffects(api, toObservable(coreSynapse.state$))`.
+  Внутри эффектов (`action$`, `state$` рецепта) ничего не меняется — это по-прежнему rxjs `Observable`.
+- **Голая функция в `effects` `createSynapse`** больше не принимается: оборачивайте в `createEffect(fn)` /
+  `combineEffects(…)` (иначе — понятная ошибка при старте). Инстансы `Effects` (`new XEffects()`) — без изменений.
+  Причина: ядро не импортирует `EffectsModule`; раннер эффектов приносят сами эффекты из `reactive`.
+
+**Новое:**
+
+- `toObservable` принимает, помимо хранилища, селектор (`toObservable(selector)`) и любой поток ядра.
+- Типы `InteropObservable`, `Subscribable`, `Observer`, `Unsubscribable` (экспорт из `core`).
+- `useObservable`/`useSubscription` принимают любой поток с `subscribe` (rxjs `Observable`, `selector.$`, …);
+  `useStorageObservable` больше не использует rxjs. `externalStates` в `EffectsModule` принимают и потоки ядра.
+
+**Tree-shaking** (потребитель платит только за импортированное):
+
+- `"sideEffects": false` в `package.json` — настоящих side effects при импорте в пакете нет.
+- Модули без top-level кода, который бандлер не может доказать чистым (для инструментов, игнорирующих
+  `sideEffects`): фабрики `broadcastMiddleware`/`syncBroadcastMiddleware`/`sharedWorkerMiddleware`/
+  `syncSharedWorkerMiddleware` помечены `/*#__PURE__*/`; `createSynapse` собирается `Object.assign(fn, { of })`
+  вместо `createSynapse.of = …`; у `Dispatcher` нет метода с вычисляемым ключом `[FINALIZE]()` (вызов
+  `dispatcher[FINALIZE]()` работает как раньше); `loggerConsole` обращается к `globalThis.console` лениво.
+
+**Вес** (min+gzip, rolldown / Vite 7+, против npm 6.2.0): `MemoryStorage` 15.4 → 7.1 KB; `ApiClient` 15.4 → 6.9 KB;
+`Dispatcher` 13.1 → 3.1 KB; `MemoryStorage + Selectors` 17.2 → 9.2 KB; модуль `createSynapse` без эффектов
+24.3 → 12.8 KB; приложение без rxjs (модуль + `createSynapseCtx` + `ApiClient` + хуки + `LocalStorage`)
+32.8 → 21.1 KB. Путь с эффектами — без заметных изменений (+0.7 KB за interop-мост). Замер — `yarn size`.
+
+**Документация.** README и `install`, `architecture`, `selector-system`, `synapse-ctx`, `to-observable`,
+`use-storage-observable`, `reactive-reads`, `create-synapse-*`, `dispatcher-detailed`, `event-bus` (обе локали)
+описывают опциональный rxjs, interop-потоки и миграцию. Убраны упоминания несуществующего хука `useStorageRef`.
+
 ## [6.2.0] - 2026-10-04 — API-слой: единый `ApiError`, 204 — успех, исправления по аудиту
 
 - **`apiResult`: успешный ответ без тела (204 / пустой 200) больше не ошибка.** Оператор требовал

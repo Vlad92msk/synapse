@@ -2,8 +2,10 @@ import { merge, Observable, of, Subject } from 'rxjs'
 import { catchError, retry, shareReplay } from 'rxjs/operators'
 
 import { handleCallbackError } from '../../_utils/error-handling.util'
-import { IStorage } from '../../core'
-import { Action, DispatcherCore } from '../dispatcher'
+import type { Subscribable } from '../../core/observable/interop-observable'
+import type { IStorage } from '../../core/storage/storage.interface'
+import { EFFECTS_RUNNER, type EffectsRunner } from '../../utils/createSynapse/effects-runner'
+import type { Action, DispatcherCore } from '../dispatcher'
 import { type Effect, EFFECT_NAME, EFFECT_OPTIONS, type EffectContext, type EffectOptions, type ExternalStates, type NormalizedExternalStates } from './effects.types'
 import { PreStartActionBuffer } from './preStartActionBuffer'
 import { isStorage, toObservable } from './utils'
@@ -48,7 +50,7 @@ export class EffectsModule<
    */
   constructor(
     private storage: IStorage<TState>,
-    private dispatcher: TDispatcher & { actions: Observable<Action> },
+    private dispatcher: TDispatcher & { actions: Subscribable<Action> },
     private externalDispatchers: TExternalDispatchers = {} as TExternalDispatchers,
     private services: TServices = {} as TServices,
     private config: TConfig = {} as TConfig,
@@ -76,7 +78,7 @@ export class EffectsModule<
   private normalizeExternalStates(states: TExternalStates): NormalizedExternalStates<TExternalStates> {
     const normalized = {} as Record<string, Observable<any>>
     for (const [key, value] of Object.entries(states)) {
-      normalized[key] = isStorage(value) ? toObservable(value) : value
+      normalized[key] = isStorage(value) ? toObservable(value) : value instanceof Observable ? value : toObservable(value as Subscribable<any>)
     }
     return normalized as NormalizedExternalStates<TExternalStates>
   }
@@ -244,6 +246,31 @@ export class EffectsModule<
 }
 
 /**
+ * Раннер эффектов для rxjs-free ядра (`createSynapse`): ядро не импортирует EffectsModule,
+ * а берёт этот раннер с самих функций-эффектов (см. utils/createSynapse/effects-runner.ts).
+ */
+const runEffects: EffectsRunner = (effects, ctx) => {
+  const effectsModule = new EffectsModule<any>(ctx.storage, ctx.dispatcher as any, ctx.externalDispatchers as any)
+  if (ctx.preStartBuffer) effectsModule.setPreStartBuffer(ctx.preStartBuffer)
+  effectsModule.addEffects(effects as Effect[])
+  return {
+    start: () => effectsModule.start(),
+    stop: () => {
+      effectsModule.stop()
+    },
+  }
+}
+
+/**
+ * Помечает функцию-эффект раннером, чтобы `createSynapse` мог её запустить.
+ * @internal
+ */
+export function markEffect<T extends (...args: any[]) => unknown>(effect: T): T {
+  ;(effect as { [EFFECTS_RUNNER]?: EffectsRunner })[EFFECTS_RUNNER] = runEffects
+  return effect
+}
+
+/**
  * Вспомогательная функция для создания типизированного эффекта
  */
 export function createEffect<
@@ -256,7 +283,7 @@ export function createEffect<
 >(
   effect: Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates>,
 ): Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates> {
-  return effect
+  return markEffect(effect)
 }
 
 /**
@@ -274,7 +301,7 @@ export function combineEffects<
 >(
   ...effects: Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates>[]
 ): Effect<TState, TDispatcher, TServices, TConfig, TExternalDispatchers, TExternalStates> {
-  return (action$, state$, context) => {
+  return markEffect((action$, state$, context) => {
     const outputs = effects.map((effect) => {
       try {
         return effect(action$, state$, context)
@@ -284,5 +311,5 @@ export function combineEffects<
       }
     })
     return merge(...outputs)
-  }
+  })
 }

@@ -1,5 +1,5 @@
 // Этап 3 ROADMAP — class-based `Selectors<TState>` (+ keyed) и `SelectorAPI.$`.
-import { Observable } from 'rxjs'
+import { from, Observable } from 'rxjs'
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators'
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
 
@@ -180,7 +180,9 @@ describe('keyed-селекторы', () => {
 
 describe('SelectorAPI.$', () => {
   it('эмит текущего значения при подписке + при каждом реальном изменении', async () => {
-    expect(selectors.postsStatus.$).toBeInstanceOf(Observable)
+    // Поток ядра — не rxjs Observable (ядро без rxjs), но interop: rxjs `from()` его принимает.
+    expect(selectors.postsStatus.$).not.toBeInstanceOf(Observable)
+    expect(from(selectors.postsStatus.$)).toBeInstanceOf(Observable)
 
     const received: string[] = []
     const sub = selectors.postsStatus.$.subscribe((v) => {
@@ -205,13 +207,15 @@ describe('SelectorAPI.$', () => {
     sub.unsubscribe()
   })
 
-  it('совместим с pipe(debounceTime) — задебаунсенное производное прямо из селектора', async () => {
+  it('rxjs-interop: from(selector.$).pipe(debounceTime) — задебаунсенное производное', async () => {
     vi.useFakeTimers()
     try {
       const received: string[] = []
-      const sub = selectors.postsStatus.$.pipe(debounceTime(300), distinctUntilChanged()).subscribe((v) => {
-        received.push(v)
-      })
+      const sub = from(selectors.postsStatus.$)
+        .pipe(debounceTime(300), distinctUntilChanged())
+        .subscribe((v) => {
+          received.push(v)
+        })
 
       await postsStorage.update((s) => {
         s.api.postsRequest.status = 'a'

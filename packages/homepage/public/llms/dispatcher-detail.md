@@ -11,7 +11,7 @@
 | A pure intent with no write (caught by an effect) | `this.signal<P>(desc)` |
 | A group of API-request statuses (idle/loading/success/failure/reset) | `this.apiActions<P>(accessor)` |
 | The same, but status per key (parallel requests) | `this.keyedApiActions<P>(accessor)` |
-| Reactively observe a slice of state (Observable) | `this.watcher({ selector })` |
+| Reactively observe a slice of state (stream) | `this.watcher({ selector })` |
 
 The [assembly page](./create-synapse-dispatcher.md) shows the minimum; here are **all** the factories
 with their options (`meta`/`memoize`), the `ofType` rule for `apiActions`, and standalone use without
@@ -153,7 +153,8 @@ d.loadDetailsById.failure({ key: '25', error: 'msg' })
 
 ## this.watcher
 
-A reactive watcher over a slice of state, returning an RxJS `Observable`. In pokemon —
+A reactive watcher over a slice of state, returning a stream (interop: `subscribe` works without RxJS,
+operators — via `toObservable(...)`). In pokemon —
 `watchFavoriteCount` (with `meta` and `notifyAfterSubscribe`).
 
 ```typescript
@@ -172,7 +173,7 @@ class PokemonDispatcher extends Dispatcher<PokemonState> {
   })
 }
 
-// Subscribe — through the watchers registry (calling the factory → Observable)
+// Subscribe — through the watchers registry (calling the factory → stream)
 const sub = dispatcher.watchers.watchFavoriteCount().subscribe((action) => {
   console.log('favorites:', action.payload)
 })
@@ -197,7 +198,7 @@ dispatcher.loadMore()
 dispatcher.dispatch.selectPokemon.actionType  // '[pokemon-advanced]selectPokemon'
 dispatcher.dispatch.toggleFavorite.meta       // { description: 'Add/remove from favorites' }
 
-// Subscribing to watchers (RxJS Observable)
+// Subscribing to watchers (a stream; no RxJS needed)
 const sub = dispatcher.watchers.watchFavoriteCount().subscribe((action) => {
   console.log('favorites:', action.payload)
 })

@@ -3,34 +3,35 @@
 # useStorageObservable / useObservable
 
 
-**TL;DR.** The RxJS path for "store → reactive in a component". Two hooks:
+**TL;DR.** The stream path for "store → reactive in a component". Two hooks (neither requires RxJS):
 
-- **`useStorageObservable(storage[, selector])`** — sugar: a store slice into render via RxJS, with no
-  operators of your own. Equivalent to [`useStorageSubscribe`](./use-storage-subscribe.md), only inside
-  RxJS.
-- **`useObservable(source, initial[, deps])`** — subscribe to **any** `Observable` (your own `pipe(...)`
-  or `selector.$`) and return its value to render. This is one level down: here you build the stream
-  yourself.
+- **`useStorageObservable(storage[, selector])`** — sugar: a store slice into render via a stream
+  subscription, with no operators of your own. Equivalent to
+  [`useStorageSubscribe`](./use-storage-subscribe.md).
+- **`useObservable(source, initial[, deps])`** — subscribe to **any** stream with `subscribe` (an RxJS
+  `Observable` with your own `pipe(...)`, or `selector.$`) and return its value to render. This is one
+  level down: here you build the stream yourself.
 
-Need operators (`debounceTime`, `scan`, `bufferTime`)? Reach for `toObservable` + `useObservable`. Both
-are imported from `synapse-storage/react`. The examples use the end-to-end `todoStorage`
+Need operators (`debounceTime`, `scan`, `bufferTime`)? Reach for `toObservable` (from
+`synapse-storage/reactive`, requires `rxjs`) + `useObservable`. The hooks are imported from
+`synapse-storage/react`. The examples use the end-to-end `todoStorage`
 (`TodoState = { todos: Todo[]; filter: Filter }`).
 
 ## Why
 
 `useStorageSubscribe` returns a slice as is. As soon as you need **stream processing** between the store
 and render (smooth it with a debounce, accumulate with `scan`, collapse with `bufferTime`), you need
-RxJS. `useObservable` subscribes to a ready `Observable` in `useEffect` and puts the latest value into
-state; `useStorageObservable` is a thin wrapper over `toObservable` + `useObservable` for the common case
-of "just a slice, no operators of your own".
+RxJS. `useObservable` subscribes to a ready stream in `useEffect` and puts the latest value into
+state; `useStorageObservable` is a thin wrapper (a store stream + `useObservable`) for the common case
+of "just a slice, no operators of your own" — it needs no RxJS.
 
 ## When to use / when you don't need it
 
-**`useStorageObservable`** — you need a store slice into render, but for ideological/stylistic reasons
-through RxJS, with no operators of your own. If there are no operators and RxJS isn't important —
+**`useStorageObservable`** — you need a store slice into render through a stream subscription (as in
+`useObservable`), with no operators of your own. If there are no operators and RxJS isn't important —
 [`useStorageSubscribe`](./use-storage-subscribe.md) is simpler.
 
-**`useObservable`** — you have **your own `Observable`**: an assembled `toObservable(...).pipe(...)`,
+**`useObservable`** — you have **your own stream**: an assembled `toObservable(...).pipe(...)`,
 `selector.$`, or an external RxJS source, and its value is needed **in render**.
 
 **Neither is needed** if:
@@ -42,13 +43,13 @@ through RxJS, with no operators of your own. If there are no operators and RxJS 
 ## Signatures
 
 ```typescript
-// sugar: a store slice into render via RxJS
+// sugar: a store slice into render (no RxJS)
 useStorageObservable<S>(storage: IStorageBase<S>): S
 useStorageObservable<S, R>(storage: IStorageBase<S>, selector: (state: S) => R): R
 
-// low level: any Observable → value into render
+// low level: any stream with subscribe (RxJS Observable, selector.$, …) → value into render
 useObservable<T>(
-  source: Observable<T> | (() => Observable<T>),
+  source: Subscribable<T> | (() => Subscribable<T>),
   initialValue: T,
   deps?: DependencyList,
 ): T
@@ -275,7 +276,7 @@ const label = useObservable(
 
 | Parameter | Type | Description |
 |---|---|---|
-| `source` | `Observable<T> \| (() => Observable<T>)` | A ready stream or a factory. A factory is for your own operators. |
+| `source` | `Subscribable<T> \| (() => Subscribable<T>)` | A ready stream (RxJS `Observable`, `selector.$`, …) or a factory. A factory is for your own operators. |
 | `initialValue` | `T` | Value before the first emit. |
 | `deps?` | `DependencyList` | Re-subscription. Default `[]` for a factory, `[source]` for a direct Observable. |
 
@@ -283,8 +284,9 @@ const label = useObservable(
 
 - A `toObservable` selector stream already runs through `distinctUntilChanged` — an extra
   `distinctUntilChanged` right after the selector is almost always redundant.
-- `useObservable` also accepts `selector.$` directly (the Observable form of `SelectorAPI`) — you can do
-  `useObservable(selectors.active.$.pipe(debounceTime(300)), initial)`, see [Selectors](./selector-system.md).
+- `useObservable` also accepts `selector.$` directly (the stream form of `SelectorAPI`, no RxJS needed);
+  with operators — `useObservable(() => toObservable(selectors.active).pipe(debounceTime(300)), initial, [])`,
+  see [Selectors](./selector-system.md).
 
 ## See also
 

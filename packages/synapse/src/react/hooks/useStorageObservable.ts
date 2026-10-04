@@ -1,20 +1,17 @@
 import { useMemo } from 'react'
-import { Observable } from 'rxjs'
 
-import { IStorageBase } from '../../core'
-import { toObservable } from '../../reactive/effects/utils/toObservable'
+import { type InteropObservable, SimpleObservable } from '../../core/observable/interop-observable'
+import type { IStorageBase } from '../../core/storage/storage.interface'
 import { useObservable } from './useObservable'
 
 /**
- * RxJS-путь «store → реактивно в компоненте» без footgun'а с пере-подпиской.
+ * Поток-путь «store → реактивно в компоненте» без footgun'а с пере-подпиской (rxjs не требуется).
  *
- * Оборачивает {@link toObservable} в `useMemo` по `[storage]` и подписывается
- * через {@link useObservable}. Без этой обёртки инлайновый `toObservable(storage)`
- * в рендере создавал бы новый Observable на каждый рендер и провоцировал лишние
- * пере-подписки.
+ * Строит поток состояния (или среза — с пропуском повторов по `Object.is`) один раз на `storage`
+ * и подписывается через {@link useObservable}.
  *
- * Эквивалентно `useStorageSubscribe`, но через RxJS — берите его, если нужны
- * операторы (`debounceTime`, `scan` и т.п.) поверх потока состояния.
+ * Эквивалентно `useStorageSubscribe`. Нужны операторы rxjs (`debounceTime`, `scan`) — используйте
+ * `useObservable(() => toObservable(storage).pipe(...), initial, [storage])`.
  *
  * @example
  * ```ts
@@ -32,8 +29,23 @@ import { useObservable } from './useObservable'
 export function useStorageObservable<S extends Record<string, any>>(storage: IStorageBase<S>): S
 export function useStorageObservable<S extends Record<string, any>, R>(storage: IStorageBase<S>, selector: (state: S) => R): R
 export function useStorageObservable<S extends Record<string, any>, R>(storage: IStorageBase<S>, selector?: (state: S) => R): S | R {
-  const observable = useMemo<Observable<S | R>>(
-    () => (selector ? toObservable(storage, selector) : toObservable(storage)),
+  const observable = useMemo<InteropObservable<S | R>>(
+    () =>
+      new SimpleObservable<S | R>((observer) => {
+        let hasValue = false
+        let last: S | R | undefined
+        const emit = () => {
+          const state = storage.getStateSync()
+          const value = selector ? selector(state) : state
+          // Срез — только при реальном изменении (как distinctUntilChanged); весь стейт — на каждое изменение.
+          if (selector && hasValue && Object.is(value, last)) return
+          hasValue = true
+          last = value
+          observer.next(value)
+        }
+        emit()
+        return storage.subscribeToAll(emit)
+      }),
     // selector намеренно не в deps: пересоздавать поток на каждую новую ссылку
     // селектора не нужно (он редко стабилен), переподписка идёт только по storage.
     [storage],

@@ -33,8 +33,8 @@ How it all fits together:
   `useSelector` (from a `SelectorAPI`). 90% of cases.
 - **You need RxJS operators** → first `toObservable(storage, selector)` builds the stream; then in React it
   is subscribed by `useObservable` (a value into render) or `useSubscription` (a side effect).
-  `useStorageObservable` is sugar over `toObservable` + `useObservable` for the "just a slice without your
-  own operators" case.
+  `useStorageObservable` is sugar (a store stream + `useObservable`, no RxJS) for the "just a slice without
+  your own operators" case.
 - **Outside React** (effects, watchers, non-React modules) → only `toObservable`.
 
 ## Reading without a re-render is not a hook

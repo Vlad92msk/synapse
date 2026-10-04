@@ -1,5 +1,6 @@
 import { DependencyList, useEffect } from 'react'
-import { Unsubscribable } from 'rxjs'
+
+import type { Unsubscribable } from '../../core/observable/interop-observable'
 
 /**
  * Императивная подписка-side-effect без возврата значения в рендер.

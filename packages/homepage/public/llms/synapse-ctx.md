@@ -39,7 +39,7 @@ const {
   useSynapseStorage,    // () => IStorage<PokemonState>
   useSynapseSelectors,  // () => PokemonSelectors
   useSynapseActions,    // () => PokemonDispatcher (actions)
-  useSynapseState$,     // () => Observable<PokemonState> (only with effects)
+  useSynapseState$,     // () => InteropObservable<PokemonState> (only with effects)
   cleanupSynapse,       // () => Promise<void>
 } = createSynapseCtx(pokemonSynapse, {
   loadingComponent: <div>Loading the pokedex...</div>,  // FALLBACK render: only if the store couldn't be
@@ -115,7 +115,8 @@ const PokedexWithContext = contextSynapse(Pokedex)
 
 ```typescript
 // Available only if effects were passed to the factory (pokemon — yes).
-// Returns Observable<PokemonState> for use with RxJS.
+// Returns the state stream (interop: `subscribe` works without RxJS;
+// for RxJS operators — `toObservable(state$)` from synapse-storage/reactive).
 
 const { useSynapseState$ } = createSynapseCtx(pokemonSynapse)
 
@@ -131,21 +132,23 @@ function StateLogger() {
 
 ## Reactive reads in a component
 
-Writes still go through actions, but reading can be reactive — straight from the selector's stream (`.$`):
+Writes still go through actions, but reading can be reactive — from the selector's stream. `useObservable`
+accepts `selectors.x.$` directly; RxJS operators come via `toObservable(selector)`:
 
 ```typescript
 import { useObservable, useSubscription } from 'synapse-storage/react'
+import { toObservable } from 'synapse-storage/reactive'
 
 function DebouncedSearch() {
   const selectors = useSynapseSelectors()
 
   const debounced = useObservable(
-    () => selectors.searchQuery.$.pipe(debounceTime(300), distinctUntilChanged()),
+    () => toObservable(selectors.searchQuery).pipe(debounceTime(300), distinctUntilChanged()),
     '',
     [selectors],
   )
 
-  useSubscription(() => selectors.favoriteCount.$.pipe(skip(1), tap(logFavChange)).subscribe(), [selectors])
+  useSubscription(() => toObservable(selectors.favoriteCount).pipe(skip(1), tap(logFavChange)).subscribe(), [selectors])
 
   return <div>{debounced}</div>
 }
@@ -302,7 +305,7 @@ export const presenceSynapse = createSynapse({
   selectors: (s) => new PresenceSelectors(s),
   dependencies: [coreSynapse],                       // gate for the START of effects (not construction)
   // async — client only (endpoints / WS); does not run on the server
-  effects: async () => new PresenceEffects(await getPresenceEndpoints(), coreSynapse.state$),
+  effects: async () => new PresenceEffects(await getPresenceEndpoints(), toObservable(coreSynapse.state$)),
 })
 ```
 

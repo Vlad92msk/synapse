@@ -1,6 +1,6 @@
 import { ComponentType, PropsWithChildren, ReactNode, useEffect, useState } from 'react'
 
-import { type AwaitableSynapse, createSynapseAwaiter } from '../../utils'
+import { type AwaitableSynapse, createSynapseAwaiter } from '../../utils/createSynapseAwaiter'
 
 interface ReactAwaitSynapseOptions {
   loadingComponent?: ReactNode

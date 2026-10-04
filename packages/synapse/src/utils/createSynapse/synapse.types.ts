@@ -1,6 +1,5 @@
-import type { Observable } from 'rxjs'
-
-import type { IStorage } from '../../core'
+import type { InteropObservable } from '../../core/observable/interop-observable'
+import type { IStorage } from '../../core/storage/storage.interface'
 
 /**
  * Handle C-формы: как {@link SynapseModule}, но с СИНХРОННЫМ доступом к main-ядру. Конструкция
@@ -10,7 +9,8 @@ import type { IStorage } from '../../core'
  */
 export interface SyncSynapseModule<TState extends Record<string, any>, TDispatcher, TSelectors> extends SynapseModule<TState, TDispatcher, TSelectors> {
   readonly storage: IStorage<TState>
-  readonly state$: Observable<TState>
+  /** Поток состояния (interop, без rxjs); в rxjs — `toObservable(handle.storage)` / `from(handle.state$)`. */
+  readonly state$: InteropObservable<TState>
   readonly dispatcher: TDispatcher
   /** Алиас `dispatcher`. */
   readonly actions: TDispatcher
@@ -32,8 +32,8 @@ export interface SyncSynapseOptions<TState extends Record<string, any>, TDispatc
 /** Готовый synapse — результат `SynapseModule.ready()` (или синхронной конструкции C-формы). */
 export interface Synapse<TState extends Record<string, any>, TDispatcher, TSelectors> {
   storage: IStorage<TState>
-  /** Поток состояния — присутствует ВСЕГДА, даже без эффектов. */
-  state$: Observable<TState>
+  /** Поток состояния (interop, без rxjs) — присутствует ВСЕГДА, даже без эффектов. */
+  state$: InteropObservable<TState>
   /** Инстанс class-диспетчера (`undefined`, если нет). */
   dispatcher: TDispatcher
   /** Алиас `dispatcher`: его поля и есть dispatch-функции. */

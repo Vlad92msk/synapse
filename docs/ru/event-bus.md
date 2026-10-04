@@ -57,7 +57,7 @@ const eventBus = await eventBusHandle
 //   actions: EventBusDispatcher            — типизированные экшены (алиас dispatcher)
 //   dispatcher: EventBusDispatcher         — тот же инстанс диспетчера
 //   selectors: undefined                   — селекторов у шины нет
-//   state$: Observable<EventBusState>      — поток состояния (есть всегда)
+//   state$: InteropObservable<EventBusState> — поток состояния (есть всегда; RxJS не нужен)
 //   destroy: () => Promise<void>           — очистка
 // }
 

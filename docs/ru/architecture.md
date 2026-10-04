@@ -65,7 +65,8 @@ storage.update((s) => { s.count++ })   // Immer-like
 Но без тяжёлого DI-контейнера — нужна **форма**, а не IoC-механизм.
 
 ```typescript
-import { Dispatcher, Effects, ofType, validateMap, fromRequest, apiResult } from 'synapse-storage/reactive'
+import { Dispatcher } from 'synapse-storage/dispatcher'
+import { Effects, ofType, validateMap, fromRequest, apiResult } from 'synapse-storage/reactive' // rxjs
 import { Selectors, MemoryStorage } from 'synapse-storage/core'
 import { createSynapse } from 'synapse-storage/utils'
 
@@ -111,8 +112,10 @@ export const postsSynapse = createSynapse({
 ## Почему это разделение важно
 
 1. **Можно брать только то, что нужно.** Нужен лишь реактивный кэш в IndexedDB — берёшь
-   State Manager и не тянешь RxJS. Нужен полноценный модуль с сетью — добавляешь BL-слой.
-   `rxjs`/`react` — опциональные peer-зависимости именно поэтому.
+   хранилище. Нужны экшены и модуль — добавляешь `Dispatcher`/`Selectors`/`createSynapse`. Всему
+   этому RxJS не нужен: `rxjs` требуется только `Effects` (`synapse-storage/reactive`), а `react` —
+   только `synapse-storage/react`. Пакет tree-shakeable, так что платишь только за импортированное
+   (см. [Установка](./install.md)).
 
 2. **Граница ответственности.** State Manager не знает про намерения и сеть; BL-слой не
    знает, *как* физически хранится состояние. Меняешь `MemoryStorage` на `IndexedDBStorage` —

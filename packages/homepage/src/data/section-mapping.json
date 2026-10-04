@@ -262,7 +262,7 @@
   "install": {
     "0": "install",
     "1": "installing-the-package",
-    "2": "optional-peer-dependencies",
+    "2": "peer-dependencies",
     "3": "imports-by-layer-sub-entrypoints",
     "4": "see-also"
   },

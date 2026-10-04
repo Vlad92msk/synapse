@@ -1,5 +1,5 @@
 import { handleOperationError } from '../../_utils/error-handling.util'
-import type { IStorageBase } from '../../core'
+import type { IStorageBase } from '../../core/storage/storage.interface'
 import type { DependencyInput } from './types'
 
 const DEFAULT_DEPENDENCY_TIMEOUT = 30_000

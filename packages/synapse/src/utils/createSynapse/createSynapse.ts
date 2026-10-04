@@ -1,5 +1,7 @@
-import type { IStorage, Selectors } from '../../core'
-import type { Dispatcher, Effect, Effects } from '../../reactive'
+import type { Selectors } from '../../core/selector/selectors.base'
+import type { IStorage } from '../../core/storage/storage.interface'
+import type { Dispatcher } from '../../reactive/dispatcher/dispatcher.base'
+import type { EffectFunctionLike, EffectsLike } from './effects-runner'
 import type { SyncSynapseModule, SyncSynapseOptions } from './synapse.types'
 import { createSyncSynapseModule, type SyncEffectsContext } from './syncModule'
 import type { DependencyInput } from './types'
@@ -7,14 +9,16 @@ import type { DependencyInput } from './types'
 /** Выводит форму состояния из типа хранилища: `IStorage<T>` → `T`. Даёт вывести `TState` из `storage: () => new MemoryStorage<State>()`. */
 type StateOf<TStorage> = TStorage extends IStorage<infer TState> ? TState : never
 
-/** Что может вернуть фабрика `effects`: инстанс(ы) `Effects`/функции-эффекты, возможно асинхронно (ленивый резолв endpoints). */
-type SyncEffectsResult<TState extends Record<string, any>> =
-  | Effects<TState, any, any>
-  | Array<Effects<TState, any, any> | Effect>
-  | undefined
-  | Promise<Effects<TState, any, any> | Array<Effects<TState, any, any> | Effect> | undefined>
+/**
+ * Что может вернуть фабрика `effects`: инстанс(ы) `Effects`/функции-эффекты из `synapse-storage/reactive`,
+ * возможно асинхронно (ленивый резолв endpoints). Типы структурные — `.d.ts` ядра не ссылается на rxjs.
+ */
+type SyncEffectsItems = EffectsLike | EffectFunctionLike | Array<EffectsLike | EffectFunctionLike> | undefined
+type SyncEffectsResult = SyncEffectsItems | Promise<SyncEffectsItems>
 
 /**
+ * Реализация {@link createSynapse} (основная сигнатура).
+ *
  * Создаёт ленивый class-based synapse (C-форма): синхронная конструкция ядра
  * (`storage`/`dispatcher`/`selectors`) + `dependencies` (гейт старта эффектов) + фабрика `effects`.
  * Возвращает {@link SyncSynapseModule} — с синхронным доступом к main-ядру (`.selectors` и т.д.)
@@ -31,7 +35,7 @@ type SyncEffectsResult<TState extends Record<string, any>> =
  * })
  * ```
  */
-export function createSynapse<
+function createSynapseImpl<
   TStorage extends IStorage<any>,
   TDispatcher extends Dispatcher<StateOf<TStorage>> | undefined = undefined,
   TSelectors extends Selectors<StateOf<TStorage>> | undefined = undefined,
@@ -43,7 +47,7 @@ export function createSynapse<
     dependencies?: DependencyInput[]
     dependencyTimeout?: number
     externalDispatchers?: Record<string, Dispatcher<any>> | ((ctx: SyncEffectsContext<StateOf<TStorage>, TDispatcher, TSelectors>) => Record<string, Dispatcher<any>>)
-    effects?: (ctx: SyncEffectsContext<StateOf<TStorage>, TDispatcher, TSelectors>) => SyncEffectsResult<StateOf<TStorage>>
+    effects?: (ctx: SyncEffectsContext<StateOf<TStorage>, TDispatcher, TSelectors>) => SyncEffectsResult
   },
   options?: SyncSynapseOptions<StateOf<TStorage>, TDispatcher, TSelectors>,
 ): SyncSynapseModule<StateOf<TStorage>, TDispatcher, TSelectors> {
@@ -63,11 +67,7 @@ export function createSynapse<
  * )
  * ```
  */
-createSynapse.of = function of<
-  TState extends Record<string, any>,
-  TDispatcher extends Dispatcher<TState> | undefined = undefined,
-  TSelectors extends Selectors<TState> | undefined = undefined,
->(
+function of<TState extends Record<string, any>, TDispatcher extends Dispatcher<TState> | undefined = undefined, TSelectors extends Selectors<TState> | undefined = undefined>(
   config: {
     storage: () => IStorage<TState>
     dispatcher?: (storage: IStorage<TState>) => TDispatcher
@@ -75,9 +75,19 @@ createSynapse.of = function of<
     dependencies?: DependencyInput[]
     dependencyTimeout?: number
     externalDispatchers?: Record<string, Dispatcher<any>> | ((ctx: SyncEffectsContext<TState, TDispatcher, TSelectors>) => Record<string, Dispatcher<any>>)
-    effects?: (ctx: SyncEffectsContext<TState, TDispatcher, TSelectors>) => SyncEffectsResult<TState>
+    effects?: (ctx: SyncEffectsContext<TState, TDispatcher, TSelectors>) => SyncEffectsResult
   },
   options?: SyncSynapseOptions<TState, TDispatcher, TSelectors>,
 ): SyncSynapseModule<TState, TDispatcher, TSelectors> {
   return createSyncSynapseModule<TState, TDispatcher, TSelectors>({ ...config, postConstruct: options?.postConstruct } as any)
 }
+
+/**
+ * Создаёт ленивый class-based synapse (C-форма). Основная сигнатура выводит `TState` из фабрики
+ * `storage`; `createSynapse.of<TState, TDispatcher, TSelectors>(…)` — явно-типизированный вариант.
+ *
+ * Собирается чистым выражением (`Object.assign` под `#__PURE__`), а не присваиванием
+ * `createSynapse.of = …` на верхнем уровне модуля: иначе бандлеры считают модуль имеющим
+ * side effect и не могут выкинуть его (вместе с reactive-слоем и rxjs) при неиспользовании.
+ */
+export const createSynapse = /*#__PURE__*/ Object.assign(createSynapseImpl, { of })

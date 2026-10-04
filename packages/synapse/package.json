@@ -1,11 +1,12 @@
 {
   "name": "synapse-storage",
-  "version": "6.2.0",
+  "version": "7.0.0",
   "description": "Набор инструментов для управления состоянием и апи-запросами",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "sideEffects": false,
   "files": [
     "dist"
   ],
@@ -32,6 +33,7 @@
   "private": false,
   "scripts": {
     "build": "rslib build",
+    "postbuild": "node ../../scripts/bundle-size/run.mjs --postbuild",
     "watch": "rslib build --watch",
     "typecheck": "tsc -p tsconfig.test.json",
     "test": "yarn typecheck && vitest run",
@@ -53,6 +55,10 @@
     "./core": {
       "types": "./dist/core/index.d.ts",
       "import": "./dist/core/index.js"
+    },
+    "./dispatcher": {
+      "types": "./dist/reactive/dispatcher/index.d.ts",
+      "import": "./dist/reactive/dispatcher/index.js"
     },
     "./reactive": {
       "types": "./dist/reactive/index.d.ts",

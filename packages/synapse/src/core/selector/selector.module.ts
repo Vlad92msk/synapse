@@ -1,5 +1,4 @@
-import { Observable } from 'rxjs'
-
+import { SimpleObservable } from '../observable/interop-observable'
 import type { ILogger, IStorage, StorageInitStatus } from '../storage'
 import { StorageStatus } from '../storage'
 import type { ISelectorModule, Selector, SelectorAPI, SelectorOptions, Subscriber } from './selector.interface'
@@ -241,7 +240,7 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
   }
 
   /**
-   * Собирает публичный `SelectorAPI` поверх подписки. `$` — Observable-вид с той же
+   * Собирает публичный `SelectorAPI` поверх подписки. `$` — interop-поток (без rxjs) с той же
    * семантикой, что у `subscribe`: синхронный снапшот при подписке + emit на изменение.
    *
    * `sourceReadiness` переопределяет дефолтную (локальную) готовность источника: для
@@ -259,7 +258,7 @@ export class SelectorModule<S extends Record<string, any>> implements ISelectorM
       selectSync: () => subscription.getValue(),
       subscribe: (subscriber) => subscription.subscribe(subscriber),
       getId: () => id,
-      $: new Observable<T>((observer) => subscription.subscribe({ notify: (value) => observer.next(value) })),
+      $: new SimpleObservable<T>((observer) => subscription.subscribe({ notify: (value) => observer.next(value) })),
       isSourceReady: sourceReadiness?.isSourceReady ?? this.isSourceReady,
       onSourceStatusChange: sourceReadiness?.onSourceStatusChange ?? this.onSourceStatusChange,
     }

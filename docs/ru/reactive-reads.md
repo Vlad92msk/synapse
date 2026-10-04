@@ -32,8 +32,8 @@
   `SelectorAPI`). 90 % случаев.
 - **Нужны RxJS-операторы** → сначала `toObservable(storage, selector)` строит поток; дальше в React его
   подписывает `useObservable` (значение в рендер) или `useSubscription` (side-effect).
-  `useStorageObservable` — сахар над `toObservable` + `useObservable` для случая «просто срез без своих
-  операторов».
+  `useStorageObservable` — сахар (поток стора + `useObservable`, без RxJS) для случая «просто срез без
+  своих операторов».
 - **Вне React** (эффекты, watcher-ы, не-React модули) → только `toObservable`.
 
 ## Прочитать без ререндера — это не хук

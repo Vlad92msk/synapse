@@ -1,27 +1,24 @@
 import type { Observable } from 'rxjs'
 
-import type { IStorageBase } from '../../core'
-import type { Action, ActionsResult, DispatcherCore, DispatchFunction } from '../dispatcher'
+import type { Subscribable } from '../../core/observable/interop-observable'
+import type { IStorageBase } from '../../core/storage/storage.interface'
+import type { Action, ActionsResult, DispatcherCore, DispatchFunction, TypedAction } from '../dispatcher'
+
+// TypedAction живёт в диспетчере (ядро без rxjs); реэкспорт — для совместимости импортов.
+export type { TypedAction }
 
 /**
- * Тип действия с типизированным payload
+ * Тип для внешних состояний — Observable, хранилище (IStorageBase) или поток ядра (`synapse.state$`),
+ * которые автоматически конвертируются в Observable
  */
-export interface TypedAction<P> extends Action<P> {
-  type: string
-  payload: P
-}
-
-/**
- * Тип для внешних состояний — Observable или хранилище (IStorageBase), которое автоматически конвертируется в Observable
- */
-export type ExternalStates = Record<string, Observable<any> | IStorageBase<any>>
+export type ExternalStates = Record<string, Observable<any> | IStorageBase<any> | Subscribable<any>>
 
 /**
  * Внешние состояния в том виде, в каком их видит эффект: хранилища (`IStorageBase<S>`) уже
  * сконвертированы `EffectsModule` в `Observable<S>`, Observable'ы — как есть.
  */
 export type NormalizedExternalStates<T extends ExternalStates> = {
-  [K in keyof T]: T[K] extends IStorageBase<infer S> ? Observable<S> : T[K]
+  [K in keyof T]: T[K] extends IStorageBase<infer S> ? Observable<S> : T[K] extends Observable<any> ? T[K] : T[K] extends Subscribable<infer V> ? Observable<V> : T[K]
 }
 
 /**
