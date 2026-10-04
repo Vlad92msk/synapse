@@ -14,6 +14,7 @@ import { MemoryStorage } from '../../../core/storage/adapters/memory-storage.ser
 import type { IStorage } from '../../../core/storage/storage.interface'
 import { Dispatcher } from '../../dispatcher/dispatcher.base'
 import { EffectsModule } from '../effects.module'
+import type { Effect } from '../effects.types'
 import { ofType, selectorObject } from '../operators'
 import { PreStartActionBuffer } from '../preStartActionBuffer'
 
@@ -37,12 +38,12 @@ function makeStorage(kind: Kind): IStorage<State> {
 }
 
 /** Эффект как `PostsEffects.mounted` в sn_client: ofType → withLatestFrom(selectorObject(state$)). */
-function withStateEffect(seen: Array<[number, number]>) {
-  return (action$: any, state$: any, { dispatcher }: any) =>
+function withStateEffect(seen: Array<[number, number]>): Effect<State, TestDispatcher> {
+  return (action$, state$, { dispatcher }) =>
     action$.pipe(
       ofType(dispatcher.dispatch.mounted),
-      withLatestFrom(selectorObject(state$, { count: (s: State) => s.count })),
-      tap(([a, { count }]: [{ payload: number }, { count: number }]) => seen.push([a.payload, count])),
+      withLatestFrom(selectorObject(state$, { count: (s) => s.count })),
+      tap(([a, { count }]) => seen.push([a.payload, count])),
     )
 }
 

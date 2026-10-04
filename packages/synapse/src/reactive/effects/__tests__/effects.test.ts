@@ -7,6 +7,7 @@ import { MemoryStorage } from '../../../core/storage/adapters/memory-storage.ser
 import { Dispatcher } from '../../dispatcher/dispatcher.base'
 import { Effects } from '../effects.base'
 import { EffectsModule } from '../effects.module'
+import type { Effect } from '../effects.types'
 import { ApiError, apiResult, mutationMap, ofType, ofTypes, selectorObject, validateMap } from '../operators'
 import { PreStartActionBuffer } from '../preStartActionBuffer'
 import { fromRequest } from '../utils/fromRequest'
@@ -45,7 +46,7 @@ describe('EffectsModule — lifecycle', () => {
   })
 
   it('эффект вызывается один раз при start() с (action$, state$, context)', async () => {
-    const effect = vi.fn(() => EMPTY)
+    const effect = vi.fn((..._args: Parameters<Effect<State>>) => EMPTY)
     const mod = new EffectsModule(storage, d)
     mod.add(effect)
 
@@ -177,7 +178,7 @@ describe('EffectsModule — lifecycle', () => {
     const mod = new EffectsModule(storage, d, {}, {}, {}, { ext: storageB })
     mod.add((_a$, _s$, { externalStates }) => {
       isObservable = externalStates.ext instanceof Observable
-      return externalStates.ext.pipe(tap((s: any) => extStates.push(s.val)))
+      return externalStates.ext.pipe(tap((s) => extStates.push(s.val)))
     })
     await mod.start()
     await tick()

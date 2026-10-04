@@ -113,7 +113,7 @@ function mountEffects(
 ) {
   dispatcher[FINALIZE]()
   for (const ext of Object.values(externalDispatchers)) ext[FINALIZE]?.()
-  const mod = new EffectsModule<State, TestDispatcher>(storage, dispatcher, externalDispatchers)
+  const mod = new EffectsModule<State, TestDispatcher, any, any, any>(storage, dispatcher, externalDispatchers)
   mod.addEffects([...effectsInstance.getEffects(), ...extraEffects])
   return mod
 }

@@ -10,7 +10,11 @@ export interface SelectorOptions<T> {
 }
 
 export interface Subscriber<T> {
-  notify: (value: T) => void | Promise<void>
+  /**
+   * Возвращаемое значение игнорируется. Тип именно `void` (а не `void | Promise<void>`): только чистый
+   * `void` разрешает колбэку возвращать что угодно — `notify: (v) => list.push(v)` и async-колбэки.
+   */
+  notify: (value: T) => void
 }
 
 export interface SelectorAPI<T> {

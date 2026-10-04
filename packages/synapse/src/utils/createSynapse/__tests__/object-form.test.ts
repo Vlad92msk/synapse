@@ -27,7 +27,7 @@ const name = () => `objform_${uid++}`
 
 describe('createSynapse — C-форма', () => {
   it('buildSyncShell отдаёт READY-ядро синхронно из initialState', () => {
-    const handle = createSynapse<State, CounterDispatcher, CounterSelectors>({
+    const handle = createSynapse.of<State, CounterDispatcher, CounterSelectors>({
       storage: () => new MemoryStorage<State>({ name: name(), initialState }),
       dispatcher: (s) => new CounterDispatcher(s),
       selectors: (s) => new CounterSelectors(s),
@@ -42,7 +42,7 @@ describe('createSynapse — C-форма', () => {
   })
 
   it('каждый вызов оболочки — свежий изолированный storage (request-изоляция)', () => {
-    const handle = createSynapse<State, CounterDispatcher, CounterSelectors>({
+    const handle = createSynapse.of<State, CounterDispatcher, CounterSelectors>({
       storage: () => new MemoryStorage<State>({ name: name(), initialState }),
       selectors: (s) => new CounterSelectors(s),
     })
@@ -54,7 +54,7 @@ describe('createSynapse — C-форма', () => {
   })
 
   it('работает без dispatcher/selectors (только storage)', () => {
-    const handle = createSynapse<State>({
+    const handle = createSynapse.of<State>({
       storage: () => new MemoryStorage<State>({ name: name(), initialState }),
     })
     const shell = handle.buildSyncShell!()!
@@ -82,7 +82,7 @@ describe('createSynapse — C-форма', () => {
   })
 
   it('реальный стор собирается через ready()', async () => {
-    const handle = createSynapse<State, CounterDispatcher, CounterSelectors>({
+    const handle = createSynapse.of<State, CounterDispatcher, CounterSelectors>({
       storage: () => new MemoryStorage<State>({ name: name(), initialState }),
       dispatcher: (s) => new CounterDispatcher(s),
       selectors: (s) => new CounterSelectors(s),

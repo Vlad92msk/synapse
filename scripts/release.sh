@@ -54,7 +54,7 @@ cat <<PLAN
   Режим:                                     $([ "$DRY_RUN" = 1 ] && echo 'DRY-RUN (только валидация)' || echo 'полный релиз')
 
   Фаза 1 — валидация (обратимо):
-    1) тесты synapse (vitest)
+    1) тесты synapse (tsc по src+тестам, затем vitest)
     2) build synapse (dist)
     3) build examples (против свежего dist)
     4) build homepage (docs:generate + docs:llms + ssg + prerender)
@@ -84,9 +84,9 @@ if [ "$DRY_RUN" != 1 ]; then
 fi
 
 # ══ ФАЗА 1 — ВАЛИДАЦИЯ (обратимо) ════════════════════════════════════════════
-step "1/6 Тесты synapse"
+step "1/6 Тесты synapse (typecheck + vitest)"
 yarn workspace synapse-storage test
-ok "тесты прошли"
+ok "типы и тесты прошли"
 
 step "2/6 Сборка synapse (dist)"
 yarn workspace synapse-storage build

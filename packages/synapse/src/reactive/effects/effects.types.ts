@@ -17,6 +17,14 @@ export interface TypedAction<P> extends Action<P> {
 export type ExternalStates = Record<string, Observable<any> | IStorageBase<any>>
 
 /**
+ * Внешние состояния в том виде, в каком их видит эффект: хранилища (`IStorageBase<S>`) уже
+ * сконвертированы `EffectsModule` в `Observable<S>`, Observable'ы — как есть.
+ */
+export type NormalizedExternalStates<T extends ExternalStates> = {
+  [K in keyof T]: T[K] extends IStorageBase<infer S> ? Observable<S> : T[K]
+}
+
+/**
  * Контекст эффекта — объект с зависимостями, передаваемый третьим аргументом
  */
 export interface EffectContext<
@@ -30,8 +38,8 @@ export interface EffectContext<
   dispatcher: TDispatcher
   /** Внешние dispatcher'ы из других synapse */
   externalDispatchers: TExternalDispatchers
-  /** Внешние состояния — Observable'ы от других хранилищ (Synapse.state$, или любой Observable) */
-  externalStates: TExternalStates
+  /** Внешние состояния — Observable'ы (переданные хранилища уже сконвертированы в Observable) */
+  externalStates: NormalizedExternalStates<TExternalStates>
   /** Сервисы (API-клиенты и т.д.) */
   services: TServices
   /** Глобальная конфигурация для эффектов */

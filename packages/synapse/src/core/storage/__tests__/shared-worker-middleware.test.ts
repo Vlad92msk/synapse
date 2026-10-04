@@ -71,7 +71,8 @@ function makeTab(storageName: string): Tab {
   }
 
   const middleware = sharedWorkerMiddleware({ storageType: 'memory', storageName })
-  const unsubscribe = middleware.setup!(api)
+  // setup типизирован как `=> void`, но реализация может вернуть отписку — проверяем в рантайме.
+  const unsubscribe: unknown = middleware.setup!(api)
 
   // Локальное применение действия (эмуляция baseOperation), затем reducer делает broadcast.
   const localApply = async (action: StorageAction) => {

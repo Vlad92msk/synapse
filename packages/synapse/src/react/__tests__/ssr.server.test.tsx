@@ -30,7 +30,7 @@ class PostsSelectors extends Selectors<State> {
 }
 
 const makeCtx = () => {
-  const handle = createSynapse<State, PostsDispatcher, PostsSelectors>({
+  const handle = createSynapse.of<State, PostsDispatcher, PostsSelectors>({
     storage: () => new MemoryStorage<State>({ name: `ssr_${uid++}`, initialState: { user: 'default', count: 0 } }),
     dispatcher: (s) => new PostsDispatcher(s),
     selectors: (s) => new PostsSelectors(s),
@@ -100,7 +100,7 @@ describe('SSR — серверный renderToString', () => {
   })
 
   it('прогрев main handle: до обращения getSnapshot пуст, после ready({withEffects:false}) — READY', async () => {
-    const handle = createSynapse<State, PostsDispatcher, PostsSelectors>({
+    const handle = createSynapse.of<State, PostsDispatcher, PostsSelectors>({
       storage: () => new MemoryStorage<State>({ name: `ssr_${uid++}`, initialState: { user: 'default', count: 0 } }),
       dispatcher: (s) => new PostsDispatcher(s),
       selectors: (s) => new PostsSelectors(s),

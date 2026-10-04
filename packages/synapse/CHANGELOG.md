@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.1.7] - 2026-10-04
+
+- **Типы: `Subscriber.notify` — `(value) => void` вместо `void | Promise<void>`.** Результат `notify`
+  библиотека не использует, а union с `void` отключал правило TS «void-колбэк может вернуть что угодно»:
+  `selector.subscribe({ notify: (v) => list.push(v) })` падал с `Type 'number' is not assignable to type
+  'void | Promise<void>'`. Ограничение только ослаблено — всё, что компилировалось, компилируется (async-колбэки тоже).
+- **Типы: `EffectContext.externalStates` отражает рантайм.** Хранилище, переданное в `externalStates`,
+  `EffectsModule` конвертирует в `Observable`, но тип в контексте эффекта оставался исходным
+  (`MemoryStorage` без `.pipe`). Новый тип `NormalizedExternalStates<T>`: `IStorageBase<S>` → `Observable<S>`,
+  Observable'ы — как есть.
+- **Проверка типов тестов в гейте.** Основной `tsconfig.json` исключает тесты (он же генерит `.d.ts`), поэтому
+  ошибки типов в тестах ничем не ловились и накопились (46 шт.: в основном `createSynapse<State, …>` со старым
+  порядком дженериков → `createSynapse.of<…>`). Новый `tsconfig.test.json` (весь `src` с тестами, `noEmit`),
+  скрипт `yarn typecheck`; `yarn test` = `typecheck && vitest run` — входит в валидацию `yarn release`.
+
 ## [6.1.6] - 2026-10-04
 
 - **Эффекты: экшены из pre-start буфера терялись в эффектах с `withLatestFrom(state$)`.** `state$` отдавал

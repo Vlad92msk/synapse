@@ -140,7 +140,9 @@ describe('WorkerChannel relay — РЕАЛЬНЫЙ SharedWorker-путь (eval r
     const b = new WorkerChannel<any>(channel)
 
     const seen: any[] = []
-    b.subscribe((msg) => seen.push(msg))
+    b.subscribe((msg) => {
+      seen.push(msg)
+    })
     await tick()
 
     a.broadcast('PING', { n: 42 })
@@ -158,7 +160,9 @@ describe('WorkerChannel relay — РЕАЛЬНЫЙ SharedWorker-путь (eval r
     const b = new WorkerChannel<any>(channel)
 
     const seenA: any[] = []
-    a.subscribe((msg) => seenA.push(msg))
+    a.subscribe((msg) => {
+      seenA.push(msg)
+    })
     await tick()
 
     a.broadcast('SELF', { x: 1 })
@@ -176,7 +180,9 @@ describe('WorkerChannel relay — РЕАЛЬНЫЙ SharedWorker-путь (eval r
     const b = new WorkerChannel<any>(nextChannel())
 
     const seenB: any[] = []
-    b.subscribe((msg) => seenB.push(msg))
+    b.subscribe((msg) => {
+      seenB.push(msg)
+    })
     await tick()
 
     a.broadcast('X', { v: 1 })

@@ -1,0 +1,12 @@
+{
+  // Проверка типов ВСЕГО src, включая тесты. Основной tsconfig.json исключает тесты (он же
+  // генерирует .d.ts), поэтому ошибки типов в тестах раньше не ловились ничем, кроме IDE.
+  // Гейт: `yarn typecheck` (входит в `yarn test` → release.sh).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false
+  },
+  "include": ["src", "vitest.setup.ts"],
+  "exclude": ["node_modules", "dist", "src/api/example.ts"]
+}

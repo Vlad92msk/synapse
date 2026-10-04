@@ -4,7 +4,7 @@ import { catchError, retry, shareReplay } from 'rxjs/operators'
 import { handleCallbackError } from '../../_utils/error-handling.util'
 import { IStorage } from '../../core'
 import { Action, DispatcherCore } from '../dispatcher'
-import { type Effect, EFFECT_NAME, EFFECT_OPTIONS, type EffectContext, type EffectOptions, type ExternalStates } from './effects.types'
+import { type Effect, EFFECT_NAME, EFFECT_OPTIONS, type EffectContext, type EffectOptions, type ExternalStates, type NormalizedExternalStates } from './effects.types'
 import { PreStartActionBuffer } from './preStartActionBuffer'
 import { isStorage, toObservable } from './utils'
 
@@ -24,7 +24,7 @@ export class EffectsModule<
   private subscriptions: Array<{ unsubscribe: VoidFunction }> = []
   private running = false
   private action$ = new Subject<Action>()
-  private externalStates: TExternalStates
+  private externalStates: NormalizedExternalStates<TExternalStates>
 
   // Буфер экшенов, задиспатченных ДО start() (маунт-диспатч ребёнка до useEffect провайдера).
   // Создаётся на уровне ЯДРА (constructSyncCore) и инъектится сюда: подписка оттуда живёт с
@@ -73,12 +73,12 @@ export class EffectsModule<
   /**
    * Нормализует externalStates: конвертирует IStorageBase в Observable, пропускает Observable как есть
    */
-  private normalizeExternalStates(states: TExternalStates): TExternalStates {
+  private normalizeExternalStates(states: TExternalStates): NormalizedExternalStates<TExternalStates> {
     const normalized = {} as Record<string, Observable<any>>
     for (const [key, value] of Object.entries(states)) {
       normalized[key] = isStorage(value) ? toObservable(value) : value
     }
-    return normalized as TExternalStates
+    return normalized as NormalizedExternalStates<TExternalStates>
   }
 
   /**

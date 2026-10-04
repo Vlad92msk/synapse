@@ -29,7 +29,7 @@ class CtxSelectors extends Selectors<State> {
 }
 
 const makeCtx = () => {
-  const handle = createSynapse<State, CtxDispatcher, CtxSelectors>({
+  const handle = createSynapse.of<State, CtxDispatcher, CtxSelectors>({
     storage: () => new MemoryStorage<State>({ name: `ssrc_${uid++}`, initialState: { user: 'default' } }),
     dispatcher: (s) => new CtxDispatcher(s),
     selectors: (s) => new CtxSelectors(s),
@@ -136,10 +136,7 @@ describe('SSR — клиентская гидрация', () => {
     // Навигация: в том же дереве появляется провайдер B с другим снапшотом на том же сторе.
     // Если B сеет в фазе рендера — hydrate нотифицирует живого подписчика A → варнинг.
     await act(async () => {
-      root.render([
-        createElement(View as any, { key: 'a', dehydratedState: snapA }),
-        createElement(View as any, { key: 'b', dehydratedState: snapB }),
-      ])
+      root.render([createElement(View as any, { key: 'a', dehydratedState: snapA }), createElement(View as any, { key: 'b', dehydratedState: snapB })])
     })
 
     const renderPhaseWarnings = errorSpy.mock.calls.filter((c) => String(c[0]).includes('while rendering a different component'))
@@ -199,10 +196,7 @@ describe('SSR — клиентская гидрация', () => {
 
     await act(async () => {
       startTransition(() => {
-        root.render([
-          createElement(View as any, { key: 'a', dehydratedState: snapA }),
-          createElement(View as any, { key: 'b', dehydratedState: snapB }),
-        ])
+        root.render([createElement(View as any, { key: 'a', dehydratedState: snapA }), createElement(View as any, { key: 'b', dehydratedState: snapB })])
       })
     })
 
