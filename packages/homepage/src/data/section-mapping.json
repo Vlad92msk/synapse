@@ -15,11 +15,12 @@
     "12": "getendpoints-direct-access-to-the-endpoints",
     "13": "waitwithcallbacks-callbacks-per-status",
     "14": "abort-aborting-a-request",
-    "15": "subscribe-subscribing-to-the-endpoint-state",
-    "16": "lifecycle",
-    "17": "cache-invalidation-bus-endpointoncacheinvalidate",
-    "18": "synchronous-cache-read-endpointgetcachedsync",
-    "19": "ssr-dehydrate-hydrate"
+    "15": "errors-and-empty-responses",
+    "16": "subscribe-subscribing-to-the-endpoint-state",
+    "17": "lifecycle",
+    "18": "cache-invalidation-bus-endpointoncacheinvalidate",
+    "19": "synchronous-cache-read-endpointgetcachedsync",
+    "20": "ssr-dehydrate-hydrate"
   },
   "api-ssr-pokemon": {
     "0": "pokmon-ssr-server-render-client-pagination",

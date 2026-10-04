@@ -22,10 +22,14 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
-      // «Ядро» этапа 0: модули, чьё текущее поведение зафиксировано страховочными тестами.
-      // Вне-scope (api/, storage middlewares, broadcast/plugin, createEventBus,
-      // useStorage*) сюда намеренно не входят — их покрытие появится на следующих этапах.
+      // Модули, чьё поведение зафиксировано тестами. Вне-scope (storage middlewares,
+      // broadcast/plugin, createEventBus, useStorage*) пока не входят.
+      // api/ добавлен в 6.2.0 после аудита: его отсутствие здесь скрывало непокрытые пути ошибок.
       include: [
+        'src/api/**',
+        'src/reactive/effects/operators/**',
+        'src/react/hooks/useApiQuery.ts',
+        'src/react/hooks/useApiMutation.ts',
         'src/core/storage/adapters/**',
         'src/core/selector/selector.module.ts',
         'src/reactive/dispatcher/dispatcher.module.ts',
@@ -36,7 +40,7 @@ export default defineConfig({
         'src/react/hooks/useSelector.ts',
         'src/react/utils/createSynapseCtx.tsx',
       ],
-      exclude: ['**/__tests__/**', '**/*.interface.ts', '**/index.ts', 'src/**/example.ts', 'src/utils/createSynapse/types.ts'],
+      exclude: ['**/__tests__/**', '**/*.interface.ts', '**/index.ts', 'src/**/example.ts', 'src/utils/createSynapse/types.ts', 'src/api/example.ts'],
       reporter: ['text-summary'],
     },
   },

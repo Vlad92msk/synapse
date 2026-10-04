@@ -1,5 +1,5 @@
 // Auto-generated types for structured documentation
-// Generated at: 2026-10-04T07:04:28.035Z
+// Generated at: 2026-10-04T10:38:41.646Z
 // Master locale: en
 
 export type Locale = 'en' | 'ru'
@@ -9,7 +9,7 @@ export type DocKey = 'api-client' | 'api-ssr-pokemon' | 'api-use-mutation' | 'ap
 
 // ✅ ТОЧНЫЕ ТИПЫ ДЛЯ SECTION ID
 export interface DocSectionIds {
-  'api-client': 'apiclient-http-client-with-caching' | 'why' | 'when-to-use' | 'when-you-dont-need-it' | 'imports' | 'creating-the-apiclient-pokemonapits' | 'response-mappers' | 'request-performing-a-request' | 'queryoptions-request-options' | 'requestdefinition-describing-an-endpoints-request' | 'caching-and-tags' | 'all-client-options-commented' | 'getendpoints-direct-access-to-the-endpoints' | 'waitwithcallbacks-callbacks-per-status' | 'abort-aborting-a-request' | 'subscribe-subscribing-to-the-endpoint-state' | 'lifecycle' | 'cache-invalidation-bus-endpointoncacheinvalidate' | 'synchronous-cache-read-endpointgetcachedsync' | 'ssr-dehydrate-hydrate'
+  'api-client': 'apiclient-http-client-with-caching' | 'why' | 'when-to-use' | 'when-you-dont-need-it' | 'imports' | 'creating-the-apiclient-pokemonapits' | 'response-mappers' | 'request-performing-a-request' | 'queryoptions-request-options' | 'requestdefinition-describing-an-endpoints-request' | 'caching-and-tags' | 'all-client-options-commented' | 'getendpoints-direct-access-to-the-endpoints' | 'waitwithcallbacks-callbacks-per-status' | 'abort-aborting-a-request' | 'errors-and-empty-responses' | 'subscribe-subscribing-to-the-endpoint-state' | 'lifecycle' | 'cache-invalidation-bus-endpointoncacheinvalidate' | 'synchronous-cache-read-endpointgetcachedsync' | 'ssr-dehydrate-hydrate'
   'api-ssr-pokemon': 'pokmon-ssr-server-render-client-pagination' | 'the-idea' | 'shared-api-factory' | 'server-warm-the-cache-and-dehydrate' | 'client-hydrate-and-render' | 'the-component-first-page-from-cache-pagination-on-the-client' | 'prewarming-several-pages' | 'gotchas' | 'nextjs-app-router' | 'see-also'
   'api-use-mutation': 'useapimutation-react-hook-for-mutations' | 'when-to-use-it-when-you-dont-need-it' | 'import' | 'usage' | 'return-value' | 'mutate-vs-mutateasync' | 'invalidating-related-queries' | 'notes' | 'see-also'
   'api-use-query': 'useapiquery-react-hook-for-get-requests' | 'when-to-use-when-you-dont-need-it' | 'import' | 'usage' | 'return-value' | 'options-commented' | 'ssr-no-loading-flash-after-hydration' | 'auto-refetch-on-cache-invalidation' | 'notes' | 'see-also'

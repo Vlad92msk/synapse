@@ -121,9 +121,9 @@ export interface Endpoint<RequestParams extends Record<string, any> = any, Respo
   /**
    * Синхронно прочитать результат из кэша без сетевого запроса (fast-path для SSR).
    * Возвращает `undefined`, если кэш недоступен синхронно (async-хранилище,
-   * заголовки в ключе кэша, отключённый кэш или протухшая запись).
+   * заголовки в ключе кэша, отключённый кэш — в т.ч. `options.disableCache` — или протухшая запись).
    */
-  getCachedSync: (params: RequestParams) => QueryResult<ResponseData, Error> | undefined
+  getCachedSync: (params: RequestParams, options?: QueryOptions) => QueryResult<ResponseData, Error> | undefined
   /** Подписка на инвалидацию кэша по тегам эндпоинта (для авто-рефетча хуков) */
   onCacheInvalidate: (listener: VoidFunction) => Unsubscribe
   /** Сбросить состояние */

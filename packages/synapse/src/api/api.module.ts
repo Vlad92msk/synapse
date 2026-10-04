@@ -4,7 +4,6 @@ import { QueryStorage } from './components/query-storage'
 import { CreateApiClientOptions, ExtractParamsType, ExtractResultType } from './types/api.interface'
 import { CreateEndpoint, Endpoint as EndpointType, EndpointConfig } from './types/endpoint.interface'
 import { QueryOptions, QueryResult } from './types/query.interface'
-import { apiLogger } from './utils/api-helpers'
 
 // Тип для извлечения типов из функции endpoints
 type EndpointsResult<F> = F extends (create: any) => Promise<infer R> ? R : never
@@ -141,13 +140,9 @@ export class ApiClient<EndpointsFn extends (create: CreateEndpoint) => Promise<R
       throw new Error(`Эндпоинт ${String(endpointName)} не найден`)
     }
 
-    try {
-      const stateRequest = endpoint.request(params, options)
-      return await stateRequest.wait()
-    } catch (error) {
-      apiLogger.error(`Ошибка запроса к ${String(endpointName)}`, { error, params })
-      throw error
-    }
+    // Ошибку не логируем: она доставляется вызывающему (reject с ApiError/AbortError) — он и решает,
+    // что с ней делать. Лог в библиотеке дублировал бы её в консоли на каждом неуспешном запросе
+    return endpoint.request(params, options).wait()
   }
 
   /**
@@ -171,6 +166,7 @@ export class ApiClient<EndpointsFn extends (create: CreateEndpoint) => Promise<R
    *
    * - Вызванная ДО `init()` — снапшот запоминается и применяется сразу после
    *   создания хранилища (init не перезатрёт серверное состояние).
+   * - Вызванная ВО ВРЕМЯ `init()` — дожидается его завершения и применяется.
    * - Вызванная ПОСЛЕ `init()` — немедленно заменяет состояние кэша и
    *   перестраивает индекс тегов.
    *
@@ -178,6 +174,12 @@ export class ApiClient<EndpointsFn extends (create: CreateEndpoint) => Promise<R
    * попадёт в кэш — на клиенте не будет повторного сетевого запроса.
    */
   public async hydrate(state: Record<string, any>): Promise<this> {
+    // init() уже идёт: отложенная гидрация могла быть уже пропущена (шаг 2 _doInit пройден) —
+    // дожидаемся init и применяем напрямую. Если init упал — откладываем до следующего init().
+    if (!this._initialized && this._initPromise) {
+      await this._initPromise.catch(() => {})
+    }
+
     if (this._initialized) {
       await this.queryStorage.hydrate(state)
     } else {

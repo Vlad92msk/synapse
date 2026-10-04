@@ -1,4 +1,3 @@
-import { logError } from '../../_utils/error-handling.util'
 import { ApiContext } from '../types/api.interface'
 import { createHeaderContext } from './create-header-context'
 
@@ -24,13 +23,10 @@ export async function prepareRequestHeaders<RequestParams extends Record<string,
   // Создаем контекст, если он не передан
   const headerContext = context || createHeaderContext({} as ApiContext<RequestParams>, {})
 
-  // Применяем функцию подготовки заголовков, если она определена
+  // Применяем функцию подготовки заголовков, если она определена. Ошибку НЕ глотаем:
+  // запрос без заголовков авторизации хуже упавшего — его валит вызывающий (Endpoint → ApiError)
   if (prepareHeadersFn) {
-    try {
-      headers = await Promise.resolve(prepareHeadersFn(headers, headerContext))
-    } catch (error) {
-      logError('prepareRequestHeaders: error preparing headers', error, null, 'warn')
-    }
+    headers = await Promise.resolve(prepareHeadersFn(headers, headerContext))
   }
 
   return headers
@@ -49,23 +45,27 @@ export function createPrepareHeaders(globalPrepareHeaders?: PrepareHeadersFuncti
     let processedHeaders = new Headers(headers)
 
     // Применяем глобальную функцию подготовки заголовков, если она определена
+    // Ошибки пробрасываются (см. prepareRequestHeaders)
     if (globalPrepareHeaders) {
-      try {
-        processedHeaders = await Promise.resolve(globalPrepareHeaders(processedHeaders, context))
-      } catch (error) {
-        logError('createPrepareHeaders: error preparing global headers', error, null, 'warn')
-      }
+      processedHeaders = await Promise.resolve(globalPrepareHeaders(processedHeaders, context))
     }
 
     // Применяем функцию подготовки заголовков эндпоинта, если она определена
     if (endpointPrepareHeaders) {
-      try {
-        processedHeaders = await Promise.resolve(endpointPrepareHeaders(processedHeaders, context))
-      } catch (error) {
-        logError('createPrepareHeaders: error preparing endpoint headers', error, null, 'warn')
-      }
+      processedHeaders = await Promise.resolve(endpointPrepareHeaders(processedHeaders, context))
     }
 
     return processedHeaders
   }
+}
+
+/**
+ * Накладывает заголовки `source` поверх `target` (перезаписывая одноимённые).
+ * Используется для заголовков эндпоинта (`RequestDefinition.headers`) и вызова (`QueryOptions.headers`)
+ * поверх результата `prepareHeaders`.
+ */
+export function mergeHeaders(target: Headers, source?: HeadersInit): Headers {
+  if (!source) return target
+  new Headers(source).forEach((value, key) => target.set(key, value))
+  return target
 }

@@ -60,9 +60,9 @@ export interface RequestDefinition<RequestParams extends Record<string, any>> {
   headers?: Record<string, string>
   /** Формат ответа (по умолчанию json) */
   responseFormat?: ResponseFormat
-  /** Имя файла для автоматического скачивания */
+  /** @deprecated Не реализовано — игнорируется (автоскачивания нет). */
   fileName?: string
-  /** Тип контента для автоматического скачивания */
+  /** @deprecated Не реализовано — игнорируется. */
   fileType?: string
 }
 

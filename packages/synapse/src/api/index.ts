@@ -1,5 +1,6 @@
 export * from './api.module'
 export { ResponseFormat, type RetryConfig } from './types/api.interface'
+export { ApiError, type ApiResultMeta } from './utils/api-error'
 export * from './utils/api-helpers'
 // export * from './_utils/file-_utils'
 // export * from './_utils/get-cacheable-headers'

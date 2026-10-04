@@ -1,6 +1,6 @@
-import { handleCallbackError, logError } from '../../_utils/error-handling.util'
+import { logError } from '../../_utils/error-handling.util'
 import { ApiContext, FetchBaseQueryArgs, RequestDefinition, ResponseFormat } from '../types/api.interface'
-import { FileDownloadResult, QueryOptions, QueryResult } from '../types/query.interface'
+import { QueryOptions, QueryResult, ResponseFileMetadata } from '../types/query.interface'
 import { getFileMetadataFromHeaders, getResponseFormatForMimeType, isFileResponse } from './file-utils'
 
 /**
@@ -14,6 +14,19 @@ function isAbortError(err: unknown, signal?: AbortSignal | null): boolean {
 }
 
 /**
+ * Тело, которое fetch принимает как есть (без JSON-сериализации).
+ * Проверки через typeof — часть классов может отсутствовать в окружении.
+ */
+function isNativeBody(body: unknown): body is BodyInit {
+  if (typeof FormData !== 'undefined' && body instanceof FormData) return true
+  if (typeof Blob !== 'undefined' && body instanceof Blob) return true
+  if (typeof URLSearchParams !== 'undefined' && body instanceof URLSearchParams) return true
+  if (typeof ArrayBuffer !== 'undefined' && (body instanceof ArrayBuffer || ArrayBuffer.isView(body))) return true
+  if (typeof ReadableStream !== 'undefined' && body instanceof ReadableStream) return true
+  return false
+}
+
+/**
  * Извлекает данные из response в зависимости от формата
  * @param response Объект Response
  * @param format Формат ответа
@@ -24,7 +37,7 @@ async function getResponseData<T, E extends Error>(
   response: Response,
   format?: ResponseFormat,
   signal?: AbortSignal | null,
-): Promise<{ data?: T; error?: E; fileMetadata?: FileDownloadResult }> {
+): Promise<{ data?: T; error?: E; fileMetadata?: ResponseFileMetadata; bodyFailed?: boolean }> {
   let responseFormat = format
   const contentType = response.headers.get('content-type') || ''
 
@@ -45,7 +58,7 @@ async function getResponseData<T, E extends Error>(
 
   try {
     // Получение метаданных файла, если формат указывает на файл
-    let fileMetadata: any
+    let fileMetadata: ResponseFileMetadata | undefined
     if (responseFormat === ResponseFormat.Blob || responseFormat === ResponseFormat.ArrayBuffer) {
       fileMetadata = getFileMetadataFromHeaders(response.headers)
     }
@@ -105,8 +118,9 @@ async function getResponseData<T, E extends Error>(
   } catch (err) {
     // Отмена во время чтения тела (заголовки уже пришли) — пробрасываем как есть
     if (isAbortError(err, signal)) throw err
-    handleCallbackError(`fetchBaseQuery: error extracting response data (format: ${responseFormat})`, err)
-    return response.ok ? { data: undefined } : { error: err as E }
+    // Тело не дочитано (обрыв соединения, битый поток) — это неуспех даже при 2xx:
+    // иначе потребитель получил бы «успех» с data: undefined, неотличимый от 204
+    return { error: err as E, bodyFailed: true }
   }
 }
 
@@ -188,10 +202,12 @@ export function fetchBaseQuery(options: Omit<FetchBaseQueryArgs, 'prepareHeaders
       })
     }
 
-    // Если body это объект, конвертируем в JSON и устанавливаем Content-Type
-    let serializedBody: string | FormData | Blob | undefined
+    // Если body это объект, конвертируем в JSON и устанавливаем Content-Type.
+    // Готовые BodyInit (FormData, Blob, URLSearchParams, бинарь, поток) отдаём fetch как есть —
+    // Content-Type для них выставит сам fetch (multipart boundary, form-urlencoded)
+    let serializedBody: BodyInit | undefined
     if (body !== undefined) {
-      if (body instanceof FormData || body instanceof Blob) {
+      if (isNativeBody(body)) {
         serializedBody = body
       } else if (typeof body === 'object' && body !== null) {
         try {
@@ -208,15 +224,27 @@ export function fetchBaseQuery(options: Omit<FetchBaseQueryArgs, 'prepareHeaders
       }
     }
 
-    // Создаем таймаут если указан
+    // Свой controller: его абортят и внешний signal (отмена), и таймаут — чтобы по таймауту
+    // реально прерывать fetch и чтение тела, а не оставлять запрос висеть в фоне
+    const controller = new AbortController()
+    const onExternalAbort = () => controller.abort()
+    if (signal?.aborted) controller.abort()
+    else signal?.addEventListener('abort', onExternalAbort, { once: true })
+
+    // Таймаут покрывает весь запрос — и ожидание заголовков, и чтение тела
     let timeoutId: ReturnType<typeof setTimeout> | undefined
+    let timedOut = false
     const timeoutPromise = new Promise<never>((_, reject) => {
       if (requestTimeout) {
         timeoutId = globalThis.setTimeout(() => {
+          timedOut = true
+          controller.abort()
           reject(new Error(`Превышено время ожидания запроса (${requestTimeout}мс)`))
         }, requestTimeout)
       }
     })
+    // Таймаут может сработать во время чтения тела, когда race уже завершён
+    timeoutPromise.catch(() => {})
 
     try {
       // Выполняем запрос
@@ -224,21 +252,21 @@ export function fetchBaseQuery(options: Omit<FetchBaseQueryArgs, 'prepareHeaders
         method,
         headers,
         body: serializedBody,
-        signal,
+        signal: controller.signal,
         credentials,
       })
 
-      // Используем Promise.race для обработки таймаута
+      // race — на случай пользовательского fetchFn, игнорирующего signal
       const response = await Promise.race([fetchPromise, timeoutPromise])
 
       // Обрабатываем ответ
-      const { data, error, fileMetadata } = await getResponseData<RequestResult, E>(response, responseFormat as ResponseFormat, signal)
+      const { data, error, fileMetadata, bodyFailed } = await getResponseData<RequestResult, E>(response, responseFormat as ResponseFormat, controller.signal)
 
       // Формируем результат запроса
       const result: QueryResult<RequestResult, E> = {
         data,
         error,
-        ok: response.ok,
+        ok: response.ok && !bodyFailed,
         status: response.status,
         statusText: response.statusText,
         headers: response.headers,
@@ -247,15 +275,20 @@ export function fetchBaseQuery(options: Omit<FetchBaseQueryArgs, 'prepareHeaders
 
       return result
     } catch (err) {
+      // Таймаут (в т.ч. во время чтения тела) — ошибка запроса, а не отмена
+      if (timedOut) {
+        const error = new Error(`Превышено время ожидания запроса (${requestTimeout}мс)`)
+        return { error: error as E, ok: false, status: 0, statusText: error.message, headers: new Headers() }
+      }
+
       // Отмена — не ошибка запроса: без лога и без QueryResult. Пробрасываем AbortError,
       // как это делает `fetchWithRetry` (перехват и статус 'error' — в `executeRequest`).
-      if (isAbortError(err, signal)) {
+      if (isAbortError(err, controller.signal)) {
         throw (err as Error | null)?.name === 'AbortError' ? err : new DOMException('The operation was aborted.', 'AbortError')
       }
 
       // Обрабатываем ошибки сети или таймаута
       const error = err as Error
-      handleCallbackError('fetchBaseQuery: request execution error', error)
 
       // Формируем результат с ошибкой
       return {
@@ -270,6 +303,7 @@ export function fetchBaseQuery(options: Omit<FetchBaseQueryArgs, 'prepareHeaders
       if (timeoutId) {
         globalThis.clearTimeout(timeoutId)
       }
+      signal?.removeEventListener('abort', onExternalAbort)
     }
   }
 }

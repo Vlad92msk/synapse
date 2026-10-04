@@ -29,8 +29,12 @@ interface InternalQueryState<TData> {
 const IDLE_STATE: InternalQueryState<any> = { status: 'idle', data: undefined, error: undefined, fromCache: false }
 
 /** Синхронно читает кэш эндпоинта (если доступно) и приводит к состоянию запроса. */
-function readSyncCache<TParams extends Record<string, any>, TData>(endpoint: Endpoint<TParams, TData>, params: TParams): InternalQueryState<TData> | undefined {
-  const cached = endpoint.getCachedSync(params)
+function readSyncCache<TParams extends Record<string, any>, TData>(
+  endpoint: Endpoint<TParams, TData>,
+  params: TParams,
+  options?: QueryOptions,
+): InternalQueryState<TData> | undefined {
+  const cached = endpoint.getCachedSync(params, options)
   if (cached?.ok) {
     return { status: 'success', data: cached.data, error: undefined, fromCache: true }
   }
@@ -95,7 +99,7 @@ export function useApiQuery<TParams extends Record<string, any>, TData>(
 
   // Ленивый инициализатор важен для SSR: на сервере effect не выполняется, поэтому
   // первый (и единственный) рендер должен сразу отдать засеянные/кэшированные данные.
-  const [state, setState] = useState<InternalQueryState<TData>>(() => (enabled ? (readSyncCache(endpoint, params) ?? IDLE_STATE) : IDLE_STATE))
+  const [state, setState] = useState<InternalQueryState<TData>>(() => (enabled ? (readSyncCache(endpoint, params, queryOptions) ?? IDLE_STATE) : IDLE_STATE))
 
   const [refetchToken, setRefetchToken] = useState(0)
   const refetch = useCallback(() => setRefetchToken((t) => t + 1), [])
@@ -107,7 +111,7 @@ export function useApiQuery<TParams extends Record<string, any>, TData>(
     }
 
     // На смену параметров: показываем кэш сразу (без вспышки) либо loading.
-    setState(readSyncCache(endpoint, paramsRef.current) ?? { status: 'loading', data: undefined, error: undefined, fromCache: false })
+    setState(readSyncCache(endpoint, paramsRef.current, optionsRef.current) ?? { status: 'loading', data: undefined, error: undefined, fromCache: false })
 
     let cancelled = false
     const req = endpoint.request(paramsRef.current, optionsRef.current)
@@ -120,6 +124,9 @@ export function useApiQuery<TParams extends Record<string, any>, TData>(
       },
       { autoUnsubscribe: false },
     )
+    // Ошибка уже приходит в state через подписку; abort при смене параметров/анмаунте — штатный.
+    // Без catch каждый такой reject был бы unhandled rejection.
+    req.wait().catch(() => {})
 
     return () => {
       cancelled = true

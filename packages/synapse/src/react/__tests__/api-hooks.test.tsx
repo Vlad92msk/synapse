@@ -6,6 +6,7 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ApiClient } from '../../api/api.module'
+import { ApiError } from '../../api/utils/api-error'
 import type { Endpoint } from '../../api/types/endpoint.interface'
 import { MemoryStorage } from '../../core/storage/adapters/memory-storage.service'
 import { useApiMutation } from '../hooks/useApiMutation'
@@ -226,9 +227,34 @@ describe('useApiMutation', () => {
     render(<Comp />)
 
     await act(async () => {
-      await expect(mutateAsyncFn({ name: 'n' })).rejects.toBeTruthy()
+      await expect(mutateAsyncFn({ name: 'n' })).rejects.toBeInstanceOf(ApiError)
     })
 
     await waitFor(() => expect(screen.getByTestId('error').textContent).toBe('true'))
+  })
+})
+
+describe('useApiQuery — ошибка запроса', () => {
+  it('error — ApiError со статусом; reject запроса не уходит в unhandled rejection', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const api = createApi((async () => jsonResponse({ message: 'nope' }, 404)) as unknown as typeof fetch)
+    await api.init()
+    const endpoints = api.getEndpoints() as unknown as Endpoints
+
+    let error: unknown
+    function Comp() {
+      const q = useApiQuery(endpoints.getList, { q: 'x' })
+      error = q.error
+      return <span data-testid="error">{String(q.isError)}</span>
+    }
+
+    render(<Comp />)
+    await waitFor(() => expect(screen.getByTestId('error').textContent).toBe('true'))
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect((error as ApiError).meta.status).toBe(404)
+    expect((error as ApiError).message).toBe('nope')
+    vi.restoreAllMocks()
+    await api.destroy()
   })
 })

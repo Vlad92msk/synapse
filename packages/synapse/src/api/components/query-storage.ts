@@ -18,6 +18,13 @@ export class QueryStorage {
   /** Индекс тегов: tag → Set<cacheKey> для быстрой инвалидации */
   private tagIndex = new Map<string, Set<string>>()
 
+  /**
+   * Поколения тегов: счётчик растёт при каждой инвалидации тега. Запрос запоминает поколение
+   * своих тегов на старте и не пишет результат в кэш, если за время полёта теги инвалидировали
+   * (иначе устаревший ответ, стартовавший до мутации, лёг бы в кэш после неё).
+   */
+  private tagGenerations = new Map<string, number>()
+
   /** Подписчики на событие инвалидации кэша (шина для авто-рефетча хуков) */
   private invalidateListeners = new Set<(tags: string[]) => void>()
 
@@ -144,7 +151,7 @@ export class QueryStorage {
     if (!this.storage || !this.isSyncStorage()) return undefined
 
     const state = this.storage.getStateSync() as Record<string, CacheEntry<T> | undefined>
-    const cachedEntry = state[String(cacheKey)]
+    const cachedEntry = state?.[String(cacheKey)]
     if (!cachedEntry?.metadata) return undefined
 
     if (CacheUtils.isExpired(cachedEntry.metadata)) return undefined
@@ -155,10 +162,21 @@ export class QueryStorage {
   /**
    * Создает ключ кэша для запроса с учетом заголовков
    * @param endpoint Имя эндпоинта
-   * @param params Параметры запроса (все что посчитаем нужным)
+   * @param params Параметры запроса
+   * @param headers Заголовки, влияющие на кэш (в ключ попадают хешами)
    */
-  public createCacheKey<CacheParams extends Record<string, any>>(endpoint: string, params: CacheParams) {
-    return CacheUtils.createApiKey(endpoint, params)
+  public createCacheKey<CacheParams extends Record<string, any>>(endpoint: string, params: CacheParams, headers?: Record<string, string>, request?: Record<string, string>) {
+    return CacheUtils.createApiKey(endpoint, params, headers, request)
+  }
+
+  /**
+   * Текущее «поколение» набора тегов (сумма счётчиков инвалидаций). Изменилось с момента
+   * старта запроса — значит, теги инвалидировали, и ответ мог устареть.
+   */
+  public getTagsGeneration(tags: string[]): number {
+    let sum = 0
+    for (const tag of tags) sum += this.tagGenerations.get(tag) ?? 0
+    return sum
   }
 
   /**
@@ -167,23 +185,19 @@ export class QueryStorage {
   public async getCachedResult<T>(cacheKey: StorageKeyType): Promise<T | undefined> {
     if (!this.storage) throw new Error('Хранилище не инициализировано')
 
-    const cachedEntry = await this.storage.get<CacheEntry<T>>(cacheKey)
+    const key = CacheUtils.toStorageKey(cacheKey)
+    const cachedEntry = await this.storage.get<CacheEntry<T>>(key)
     if (!cachedEntry) return undefined
 
     // Проверяем срок годности кэша
     if (CacheUtils.isExpired(cachedEntry.metadata)) {
-      this.removeKeyFromTagIndex(String(cacheKey), cachedEntry.metadata.tags)
-      await this.storage.remove(cacheKey)
+      this.removeKeyFromTagIndex(String(cacheKey), cachedEntry.metadata?.tags)
+      await this.storage.remove(key)
       return undefined
     }
 
-    // Обновляем метаданные кэша (счетчик доступа, время обновления)
-    const updatedEntry: CacheEntry<T> = {
-      ...cachedEntry,
-      metadata: CacheUtils.updateMetadata(cachedEntry.metadata),
-    }
-    await this.storage.set(cacheKey, updatedEntry)
-
+    // Чистое чтение: запись на каждом попадании (обновление updatedAt) была лишней записью в
+    // localStorage/IndexedDB и при гонке с инвалидацией воскрешала только что удалённую запись
     return cachedEntry.data
   }
 
@@ -214,7 +228,7 @@ export class QueryStorage {
       params: cacheParams,
     }
 
-    await this.storage.set(cacheKey, cacheEntry)
+    await this.storage.set(CacheUtils.toStorageKey(cacheKey), cacheEntry)
 
     // Обновляем индекс тегов
     const keyStr = String(cacheKey)
@@ -261,9 +275,10 @@ export class QueryStorage {
     // Создаем опции по умолчанию
     let resultConfig = this.defaultCacheOptions
 
-    // Если в глобальном конфиге кэш передан как объект а не boolean - по умолчанию станет он
+    // Глобальный объект ДОПОЛНЯЕТ дефолты (а не заменяет): без этого `cache: { invalidateOnError }`
+    // без ttl давал ttl = undefined → записи без срока жизни
     if (typeof this.globalCacheConfig === 'object') {
-      resultConfig = this.globalCacheConfig
+      resultConfig = { ...resultConfig, ...this.globalCacheConfig }
     }
     // Если в настройках эндпоинта кэш как объект - дополняем этими параметрами итоговый объект кэша
     if (typeof endpointConfig?.cache === 'object') {
@@ -292,6 +307,7 @@ export class QueryStorage {
         keys.forEach((k) => keysToRemove.add(k))
         this.tagIndex.delete(tag)
       }
+      this.tagGenerations.set(tag, (this.tagGenerations.get(tag) ?? 0) + 1)
     }
 
     // Удаляем из остальных тегов индекса (ключ может быть в нескольких тегах)
@@ -303,10 +319,33 @@ export class QueryStorage {
     }
 
     // Удаляем записи из хранилища
-    await Promise.all([...keysToRemove].map((key) => this.storage!.remove(key)))
+    // Индекс хранит строки — удаляем по «сырому» ключу, иначе точка в ключе разбиралась как путь
+    await Promise.all([...keysToRemove].map((key) => this.storage!.remove(CacheUtils.toStorageKey(key))))
 
     // Уведомляем шину — активные подписчики (хуки) сделают рефетч
     this.emitCacheInvalidate(tags)
+  }
+
+  /**
+   * Удаляет все записи одного эндпоинта (по префиксу ключа `<endpoint>::`), не трогая записи других
+   * эндпоинтов с теми же тегами. Шина инвалидации получает теги удалённых записей (одним событием).
+   */
+  public async invalidateEndpoint(endpoint: string): Promise<void> {
+    if (!this.storage) throw new Error('Хранилище не инициализировано')
+
+    const prefix = `${endpoint}::`
+    const tags = new Set<string>()
+    for (const rawKey of await this.storage.keys()) {
+      const keyStr = String(rawKey)
+      if (!keyStr.startsWith(prefix)) continue
+      const key = CacheUtils.toStorageKey(rawKey)
+      const entry = await this.storage.get<CacheEntry<any>>(key)
+      entry?.metadata?.tags?.forEach((tag) => tags.add(tag))
+      this.removeKeyFromTagIndex(keyStr, entry?.metadata?.tags)
+      await this.storage.remove(key)
+    }
+
+    if (tags.size) this.emitCacheInvalidate([...tags])
   }
 
   /**
@@ -317,12 +356,13 @@ export class QueryStorage {
     if (!this.storage) throw new Error('Хранилище не инициализировано')
 
     // Читаем теги записи для очистки индекса
-    const cachedEntry = await this.storage.get<CacheEntry<any>>(cacheKey)
+    const key = CacheUtils.toStorageKey(cacheKey)
+    const cachedEntry = await this.storage.get<CacheEntry<any>>(key)
     if (cachedEntry) {
-      this.removeKeyFromTagIndex(String(cacheKey), cachedEntry.metadata.tags)
+      this.removeKeyFromTagIndex(String(cacheKey), cachedEntry.metadata?.tags)
     }
 
-    await this.storage.remove(cacheKey)
+    await this.storage.remove(key)
 
     // Уведомляем шину тегами удалённой записи
     if (cachedEntry?.metadata?.tags?.length) {
@@ -339,10 +379,11 @@ export class QueryStorage {
     }
 
     const keys = await this.storage.keys()
-    for (const key of keys) {
+    for (const rawKey of keys) {
+      const key = CacheUtils.toStorageKey(rawKey)
       const value = await this.storage.get<CacheEntry<any>>(key)
       if (value && CacheUtils.isExpired(value.metadata)) {
-        this.removeKeyFromTagIndex(String(key), value.metadata.tags)
+        this.removeKeyFromTagIndex(String(rawKey), value.metadata?.tags)
         await this.storage.remove(key)
       }
     }
@@ -360,6 +401,7 @@ export class QueryStorage {
 
     // Очищаем индекс тегов
     this.tagIndex.clear()
+    this.tagGenerations.clear()
 
     // Очищаем подписчиков шины инвалидации
     this.invalidateListeners.clear()
@@ -398,7 +440,8 @@ export class QueryStorage {
     this.tagIndex.clear()
     const keys = await this.storage.keys()
 
-    for (const key of keys) {
+    for (const rawKey of keys) {
+      const key = CacheUtils.toStorageKey(rawKey)
       const entry = await this.storage.get<CacheEntry<any>>(key)
       if (!entry?.metadata?.tags) continue
 
@@ -408,7 +451,7 @@ export class QueryStorage {
         continue
       }
 
-      const keyStr = String(key)
+      const keyStr = String(rawKey)
       for (const tag of entry.metadata.tags) {
         let tagKeys = this.tagIndex.get(tag)
         if (!tagKeys) {

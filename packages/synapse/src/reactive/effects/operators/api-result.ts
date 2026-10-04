@@ -1,34 +1,15 @@
 import { from, OperatorFunction, pipe } from 'rxjs'
 import { switchMap } from 'rxjs/operators'
 
-/**
- * Метаданные ответа API, доступные в колбэках apiResult.
- */
-export interface ApiResultMeta {
-  status: number
-  statusText: string
-  headers: Headers
-  fromCache?: boolean
-}
+import { ApiError, ApiResultMeta, toApiError } from '../../../api/utils/api-error'
 
-/**
- * Ошибка API-запроса. Бросается apiResult при !result.ok.
- * Ловится errorAction в validateMap.
- */
-export class ApiError extends Error {
-  constructor(
-    public readonly originalError: any,
-    public readonly meta: ApiResultMeta,
-  ) {
-    super(typeof originalError === 'string' ? originalError : (originalError?.message ?? 'API request failed'))
-    this.name = 'ApiError'
-  }
-}
+export { ApiError, type ApiResultMeta }
 
 /**
  * Оператор для обработки успешного результата API-запроса (QueryResult).
  *
- * При `result.ok` — вызывает callback с `data` и `meta`.
+ * При `result.ok` — вызывает callback с `data` и `meta`. Успешный ответ без тела
+ * (204 / пустой 200) — тоже успех: `data` придёт `undefined`.
  * При `!result.ok` — бросает `ApiError`, который ловится `errorAction` в `validateMap`.
  *
  * @example
@@ -53,17 +34,17 @@ export function apiResult<TData, TResult = void>(
 ): OperatorFunction<{ ok: boolean; data?: TData; error?: any; status?: number; statusText?: string; headers?: Headers; fromCache?: boolean }, TResult> {
   return pipe(
     switchMap((result) => {
+      if (!result.ok) throw toApiError(result)
+
       const meta: ApiResultMeta = {
         status: result.status ?? 0,
         statusText: result.statusText ?? '',
         headers: result.headers ?? new Headers(),
         fromCache: result.fromCache,
       }
-      if (result.ok && result.data !== undefined) {
-        const out = onSuccess(result.data, meta)
-        return from(Promise.resolve(out))
-      }
-      throw new ApiError(result.error ?? 'Unknown error', meta)
+      // data может быть undefined (204 / пустое тело) — это не ошибка запроса
+      const out = onSuccess(result.data as TData, meta)
+      return from(Promise.resolve(out))
     }),
   )
 }

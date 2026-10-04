@@ -124,7 +124,7 @@ describe('fetchBaseQuery: отмена запроса', () => {
     expect(consoleError).not.toHaveBeenCalled()
   })
 
-  it('обычная сетевая ошибка (без abort) по-прежнему логируется и даёт ok: false', async () => {
+  it('обычная сетевая ошибка (без abort) → ok: false, без лога (ошибку получает вызывающий)', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     const fetchFn = (async () => {
       throw new TypeError('Failed to fetch')
@@ -134,6 +134,72 @@ describe('fetchBaseQuery: отмена запроса', () => {
     const result = await promise
     expect(result.ok).toBe(false)
     expect(result.status).toBe(0)
-    expect(consoleError).toHaveBeenCalled()
+    expect(consoleError).not.toHaveBeenCalled()
+  })
+})
+
+// Обрыв тела при 2xx — неуспех, а не «успех с data: undefined» (неотличимый от 204).
+describe('fetchBaseQuery: ошибка чтения тела', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('200, но поток тела упал (не abort) → ok: false, error = исходная ошибка', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('{"items":'))
+        controller.error(new TypeError('network error'))
+      },
+    })
+    const result = await run(new Response(body, { status: 200, headers: { 'content-type': 'application/json' } }))
+
+    expect(result.ok).toBe(false)
+    expect(result.status).toBe(200)
+    expect(result.error).toBeInstanceOf(TypeError)
+  })
+})
+
+// Таймаут должен реально прерывать запрос (abort signal'а fetch), в т.ч. во время чтения тела.
+describe('fetchBaseQuery: таймаут', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('таймаут до заголовков → abort signal fetch, ok: false, status 0', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    let fetchSignal: AbortSignal | undefined
+    const fetchFn = ((_url: string, init?: RequestInit) => {
+      fetchSignal = init?.signal ?? undefined
+      return new Promise(() => {}) // никогда не отвечает
+    }) as unknown as typeof fetch
+    const baseQuery = fetchBaseQuery({ baseUrl: 'http://test.local', fetchFn, timeout: 10 })
+
+    const result = await baseQuery({ path: '/x', method: 'GET' } as any, {}, new Headers())
+
+    expect(result.ok).toBe(false)
+    expect(result.status).toBe(0)
+    expect(String(result.statusText)).toMatch(/10мс/)
+    expect(fetchSignal?.aborted).toBe(true)
+  })
+
+  it('таймаут во время чтения тела → ok: false (а не зависание / AbortError)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const fetchFn = (async (_url: string, init?: RequestInit) => {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('{"items":'))
+          init?.signal?.addEventListener('abort', () => controller.error(new DOMException('aborted', 'AbortError')), { once: true })
+        },
+      })
+      return new Response(body, { status: 200, headers: { 'content-type': 'application/json' } })
+    }) as unknown as typeof fetch
+    const baseQuery = fetchBaseQuery({ baseUrl: 'http://test.local', fetchFn, timeout: 10 })
+
+    const result = await baseQuery({ path: '/x', method: 'GET' } as any, {}, new Headers())
+
+    expect(result.ok).toBe(false)
+    expect(result.status).toBe(0)
+    expect(String(result.statusText)).toMatch(/Превышено время ожидания/)
   })
 })

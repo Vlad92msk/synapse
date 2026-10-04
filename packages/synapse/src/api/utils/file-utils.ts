@@ -1,4 +1,11 @@
 import { ResponseFormat } from '../types/api.interface'
+import { ResponseFileMetadata } from '../types/query.interface'
+
+/** Текстовый тип (JSON / text/*): явный Content-Type важнее `filename` в inline-Disposition. */
+function isTextualContentType(contentType: string): boolean {
+  const type = contentType.toLowerCase().split(';')[0].trim()
+  return type === 'application/json' || type.endsWith('+json') || type.startsWith('text/')
+}
 
 /**
  * Получает формат ответа на основе MIME-типа
@@ -44,8 +51,10 @@ export function isFileResponse(headers: Headers): boolean {
     contentType.includes('audio/') ||
     contentType.includes('video/')
 
-  // Проверяем по заголовку content-disposition
-  const isAttachment = contentDisposition.includes('attachment') || contentDisposition.includes('filename=')
+  // Проверяем по заголовку content-disposition: `attachment` — всегда файл; одно лишь имя файла
+  // (`inline; filename=report.json`) — файл, только если Content-Type не текстовый (JSON/text)
+  const disposition = contentDisposition.toLowerCase()
+  const isAttachment = /(^|;)\s*attachment/.test(disposition) || (disposition.includes('filename') && !isTextualContentType(contentType))
 
   return isFileContentType || isAttachment
 }
@@ -60,11 +69,22 @@ export function extractFilenameFromHeaders(headers: Headers): string | undefined
 
   if (!contentDisposition) return undefined
 
-  // Пытаемся извлечь имя файла из content-disposition
-  const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
-  if (filenameMatch && filenameMatch[1]) {
+  // 1. filename*=charset'lang'percent-encoded (RFC 5987/6266) — приоритетнее обычного filename
+  const extMatch = contentDisposition.match(/filename\*\s*=\s*([^']*)'[^']*'([^;\n]*)/i)
+  if (extMatch && extMatch[2]) {
+    try {
+      return decodeURIComponent(extMatch[2].trim().replace(/^"|"$/g, ''))
+    } catch {
+      // битая percent-последовательность — пробуем обычный filename
+    }
+  }
+
+  // 2. filename="..." / filename=... (без `*`)
+  const filenameMatch = contentDisposition.match(/(?:^|;)\s*filename\s*=\s*("([^"]*)"|[^;\n]*)/i)
+  const value = filenameMatch?.[2] ?? filenameMatch?.[1]
+  if (value) {
     // Очищаем от кавычек
-    return filenameMatch[1].replace(/['"]/g, '').trim()
+    return value.replace(/['"]/g, '').trim()
   }
 
   return undefined
@@ -75,7 +95,7 @@ export function extractFilenameFromHeaders(headers: Headers): string | undefined
  * @param headers Заголовки ответа
  * @returns Метаданные файла
  */
-export function getFileMetadataFromHeaders(headers: Headers): Record<string, any> | undefined {
+export function getFileMetadataFromHeaders(headers: Headers): ResponseFileMetadata | undefined {
   const contentType = headers.get('content-type') || ''
   const contentDisposition = headers.get('content-disposition') || ''
   const contentLength = headers.get('content-length')

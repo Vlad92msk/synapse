@@ -226,7 +226,8 @@ withLatestFrom(selectorObject(state$, { listStatus: (s) => s.api.listRequest.sta
 - **`loadingAction`** → ставит статус `loading` (через `apiActions`-группу диспетчера).
 - **`apiCall`** получает значение пайпа, зовёт `fromRequest(this.api.X.request(...))`, и в `apiResult`
   пишет результат (`d.applyPokemon...`) + `d.X.success()`.
-- **`errorAction`** ловит `ApiError` → `d.X.failure(...)`.
+- **`errorAction`** ловит `ApiError` → `d.X.failure(...)`. Статус — `err.meta.status`, тело ответа сервера — `err.originalError`.
+  204 / пустое тело — успех: колбэк `apiResult` вызывается с `data = undefined`.
 
 ```typescript
 readonly loadDetails = this.effect((action$, state$, { dispatcher: d }) =>

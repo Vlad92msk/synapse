@@ -13,8 +13,12 @@ export function createHeaderContext<RequestParams extends Record<string, any>>(
   optionContext: Record<string, any> = {},
 ): ApiContext<RequestParams> {
   return {
-    ...context,
+    // Пользовательский контекст из options.context доступен и на верхнем уровне (историческое
+    // поведение), и как `ctx.context` (как описано в документации). Служебные поля
+    // (`requestParams`, `getFromStorage`, `getCookie`) пользовательский контекст не перетирает.
     ...optionContext,
+    ...context,
+    context: optionContext,
     getFromStorage:
       context.getFromStorage ||
       ((key: string) => {

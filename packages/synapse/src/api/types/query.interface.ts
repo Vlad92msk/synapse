@@ -23,11 +23,14 @@ export interface QueryOptions {
   cacheableHeaderKeys?: string[]
   /** Формат ответа (переопределяет формат из RequestDefinition) */
   responseFormat?: ResponseFormat
-  /** Название файла при скачивании (переопределяет fileName из RequestDefinition) */
+  /**
+   * @deprecated Не реализовано — игнорируется. Имя файла из ответа: `result.fileDownloadResult?.filename`;
+   * скачивание в браузере — вручную (`URL.createObjectURL(result.data)` + `<a download>`).
+   */
   fileName?: string
-  /** Тип файла при скачивании (переопределяет fileType из RequestDefinition) */
+  /** @deprecated Не реализовано — игнорируется. */
   fileType?: string
-  /** Автоматически скачать файл после получения */
+  /** @deprecated Не реализовано — игнорируется (автоскачивания нет). */
   downloadFile?: boolean
   /** Конфигурация retry для этого запроса (переопределяет эндпоинт и глобальную) */
   retry?: RetryConfig
@@ -68,6 +71,19 @@ export interface FileDownloadResult<T = Blob | ArrayBuffer> {
 }
 
 /**
+ * Метаданные файлового ответа (Blob/ArrayBuffer), извлечённые из заголовков
+ * `Content-Type` / `Content-Disposition` / `Content-Length`.
+ */
+export interface ResponseFileMetadata {
+  /** Имя файла из Content-Disposition (`filename*` RFC 5987 декодируется) */
+  filename?: string
+  contentType: string
+  contentDisposition: string
+  /** Размер в байтах из Content-Length */
+  size?: number
+}
+
+/**
  * Результат выполнения запроса
  */
 export interface QueryResult<T = any, E = Error> {
@@ -83,7 +99,7 @@ export interface QueryResult<T = any, E = Error> {
   statusText: string
   /** Заголовки ответа */
   headers: Headers
-  /** Результат скачивания файла (если responseFormat - Blob или ArrayBuffer) */
-  fileDownloadResult?: FileDownloadResult
+  /** Метаданные файла (если ответ — файл: responseFormat Blob или ArrayBuffer) */
+  fileDownloadResult?: ResponseFileMetadata
   fromCache?: boolean
 }

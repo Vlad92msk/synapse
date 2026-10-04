@@ -514,10 +514,44 @@
                 "code": "// The third argument of request() — options\nawait pokemonApiClient.request('getDetails', { id: 25 }, {\n  disableCache: true,             // bypass the cache\n  timeout: 5000,                  // timeout for this request\n  signal: abortController.signal, // abort signal\n  headers: new Headers({          // extra headers\n    'X-Custom': 'value',\n  }),\n  context: { source: 'user' },   // passed into prepareHeaders\n})\n\n// prepareHeaders receives the context:\nbaseQuery: {\n  baseUrl: 'https://pokeapi.co/api/v2',\n  prepareHeaders: async (headers, context) => {\n    headers.set('Accept', 'application/json')\n    if (context.context?.source === 'admin') headers.set('X-Admin', 'true')\n    // context.requestParams        — the current request's params\n    // context.getFromStorage('key') — read from storage\n    // context.getCookie('name')     — read a cookie\n    return headers\n  },\n}",
                 "meta": null
               }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "If prepareHeaders throws (e.g. the token refresh failed), the request fails with ApiError (meta.status === 0,\nthe thrown error in originalError) and is not sent — a request silently sent without auth headers is worse than a failed one.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 70,
+                      "end": 75
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 3,
+                      "end": 17
+                    },
+                    {
+                      "start": 81,
+                      "end": 89
+                    },
+                    {
+                      "start": 91,
+                      "end": 108
+                    },
+                    {
+                      "start": 130,
+                      "end": 143
+                    }
+                  ],
+                  "links": []
+                }
+              }
             }
           ],
           "metadata": {
-            "wordCount": 0,
+            "wordCount": 39,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -535,7 +569,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "// The full structure of the object returned from request()\nrequest: (params) => ({\n  path: '/pokemon',               // path (appended to baseUrl)\n  method: 'GET',                  // 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'\n  body: params,                   // request body (POST/PUT/PATCH)\n  query: { limit: 12 },          // query params (?limit=12)\n  headers: { 'X-Custom': '1' },  // headers for this request\n  responseFormat: 'json',         // 'json' | 'blob' | 'arrayBuffer' | 'text' | 'formData' | 'raw'\n})\n\n// A mutation example (POST with body + cache invalidation):\ncreatePokemon: create<{ name: string; type: string }, PokemonApiResponse>({\n  request: (params) => ({\n    path: '/pokemon',\n    method: 'POST',\n    body: params,                 // serialized to JSON\n  }),\n  invalidatesTags: ['pokemon-list'],  // on success, drops the list cache\n  cache: false,                       // don't cache mutations\n})",
+                "code": "// The full structure of the object returned from request()\nrequest: (params) => ({\n  path: '/pokemon',               // path (appended to baseUrl); an absolute URL (https://…) bypasses baseUrl —\n                                  // prepareHeaders (incl. the auth token) is applied to it too: never build it from untrusted input\n  method: 'GET',                  // 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'\n  body: params,                   // request body (POST/PUT/PATCH)\n  query: { limit: 12 },          // query params (?limit=12)\n  headers: { 'X-Custom': '1' },  // headers for this request\n  responseFormat: 'json',         // 'json' | 'blob' | 'arrayBuffer' | 'text' | 'formData' | 'raw'\n})\n\n// A mutation example (POST with body + cache invalidation):\ncreatePokemon: create<{ name: string; type: string }, PokemonApiResponse>({\n  request: (params) => ({\n    path: '/pokemon',\n    method: 'POST',\n    body: params,                 // serialized to JSON\n  }),\n  invalidatesTags: ['pokemon-list'],  // on success, drops the list cache\n  cache: false,                       // don't cache mutations\n})",
                 "meta": null
               }
             },
@@ -599,10 +633,290 @@
                 "code": "// Global cache (for all endpoints)\ncache: {\n  ttl: 60000,                            // 60 seconds\n  invalidateOnError: true,\n}\n\n// Cache for a specific endpoint (overrides the global one)\ngetList: create<...>({\n  cache: { ttl: 120000 },               // 2 minutes for the list\n})\n\n// Disable cache for an endpoint\ncreatePokemon: create<...>({\n  cache: false,\n})\n\n// Disable cache for a specific request\nawait pokemonApiClient.request('getDetails', { id: 1 }, {\n  disableCache: true,                    // forced network request\n})\n\n// --- Tags ---\n// An endpoint is tagged:\ngetList: create<...>({\n  tags: ['pokemon-list'],\n})\n\n// A mutation invalidates tags on success:\ncreatePokemon: create<...>({\n  invalidatesTags: ['pokemon-list'],     // drops the cache of all endpoints\n                                         // tagged 'pokemon-list'\n})",
                 "meta": null
               }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "How the cache behaves:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "TTL by default — 5 minutes. A global cache object without ttl extends the defaults (it no longer means \"forever\").",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 27
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 37,
+                              "end": 42
+                            },
+                            {
+                              "start": 58,
+                              "end": 61
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Cache key = endpoint name + the full request params (nested objects and arrays included, key order doesn't matter)",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 9
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered",
+                  "children": [
+                    {
+                      "content": [
+                        {
+                          "type": "paragraph",
+                          "data": {
+                            "text": "the headers listed in cacheableHeaderKeys. Header values are hashed: a token in cacheableHeaderKeys: ['authorization']\nseparates per-user records but never lands in localStorage/IndexedDB or in the dehydrate() snapshot as plain text.",
+                            "formatting": {
+                              "bold": [
+                                {
+                                  "start": 50,
+                                  "end": 67
+                                }
+                              ],
+                              "italic": [],
+                              "code": [
+                                {
+                                  "start": 22,
+                                  "end": 41
+                                },
+                                {
+                                  "start": 80,
+                                  "end": 118
+                                },
+                                {
+                                  "start": 198,
+                                  "end": 209
+                                }
+                              ],
+                              "links": []
+                            }
+                          }
+                        }
+                      ],
+                      "level": 1,
+                      "type": "unordered"
+                    }
+                  ]
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Parallel identical requests are deduplicated into one fetch. Aborting one of them doesn't affect the others; the shared\nfetch is cancelled only when every caller has aborted.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 44
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "A request that was in flight while its tags got invalidated (a mutation finished in the meantime) returns its result to\nthe caller but is not written to the cache — a stale response can't overwrite fresh data.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 59
+                            },
+                            {
+                              "start": 138,
+                              "end": 141
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "The key also includes the final path and responseFormat — if request(params, context) builds a different path\nfrom options.context, those are different records.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 55
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 32,
+                              "end": 36
+                            },
+                            {
+                              "start": 41,
+                              "end": 55
+                            },
+                            {
+                              "start": 61,
+                              "end": 85
+                            },
+                            {
+                              "start": 115,
+                              "end": 130
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Binary responses (Blob, ArrayBuffer, Raw, FormData) are not cached — a JSON storage (localStorage, dehydrate)\nwould silently turn them into {}.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 66
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 18,
+                              "end": 22
+                            },
+                            {
+                              "start": 24,
+                              "end": 35
+                            },
+                            {
+                              "start": 37,
+                              "end": 40
+                            },
+                            {
+                              "start": 42,
+                              "end": 50
+                            },
+                            {
+                              "start": 99,
+                              "end": 108
+                            },
+                            {
+                              "start": 140,
+                              "end": 142
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "invalidateOnError (on by default): a failed forced refetch (disableCache: true) drops the stored record of that key,\nso stale data isn't served after the server reported an error.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 17
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 17
+                            },
+                            {
+                              "start": 60,
+                              "end": 78
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
             }
           ],
           "metadata": {
-            "wordCount": 0,
+            "wordCount": 210,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -637,7 +951,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "import { ApiClient } from 'synapse-storage/api'\nimport { MemoryStorage } from 'synapse-storage/core'\n\nexport const client = new ApiClient({\n  // 1. storage — REQUIRED. The request-cache storage. An instance OR a factory () => IStorage\n  //    (the factory is called on init() — handy for universal SSR code: Memory on the server, anything on the client).\n  storage: () => new MemoryStorage({ name: 'api-cache', initialState: {} }),\n\n  // 2. baseQuery — REQUIRED. The default transport for all endpoints.\n  baseQuery: {\n    baseUrl: 'https://api.example.com',        // base URL, the endpoint's path is glued onto it\n    timeout: 10000,                            // overall request timeout (ms)\n    credentials: 'include',                    // RequestCredentials for fetch (cookies)\n    fetchFn: customFetch,                      // your own fetch function (e.g. via a ServiceWorker) — see CustomFetchFnExample\n    prepareHeaders: async (headers, ctx) => {  // mutate headers before sending\n      headers.set('Accept', 'application/json')\n      // ctx.requestParams / ctx.context / ctx.getFromStorage(key) / ctx.getCookie(name)\n      return headers\n    },\n  },\n\n  // 3. cache? — the global cache policy. false disables the cache entirely (even if endpoints set it).\n  cache: {\n    ttl: 60000,                                // record lifetime (ms)\n    invalidateOnError: true,                   // drop the endpoint's cache when a request errors\n  },\n\n  // 4. cacheableHeaderKeys? — headers that AFFECT the cache key (globally).\n  //    Important for SSR: the set must match on the server and the client, otherwise hydration \"misses\".\n  cacheableHeaderKeys: ['x-lang'],\n\n  // 5. retry? — the global retry policy (inherited by endpoints; can be overridden per endpoint).\n  retry: {\n    count: 3,                                  // number of retries (0 = no retry)\n    delay: (attempt) => attempt * 500,         // delay: a number (ms) or (attempt) => ms\n    retryOn: [0, 429, 500, 502, 503, 504],     // which HTTP statuses to retry on\n  },\n\n  // 6. endpoints — the endpoints factory. create<Params, Result>({ request, cache?, tags?, invalidatesTags?, retry? })\n  endpoints: async (create) => ({\n    getList: create<{ limit: number }, ListResponse>({\n      request: (p) => ({ path: '/items', method: 'GET', query: p }),\n      cache: { ttl: 120000 },                  // this endpoint's TTL (overrides the global one); cache:true — use the global; cache:false — don't cache\n      tags: ['items'],                         // record tags (for invalidation)\n      // invalidatesTags: ['items'],           // for mutations: which tags to drop on success\n    }),\n  }),\n})",
+                "code": "import { ApiClient } from 'synapse-storage/api'\nimport { MemoryStorage } from 'synapse-storage/core'\n\nexport const client = new ApiClient({\n  // 1. storage — REQUIRED. The request-cache storage. An instance OR a factory () => IStorage\n  //    (the factory is called on init() — handy for universal SSR code: Memory on the server, anything on the client).\n  storage: () => new MemoryStorage({ name: 'api-cache', initialState: {} }),\n\n  // 2. baseQuery — REQUIRED. The default transport for all endpoints.\n  baseQuery: {\n    baseUrl: 'https://api.example.com',        // base URL, the endpoint's path is glued onto it\n    timeout: 10000,                            // overall request timeout (ms)\n    credentials: 'include',                    // RequestCredentials for fetch (cookies)\n    fetchFn: customFetch,                      // your own fetch function (e.g. via a ServiceWorker) — see CustomFetchFnExample\n    prepareHeaders: async (headers, ctx) => {  // mutate headers before sending\n      headers.set('Accept', 'application/json')\n      // ctx.requestParams / ctx.context / ctx.getFromStorage(key) / ctx.getCookie(name)\n      return headers\n    },\n  },\n\n  // 3. cache? — the global cache policy. false disables the cache entirely (even if endpoints set it).\n  cache: {\n    ttl: 60000,                                // record lifetime (ms)\n    invalidateOnError: true,                   // drop the endpoint's cache when a request errors\n  },\n\n  // 4. cacheableHeaderKeys? — headers that AFFECT the cache key (globally).\n  //    Important for SSR: the set must match on the server and the client, otherwise hydration \"misses\".\n  cacheableHeaderKeys: ['x-lang'],\n\n  // 5. retry? — the global retry policy. Applies only to idempotent methods (GET/HEAD/OPTIONS/PUT/DELETE):\n  //    retrying a POST/PATCH after a 5xx or a dropped connection could create the entity twice.\n  //    `retry` on an endpoint (or in QueryOptions) is an explicit opt-in and works for any method.\n  retry: {\n    count: 3,                                  // number of retries (0 = no retry)\n    delay: (attempt) => attempt * 500,         // delay: a number (ms) or (attempt) => ms\n    retryOn: [0, 429, 500, 502, 503, 504],     // which HTTP statuses to retry on\n  },\n\n  // 6. endpoints — the endpoints factory. create<Params, Result>({ request, cache?, tags?, invalidatesTags?, retry? })\n  endpoints: async (create) => ({\n    getList: create<{ limit: number }, ListResponse>({\n      request: (p) => ({ path: '/items', method: 'GET', query: p }),\n      cache: { ttl: 120000 },                  // this endpoint's TTL (overrides the global one); cache:true — use the global; cache:false — don't cache\n      tags: ['items'],                         // record tags (for invalidation)\n      // invalidatesTags: ['items'],           // for mutations: which tags to drop on success\n    }),\n  }),\n})",
                 "meta": null
               }
             },
@@ -770,7 +1084,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "const endpoints = pokemonApiClient.getEndpoints()\n\n// The endpoint object:\n// {\n//   fetchCounts: number              — number of performed requests\n//   request(params, options?)        — perform a request (returns RequestResponseModify)\n//   subscribe(callback)              — subscribe to the endpoint state\n//   reset()                          — reset the counter\n//   meta: { name, tags, invalidatesTags, cache }\n//   destroy()                        — cleanup\n// }\n\n// request() through an endpoint returns RequestResponseModify:\nconst req = endpoints.getDetails.request({ id: 25 })\n\n// RequestResponseModify:\n// {\n//   id: string                       — the unique request ID\n//   subscribe(listener)              — subscribe to the request state\n//   wait()                           — Promise<QueryResult>\n//   waitWithCallbacks({ idle, loading, success, error })\n//   abort()                          — abort the request\n//   then/catch/finally               — Promise API (awaitable)\n// }\n\n// Subscribe to the request state\nreq.subscribe((state) => {\n  // RequestState<T>:\n  // {\n  //   status: 'idle' | 'loading' | 'success' | 'error'\n  //   data?: PokemonApiResponse\n  //   error?: Error\n  //   fromCache: boolean\n  //   requestParams: { id: number }\n  // }\n  console.log(state.status)       // 'loading' -> 'success'\n  console.log(state.data)         // PokemonApiResponse | undefined\n})\n\n// Wait for the result\nconst result = await req.wait()\nconsole.log(result.data)          // PokemonApiResponse",
+                "code": "const endpoints = pokemonApiClient.getEndpoints()\n\n// The endpoint object:\n// {\n//   fetchCounts: number              — number of performed requests\n//   request(params, options?)        — perform a request (returns RequestResponseModify)\n//   subscribe(callback)              — subscribe to the endpoint state\n//   reset()                          — reset the counter and drop THIS endpoint's cache records (not other endpoints' with the same tags)\n//   meta: { name, tags, invalidatesTags, cache }\n//   destroy()                        — cleanup\n// }\n\n// request() through an endpoint returns RequestResponseModify:\nconst req = endpoints.getDetails.request({ id: 25 })\n\n// RequestResponseModify:\n// {\n//   id: string                       — the unique request ID\n//   subscribe(listener)              — subscribe to the request state\n//   wait()                           — Promise<QueryResult>\n//   waitWithCallbacks({ idle, loading, success, error })\n//   abort()                          — abort the request\n//   then/catch/finally               — Promise API (awaitable)\n// }\n\n// Subscribe to the request state\nreq.subscribe((state) => {\n  // RequestState<T>:\n  // {\n  //   status: 'idle' | 'loading' | 'success' | 'error'\n  //   data?: PokemonApiResponse\n  //   error?: Error\n  //   fromCache: boolean\n  //   requestParams: { id: number }\n  // }\n  console.log(state.status)       // 'loading' -> 'success'\n  console.log(state.data)         // PokemonApiResponse | undefined\n})\n\n// Wait for the result\nconst result = await req.wait()\nconsole.log(result.data)          // PokemonApiResponse",
                 "meta": null
               }
             },
@@ -885,6 +1199,172 @@
           ],
           "metadata": {
             "wordCount": 44,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "errors-and-empty-responses",
+          "title": "Errors and empty responses",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "204 / empty body is a success. ok: true, data: undefined (for an endpoint declared as create<Params, void>()).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 30
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 31,
+                              "end": 39
+                            },
+                            {
+                              "start": 41,
+                              "end": 56
+                            },
+                            {
+                              "start": 86,
+                              "end": 108
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "The library doesn't log request errors — they are delivered to the caller (reject / error state), who decides what to do.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 38
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 84,
+                              "end": 89
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Any failure rejects with ApiError (import { ApiError } from 'synapse-storage/api', also re-exported from synapse-storage/reactive):\nHTTP 4xx/5xx, a network error or timeout (meta.status === 0), a connection dropped while the body is being read.\nThe same ApiError lands in the request state (error), in endpoint subscribers and in useApiQuery/useApiMutation.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 33
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 25,
+                              "end": 33
+                            },
+                            {
+                              "start": 35,
+                              "end": 81
+                            },
+                            {
+                              "start": 105,
+                              "end": 129
+                            },
+                            {
+                              "start": 174,
+                              "end": 191
+                            },
+                            {
+                              "start": 254,
+                              "end": 262
+                            },
+                            {
+                              "start": 291,
+                              "end": 296
+                            },
+                            {
+                              "start": 330,
+                              "end": 341
+                            },
+                            {
+                              "start": 342,
+                              "end": 356
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "try {\n  await pokemonApiClient.request('getDetails', { id: 1 })\n} catch (err) {\n  if (err instanceof ApiError) {\n    err.meta.status        // 404 (0 — network / timeout)\n    err.originalError      // server response body (parsed JSON / text / undefined) or the original JS error\n    err.message            // `message` from the body, otherwise \"Request failed with status 404 Not Found\"\n  }\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "The timeout (timeout) covers the whole request — including reading the body — and actually aborts it.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 13,
+                      "end": 20
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 106,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -1438,11 +1918,11 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-10-04T06:56:34.785Z",
-        "wordCount": 2842,
-        "readingTime": 15,
-        "sectionsCount": 20,
-        "codeBlocksCount": 17
+        "lastModified": "2026-10-04T10:37:58.849Z",
+        "wordCount": 3340,
+        "readingTime": 17,
+        "sectionsCount": 21,
+        "codeBlocksCount": 18
       }
     },
     "api-ssr-pokemon": {
@@ -10164,7 +10644,7 @@
                     {
                       "type": "paragraph",
                       "data": {
-                        "text": "errorAction catches ApiError → d.X.failure(...).",
+                        "text": "errorAction catches ApiError → d.X.failure(...). Status — err.meta.status, server body — err.originalError.\nA 204 / empty body is a success: the apiResult callback is called with data = undefined.",
                         "formatting": {
                           "bold": [
                             {
@@ -10185,6 +10665,22 @@
                             {
                               "start": 31,
                               "end": 47
+                            },
+                            {
+                              "start": 58,
+                              "end": 73
+                            },
+                            {
+                              "start": 89,
+                              "end": 106
+                            },
+                            {
+                              "start": 145,
+                              "end": 154
+                            },
+                            {
+                              "start": 179,
+                              "end": 195
                             }
                           ],
                           "links": []
@@ -10501,7 +10997,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 384,
+            "wordCount": 408,
             "codeBlocksCount": 2,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -10845,8 +11341,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-10-04T07:04:26.826Z",
-        "wordCount": 2100,
+        "lastModified": "2026-10-04T10:06:40.239Z",
+        "wordCount": 2124,
         "readingTime": 11,
         "sectionsCount": 11,
         "codeBlocksCount": 10
@@ -41453,10 +41949,44 @@
                 "code": "// Третий аргумент request() — опции\nawait pokemonApiClient.request('getDetails', { id: 25 }, {\n  disableCache: true,             // обойти кэш\n  timeout: 5000,                  // таймаут для этого запроса\n  signal: abortController.signal, // сигнал отмены\n  headers: new Headers({          // дополнительные заголовки\n    'X-Custom': 'value',\n  }),\n  context: { source: 'user' },   // передаётся в prepareHeaders\n})\n\n// prepareHeaders получает context:\nbaseQuery: {\n  baseUrl: 'https://pokeapi.co/api/v2',\n  prepareHeaders: async (headers, context) => {\n    headers.set('Accept', 'application/json')\n    if (context.context?.source === 'admin') headers.set('X-Admin', 'true')\n    // context.requestParams        — параметры текущего запроса\n    // context.getFromStorage('key') — чтение из хранилища\n    // context.getCookie('name')     — чтение cookie\n    return headers\n  },\n}",
                 "meta": null
               }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Если prepareHeaders бросает (например, не удалось обновить токен), запрос падает с ApiError (meta.status === 0,\nброшенная ошибка — в originalError) и не отправляется: запрос, молча ушедший без заголовков авторизации, хуже упавшего.",
+                "formatting": {
+                  "bold": [
+                    {
+                      "start": 74,
+                      "end": 80
+                    }
+                  ],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 5,
+                      "end": 19
+                    },
+                    {
+                      "start": 83,
+                      "end": 91
+                    },
+                    {
+                      "start": 93,
+                      "end": 110
+                    },
+                    {
+                      "start": 133,
+                      "end": 146
+                    }
+                  ],
+                  "links": []
+                }
+              }
             }
           ],
           "metadata": {
-            "wordCount": 0,
+            "wordCount": 31,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -41474,7 +42004,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "// Полная структура объекта, возвращаемого из request()\nrequest: (params) => ({\n  path: '/pokemon',               // путь (добавляется к baseUrl)\n  method: 'GET',                  // 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'\n  body: params,                   // тело запроса (POST/PUT/PATCH)\n  query: { limit: 12 },          // query-параметры (?limit=12)\n  headers: { 'X-Custom': '1' },  // заголовки для этого запроса\n  responseFormat: 'json',         // 'json' | 'blob' | 'arrayBuffer' | 'text' | 'formData' | 'raw'\n})\n\n// Пример мутации (POST с body + инвалидация кэша):\ncreatePokemon: create<{ name: string; type: string }, PokemonApiResponse>({\n  request: (params) => ({\n    path: '/pokemon',\n    method: 'POST',\n    body: params,                 // сериализуется в JSON\n  }),\n  invalidatesTags: ['pokemon-list'],  // при успехе сбрасывает кэш списка\n  cache: false,                       // мутации не кэшируем\n})",
+                "code": "// Полная структура объекта, возвращаемого из request()\nrequest: (params) => ({\n  path: '/pokemon',               // путь (добавляется к baseUrl); абсолютный URL (https://…) идёт в обход baseUrl —\n                                  // prepareHeaders (вкл. токен) применяется и к нему: не собирайте его из недоверенных данных\n  method: 'GET',                  // 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'\n  body: params,                   // тело запроса (POST/PUT/PATCH)\n  query: { limit: 12 },          // query-параметры (?limit=12)\n  headers: { 'X-Custom': '1' },  // заголовки для этого запроса\n  responseFormat: 'json',         // 'json' | 'blob' | 'arrayBuffer' | 'text' | 'formData' | 'raw'\n})\n\n// Пример мутации (POST с body + инвалидация кэша):\ncreatePokemon: create<{ name: string; type: string }, PokemonApiResponse>({\n  request: (params) => ({\n    path: '/pokemon',\n    method: 'POST',\n    body: params,                 // сериализуется в JSON\n  }),\n  invalidatesTags: ['pokemon-list'],  // при успехе сбрасывает кэш списка\n  cache: false,                       // мутации не кэшируем\n})",
                 "meta": null
               }
             },
@@ -41538,10 +42068,290 @@
                 "code": "// Глобальный кэш (для всех эндпоинтов)\ncache: {\n  ttl: 60000,                            // 60 секунд\n  invalidateOnError: true,\n}\n\n// Кэш для конкретного эндпоинта (перекрывает глобальный)\ngetList: create<...>({\n  cache: { ttl: 120000 },               // 2 минуты для списка\n})\n\n// Отключить кэш для эндпоинта\ncreatePokemon: create<...>({\n  cache: false,\n})\n\n// Отключить кэш для конкретного запроса\nawait pokemonApiClient.request('getDetails', { id: 1 }, {\n  disableCache: true,                    // принудительный сетевой запрос\n})\n\n// --- Теги ---\n// Эндпоинт помечен тегом:\ngetList: create<...>({\n  tags: ['pokemon-list'],\n})\n\n// Мутация инвалидирует теги при успехе:\ncreatePokemon: create<...>({\n  invalidatesTags: ['pokemon-list'],     // сбрасывает кэш всех эндпоинтов\n                                         // с тегом 'pokemon-list'\n})",
                 "meta": null
               }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Как ведёт себя кэш:",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [],
+                  "links": []
+                }
+              }
+            },
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "TTL по умолчанию — 5 минут. Глобальный объект cache без ttl дополняет дефолты (а не означает «навсегда»).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 27
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 46,
+                              "end": 51
+                            },
+                            {
+                              "start": 56,
+                              "end": 59
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Ключ кэша = имя эндпоинта + параметры запроса целиком (включая вложенные объекты и массивы, порядок ключей не важен)",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 9
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered",
+                  "children": [
+                    {
+                      "content": [
+                        {
+                          "type": "paragraph",
+                          "data": {
+                            "text": "заголовки из cacheableHeaderKeys. Значения заголовков хешируются: токен в cacheableHeaderKeys: ['authorization']\nразделяет записи разных пользователей, но открытым текстом не попадает ни в localStorage/IndexedDB, ни в снапшот dehydrate().",
+                            "formatting": {
+                              "bold": [
+                                {
+                                  "start": 54,
+                                  "end": 64
+                                }
+                              ],
+                              "italic": [],
+                              "code": [
+                                {
+                                  "start": 13,
+                                  "end": 32
+                                },
+                                {
+                                  "start": 74,
+                                  "end": 112
+                                },
+                                {
+                                  "start": 226,
+                                  "end": 237
+                                }
+                              ],
+                              "links": []
+                            }
+                          }
+                        }
+                      ],
+                      "level": 1,
+                      "type": "unordered"
+                    }
+                  ]
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Одинаковые параллельные запросы дедуплицируются в один fetch. Отмена одного из них не задевает остальных; общий\nfetch отменяется, только когда отменили все.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 47
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Запрос, во время полёта которого инвалидировали его теги (успела завершиться мутация), отдаёт результат вызвавшему,\nно в кэш не пишется — устаревший ответ не перетрёт свежие данные.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 56
+                            },
+                            {
+                              "start": 125,
+                              "end": 127
+                            }
+                          ],
+                          "italic": [],
+                          "code": [],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Ключ учитывает итоговый path и responseFormat — если request(params, context) строит другой path из\noptions.context, это разные записи.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 45
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 24,
+                              "end": 28
+                            },
+                            {
+                              "start": 31,
+                              "end": 45
+                            },
+                            {
+                              "start": 53,
+                              "end": 77
+                            },
+                            {
+                              "start": 100,
+                              "end": 115
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Бинарные ответы (Blob, ArrayBuffer, Raw, FormData) не кэшируются — JSON-хранилище (localStorage, dehydrate)\nмолча превратило бы их в {}.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 64
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 17,
+                              "end": 21
+                            },
+                            {
+                              "start": 23,
+                              "end": 34
+                            },
+                            {
+                              "start": 36,
+                              "end": 39
+                            },
+                            {
+                              "start": 41,
+                              "end": 49
+                            },
+                            {
+                              "start": 97,
+                              "end": 106
+                            },
+                            {
+                              "start": 133,
+                              "end": 135
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "invalidateOnError (включён по умолчанию): упавший принудительный рефетч (disableCache: true) выбрасывает\nсохранённую запись этого ключа — после ошибки сервера устаревшие данные не отдаются.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 17
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 0,
+                              "end": 17
+                            },
+                            {
+                              "start": 73,
+                              "end": 91
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
             }
           ],
           "metadata": {
-            "wordCount": 0,
+            "wordCount": 170,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -41576,7 +42386,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "import { ApiClient } from 'synapse-storage/api'\nimport { MemoryStorage } from 'synapse-storage/core'\n\nexport const client = new ApiClient({\n  // 1. storage — ОБЯЗАТЕЛЬНО. Хранилище кэша запросов. Инстанс ИЛИ фабрика () => IStorage\n  //    (фабрика зовётся на init() — удобно для универсального SSR-кода: Memory на сервере, любой на клиенте).\n  storage: () => new MemoryStorage({ name: 'api-cache', initialState: {} }),\n\n  // 2. baseQuery — ОБЯЗАТЕЛЬНО. Транспорт по умолчанию для всех эндпоинтов.\n  baseQuery: {\n    baseUrl: 'https://api.example.com',        // базовый URL, к нему клеится path эндпоинта\n    timeout: 10000,                            // общий таймаут запроса (мс)\n    credentials: 'include',                    // RequestCredentials для fetch (cookies)\n    fetchFn: customFetch,                      // своя fetch-функция (напр. через ServiceWorker) — см. CustomFetchFnExample\n    prepareHeaders: async (headers, ctx) => {  // мутируем заголовки перед отправкой\n      headers.set('Accept', 'application/json')\n      // ctx.requestParams / ctx.context / ctx.getFromStorage(key) / ctx.getCookie(name)\n      return headers\n    },\n  },\n\n  // 3. cache? — глобальная политика кэша. false целиком отключает кэш (даже если у эндпоинтов он задан).\n  cache: {\n    ttl: 60000,                                // время жизни записи (мс)\n    invalidateOnError: true,                   // сбрасывать кэш эндпоинта при ошибке запроса\n  },\n\n  // 4. cacheableHeaderKeys? — заголовки, ВЛИЯЮЩИЕ на ключ кэша (глобально).\n  //    Важно для SSR: набор должен совпадать на сервере и клиенте, иначе гидрация «не попадёт».\n  cacheableHeaderKeys: ['x-lang'],\n\n  // 5. retry? — глобальная политика повторов (наследуется эндпоинтами; можно переопределить в эндпоинте).\n  retry: {\n    count: 3,                                  // число повторов (0 = без retry)\n    delay: (attempt) => attempt * 500,         // задержка: число (мс) или (attempt) => мс\n    retryOn: [0, 429, 500, 502, 503, 504],     // на каких HTTP-статусах повторять\n  },\n\n  // 6. endpoints — фабрика эндпоинтов. create<Params, Result>({ request, cache?, tags?, invalidatesTags?, retry? })\n  endpoints: async (create) => ({\n    getList: create<{ limit: number }, ListResponse>({\n      request: (p) => ({ path: '/items', method: 'GET', query: p }),\n      cache: { ttl: 120000 },                  // TTL этого эндпоинта (перекрывает глобальный); cache:true — взять глобальный; cache:false — не кэшировать\n      tags: ['items'],                         // теги записи (для инвалидации)\n      // invalidatesTags: ['items'],           // для мутаций: какие теги сбросить при успехе\n    }),\n  }),\n})",
+                "code": "import { ApiClient } from 'synapse-storage/api'\nimport { MemoryStorage } from 'synapse-storage/core'\n\nexport const client = new ApiClient({\n  // 1. storage — ОБЯЗАТЕЛЬНО. Хранилище кэша запросов. Инстанс ИЛИ фабрика () => IStorage\n  //    (фабрика зовётся на init() — удобно для универсального SSR-кода: Memory на сервере, любой на клиенте).\n  storage: () => new MemoryStorage({ name: 'api-cache', initialState: {} }),\n\n  // 2. baseQuery — ОБЯЗАТЕЛЬНО. Транспорт по умолчанию для всех эндпоинтов.\n  baseQuery: {\n    baseUrl: 'https://api.example.com',        // базовый URL, к нему клеится path эндпоинта\n    timeout: 10000,                            // общий таймаут запроса (мс)\n    credentials: 'include',                    // RequestCredentials для fetch (cookies)\n    fetchFn: customFetch,                      // своя fetch-функция (напр. через ServiceWorker) — см. CustomFetchFnExample\n    prepareHeaders: async (headers, ctx) => {  // мутируем заголовки перед отправкой\n      headers.set('Accept', 'application/json')\n      // ctx.requestParams / ctx.context / ctx.getFromStorage(key) / ctx.getCookie(name)\n      return headers\n    },\n  },\n\n  // 3. cache? — глобальная политика кэша. false целиком отключает кэш (даже если у эндпоинтов он задан).\n  cache: {\n    ttl: 60000,                                // время жизни записи (мс)\n    invalidateOnError: true,                   // сбрасывать кэш эндпоинта при ошибке запроса\n  },\n\n  // 4. cacheableHeaderKeys? — заголовки, ВЛИЯЮЩИЕ на ключ кэша (глобально).\n  //    Важно для SSR: набор должен совпадать на сервере и клиенте, иначе гидрация «не попадёт».\n  cacheableHeaderKeys: ['x-lang'],\n\n  // 5. retry? — глобальная политика повторов. Действует только для идемпотентных методов (GET/HEAD/OPTIONS/PUT/DELETE):\n  //    повтор POST/PATCH после 5xx или обрыва мог бы создать сущность дважды.\n  //    `retry` на эндпоинте (или в QueryOptions) — явный opt-in, работает для любого метода.\n  retry: {\n    count: 3,                                  // число повторов (0 = без retry)\n    delay: (attempt) => attempt * 500,         // задержка: число (мс) или (attempt) => мс\n    retryOn: [0, 429, 500, 502, 503, 504],     // на каких HTTP-статусах повторять\n  },\n\n  // 6. endpoints — фабрика эндпоинтов. create<Params, Result>({ request, cache?, tags?, invalidatesTags?, retry? })\n  endpoints: async (create) => ({\n    getList: create<{ limit: number }, ListResponse>({\n      request: (p) => ({ path: '/items', method: 'GET', query: p }),\n      cache: { ttl: 120000 },                  // TTL этого эндпоинта (перекрывает глобальный); cache:true — взять глобальный; cache:false — не кэшировать\n      tags: ['items'],                         // теги записи (для инвалидации)\n      // invalidatesTags: ['items'],           // для мутаций: какие теги сбросить при успехе\n    }),\n  }),\n})",
                 "meta": null
               }
             },
@@ -41709,7 +42519,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "const endpoints = pokemonApiClient.getEndpoints()\n\n// Объект эндпоинта:\n// {\n//   fetchCounts: number              — количество выполненных запросов\n//   request(params, options?)        — выполнить запрос (возвращает RequestResponseModify)\n//   subscribe(callback)              — подписка на состояние эндпоинта\n//   reset()                          — сброс счётчика\n//   meta: { name, tags, invalidatesTags, cache }\n//   destroy()                        — очистка\n// }\n\n// request() через эндпоинт возвращает RequestResponseModify:\nconst req = endpoints.getDetails.request({ id: 25 })\n\n// RequestResponseModify:\n// {\n//   id: string                       — уникальный ID запроса\n//   subscribe(listener)              — подписка на состояние запроса\n//   wait()                           — Promise<QueryResult>\n//   waitWithCallbacks({ idle, loading, success, error })\n//   abort()                          — отмена запроса\n//   then/catch/finally               — Promise API (можно await)\n// }\n\n// Подписка на состояние запроса\nreq.subscribe((state) => {\n  // RequestState<T>:\n  // {\n  //   status: 'idle' | 'loading' | 'success' | 'error'\n  //   data?: PokemonApiResponse\n  //   error?: Error\n  //   fromCache: boolean\n  //   requestParams: { id: number }\n  // }\n  console.log(state.status)       // 'loading' -> 'success'\n  console.log(state.data)         // PokemonApiResponse | undefined\n})\n\n// Ожидание результата\nconst result = await req.wait()\nconsole.log(result.data)          // PokemonApiResponse",
+                "code": "const endpoints = pokemonApiClient.getEndpoints()\n\n// Объект эндпоинта:\n// {\n//   fetchCounts: number              — количество выполненных запросов\n//   request(params, options?)        — выполнить запрос (возвращает RequestResponseModify)\n//   subscribe(callback)              — подписка на состояние эндпоинта\n//   reset()                          — сброс счётчика и записей кэша ЭТОГО эндпоинта (не трогая чужие с теми же тегами)\n//   meta: { name, tags, invalidatesTags, cache }\n//   destroy()                        — очистка\n// }\n\n// request() через эндпоинт возвращает RequestResponseModify:\nconst req = endpoints.getDetails.request({ id: 25 })\n\n// RequestResponseModify:\n// {\n//   id: string                       — уникальный ID запроса\n//   subscribe(listener)              — подписка на состояние запроса\n//   wait()                           — Promise<QueryResult>\n//   waitWithCallbacks({ idle, loading, success, error })\n//   abort()                          — отмена запроса\n//   then/catch/finally               — Promise API (можно await)\n// }\n\n// Подписка на состояние запроса\nreq.subscribe((state) => {\n  // RequestState<T>:\n  // {\n  //   status: 'idle' | 'loading' | 'success' | 'error'\n  //   data?: PokemonApiResponse\n  //   error?: Error\n  //   fromCache: boolean\n  //   requestParams: { id: number }\n  // }\n  console.log(state.status)       // 'loading' -> 'success'\n  console.log(state.data)         // PokemonApiResponse | undefined\n})\n\n// Ожидание результата\nconst result = await req.wait()\nconsole.log(result.data)          // PokemonApiResponse",
                 "meta": null
               }
             },
@@ -41824,6 +42634,172 @@
           ],
           "metadata": {
             "wordCount": 36,
+            "codeBlocksCount": 1,
+            "diagramsCount": 0,
+            "tasksCount": 0,
+            "hasTable": false,
+            "hasBlockquotes": false,
+            "hasTasks": false
+          }
+        },
+        {
+          "id": "errors-and-empty-responses",
+          "title": "Ошибки и пустые ответы",
+          "level": 2,
+          "content": [
+            {
+              "type": "list",
+              "data": [
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "204 / пустое тело — успех. ok: true, data: undefined (для эндпоинта, объявленного как create<Params, void>()).",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 26
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 27,
+                              "end": 35
+                            },
+                            {
+                              "start": 37,
+                              "end": 52
+                            },
+                            {
+                              "start": 86,
+                              "end": 108
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Библиотека не логирует ошибки запросов — они доставляются вызывающему (reject / состояние error), он и решает, что делать.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 38
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 90,
+                              "end": 95
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                },
+                {
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "data": {
+                        "text": "Любой неуспех — reject с ApiError (import { ApiError } from 'synapse-storage/api', реэкспорт есть и в synapse-storage/reactive):\nHTTP 4xx/5xx, сетевая ошибка или таймаут (meta.status === 0), обрыв соединения во время чтения тела.\nТот же ApiError попадает в состояние запроса (error), в подписчики эндпоинта и в useApiQuery/useApiMutation.",
+                        "formatting": {
+                          "bold": [
+                            {
+                              "start": 0,
+                              "end": 33
+                            }
+                          ],
+                          "italic": [],
+                          "code": [
+                            {
+                              "start": 25,
+                              "end": 33
+                            },
+                            {
+                              "start": 35,
+                              "end": 81
+                            },
+                            {
+                              "start": 102,
+                              "end": 126
+                            },
+                            {
+                              "start": 171,
+                              "end": 188
+                            },
+                            {
+                              "start": 237,
+                              "end": 245
+                            },
+                            {
+                              "start": 276,
+                              "end": 281
+                            },
+                            {
+                              "start": 311,
+                              "end": 322
+                            },
+                            {
+                              "start": 323,
+                              "end": 337
+                            }
+                          ],
+                          "links": []
+                        }
+                      }
+                    }
+                  ],
+                  "level": 0,
+                  "type": "unordered"
+                }
+              ]
+            },
+            {
+              "type": "code",
+              "data": {
+                "language": "typescript",
+                "code": "try {\n  await pokemonApiClient.request('getDetails', { id: 1 })\n} catch (err) {\n  if (err instanceof ApiError) {\n    err.meta.status        // 404 (0 — сеть / таймаут)\n    err.originalError      // тело ответа сервера (распарсенный JSON / текст / undefined) или исходная JS-ошибка\n    err.message            // `message` из тела, иначе \"Request failed with status 404 Not Found\"\n  }\n}",
+                "meta": null
+              }
+            },
+            {
+              "type": "paragraph",
+              "data": {
+                "text": "Таймаут (timeout) покрывает весь запрос — включая чтение тела — и реально его прерывает.",
+                "formatting": {
+                  "bold": [],
+                  "italic": [],
+                  "code": [
+                    {
+                      "start": 9,
+                      "end": 16
+                    }
+                  ],
+                  "links": []
+                }
+              }
+            }
+          ],
+          "metadata": {
+            "wordCount": 94,
             "codeBlocksCount": 1,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -42377,11 +43353,11 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-10-04T06:56:34.784Z",
-        "wordCount": 2563,
-        "readingTime": 13,
-        "sectionsCount": 20,
-        "codeBlocksCount": 17
+        "lastModified": "2026-10-04T10:37:58.850Z",
+        "wordCount": 2990,
+        "readingTime": 15,
+        "sectionsCount": 21,
+        "codeBlocksCount": 18
       }
     },
     "api-ssr-pokemon": {
@@ -51099,7 +52075,7 @@
                     {
                       "type": "paragraph",
                       "data": {
-                        "text": "errorAction ловит ApiError → d.X.failure(...).",
+                        "text": "errorAction ловит ApiError → d.X.failure(...). Статус — err.meta.status, тело ответа сервера — err.originalError.\n204 / пустое тело — успех: колбэк apiResult вызывается с data = undefined.",
                         "formatting": {
                           "bold": [
                             {
@@ -51120,6 +52096,22 @@
                             {
                               "start": 29,
                               "end": 45
+                            },
+                            {
+                              "start": 56,
+                              "end": 71
+                            },
+                            {
+                              "start": 95,
+                              "end": 112
+                            },
+                            {
+                              "start": 148,
+                              "end": 157
+                            },
+                            {
+                              "start": 171,
+                              "end": 187
                             }
                           ],
                           "links": []
@@ -51432,7 +52424,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 338,
+            "wordCount": 359,
             "codeBlocksCount": 2,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -51776,8 +52768,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-10-04T07:04:26.824Z",
-        "wordCount": 1871,
+        "lastModified": "2026-10-04T10:06:40.239Z",
+        "wordCount": 1892,
         "readingTime": 10,
         "sectionsCount": 11,
         "codeBlocksCount": 10
