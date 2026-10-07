@@ -1,0 +1,88 @@
+{
+  "v": 4,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-07T11:40:00Z"
+  },
+  "lists": "css",
+  "title": "synapse-storage: от стора до модуля",
+  "cover": "cover",
+  "order": [
+    "hook",
+    "cover",
+    "why",
+    "layers",
+    "storage",
+    "persist",
+    "persist-table",
+    "middleware",
+    "middleware-custom",
+    "react",
+    "selectors",
+    "selectors-cross",
+    "api-client",
+    "api-endpoints",
+    "api-calls",
+    "synapse-intro",
+    "dispatcher",
+    "synapse-assemble",
+    "effects",
+    "effects-validate",
+    "effects-switch",
+    "effects-mutation",
+    "effects-socket",
+    "effects-assemble",
+    "ssr-problem",
+    "ssr-server",
+    "ssr-client",
+    "real-one",
+    "real-module",
+    "real-app",
+    "real-files",
+    "real-facade",
+    "shelf",
+    "have",
+    "end"
+  ],
+  "sections": {
+    "intro": {
+      "description": "Крючок, обложка, зачем synapse и два слоя",
+      "start": "hook"
+    },
+    "state": {
+      "description": "State Manager: хранилище, смена хранилища, middleware, React, селекторы",
+      "start": "storage"
+    },
+    "api": {
+      "description": "ApiClient: создание, эндпоинты, вызовы",
+      "start": "api-client"
+    },
+    "logic": {
+      "description": "Бизнес-логика: диспетчер, сборка синапса, эффекты",
+      "start": "synapse-intro"
+    },
+    "ssr": {
+      "description": "SSR: форк на запрос, снапшот, гидрация",
+      "start": "ssr-problem"
+    },
+    "real": {
+      "description": "Синапсы в реальном проекте",
+      "start": "real-one"
+    },
+    "outro": {
+      "description": "Что ещё есть и чего нет",
+      "start": "shelf"
+    }
+  },
+  "faces": {
+    "inter": {
+      "family": "Inter",
+      "href": "https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
+    },
+    "jetbrains-mono": {
+      "family": "JetBrains Mono",
+      "href": "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap"
+    }
+  },
+  "designSystems": []
+}

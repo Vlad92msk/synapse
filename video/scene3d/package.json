@@ -1,0 +1,14 @@
+{
+  "name": "synapse-video-scene3d",
+  "private": true,
+  "type": "module",
+  "description": "WebGL-сцена блока 12 ролика 1 (three.js): синапсы-торы, связи, импульсы, камера на три масштаба",
+  "scripts": {
+    "build": "esbuild src/index.js --bundle --format=iife --global-name=Scene3D --minify --outfile=dist/scene3d.js --log-level=warning",
+    "watch": "esbuild src/index.js --bundle --format=iife --global-name=Scene3D --outfile=dist/scene3d.js --watch"
+  },
+  "dependencies": {
+    "esbuild": "^0.28.2",
+    "three": "^0.186.1"
+  }
+}

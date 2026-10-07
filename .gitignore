@@ -20,3 +20,10 @@ dist/
 # Claude Code local (personal) settings
 .claude/settings.local.json
 **/.claude/settings.local.json
+
+# Видео: тяжёлые медиа и сгенерированный просмотр деки
+/video/media/
+/video/decks/*/preview.html
+
+# ключи озвучки (video/render/.env)
+.env

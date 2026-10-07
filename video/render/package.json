@@ -1,0 +1,12 @@
+{
+  "name": "synapse-video-render",
+  "private": true,
+  "type": "module",
+  "description": "Черновой рендер ролика из деки: слайды + шаги + озвучка macOS say → mp4",
+  "scripts": {
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "puppeteer-core": "25.12.0"
+  }
+}

@@ -11,6 +11,7 @@ packages/
 docs/{en,ru}/ # исходники документации (Markdown, en — мастер-локаль); сайт генерится из них
 scripts/release.sh  # релиз: npm + деплой сайта
 tasks/, TASK_*.md   # рабочие заметки/задачи пользователя (не код)
+video/              # сценарии и слайды YouTube-роликов (свой CLAUDE.md)
 ```
 
 ## packages/synapse — библиотека
