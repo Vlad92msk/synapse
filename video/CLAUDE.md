@@ -13,7 +13,7 @@ video/
     build-preview.mjs    # node video/decks/build-preview.mjs <deck> → decks/<deck>/preview.html
     overview/
       build-slides.mjs   # генератор деки ролика 1: слайды + заметки из шагов VIDEO_OVERVIEW.md
-      project/           # дека ролика 1 (38 слайдов) — генерится build-slides.mjs
+      project/           # дека ролика 1 (40 слайдов) — генерится build-slides.mjs
       timeline.json      # генерится: шаги диктора → клики (build-шаги) каждого слайда, вход рендера
       preview.html       # генерится, руками не править
   render/

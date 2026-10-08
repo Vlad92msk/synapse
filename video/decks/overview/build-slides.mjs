@@ -155,7 +155,10 @@ function code({ x = 128, y = 250, w = 1664, rows: all, size = 24, lh = 34, s = 0
   all.forEach((row, v) => { if (row !== GAP) vis.push(v) })
   const vy = (r) => (r < rows.length ? vis[r] : all.length + r - rows.length)
   const h = all.length * lh + pad * 2
-  let html = DIV(x, y, w, h, { background: C.code, border: `1px solid ${C.line}`, 'border-radius': 18 }, s, 0, 'rise')
+  // рамка — вместе с первой появляющейся строкой (пустая рамка до кода выглядит как незагрузившаяся картинка)
+  const steps = rows.flatMap((row) => (Array.isArray(row) ? (row[1] ? [row[0]] : []) : (row.segs ?? row.alt ?? []).map((x) => x[0])))
+  const s0 = s || Math.min(...steps, Infinity)
+  let html = DIV(x, y, w, h, { background: C.code, border: `1px solid ${C.line}`, 'border-radius': 18 }, isFinite(s0) ? s0 : 0, 0, 'rise')
   const line = (r, text, step, out, col = 0) => {
     if (!text) return ''
     const lead = text.match(/^ */)[0].length
@@ -455,7 +458,7 @@ slide('cover',
     [9, 'const selectors = new PokemonSelectors(pokemonStorage)'],
     [9, 'const filtered = useSelector(selectors.filteredList)'],
   ] })
-  let b = header('State Manager · селекторы', 7, null) + c.html
+  let b = header('State Manager · селекторы', 7, 'Вычисляемые данные с мемоизацией') + c.html
   const A = [1480, 345, 180], B = [1700, 345, 180], F = [1590, 580, 200]
   b += bubble(A[0], A[1], A[2], 'pokemonList', { s: 5 }) + bubble(B[0], B[1], B[2], 'searchQuery', { s: 5 })
   b += arrowDown(A, F, { s: 5 }) + arrowDown(B, F, { s: 5 })
@@ -485,7 +488,7 @@ slide('cover',
     [0, ''],
     [6, 'const selectors = new PokemonSelectors(pokemonStorage, userSelectors)'],
   ] })
-  let b = header('State Manager · селекторы', 7, null) + c.html + mark(c, 8, 12, 5, 6)
+  let b = header('State Manager · селекторы', 7, 'Селекторы из другого модуля') + c.html + mark(c, 8, 12, 5, 6)
   const A = [1480, 345, 180], B = [1700, 345, 180], F = [1590, 590, 220]
   b += bubble(A[0], A[1], A[2], 'favorites', { s: 3 }) + bubble(B[0], B[1], B[2], 'user.plan', { s: 3, dashed: true })
   b += note(1610, 214, 182, 'чужой модуль', 3, 0, 22)
@@ -500,6 +503,7 @@ slide('cover',
 {
   const c = code({ y: 240, w: 1230, rows: [
     [1, "import { ApiClient } from 'synapse-storage/api'"],
+    [1, "import { MemoryStorage } from 'synapse-storage/core'"],
     [0, ''],
     [2, 'export const pokemonApi = new ApiClient({'],
     [3, "  storage: new MemoryStorage({ name: 'api-cache', initialState: {} }),"],
@@ -518,7 +522,7 @@ slide('cover',
     [2, '  endpoints: async (create) => ({ … }),   // → дальше'],
     [2, '})'],
   ] })
-  let b = header('ApiClient · создание', 8, null) + c.html
+  let b = header('ApiClient · создание', 8, 'Транспорт, кэш, повторы') + c.html
   b += P(1420, 250, 372, 'как RTK Query, только без Redux', { 'font-size': 28, color: C.muted, 'line-height': 1.4 })
   b += card(1420, 360, 372, 'кэш = хранилище', 'Memory · LocalStorage · IndexedDB', { s: 3 })
   b += card(1420, 520, 372, 'baseQuery', 'адрес, таймаут, заголовки, свой fetch', { s: 4 })
@@ -549,7 +553,7 @@ slide('cover',
     [5, 'await pokemonApi.init()              // обязательно перед запросами'],
     [6, 'export const endpoints = pokemonApi.getEndpoints()'],
   ] })
-  let b = header('ApiClient · эндпоинты', 8, null) + c.html
+  let b = header('ApiClient · эндпоинты', 8, 'Эндпоинт описывается один раз') + c.html
   b += conn(c.x + c.w - 50, c.at(13) + 16, c.x + c.w - 50, c.at(4) + 16, { s: 4, dashed: true })
   b += note(1460, 260, 332, 'тип параметров, тип ответа, путь, метод — один раз', 1, 0, 26)
   b += note(1460, 560, 332, 'мутация сбросила тег → список перезапросится сам', 4, 0, 26)
@@ -617,9 +621,9 @@ const logoBase = ({ center: withCenter = false, centerS = 0, spokes = [], sats =
     [9, '  readonly watchFavoriteCount = this.watcher({ selector: (s) => s.favorites.length })'],
     [2, '}'],
   ] })
-  let b = header('Бизнес-логика · диспетчер', null, null) + c.html + mark(c, 12, 13, 8, 9)
+  let b = header('Бизнес-логика · диспетчер', 9, 'Всё, что модуль умеет делать') + c.html + mark(c, 12, 13, 8, 9)
   // кольца «уехали в угол» — те же id, magic-переход
-  b += ring('ring-storage', 1560, 130, 56, { gapAt: 180, stroke: 18 }) + ring('ring-selectors', 1650, 130, 56, { gapAt: 180, stroke: 18 }) + ring('ring-dispatcher', 1740, 130, 56, { gapAt: 180, stroke: 18 })
+  b += ring('ring-storage', 1580, 60, 48, { gapAt: 180, stroke: 18 }) + ring('ring-selectors', 1660, 60, 48, { gapAt: 180, stroke: 18 }) + ring('ring-dispatcher', 1740, 60, 48, { gapAt: 180, stroke: 18 })
   b += chain(128, 870, [['UI'], ['selectPokemon(25)', { hot: true, mono: true }], ['стор'], ['action$ → эффекты']], { s: 10, size: 24 }).html
   slide('dispatcher', b, notes(9, 3, 13), { transition: 'magic', map: [0,1,2,3,4,5,6,7,8,9,10] })
 }
@@ -637,7 +641,7 @@ const logoBase = ({ center: withCenter = false, centerS = 0, spokes = [], sats =
     [5, 'const pokemon = await pokemonSynapse  // при первом await'],
     [5, 'pokemon.actions.selectPokemon(25)'],
   ] })
-  let b = header('Бизнес-логика · сборка', 9, null) + c.html
+  let b = header('Бизнес-логика · сборка', 9, 'Собираем синапс') + c.html
   b += spoke(0, { s: 2 }) + spoke(1, { s: 3 }) + spoke(2, { s: 4 })
   b += satellite(0) + satellite(1) + satellite(2, { opacity: 0.4 }) + satellite(2, { s: 4, idSuffix: '-on' })
   b += satellite(3, { s: 6, dashed: true, label: 'Effects?' })
@@ -658,6 +662,19 @@ const opsPanel = (lit) => {
   return h
 }
 {
+  let b = header('Бизнес-логика · эффекты', 10, 'Хук или эффект?')
+  const col = (x, title, items, s, hot) => {
+    let h = P(x, 270, 800, title, { 'font-size': 40, 'font-weight': 800, color: hot ? C.accent : C.text }, s)
+    items.forEach(([t, si], i) => { h += P(x, 350 + i * 96, 800, t, { 'font-size': 30, 'line-height': 1.35, padding: '18px 26px', 'border-radius': 16, background: hot ? C.soft : C.card, border: `2px solid ${hot ? C.accent : C.line}` }, si, 0, 'rise') })
+    return h
+  }
+  b += col(128, '<span style="font-family:JetBrains Mono, monospace">useApiQuery</span> — хук', [['данные нужны экрану: показать и забыть', 2], ['запрос живёт, пока смонтирован компонент', 2], ['можно взять только ApiClient + хуки: кэш хоть в IndexedDB', 2]], 1)
+  b += col(992, 'Эффект', [['запрос — часть логики, его запускает экшен', 3], ['ответ — в хранилище модуля, читают все', 3], ['цепочки, отмена устаревших, сокеты, таймеры', 3]], 3, true)
+  b += P(128, 700, 1664, `один запрос · один <b>ApiClient</b> и кэш — хук через <span style="font-family:JetBrains Mono, monospace;color:${C.accent}">subscribe</span>, эффект через <span style="font-family:JetBrains Mono, monospace;color:${C.accent}">pipe</span>`, { 'font-size': 32, 'text-align': 'center', padding: '22px 30px', 'border-radius': 16, border: `2px dashed ${C.dim}` }, 4, 0, 'rise')
+  b += note(128, 820, 1664, 'компонент вызывает <span style="font-family:JetBrains Mono, monospace;color:#ECECEC">selectPokemon(25)</span> и не знает, что дальше будет запрос', 4, 0, 28)
+  slide('effects-why', b, notes(10, 1, 4), { map: [1, 2, 3, 4] })
+}
+{
   const c = code({ y: 240, w: 1280, rows: [
     [3, 'export class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {'],
     [4, '  constructor(private readonly api: PokemonApiEndpoints) { super() }'],
@@ -665,31 +682,26 @@ const opsPanel = (lit) => {
     [5, '  readonly loadDetails = this.effect((action$, state$, { dispatcher: d }) =>'],
     [5, '    action$.pipe('],
     [7, '      ofType(d.selectPokemon),'],
-    [8, '      withLatestFrom(selectorMap(state$,'],
-    [8, '        (s) => s.selectedPokemonId,'],
-    [8, '        (s) => s.api.detailsRequest.status,'],
-    [8, '      )),'],
+    [8, '      withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId)),'],
     [9, '      validateMap({ … }),          // → следующий слайд'],
     [5, '    ),'],
     [5, '  )'],
     [3, '}'],
   ] })
-  let b = header('Бизнес-логика · эффекты', 10, null) + c.html
+  let b = header('Бизнес-логика · эффекты', 10, 'Эффекты — реакции на намерения') + c.html
   b += opsPanel({ base: 6, 'ofType / ofTypes': 7, 'selectorMap / Object': 8, validateMap: 9 })
   b += note(128, c.y + c.h + 28, 1260, 'RxJS — только здесь. Знакомо по redux-observable и эффектам Angular.', 1, 0, 28)
   b += note(128, c.y + c.h + 80, 1260, 'selectorMap → массив · selectorObject → объект с именами', 8, 0, 28)
-  slide('effects', b, notes(10, 1, 8), { map: [0,1,3,4,5,6,7,[8,9]] })
+  slide('effects', b, notes(10, 5, 12), { map: [0,1,3,4,5,6,7,[8,9]] })
 }
 {
   const c = code({ y: 240, w: 1280, rows: [
     [0, 'action$.pipe(ofType(d.selectPokemon), withLatestFrom(…),'],
     [0, '  validateMap({'],
-    [2, '    validator: ([, [id, status]]) => ({'],
-    [2, '      conditions: [id !== null, status !== ApiStatus.Loading],'],
-    [2, '    }),'],
+    [2, '    validator: ([, [id]]) => ({ conditions: [id !== null] }),'],
     GAP,
     [3, '    loadingAction: () => d.loadDetails.loading(),'],
-    [4, '    errorAction: (err) => d.loadDetails.failure(String(err)),'],
+    [4, '    errorAction: (err) => d.loadDetails.failure(err.message), // err: ApiError'],
     GAP,
     [5, '    apiCall: ([, [id]]) =>'],
     [5, '      fromRequest(this.api.getDetails.request({ id: id! })).pipe('],
@@ -700,13 +712,13 @@ const opsPanel = (lit) => {
     [5, '      ),'],
     [0, '  }),'],
   ], dimRows: [0] })
-  let b = header('Бизнес-логика · эффекты', 10, null) + c.html
+  let b = header('Бизнес-логика · эффекты', 10, 'validateMap — весь цикл запроса') + c.html
   b += opsPanel({ 'ofType / ofTypes': 0, 'selectorMap / Object': 0, validateMap: 0, fromRequest: 5, apiResult: 6 })
   const stages = [['validator', 2], ['loadingAction', 3], ['apiCall', 5], ['success / errorAction', 4]]
   b += chain(128, c.y + c.h + 28, stages.map(([t]) => [t, { mono: true }]), { s: 1, size: 24 }).html
   let x = 128
   stages.forEach(([t, s]) => { b += pill(x, c.y + c.h + 28, t, { s, size: 24, mono: true, hot: true }); x += pillW(t, 24) + 56 })
-  slide('effects-validate', b, notes(10, 9, 14), { map: [1,2,3,4,5,6] })
+  slide('effects-validate', b, notes(10, 13, 18), { map: [1,2,3,4,5,6] })
 }
 {
   // marble-диаграмма switchMap
@@ -721,7 +733,28 @@ const opsPanel = (lit) => {
   b += DIV(1120, 736, 360, 12, { background: C.accent, 'border-radius': 6 }, 3)
   b += dot(1520, 742, '✓', 3, true)
   b += note(128, 860, 1600, 'новый выбор отменяет старый запрос вместе с HTTP — в стор попадает только ответ для 6', 3, 0, 30)
-  slide('effects-switch', b, notes(10, 15, 15), { map: [[1,2,3]] })
+  slide('effects-switch', b, notes(10, 19, 19), { map: [[1,2,3]] })
+}
+{
+  let b = header('Бизнес-логика · эффекты', 10, 'Запрос как поток')
+  b += P(128, 260, 800, `<span style="font-family:JetBrains Mono, monospace"><span style="color:${C.kw}">await</span> req</span><br><span style="color:${C.muted};font-size:28px">промис: отписались — HTTP висит дальше</span> <span style="color:${C.red}">✕</span>`, { 'font-size': 32, 'line-height': 1.5, padding: '22px 28px', 'border-radius': 16, background: C.card, border: `2px solid ${C.line}` }, 1, 0, 'rise')
+  b += P(992, 260, 800, `<span style="font-family:JetBrains Mono, monospace">fromRequest(req).pipe(apiResult(…))</span><br><span style="color:${C.muted};font-size:28px">поток: отписались — запрос прерван</span> <span style="color:${C.accent}">✓</span>`, { 'font-size': 30, 'line-height': 1.5, padding: '22px 28px', 'border-radius': 16, background: C.soft, border: `2px solid ${C.accent}` }, 2, 0, 'rise')
+  b += chain(128, 470, [['fromRequest', { mono: true }], ['apiResult', { mono: true, hot: true }], ['успех → колбэк', {}], ['ApiError → errorAction', { mono: true }]], { s: 2, size: 26 }).html
+  const c = code({ y: 580, w: 1664, size: 22, lh: 31, rows: [
+    [3, 'readonly search = this.effect((action$, _state$, { dispatcher: d }) =>'],
+    [3, '  action$.pipe('],
+    [3, '    ofType(d.setSearchQuery),'],
+    [3, '    debounceTime(300),            // ждём паузу в наборе'],
+    [3, '    distinctUntilChanged(),       // тот же запрос — пропуск'],
+    [3, '    validateMap({'],
+    [3, '      apiCall: ({ payload }) =>'],
+    [3, '        fromRequest(this.api.search.request({ query: payload })).pipe(apiResult(…)),'],
+    [3, '    }),'],
+    [3, '  ),'],
+    [3, ')'],
+  ] })
+  b += c.html
+  slide('effects-request', b, notes(10, 20, 22), { map: [1, 2, 3] })
 }
 {
   const c = code({ y: 240, w: 1180, size: 22, lh: 31, rows: [
@@ -748,12 +781,12 @@ const opsPanel = (lit) => {
     [4, '  })),'],
     [4, ')'],
   ] })
-  let b = header('Бизнес-логика · эффекты', 10, null) + c.html + mark(c, 6, 6, 3, 4)
+  let b = header('Бизнес-логика · эффекты', 10, 'mutationMap — запись') + c.html + mark(c, 6, 6, 3, 4)
   b += P(1360, 250, 432, `<b style="color:${C.accent}">mutationMap</b> — запись: словарь тот же, стратегию выбираете вы`, { 'font-size': 28, 'line-height': 1.4, color: C.text }, 1)
   b += card(1360, 420, 432, 'exhaustMap', 'одиночная операция: повторный клик игнорируется', { s: 2 })
   b += card(1360, 600, 432, 'mergeMap', 'разные сущности — параллельно, ошибка одного не ломает остальные', { s: 4 })
   b += card(1360, 820, 432, 'concatMap', 'строго по очереди', { s: 5 })
-  slide('effects-mutation', b, notes(10, 16, 20), { map: [1,2,3,4,5] })
+  slide('effects-mutation', b, notes(10, 23, 27), { map: [1,2,3,4,5] })
 }
 {
   const c = code({ y: 240, w: 1230, size: 22, lh: 32, rows: [
@@ -775,13 +808,13 @@ const opsPanel = (lit) => {
     [4, '  )'],
     [1, '}'],
   ] })
-  let b = header('Бизнес-логика · эффекты: сокет', 10, null) + c.html
+  let b = header('Бизнес-логика · эффекты', 10, 'Источник — сокет') + c.html
   b += P(1400, 250, 392, 'Пример из реального мессенджера: «печатает…»', { 'font-size': 26, color: C.muted, 'line-height': 1.4 }, 1)
   const vchain = (y, items, s) => items.map((t, i) => pill(1400, y + i * 70, t, { s, size: 22, mono: true, hot: i === items.length - 1, w: 392 })).join('')
   b += vchain(360, ['socket', 'effect', 'd.applyTyping', 'стор'], 3)
   b += vchain(660, ['d.typingInput', 'throttle 3 с', 'socket'], 4)
   b += P(128, 860, 1664, 'через конструктор также: другие API-клиенты · диспетчер соседнего модуля · toObservable(other.state$)', { 'font-size': 26, color: C.muted }, 5)
-  slide('effects-socket', b, notes(10, 21, 25), { map: [1,2,3,4,5] })
+  slide('effects-socket', b, notes(10, 28, 32), { map: [1,2,3,4,5] })
 }
 {
   const c = code({ y: 240, w: 900, size: 22, lh: 32, rows: [
@@ -796,13 +829,13 @@ const opsPanel = (lit) => {
     [1, '  },'],
     [0, '})'],
   ] })
-  let b = header('Бизнес-логика · сборка', 10, null) + c.html + mark(c, 5, 8, 2, 3)
+  let b = header('Бизнес-логика · сборка', 10, 'Подключаем эффекты') + c.html + mark(c, 5, 8, 2, 3)
   b += note(128, 660, 900, 'эффекты стартуют сами при первом await модуля — и только в браузере', 2, 0, 28)
   b += spoke(0) + spoke(1) + spoke(2) + spoke(3, { s: 3 })
-  b += satellite(0) + satellite(1) + satellite(2) + satellite(3, { dashed: true, label: 'Effects?', idSuffix: '-ph' }) + satellite(3, { s: 3 })
+  b += satellite(0) + satellite(1) + satellite(2) + satellite(3, { dashed: true, label: 'Effects?', idSuffix: '-ph', out: 3 }) + satellite(3, { s: 3 })
   b += center('createSynapse')
   b += P(LG.cx - 300, 140, 600, 'синапс собран', { 'font-size': 34, 'font-weight': 800, color: C.accent, 'text-align': 'center', 'letter-spacing': 2, 'text-transform': 'uppercase' }, 3, 0, 'pop')
-  slide('effects-assemble', b, notes(10, 26, 28), { map: [1,2,3] })
+  slide('effects-assemble', b, notes(10, 33, 35), { map: [1,2,3] })
 }
 
 // ═══ Блок 11 — SSR ═══
@@ -826,7 +859,7 @@ const opsPanel = (lit) => {
     [2, 'const dehydrated = await PokemonCtx.dehydrate({ initialState: { pokemonList: list } })'],
     [6, 'const html = renderToString(<Pokedex dehydratedState={dehydrated} />)'],
   ] })
-  let b = header('SSR · сервер', 11, null) + c.html
+  let b = header('SSR · сервер', 11, 'Снапшот на каждый запрос') + c.html
   const L = (y, t, s) => P(128, y + 8, 220, t, { 'font-size': 26, 'font-weight': 700, color: C.muted }, s)
   b += L(530, 'запрос A', 2)
   b += chain(360, 530, [['fork A', { s: 3 }], ['effects: off', { s: 4, dashed: true }], ['залить данные', { s: 5 }], ['{ снапшот } ⏱', { s: 5, hot: true, mono: true }], ['fork ✕', { s: 5, dashed: true }]], { size: 24, gap: 48 }).html
@@ -837,7 +870,7 @@ const opsPanel = (lit) => {
   slide('ssr-server', b, notes(11, 4, 11), { map: [1,2,3,4,5,6,7,8] })
 }
 {
-  let b = header('SSR · клиент', 11, null)
+  let b = header('SSR · клиент', 11, 'Засев до первого рендера')
   b += chain(128, 240, [['HTML + снапшот JSON', { s: 1 }], ['засев до первого рендера', { s: 2 }], ['кадр = HTML ✓', { s: 3, hot: true }], ['эффекты стартуют', { s: 4 }]], { size: 26, gap: 50 }).html
   b += note(128, 330, 1664, 'синхронно, в инициализаторе useState — не в useEffect', 2, 0, 26)
   b += card(128, 410, 820, 'метка времени ⏱', 'при навигации старый снапшот не перетрёт более свежие данные', { s: 5 })
@@ -1098,36 +1131,32 @@ function bars(x, y, rows, { labelW = 420, maxW = 1000, rowH = 82, barH = 46, s =
 }
 {
   let b = header('Сколько это стоит', 15, 'Цена по мере роста приложения')
+  // ячейка: KB | [KB, тусклая?] | null (слоя нет); тусклая — цена не изменилась, новых пакетов нет
   const stacks = [
-    ['synapse', 'одна библиотека', [kb('syn-react-storage'), kb('syn-react-api'), [kb('syn-typical-norx'), kb('syn-typical')]], true],
-    ['zustand', '+ TanStack Query', [kb('zustand'), kb('stack-zustand-rq'), [kb('stack-zustand-rq')]]],
-    ['effector', '+ farfetched', [kb('effector-react'), kb('stack-effector-ff'), [kb('stack-effector-ff')]]],
-    ['RTK', '+ RTK Query · saga / observable', [kb('rtk-react'), kb('stack-rtk-rtkq'), [kb('stack-rtk-saga'), kb('stack-rtk-full')]]],
-    ['MobX', '+ TanStack Query', [kb('mobx-react'), kb('stack-mobx-rq'), [kb('stack-mobx-rq')]]],
+    ['synapse', 'одна библиотека', [kb('syn-react-storage'), kb('syn-react-api'), kb('syn-typical-norx'), kb('syn-typical')], true],
+    ['zustand', '② + TanStack Query', [kb('zustand'), kb('stack-zustand-rq'), [kb('stack-zustand-rq'), 1], null]],
+    ['effector', '② + farfetched', [kb('effector-react'), kb('stack-effector-ff'), [kb('stack-effector-ff'), 1], null]],
+    ['RTK', '② + RTK Query · ④ + observable', [kb('rtk-react'), kb('stack-rtk-rtkq'), [kb('stack-rtk-rtkq'), 1], kb('stack-rtk-full')]],
+    ['MobX', '② + TanStack Query', [kb('mobx-react'), kb('stack-mobx-rq'), [kb('stack-mobx-rq'), 1], null]],
   ]
-  const cols = ['① стор + React', '② + запросы и кэш', '③ + логика и персист']
-  const X0 = 540, CW = 420, Y0 = 330, RH = 104, SC = 6.4 // px на KB
-  cols.forEach((t, c) => { b += P(X0 + c * CW, 262, CW - 20, t, { 'font-size': 28, 'font-weight': 700, color: C.accent }, c + 1) })
+  const cols = ['① стор + React', '② + запросы, кэш', '③ + логика', '④ + RxJS-эффекты']
+  const X0 = 540, CW = 312, Y0 = 330, RH = 100, SC = 5.4 // px на KB
+  cols.forEach((t, c) => { b += P(X0 + c * CW, 262, CW - 12, t, { 'font-size': 26, 'font-weight': 700, color: C.accent }, c + 1) })
   stacks.forEach(([name, sub, vals, hot], r) => {
     const y = Y0 + r * RH
     b += P(128, y - 6, 400, `<b style="color:${hot ? C.accent : C.text}">${name}</b><br><span style="color:${C.muted};font-size:24px">${sub}</span>`, { 'font-size': 30, 'line-height': 1.25 })
     vals.forEach((v, c) => {
       const x = X0 + c * CW, s = c + 1
-      const [a, ext] = Array.isArray(v) ? v : [v]
+      if (v == null) { b += P(x, y - 2, 80, '—', { 'font-size': 28, color: C.dim, 'line-height': 1.4 }, s); return }
+      const [a, same] = Array.isArray(v) ? v : [v]
       const w = Math.max(5, Math.round(a * SC))
-      b += DIV(x, y, w, 36, { background: hot ? C.accent : C.card, border: `2px solid ${hot ? C.accent : C.line}`, 'border-radius': 6 }, s, 0, 'rise')
-      let lx = x + w, label = fmtKb(a)
-      if (ext) {
-        const we = Math.round((ext - a) * SC)
-        b += DIV(x + w, y, we, 36, { background: 'transparent', border: `2px dashed ${hot ? C.accent : C.dim}`, 'border-left': 'none', 'border-radius': '0 6px 6px 0' }, s, 0, 'rise')
-        lx += we; label += ` · ${fmtKb(ext)}`
-      }
-      b += P(lx + 12, y - 2, CW - (lx - x) - 12 + 60, label, { 'font-size': 26, 'font-weight': 700, color: hot ? C.accent : C.text, 'font-family': MONO, 'white-space': 'nowrap', 'line-height': 1.5 }, s)
+      b += DIV(x, y, w, 34, { background: hot ? C.accent : C.card, border: `2px solid ${hot ? C.accent : same ? C.line : C.dim}`, 'border-radius': 6, opacity: same ? 0.45 : 1 }, s, 0, 'rise')
+      b += P(x + w + 12, y - 3, 110, fmtKb(a), { 'font-size': 26, 'font-weight': 700, color: hot ? C.accent : same ? C.dim : C.text, 'font-family': MONO, 'white-space': 'nowrap', 'line-height': 1.5 }, s)
     })
   })
-  b += P(128, 860, 1664, 'На старте — как RTK. Дальше — посередине: дешевле Redux-стеков, дороже zustand + TanStack Query и чуть дороже effector. Но одна библиотека — и без своего связующего кода.', { 'font-size': 28, 'line-height': 1.4, color: C.text, padding: '18px 26px', 'border-radius': 16, background: C.soft, border: `2px solid ${C.accent}` }, 4, 0, 'rise')
-  b += note(128, 1000, 1664, SIZE_NOTE + ' · пунктир: synapse — с RxJS-эффектами, RTK — saga / observable', 0, 0, 24)
-  slide('cost-growth', b, notes(15, 9, 13), { map: [0, 1, 2, 3, 4] })
+  b += P(128, 840, 1664, 'На старте — чуть легче RTK, дальше — на уровне Redux-стеков. Дороже zustand + TanStack Query и чуть дороже effector. Но одна библиотека — и без своего связующего кода.', { 'font-size': 28, 'line-height': 1.4, color: C.text, padding: '18px 26px', 'border-radius': 16, background: C.soft, border: `2px solid ${C.accent}` }, 5, 0, 'rise')
+  b += note(128, 990, 1664, `${SIZE_NOTE} · серые — без новых пакетов · RTK + saga вместо observable — ${fmtKb(kb('stack-rtk-saga'))} · персист в цифре только у synapse и zustand`, 0, 0, 24)
+  slide('cost-growth', b, notes(15, 9, 14), { map: [0, 1, 2, 3, 4, 5] })
 }
 {
   let b = header('Сколько это стоит', 15, 'Кому подойдёт, а кому нет')
@@ -1136,14 +1165,14 @@ function bars(x, y, rows, { labelW = 420, maxW = 1000, rowH = 82, barH = 46, s =
   no.forEach((t, i) => { b += P(128, 350 + i * 110, 800, `<span style="color:${C.red}">×</span> ${t}`, { 'font-size': 30, 'line-height': 1.35, padding: '20px 26px', 'border-radius': 16, background: C.card, border: `2px solid ${C.line}` }, 1, 0, 'rise') })
   b += P(1000, 280, 792, 'Присмотреться, если', { 'font-size': 34, 'font-weight': 700, color: C.accent }, 2)
   b += P(1000, 350, 792, 'вы всё равно собираете стор + API + бизнес-логику (+ персист, IndexedDB, SSR, вкладки) и хотите одну библиотеку с общими соглашениями', { 'font-size': 32, 'line-height': 1.4, padding: '26px 30px', 'border-radius': 16, background: C.soft, border: `2px solid ${C.accent}` }, 2, 0, 'rise')
-  slide('cost-fit', b, notes(15, 14, 15), { map: [1, 2] })
+  slide('cost-fit', b, notes(15, 15, 16), { map: [1, 2] })
 }
 {
   let b = glow(258, 350, 200) + logoSvg('end', 128, 220, 260)
   b += P(128, 520, 1664, 'Спасибо!', { 'font-size': 80, 'font-weight': 800, 'line-height': 1.1 }, 0)
   b += note(128, 660, 1664, 'документация и исходники — ссылки в описании · <span style="font-family:JetBrains Mono, monospace;color:#ECECEC">yarn add synapse-storage</span>', 0, 0, 32)
-  b += note(128, 740, 1664, 'цифры пересчитываются: <span style="font-family:JetBrains Mono, monospace;color:#ECECEC">yarn size:full</span> · методика — в репозитории', 0, 0, 28)
-  slide('end', b, notes(15, 16, 16), { map: [0] })
+  b += note(128, 740, 1664, '<span style="font-family:JetBrains Mono, monospace;color:#ECECEC">github.com/Vlad92msk/synapse</span> · <span style="font-family:JetBrains Mono, monospace;color:#ECECEC">synapse-homepage.web.app</span>', 0, 0, 28)
+  slide('end', b, notes(15, 17, 17), { map: [0] })
 }
 
 // ─── запись ────────────────────────────────────────────────────────────────

@@ -356,8 +356,9 @@ window.__init = (plan, s3dSlides) => {
       const t0 = Number(tin) + (els.some((e) => e.code && e.tOut === Number(tin)) ? ERASE + 0.05 : 0.05)
       list.sort((a, b) => a.top - b.top || a.left - b.left)
       const chars = list.reduce((n, e) => n + e.len, 0)
-      const avail = Math.max(0.6, nextStepAfter(Number(tin)) - t0 - 0.2)
-      const cps = Math.max(28, chars / avail)
+      // допечатать к ~70% фразы: зритель успевает прочитать строку, пока о ней говорят (паузы между строками — в счёт)
+      const avail = Math.max(0.6, (nextStepAfter(Number(tin)) - t0 - 0.2) * 0.7 - 0.04 * (list.length - 1))
+      const cps = Math.max(36, chars / avail)
       let at = t0
       for (const e of list) { e.typeStart = at; e.typeDur = e.len / cps; at += e.typeDur + 0.04 }
     }
