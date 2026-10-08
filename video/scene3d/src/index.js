@@ -253,10 +253,14 @@ export function mount(container, { width = 1920, height = 1080, slides = [] } = 
 
   function seek(t) {
     // камера: дробный масштаб + медленный облёт (непрерывен по времени, поэтому переходы между слайдами гладкие)
-    const { sig, yaw, pitch, shift } = story.camera(t)
-    const fr = framing(sig)
+    const { sig, yaw, pitch, shift, center = 0, zoom = 1 } = story.camera(t)
+    const fr = { ...framing(sig) }
+    fr.D *= zoom // zoom < 1 — камера ближе
     const T = V(fr.T)
     if (shift) { T.x += shift[0] * fr.S; T.y -= shift[1] * fr.S } // сдвиг кадра в px: сцена уезжает влево-вверх
+    // center → 1: камера смотрит на начало координат (кольцо messenger), кольцо — на 100 px ниже середины кадра,
+    // чтобы соседи сверху не заходили под шапку слайда
+    if (center) { T.multiplyScalar(1 - center); T.y += 100 * fr.S * zoom * center }
     camera.position.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)).multiplyScalar(fr.D).add(T)
     camera.up.copy(up)
     camera.lookAt(T)
@@ -276,7 +280,7 @@ export function mount(container, { width = 1920, height = 1080, slides = [] } = 
       const kick = sum(n.kicks, t, kickFn), flash = sum(n.flashes, t, flashFn)
       n.kick = Math.max(-1.2, Math.min(1.2, kick)); n.flash = Math.min(1.1, flash)
       const breath = n.breath != null && t > n.breath ? 0.035 * Math.sin((t - n.breath) * 2 - n.P.length() * 0.0009) * smooth(t - n.breath, 0, 1.5) : 0
-      n.v = n.alive(t) ? clamp(n.vis(t)) : 0
+      n.v = n.alive(t) ? clamp(n.vis(t)) * (n.dim ? n.dim(t) : 1) : 0
       n.s = n.R(t) * n.pop(t) * (1 + 0.07 * kick + breath)
       n.d = n.dot ? clamp(n.dot(t)) : 0
       n.sc = scr(n.P, [0, 0])

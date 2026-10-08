@@ -8,7 +8,6 @@
   "title": "synapse-storage: от стора до модуля",
   "cover": "cover",
   "order": [
-    "hook",
     "cover",
     "why",
     "layers",
@@ -42,12 +41,16 @@
     "real-facade",
     "shelf",
     "have",
+    "cost-rules",
+    "cost-store",
+    "cost-growth",
+    "cost-fit",
     "end"
   ],
   "sections": {
     "intro": {
-      "description": "Крючок, обложка, зачем synapse и два слоя",
-      "start": "hook"
+      "description": "Обложка, зачем synapse и два слоя",
+      "start": "cover"
     },
     "state": {
       "description": "State Manager: хранилище, смена хранилища, middleware, React, селекторы",
@@ -72,6 +75,10 @@
     "outro": {
       "description": "Что ещё есть и чего нет",
       "start": "shelf"
+    },
+    "cost": {
+      "description": "Сколько это стоит: вес в бандле и сравнение",
+      "start": "cost-rules"
     }
   },
   "faces": {

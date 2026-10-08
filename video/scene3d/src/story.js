@@ -51,6 +51,13 @@ export function buildStory(slides) {
     return t + off
   }
   const tr = (id) => sl[id]?.trans || 0
+  // момент, когда диктор доходит до слова needle во фразе beat слайда (по доле текста); нет фраз — fallback
+  const word = (id, beat, needle, fallback) => {
+    const b = sl[id]?.beats?.[beat]
+    if (!sl[id] || !b) return sl[id] ? fallback : at(id, 'start')
+    const i = b.text.indexOf(needle)
+    return i < 0 ? fallback : b.start + (b.dur * i) / b.text.length
+  }
 
   // ─ камера: дробный масштаб от времени ─
   const sigma = (t) => {
@@ -112,7 +119,7 @@ export function buildStory(slides) {
   PARTS.forEach(([id, text, x, y, z], i) => {
     const P = place(1, x, y, z)
     const from = [P[0] * 1.7, P[1] * 1.7, P[2] - 300] // прилетает снаружи и «садится» на пружине
-    const ta = t1 + 0.7 + i * 0.22, tc = col + 0.45 + i * 0.14
+    const ta = Math.max(t1 + 0.7, word('real-one', 1, 'вокруг', t1 + 0.7)) + i * 0.35, tc = col + 0.45 + i * 0.14
     const n = node(id, {
       pos: track3([{ v: from }, { t: ta, v: P, k: spring(5.5, 0.55) }, { t: tc, v: [0, 0, 0], k: pull(0.7) }]),
       R: track([{ v: size(1, 58, z) / 1.25 }, { t: tc, v: size(1, 18, z), k: pull(0.7) }]),
@@ -161,10 +168,11 @@ export function buildStory(slides) {
     ['call-history', 960, 880, -250, 36, 0.95],
   ]
   const MSATS = 7 // синапсы модуля мессенджера — спутники узла messenger на масштабе 3
+  const KID_WORDS = ['чат,', 'список чатов', 'информация о чате', 'контакты', 'история звонков']
   KIDS.forEach(([id, x, y, z, r, alpha], i) => {
     const P = place(2, x, y, z)
     const from = [P[0] * 1.45, P[1] * 1.45, P[2] - 900]
-    const ta = t2 + tr2 * 0.55 + i * 0.22, tm = t3 + 0.15 + i * 0.1
+    const ta = Math.max(t2 + tr2 * 0.55 + i * 0.22, word('real-module', 0, KID_WORDS[i], -Infinity)), tm = t3 + 0.15 + i * 0.1
     const n = node(id, {
       pos: track3([{ v: from }, { t: ta, v: P, k: spring(4.2, 0.6) }, { t: s2(6), v: [P[0] * 0.93, P[1] * 0.93, P[2] * 0.93], k: spring(5, 0.5) }, { t: tm, v: orbit(M, 92, i, MSATS, 3, 'm'), k: spring(3.6, 0.7) }]),
       R: track([{ v: size(2, r, z) / 1.25 }, { t: tm, v: 0, k: glide(1.0) }]),
@@ -258,20 +266,29 @@ export function buildStory(slides) {
     }
   })
   N.core.net = N.relations.net = M.net = true
-  const netLink = (a, b, ta) => link(a, b, { grow: 'a', rpx: 1.8, S: LEVELS[2].S, w: track([{ v: 0 }, { t: ta, v: 1, k: glide(0.8) }]), lit: track([{ v: 0 }, { t: s3(3), v: 0.6, k: glide(1) }]) })
+  // «Отсюда и название»: на «Синапс — это узел» сеть гаснет, остаётся тройка social-network · streaming · messenger —
+  // форма логотипа; на «Маленький собирается из частей» сеть возвращается и по ней идёт волна
+  const tA = word('real-app', 3, 'Синапс —', s3(3)), tB = Math.max(tA + 2.5, word('real-app', 3, 'Маленький', s3(3) + 4))
+  const netLink = (a, b, ta) => link(a, b, { grow: 'a', rpx: 1.8, S: LEVELS[2].S, w: track([{ v: 0 }, { t: ta, v: 1, k: glide(0.8) }]), lit: track([{ v: 0 }, { t: tB, v: 0.6, k: glide(1) }]) })
   const coreKids = ['streaming', 'media', 'posts', 'calls', 'comments', 'reactions', 'live', 'user']
   const netLinks = coreKids.map((id) => netLink('core', id, s3(1) + 0.35 + Math.hypot(...[0, 1].map((k) => place(3, ...NET.find((x) => x[0] === id).slice(1, 4))[k] - core3[k])) / 2600))
   netLinks.push(netLink('relations', 'social', s3(1) + 0.5))
   // history ↔ messenger: разрез history смотрит на messenger (ребёнок → родитель)
   netLinks.push(netLink('messenger', 'history', s3(1) + 0.55))
   // смысловые импульсы масштаба 3: волна от ядра по всей сети и обратно
-  const w0 = s3(3) + 0.4
+  const w0 = tB + 0.2
   netLinks.forEach((l, i) => pulse(l, false, w0 + i * 0.09, 1.2, 0.9))
   pulse(N.core.link, true, w0 + 0.3, 1.2, 0.9)
   pulse(N.relations.link, true, w0 + 0.5, 1.2, 0.9)
   netLinks.forEach((l, i) => pulse(l, true, w0 + 2.6 + i * 0.11, 1.2, 0.7))
   // «сеть дышит» с шага 3
   for (const n of nodes) if (n.net) n.breath = s3(3)
+  const TRIAD = new Set(['core', 'streaming', 'messenger'])
+  const dim = track([{ v: 1 }, { t: tA, v: 0.22, k: glide(0.8) }, { t: tB, v: 1, k: glide(1.2) }])
+  for (const n of nodes) if (!TRIAD.has(n.id)) n.dim = dim
+  const tri = track([{ v: 0 }, { t: tA + 0.2, v: 1, k: glide(0.6) }, { t: tB, v: 0, k: glide(1.0) }])
+  for (const l of [netLinks[0], N.core.link]) { const lit0 = l.lit; l.lit = (t) => Math.max(lit0(t), tri(t)) }
+  pulse(netLinks[0], false, tA + 0.3, 1.1); pulse(N.core.link, false, tA + 0.3, 1.1)
 
   // ─ фоновые импульсы: редкие, не спорят со смысловыми ─
   const busy = pulses.map((p) => p.t0).concat([2, 3, 4, 5].map((k) => at('real-one', k)), [2, 3, 4, 5, 6].map(s2), [1, 2, 3].map(s3)).filter(isFinite)
@@ -288,105 +305,17 @@ export function buildStory(slides) {
     }
   }
   // камера блока 12: дробный масштаб + медленный облёт; в середине перелёта между масштабами — дуга побольше
-  let camera = (t) => {
-    const sig = sigma(t), tr = Math.abs(sig - Math.round(sig))
+  const hold = track([{ v: 0 }, { t: t3 + tr3 * 0.2, v: 1, k: glide(Math.max(1.2, tr3)) }, { t: s3(1), v: 0, k: glide(3.4) }])
+  const camera = (t) => {
+    const sig = sigma(t), tr = Math.abs(sig - Math.round(sig)), h = clamp(hold(t))
     return {
-      sig,
+      sig, center: h, zoom: 1 - 0.3 * h,
       yaw: 0.06 * Math.sin(t * 0.11 + 0.6) + 0.1 * Math.sin(Math.PI * clamp(tr * 2)) * Math.sign(Math.sin(sig * Math.PI)),
       pitch: 0.035 * Math.sin(t * 0.083 + 1.7) - 0.05 * Math.sin(Math.PI * clamp(tr * 2)),
     }
   }
-  if (sl.hook) camera = addHook(sl.hook, camera, { node, label, link, pulse, nodes, links, vis })
-  // окна жизни: узлы блока 12 не существуют до его первого слайда, узлы крючка — после ухода в обложку
-  // (иначе при --only без real-one/real-module «прошедшие» события блока 12 видны уже на крючке)
+  // узлы блока 12 не существуют до его первого слайда (иначе при --only без real-one «прошедшие» события видны)
   const blockStart = Math.min(...ORDER.map((id) => sl[id]?.start ?? Infinity))
-  const hookEnd = sl.hook ? (sl.hook.exit ? sl.hook.exit.start + sl.hook.exit.dur : sl.hook.end + 2.6) + 0.5 : -Infinity
-  for (const n of nodes) n.alive = n.id.startsWith('h-') ? (t) => t <= hookEnd : (t) => t >= blockStart - 0.01
+  for (const n of nodes) n.alive = (t) => t >= blockStart - 0.01
   return { nodes, links, pulses, camera, N }
-}
-
-// ════ крючок (слайд hook, начало ролика): та же сеть проекта, камера облетает её; на переходе к обложке
-// сеть сворачивается в логотип: ядро → большое кольцо, streaming и messenger → малые кольца ════
-const HOOK_SHIFT = [140, 88] // px: центр сети (с подписями) → центр кадра
-const HOOK_NET = [
-  // id, подпись, x, y, z, радиус (px), спутников
-  ['core', 'social-network', 720, 610, -60, 48, 0],
-  ['messenger', 'messenger', 1040, 860, 0, 52, 7],
-  ['relations', 'relations', 690, 960, -200, 28, 1],
-  ['streaming', 'streaming', 1270, 470, -150, 44, 5],
-  ['media', 'media', 1360, 660, -100, 38, 3],
-  ['posts', 'posts', 1600, 560, -350, 30, 1],
-  ['calls', 'calls', 980, 360, -250, 26, 1],
-  ['comments', 'comments', 1560, 260, -600, 20, 1],
-  ['reactions', 'reactions', 1730, 840, -500, 20, 1],
-  ['live', 'live', 1330, 960, -300, 22, 1],
-  ['user', 'user', 1600, 930, -200, 26, 1],
-  ['social', 'social', 450, 840, -300, 30, 3],
-  ['history', 'history', 740, 765, -250, 20, 1],
-]
-function addHook(h, blockCamera, { node, label, link, pulse, nodes, links, vis }) {
-  const t0 = h.start, ex = h.exit ?? { start: h.end, dur: 2.6 }, tx = ex.start, tEnd = ex.start + ex.dur
-  const SIG0 = 3, SIG1 = 2.88
-  const u = (t) => clamp((t - t0) / Math.max(1, tx - t0))
-  const fr = framing(SIG1)
-  // логотип обложки (экранные px): большое кольцо и два малых — viewBox 200, как в logo2.svg
-  const lg = ex.logo ?? { x: 1290, y: 300, w: 480 }
-  const k = lg.w / 200
-  const at = (vx, vy) => { const S = fr.S; return [fr.T[0] + (lg.x + vx * k - 960) * S, fr.T[1] - (lg.y + vy * k - 540) * S, 0] }
-  const LOGO = { core: [at(60, 100), 26 * k * fr.S], streaming: [at(140, 45), 14 * k * fr.S], messenger: [at(140, 155), 14 * k * fr.S] }
-  const H = {}
-  HOOK_NET.forEach(([id, text, x, y, z, r, sats], i) => {
-    const P = place(SIG0, x, y, z)
-    const ta = t0 + 0.2 + i * 0.07
-    const L = LOGO[id]
-    const tc = tx + 0.15 + hash(id) * 0.35 // остальные втягиваются в ядро
-    const pos = [{ v: [P[0] * 1.25, P[1] * 1.25, P[2] - 1500] }, { t: ta, v: P, k: spring(4, 0.62) }]
-    const R = [{ v: size(SIG0, r, z) / 1.25 }]
-    if (L) { pos.push({ t: tx + 0.2, v: L[0], k: spring(3.2, 0.8) }); R.push({ t: tx + 0.2, v: L[1], k: glide(1.4) }) }
-    else { pos.push({ t: tc, v: () => H.core.pos(tc + 0.01), k: pull(0.8) }); R.push({ t: tc, v: size(SIG0, r, z) * 0.2, k: pull(0.8) }) }
-    const n = node('h-' + id, {
-      pos: track3(pos), R: track(R), vis: vis(ta, L ? tEnd + 5 : tc + 0.7, 0.7, 0.25), pop: track([{ v: 0.5 }, { t: ta, v: 1, k: spring(6, 0.5) }]),
-      flat: track([{ v: 0 }, { t: tx + 0.2, v: 1, k: glide(1.4) }]), gap: id === 'core' ? 82 : 74,
-    })
-    H[id] = n
-    if (!L) n.kicks.push({ t: tc + 0.8, amp: 0.3 })
-    label(n, text, { alpha: 0.9, ox: id === 'core' ? -30 : 0, vis: vis(ta + 0.4, tx, 0.6, 0.5) })
-    for (let j = 0; j < sats; j++) {
-      const ts = ta + 0.5 + j * 0.08
-      node(`h-${id}-sat${j}`, { kind: 'dot', pos: track3([{ v: P }, { t: ts, v: orbitAround(n, size(SIG0, r * 1.75, z), j, sats, id), k: spring(5, 0.55) }, { t: tx, v: () => n.pos(tx + 0.4), k: pull(0.5) }]), R: () => size(SIG0, 5.5, z), vis: vis(ts, tx + 0.4, 0.4, 0.15), pop: () => 1 })
-    }
-  })
-  const hl = (a, b) => {
-    const keep = (a === 'core' && (b === 'streaming' || b === 'messenger'))
-    const ta = t0 + 0.7 + Math.max(HOOK_NET.findIndex((x) => x[0] === a), HOOK_NET.findIndex((x) => x[0] === b)) * 0.07
-    return link('h-' + a, 'h-' + b, { grow: 'a', rpx: keep ? 2.6 : 1.8, S: framing(SIG0).S, w: track([{ v: 0 }, { t: ta, v: 1, k: glide(0.9) }]), op: keep ? () => 1 : track([{ v: 1 }, { t: tx, v: 0, k: glide(0.5) }]), lit: track([{ v: 0.25 }, { t: tx + 0.3, v: 1, k: glide(1) }]) })
-  }
-  const hk = ['messenger', 'streaming', 'media', 'posts', 'calls', 'comments', 'reactions', 'live', 'user'].map((id) => hl('core', id))
-  hk.push(hl('relations', 'messenger'), hl('relations', 'social'), hl('messenger', 'history'))
-  // фоновые импульсы по сети, на выходе — по двум связям логотипа (как искры на обложке)
-  let seed = 7
-  for (let t = t0 + 2.5; t < tx - 1.2; t += 1.6 + 1.6 * hash(seed++)) pulse(hk[Math.floor(hash(seed++) * hk.length)], hash(seed++) > 0.4, t, 1.3, 0.6)
-  pulse(hk[0], false, tx + 1.0, 0.9, 0.8); pulse(hk[1], false, tx + 1.05, 0.9, 0.8)
-  for (const n of nodes) if (n.id.startsWith('h-') && !n.id.includes('sat')) n.breath = t0 + 1
-  // камера: облёт по дуге (к выходу возвращается в исходный ракурс), лёгкий наезд
-  return (t) => {
-    if (t >= tEnd + 0.5) return blockCamera(t)
-    const q = Math.sin(Math.PI * easeIO(u(t)))
-    // шапки на крючке нет — сеть стоит по центру кадра; к логотипу обложки сдвиг уходит в ноль
-    const c = 1 - easeIO((t - tx) / 1.4)
-    return { sig: lerp(SIG0, SIG1, easeIO(u(t))), yaw: 0.24 * q, pitch: -0.07 * q, shift: [HOOK_SHIFT[0] * c, HOOK_SHIFT[1] * c] }
-  }
-}
-// спутник по наклонённой орбите вокруг узла (для крючка; блок 12 использует orbit() внутри buildStory)
-function orbitAround(c, r, i, n, seed) {
-  const a0 = (i / n) * 6.283 + hash(seed) * 6.283, tiltX = 1.05 + 0.25 * hash(seed + 'x'), rotZ = (hash(seed + 'z') - 0.5) * 1.2
-  const cx = Math.cos(tiltX), sx = Math.sin(tiltX), cz = Math.cos(rotZ), sz = Math.sin(rotZ)
-  const out = [0, 0, 0]
-  return (t) => {
-    const a = a0 + t * 0.22
-    const x = Math.cos(a) * r, y = Math.sin(a) * r
-    const y1 = y * cx, z1 = y * sx
-    const p = c.pos(t, out)
-    return [p[0] + x * cz - y1 * sz, p[1] + x * sz + y1 * cz, p[2] + z1]
-  }
 }

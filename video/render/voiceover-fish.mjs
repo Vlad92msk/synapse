@@ -22,6 +22,7 @@ import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { dramaSpeech } from './drama-text.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const DECK = join(here, '..', 'decks', 'overview')
@@ -51,7 +52,10 @@ const pronounce = existsSync(join(here, 'pronounce.json')) ? JSON.parse(readFile
 const esc = (x) => x.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
 const dict = Object.entries(pronounce).sort((a, b) => b[0].length - a[0].length)
   .map(([a, b]) => [new RegExp(`(?<![\\w.$/-])${esc(a)}(?![\\w$/-]|\\.\\w)`, 'g'), b])
-const forSpeech = (t) => dict.reduce((s, [re, b]) => s.replace(re, b), t).replace(/[«»„“]/g, '"')
+// модели Drama (drama-3-preview): термины по-английски отдельными словами, без нормализации текста на стороне Fish —
+// так результат ближе всего к сайту; остальные модели — словарь pronounce.json
+const DRAMA = /^drama/.test(MODEL)
+const forSpeech = DRAMA ? dramaSpeech : (t) => dict.reduce((s, [re, b]) => s.replace(re, b), t).replace(/[«»„“]/g, '"')
 const sh = (cmd, args) => execFileSync(cmd, args, { encoding: 'utf8' }).trim()
 const probe = (f) => Number(sh('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', f]))
 
@@ -70,7 +74,7 @@ async function synth(text, raw = false) {
     const res = await fetch('https://api.fish.audio/v1/tts', {
       method: 'POST',
       headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json', model: MODEL },
-      body: JSON.stringify({ text: speech, reference_id: VOICE, format: 'mp3', mp3_bitrate: 192, normalize: true, prosody: { speed: Number(SPEED) } }),
+      body: JSON.stringify({ text: speech, reference_id: VOICE, format: 'mp3', mp3_bitrate: 192, normalize: !DRAMA, prosody: { speed: Number(SPEED) } }),
     })
     if (res.ok) { writeFileSync(f, Buffer.from(await res.arrayBuffer())); return f }
     const body = await res.text().catch(() => '')

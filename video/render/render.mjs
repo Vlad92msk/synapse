@@ -36,10 +36,15 @@ const RATE = 185 // слов в минуту для say
 // паузы (с)
 const GAP_BEAT = 0.35
 const HOLD_END = 0.9
+// Паузы между фразами в своей озвучке (--pause=0.45, 0 — выключить): файл слайда режется по границам фраз и между
+// кусками вставляется тишина — диктор не частит, анимация шага успевает доиграть. После законченного предложения —
+// PAUSE, после части предложения (запятая, тире) — треть. Только когда границы фраз точные (NN-<id>.json).
+const PAUSE = Number(arg('pause') ?? 0.45)
+const pauseAfter = (text) => (/[.!?…:]["»)]?\s*$/.test(text) ? PAUSE : PAUSE / 3)
 const TRANS = { fade: 0.7, magic: 1.0, push: 0.6 }
 // «Петля наверх» (блок 12): вход в эти слайды — отъезд камеры. Все кольца предыдущего слайда сжимаются
 // в кольцо ring-center нового, новая сеть приходит из глубины. Работает только после magic-слайда.
-const ZOOM_OUT = new Set(['real-module', 'real-app', 'cover']) // cover: сеть проекта из вступления сжимается в логотип
+const ZOOM_OUT = new Set(['real-module', 'real-app'])
 const ZOOM_DUR = 2.0
 // Объёмные сцены: узлы (кольца с подписями и спутниками) стоят на разной глубине, камера медленно облетает сцену
 // и к концу слайда возвращается в исходную точку (поэтому отъезды между масштабами остаются точными).
@@ -48,7 +53,7 @@ const DEPTH = new Set(NO3D ? ['real-module', 'real-app'] : [])
 // Настоящая 3D-сцена (video/scene3d, three.js): у этих слайдов 2D-схема (кольца, линии, точки, подписи узлов)
 // убирается, вместо неё — общий WebGL-canvas под HTML-текстом слайда. Один мир и непрерывная камера: переходы
 // между этими слайдами — перелёт камеры в сцене, текст слайдов сменяется наплывом.
-const SCENE3D = new Set(NO3D ? [] : ['hook', 'real-one', 'real-module', 'real-app'])
+const SCENE3D = new Set(NO3D ? [] : ['real-one', 'real-module', 'real-app'])
 const S3D_DIR = join(here, '..', 'scene3d')
 const ZOOM_DUR_3D = 2.6
 
@@ -71,6 +76,13 @@ const norm = (f) => {
   const h = createHash('sha1').update(f + statSync(f).mtimeMs).digest('hex').slice(0, 16)
   const out = join(MEDIA, 'tts', `n_${h}.wav`)
   if (!existsSync(out)) sh('ffmpeg', ['-v', 'error', '-y', '-i', f, '-ac', '1', '-ar', '44100', '-c:a', 'pcm_s16le', out])
+  return out
+}
+// кусок файла [a, a + d) с короткими фейдами на краях (без щелчков), кэш по файлу и границам
+const slice = (f, a, d) => {
+  const h = createHash('sha1').update([f, a.toFixed(3), d.toFixed(3)].join('|')).digest('hex').slice(0, 16)
+  const out = join(MEDIA, 'tts', `c_${h}.wav`)
+  if (!existsSync(out)) sh('ffmpeg', ['-v', 'error', '-y', '-ss', a.toFixed(3), '-t', d.toFixed(3), '-i', f, '-af', `afade=t=in:d=0.012,afade=t=out:st=${Math.max(0, d - 0.02).toFixed(3)}:d=0.02`, '-c:a', 'pcm_s16le', out])
   return out
 }
 // середины пауз в файле — к ним привязываем границы фраз
@@ -122,7 +134,8 @@ const plan = timeline.map((s, i) => {
     const metaFile = vo.replace(/\.\w+$/, '.json')
     const meta = existsSync(metaFile) ? JSON.parse(readFileSync(metaFile, 'utf8')) : null
     const textHash = createHash('sha1').update(s.beats.map((b) => b.text).join('\n')).digest('hex').slice(0, 12)
-    if (meta && meta.textHash === textHash && meta.cuts?.length === s.beats.length) cuts = [...meta.cuts, dur]
+    const exact = !!(meta && meta.textHash === textHash && meta.cuts?.length === s.beats.length)
+    if (exact) cuts = [...meta.cuts, dur]
     else if (n > 0 && P.length >= n) {
       // D[k][j] — лучшая стоимость, если k-я граница стоит на паузе j
       const D = Array.from({ length: n }, () => Array(P.length).fill(Infinity))
@@ -140,9 +153,21 @@ const plan = timeline.map((s, i) => {
       for (let k = n - 1; k >= 0; k--) { pick.unshift(P[j].at); j = B[k][j] }
       cuts = [0, ...pick, dur]
     } else cuts = [0, ...guess, dur] // пауз меньше, чем фраз — режем пропорционально
-    segs.push({ start: t, file })
-    beats = s.beats.map((b, k) => { const bs = t + cuts[k], bd = cuts[k + 1] - cuts[k]; return { start: bs, dur: bd, text: b.text, steps: stepsOf(b, bs, bd) } })
-    t += dur
+    if (exact && PAUSE > 0 && s.beats.length > 1) {
+      // режем по границам фраз: граница — середина ближайшей паузы в речи (иначе чуть раньше начала слова)
+      const at = cuts.map((c, k) => (k === 0 || k === cuts.length - 1 ? c : ps.filter((p) => Math.abs(p.at - c) < 0.3).sort((x, y) => Math.abs(x.at - c) - Math.abs(y.at - c))[0]?.at ?? Math.max(0, c - 0.05)))
+      beats = s.beats.map((b, k) => {
+        const piece = slice(file, at[k], at[k + 1] - at[k]), bd = probe(piece)
+        const beat = { start: t, dur: bd, text: b.text, steps: stepsOf(b, t, bd) }
+        segs.push({ start: t, file: piece })
+        t += bd + (k < s.beats.length - 1 ? pauseAfter(b.text) : 0)
+        return beat
+      })
+    } else {
+      segs.push({ start: t, file })
+      beats = s.beats.map((b, k) => { const bs = t + cuts[k], bd = cuts[k + 1] - cuts[k]; return { start: bs, dur: bd, text: b.text, steps: stepsOf(b, bs, bd) } })
+      t += dur
+    }
   } else {
     beats = s.beats.map((b) => {
       const a = STILLS ? { wav: null, dur: 1 } : tts(b.text)
@@ -205,7 +230,8 @@ if (SCRIPT) {
 const s3dSlides = plan.filter((p) => SCENE3D.has(p.id)).map((p) => {
   const steps = { 0: p.start }
   p.beats.forEach((b) => b.steps.forEach((s) => { steps[s.step] ??= s.t }))
-  return { id: p.id, start: p.start, trans: p.trans, end: p.end, steps }
+  // фразы диктора — чтобы сцена выпускала элементы на нужном слове (см. word() в story.js)
+  return { id: p.id, start: p.start, trans: p.trans, end: p.end, steps, beats: p.beats.map(({ start, dur, text }) => ({ start, dur, text })) }
 })
 const S3D_JS = join(S3D_DIR, 'dist', 'scene3d.js')
 if (s3dSlides.length) {
@@ -276,11 +302,6 @@ window.__init = (plan, s3dSlides) => {
   // своего фона у 3D-слайдов нет); при отъезде в обложку canvas поверх неё и гаснет, пока рисуется логотип
   const has3 = plan.some((p) => p.s3d)
   if (has3) {
-    for (const x of s3dSlides) {
-      const i = plan.findIndex((p) => p.id === x.id), nx = plan[i + 1]
-      const lg = nx && secs[i + 1].querySelector('[data-logo]')?.getBoundingClientRect()
-      if (nx) x.exit = { start: nx.start, dur: nx.trans, ...(lg ? { logo: { x: lg.left, y: lg.top, w: lg.width } } : {}) }
-    }
     S3 = { scene: Scene3D.mount(document.getElementById('s3d'), { width: 1920, height: 1080, slides: s3dSlides }), el: document.getElementById('s3d') }
   }
   const labels3 = new Set(has3 ? Scene3D.LABELS : [])
@@ -656,8 +677,7 @@ window.__seek = (t) => {
     if (s.logo) {
       const g = s.logo
       // после отъезда логотип рисуется, когда сеть уже почти сжалась в него
-      // из 3D-крючка логотип уже собран сценой: 2D-логотип сразу целиком, canvas над ним гаснет (наплыв)
-      const w = S[i - 1]?.p.s3d ? t - p.start + 3 : t - p.start - (p.zoom ? p.trans * 0.55 : 0)
+      const w = t - p.start - (p.zoom ? p.trans * 0.55 : 0)
       // прорисовка: большое кольцо → связи → малые кольца
       const ck = ease((w - 0.25) / 0.9)
       g.core.setAttribute('stroke-dasharray', g.coreLen)

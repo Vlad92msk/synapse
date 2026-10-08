@@ -1,5 +1,5 @@
 // Собирает локальный просмотр деки: decks/<name>/preview.html из project/deck.json + project/slides/*.html.
-// Запуск из корня репо: node video/decks/build-preview.mjs size-comparison
+// Запуск из корня репо: node video/decks/build-preview.mjs overview
 // Это приближённый просмотр (x-icon / x-shape / анимации не рендерятся) — для чтения текста и заметок.
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'

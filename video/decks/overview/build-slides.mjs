@@ -11,8 +11,17 @@ import { fileURLToPath } from 'node:url'
 const here = dirname(fileURLToPath(import.meta.url))
 const root = join(here, 'project')
 const script = readFileSync(join(here, '..', '..', 'VIDEO_OVERVIEW.md'), 'utf8')
+// вес библиотек (блок 15) — только из замера: min+gzip, сборка rolldown (как Vite production)
+const SIZE = JSON.parse(readFileSync(join(here, '..', '..', '..', 'scripts', 'bundle-size', 'results', 'results.json'), 'utf8'))
+const kb = (id) => {
+  const r = [...SIZE.synapse, ...SIZE.competitors].find((x) => x.id === id)
+  if (!r) throw new Error(`нет сценария ${id} в results.json`)
+  return Math.round((r.rolldown.gzip / 1024) * 10) / 10
+}
+const fmtKb = (v) => v.toFixed(1)
+const SIZE_NOTE = `min+gzip, KB · synapse-storage ${SIZE.synapseVersion} · замер ${SIZE.date.slice(0, 10)} · yarn size:full`
 const LOGO = '/_blob/fd250de6df274195f364a3bc9b682265'
-const TOTAL = 14
+const TOTAL = 15
 
 // ─── палитра (как в деке ролика 2) ─────────────────────────────────────────
 const C = {
@@ -137,14 +146,20 @@ function hl(src) {
   return out
 }
 // rows: [step, text, outStep?] | { segs: [[step, text, outStep?], …] } | { alt: [[step, text, out?], …] } (одна строка, разные версии)
-function code({ x = 128, y = 250, w = 1664, rows, size = 24, lh = 34, s = 0, pad = 28, dimRows = [] }) {
+// | GAP — пустая строка-разделитель: занимает строку на экране, но не считается в номерах строк (c.at, mark, dimRows)
+const GAP = { gap: true }
+function code({ x = 128, y = 250, w = 1664, rows: all, size = 24, lh = 34, s = 0, pad = 28, dimRows = [] }) {
   const cw = size * 0.6
-  const h = rows.length * lh + pad * 2
+  const rows = all.filter((row) => row !== GAP)
+  const vis = [] // номер строки → строка на экране
+  all.forEach((row, v) => { if (row !== GAP) vis.push(v) })
+  const vy = (r) => (r < rows.length ? vis[r] : all.length + r - rows.length)
+  const h = all.length * lh + pad * 2
   let html = DIV(x, y, w, h, { background: C.code, border: `1px solid ${C.line}`, 'border-radius': 18 }, s, 0, 'rise')
   const line = (r, text, step, out, col = 0) => {
     if (!text) return ''
     const lead = text.match(/^ */)[0].length
-    return P(x + pad + (col + lead) * cw, y + pad + r * lh, Math.ceil((text.length - lead) * cw) + 24, hl(text.slice(lead)), {
+    return P(x + pad + (col + lead) * cw, y + pad + vy(r) * lh, Math.ceil((text.length - lead) * cw) + 24, hl(text.slice(lead)), {
       'font-family': MONO, 'font-size': size, 'line-height': `${lh}px`, color: dimRows.includes(r) ? C.dim : C.codeText, 'white-space': 'nowrap',
     }, step, out).replace('<p ', '<p data-code="1" ')
   }
@@ -155,11 +170,11 @@ function code({ x = 128, y = 250, w = 1664, rows, size = 24, lh = 34, s = 0, pad
       for (const [step, text, out] of row.segs) { html += line(r, text, step, out, col); col += text.length }
     } else if (row.alt) for (const [step, text, out] of row.alt) html += line(r, text, step, out)
   })
-  return { html, at: (r) => y + pad + r * lh, x, y, w, h, lh, pad, cw }
+  return { html, at: (r) => y + pad + vy(r) * lh, x, y, w, h, lh, pad, cw }
 }
 // подсветка строк кода [r1..r2]
 const mark = (c, r1, r2, s, out = 0, cols) =>
-  DIV(c.x + 12 + (cols ? cols[0] * c.cw + c.pad - 12 : 0), c.at(r1) - 4, cols ? (cols[1] - cols[0]) * c.cw + 24 : c.w - 24, (r2 - r1 + 1) * c.lh + 8,
+  DIV(c.x + 12 + (cols ? cols[0] * c.cw + c.pad - 12 : 0), c.at(r1) - 4, cols ? (cols[1] - cols[0]) * c.cw + 24 : c.w - 24, c.at(r2) - c.at(r1) + c.lh + 8,
     { border: `3px solid ${C.accent}`, 'border-radius': 10, background: 'rgba(249,115,22,.08)' }, s, out, 'pop')
 
 // ─── логотип-синапс ────────────────────────────────────────────────────────
@@ -223,19 +238,6 @@ const slide = (id, body, beatTexts, { transition = 'fade', map } = {}) => {
   })
 }
 
-// ═══ Блок 0 — крючок: сеть модулей из блока 12 (масштаб 3) и обещание ═══
-// Сеть берётся из ручного слайда real-app: без шапки, пояснений и шагов появления — вся сразу.
-{
-  const app = readFileSync(join(root, 'slides', 'real-app.html'), 'utf8')
-  const net = app.slice(app.indexOf('>', app.indexOf('<section')) + 1, app.indexOf('<aside>'))
-    .replace(/<h2[\s\S]*?<\/h2>/g, '')
-    .replace(/<img[^>]*>/g, '')
-    // пояснения вверху убираем, подписи узлов (моноширинный шрифт) оставляем
-    .replace(/<p[^>]*top:\s*(\d+(?:\.\d+)?)px[^>]*>[\s\S]*?<\/p>/g, (m, top) => (Number(top) < 300 && !/JetBrains/.test(m) ? '' : m))
-    .replace(/\s*data-build-(?:in|out)="[^"]*"/g, '')
-  slide('hook', net, notes(0, 1, 2), { transition: 'magic', map: [0, 0] }) // без заголовка: только сеть
-}
-
 // ═══ Блок 0 — обложка ═══
 slide('cover',
   glow(1530, 540, 340) + logoSvg('cover', 1290, 300, 480) +
@@ -244,7 +246,7 @@ slide('cover',
   pill(128, 520, 'State manager', { s: 1, size: 34 }) +
   pill(128 + pillW('State manager', 34) + 24, 520, 'API-клиент', { s: 2, size: 34 }) +
   pill(128 + pillW('State manager', 34) + pillW('API-клиент', 34) + 48, 520, 'Бизнес-логика', { s: 3, size: 34, hot: true }),
-  notes(0, 3, 7), { map: [0,1,2,3,3] })
+  notes(0, 1, 5), { map: [0,1,2,3,3] })
 
 // ═══ Блок 1 — зачем ═══
 {
@@ -258,7 +260,7 @@ slide('cover',
     { 'font-size': 30, padding: '22px 32px', 'border-radius': 18, border: `3px dashed ${C.dim}`, 'line-height': 1.35 }, 5)
   b += P(128, 680, 1664, `<span style="color:${C.accent}">synapse:</span> storage · selectors · ApiClient · dispatcher · effects`,
     { 'font-size': 36, 'font-weight': 700, padding: '24px 32px', 'border-radius': 18, background: C.soft, border: `3px solid ${C.accent}` }, 6, 0, 'rise')
-  b += note(128, 830, 1664, 'Tree-shakeable: в бандл попадает только импортированное. Сколько это стоит в KB — в отдельном ролике.', 7, 0, 30)
+  b += note(128, 830, 1664, 'Tree-shakeable: в бандл попадает только импортированное. Сколько это стоит в KB — в конце видео.', 7, 0, 30)
   slide('why', b, notes(1, 1, 8), { map: [0,1,2,3,4,5,6,7] })
 }
 
@@ -296,6 +298,7 @@ slide('cover',
     [2, "  name: 'todo',"],
     [2, "  initialState: { todos: [], filter: 'all' },"],
     [2, '})'],
+    GAP,
     [3, 'await todoStorage.initialize()'],
     [0, ''],
     [4, "todoStorage.set('filter', 'active')"],
@@ -317,6 +320,7 @@ slide('cover',
 {
   const c = code({ y: 240, rows: [
     { alt: [[0, "import { MemoryStorage } from 'synapse-storage/core'", 1], [1, "import { LocalStorage } from 'synapse-storage/core'", 5], [5, "import { IndexedDBStorage } from 'synapse-storage/core'"]] },
+    GAP,
     { alt: [[0, 'const todoStorage = new MemoryStorage<TodoState>({', 1], [1, 'const todoStorage = new LocalStorage<TodoState>({', 5], [5, 'const todoStorage = new IndexedDBStorage<TodoState>({']] },
     [0, "  name: 'todo',"],
     [0, "  initialState: { todos: [], filter: 'all' },"],
@@ -325,10 +329,12 @@ slide('cover',
     [4, '  migrate: (old, fromVersion) => (fromVersion < 2 ? toV2(old) : old),'],
     [0, '})'],
     [0, 'await todoStorage.initialize()'],
+    GAP,
     { alt: [[0, "todoStorage.set('filter', 'active')", 7], [7, "await todoStorage.set('filter', 'active')        // API асинхронный"]] },
     { alt: [[0, 'todoStorage.update((s) => {', 7], [7, 'await todoStorage.update((s) => {']] },
     [0, "  s.filter = 'all'"],
     [0, '})'],
+    GAP,
     [0, "todoStorage.subscribe('filter', (filter) => …)  // подписки — те же"],
     [0, 'todoStorage.subscribeToAll((event) => event.changedPaths)'],
     [8, 'const cached = todoStorage.getStateSync()      // синхронно из кэша'],
@@ -505,8 +511,10 @@ slide('cover',
     [4, '      return headers'],
     [4, '    },'],
     [4, '  },'],
+    GAP,
     [5, '  cache: { ttl: 60000, invalidateOnError: true },'],
     [6, '  retry: { count: 3, delay: (attempt) => attempt * 500 },'],
+    GAP,
     [2, '  endpoints: async (create) => ({ … }),   // → дальше'],
     [2, '})'],
   ] })
@@ -525,11 +533,13 @@ slide('cover',
     [2, '    cache: { ttl: 120000 },        // своя политика'],
     [2, "    tags: ['pokemon-list'],"],
     [1, '  }),'],
+    GAP,
     [3, '  getDetails: create<{ id: number }, Pokemon>({'],
     [3, "    request: ({ id }) => ({ path: `/pokemon/${id}`, method: 'GET' }),"],
     [3, '    cache: true,'],
     [3, "    tags: ['pokemon-details'],"],
     [3, '  }),'],
+    GAP,
     [4, '  createPokemon: create<{ name: string }, Pokemon>({'],
     [4, "    request: (body) => ({ path: '/pokemon', method: 'POST', body }),"],
     [4, "    invalidatesTags: ['pokemon-list'],"],
@@ -551,8 +561,10 @@ slide('cover',
     [1, '// 1. React — чтение'],
     [2, 'const { data, isLoading, error, refetch } ='],
     [2, '  useApiQuery(endpoints.getDetails, { id }, { enabled: id != null })'],
+    GAP,
     [1, '// 2. React — запись'],
     [3, 'const { mutate, isLoading } = useApiMutation(endpoints.createPokemon)'],
+    GAP,
     [1, '// 3. Без React — запрос как объект'],
     [4, 'const req = endpoints.getDetails.request({ id: 25 })'],
     [5, 'req.subscribe((state) => state.status)   // idle → loading → success | error'],
@@ -564,7 +576,7 @@ slide('cover',
   let b = header('ApiClient · вызовы', 8, 'Три способа вызвать запрос') + c.html
   const checks = ['одинаковые запросы → один fetch', 'любая ошибка — ApiError', '204 / пустое тело — успех', 'кэш + теги']
   let x = 128
-  checks.forEach((t) => { b += pill(x, 760, `<span style="color:${C.accent}">✓</span> ${t}`, { s: 9, size: 24 }); x += pillW(t, 24) + 50 })
+  checks.forEach((t) => { b += pill(x, c.y + c.h + 28, `<span style="color:${C.accent}">✓</span> ${t}`, { s: 9, size: 24 }); x += pillW(t, 24) + 50 })
   slide('api-calls', b, notes(8, 14, 22), { map: [1,2,3,4,5,6,7,8,9] })
 }
 
@@ -585,7 +597,7 @@ const logoBase = ({ center: withCenter = false, centerS = 0, spokes = [], sats =
   slide('synapse-intro', b, notes(9, 1, 2), { transition: 'magic', map: [1,2] })
 }
 {
-  const c = code({ y: 240, rows: [
+  const c = code({ y: 240, size: 23, lh: 31, rows: [
     [1, "import { Dispatcher } from 'synapse-storage/reactive'"],
     [0, ''],
     [2, 'export class PokemonDispatcher extends Dispatcher<PokemonState> {'],
@@ -593,10 +605,12 @@ const logoBase = ({ center: withCenter = false, centerS = 0, spokes = [], sats =
     [3, '    store.update((s) => { s.selectedPokemonId = id })'],
     [4, '    return id                                   // payload → эффектам'],
     [3, '  })'],
+    GAP,
     [5, '  readonly setSearchQuery = this.action('],
     [5, "    (store, query: string) => { store.set('searchQuery', query); return query },"],
     [5, '    { memoize: (cur, prev) => cur === prev },   // тот же аргумент — пропуск'],
     [5, '  )'],
+    GAP,
     [6, "  readonly loadMore = this.signal<void>('Подгрузить следующую страницу')"],
     [7, '  readonly loadDetails = this.apiActions<void>((s) => s.api.detailsRequest)'],
     [8, '  // d.loadDetails() — намерение · .loading() · .success() · .failure(msg)'],
@@ -673,8 +687,10 @@ const opsPanel = (lit) => {
     [2, '    validator: ([, [id, status]]) => ({'],
     [2, '      conditions: [id !== null, status !== ApiStatus.Loading],'],
     [2, '    }),'],
+    GAP,
     [3, '    loadingAction: () => d.loadDetails.loading(),'],
     [4, '    errorAction: (err) => d.loadDetails.failure(String(err)),'],
+    GAP,
     [5, '    apiCall: ([, [id]]) =>'],
     [5, '      fromRequest(this.api.getDetails.request({ id: id! })).pipe('],
     [6, '        apiResult((data) => {'],
@@ -687,9 +703,9 @@ const opsPanel = (lit) => {
   let b = header('Бизнес-логика · эффекты', 10, null) + c.html
   b += opsPanel({ 'ofType / ofTypes': 0, 'selectorMap / Object': 0, validateMap: 0, fromRequest: 5, apiResult: 6 })
   const stages = [['validator', 2], ['loadingAction', 3], ['apiCall', 5], ['success / errorAction', 4]]
-  b += chain(128, 860, stages.map(([t]) => [t, { mono: true }]), { s: 1, size: 24 }).html
+  b += chain(128, c.y + c.h + 28, stages.map(([t]) => [t, { mono: true }]), { s: 1, size: 24 }).html
   let x = 128
-  stages.forEach(([t, s]) => { b += pill(x, 860, t, { s, size: 24, mono: true, hot: true }); x += pillW(t, 24) + 56 })
+  stages.forEach(([t, s]) => { b += pill(x, c.y + c.h + 28, t, { s, size: 24, mono: true, hot: true }); x += pillW(t, 24) + 56 })
   slide('effects-validate', b, notes(10, 9, 14), { map: [1,2,3,4,5,6] })
 }
 {
@@ -804,6 +820,7 @@ const opsPanel = (lit) => {
 {
   const c = code({ y: 240, size: 23, lh: 33, rows: [
     [1, 'export const PokemonCtx = createSynapseCtx(pokemonSynapse)   // контекст + хуки + dehydrate'],
+    GAP,
     [2, '// сервер'],
     [2, 'const list = await fetchPokemonList()'],
     [2, 'const dehydrated = await PokemonCtx.dehydrate({ initialState: { pokemonList: list } })'],
@@ -811,12 +828,12 @@ const opsPanel = (lit) => {
   ] })
   let b = header('SSR · сервер', 11, null) + c.html
   const L = (y, t, s) => P(128, y + 8, 220, t, { 'font-size': 26, 'font-weight': 700, color: C.muted }, s)
-  b += L(500, 'запрос A', 2)
-  b += chain(360, 500, [['fork A', { s: 3 }], ['effects: off', { s: 4, dashed: true }], ['залить данные', { s: 5 }], ['{ снапшот } ⏱', { s: 5, hot: true, mono: true }], ['fork ✕', { s: 5, dashed: true }]], { size: 24, gap: 48 }).html
-  b += chain(360, 610, [['снапшот', { s: 7, mono: true }], ['одноразовый стор', { s: 7 }], ['HTML с данными', { s: 7, hot: true }]], { size: 24, gap: 48 }).html
-  b += L(740, 'запрос B', 8)
-  b += pill(360, 740, 'свой fork · свой одноразовый стор — без пересечений с A', { s: 8, size: 24 })
-  b += note(128, 860, 1664, 'засев одноразового стора — синхронно, до рендера; общий модуль на сервере не трогается', 7, 0, 26)
+  b += L(530, 'запрос A', 2)
+  b += chain(360, 530, [['fork A', { s: 3 }], ['effects: off', { s: 4, dashed: true }], ['залить данные', { s: 5 }], ['{ снапшот } ⏱', { s: 5, hot: true, mono: true }], ['fork ✕', { s: 5, dashed: true }]], { size: 24, gap: 48 }).html
+  b += chain(360, 640, [['снапшот', { s: 7, mono: true }], ['одноразовый стор', { s: 7 }], ['HTML с данными', { s: 7, hot: true }]], { size: 24, gap: 48 }).html
+  b += L(770, 'запрос B', 8)
+  b += pill(360, 770, 'свой fork · свой одноразовый стор — без пересечений с A', { s: 8, size: 24 })
+  b += note(128, 890, 1664, 'засев одноразового стора — синхронно, до рендера; общий модуль на сервере не трогается', 7, 0, 26)
   slide('ssr-server', b, notes(11, 4, 11), { map: [1,2,3,4,5,6,7,8] })
 }
 {
@@ -979,6 +996,7 @@ const thin = (a, b, { s = 0, color = 'rgba(249,115,22,.5)', width = 3, head = 'n
   b += P(128, 340, 1664, `в каждом: <span style="font-family:JetBrains Mono, monospace;color:#ECECEC">X.synapse · X.dispatcher · X.effects · X.selectors · X.context</span> + ui/`, { 'font-size': 26, color: C.muted }, 1)
   const c = code({ y: 420, w: 1100, size: 23, lh: 33, rows: [
     [2, '// dispatcher/counters.mixin.ts — одна тема: счётчики непрочитанного'],
+    GAP,
     [2, 'export const CountersMixin = <TBase extends MessengerDispatcherCtor>(Base: TBase) => {'],
     [2, '  abstract class CountersDispatcher extends Base {'],
     [2, '    loadCounters = this.apiActions((s) => s.api.countersRequest)'],
@@ -1040,13 +1058,92 @@ const thin = (a, b, { s = 0, color = 'rgba(249,115,22,.5)', width = 3, head = 'n
   has.forEach((t, i) => { b += P(128, 290 + i * 86, 760, `<span style="color:${C.accent}">✓</span> ${t}`, { 'font-size': 34 }, 1, 0, 'rise') })
   const no = ['DevTools', 'polling, refetch при возврате', 'optimistic updates', 'большая экосистема']
   no.forEach((t, i) => { b += P(1000, 290 + i * 86, 792, `<span style="color:${C.red}">×</span> ${t}`, { 'font-size': 34, color: C.muted }, i + 2, 0, 'rise') })
-  slide('have', b, notes(14, 1, 5), { map: [1,2,3,4,5] })
+  slide('have', b, notes(14, 1, 6), { map: [1,2,3,4,5,5] })
+}
+
+// ═══ Блок 15 — сколько это стоит ═══
+{
+  let b = header('Сколько это стоит', 15, 'Цена — килобайты в бандле')
+  b += card(128, 290, 520, 'KB = min + gzip', 'бандл после сборки, как в Vite production', { s: 1, size: 30 })
+  b += card(700, 290, 520, 'react — не считаем', 'он есть в любом React-приложении', { s: 2, size: 30 })
+  b += card(1272, 290, 520, 'rxjs — считаем', 'и у synapse, и у redux-observable — там, где он нужен', { s: 2, size: 30 })
+  b += P(128, 560, 1664, 'Платите за импортированное', { 'font-size': 44, 'font-weight': 700 }, 3)
+  b += pill(128, 650, `вся библиотека — ${fmtKb(kb('syn-full-core'))} KB`, { s: 3, size: 32 })
+  b += pill(128 + pillW(`вся библиотека — ${fmtKb(kb('syn-full-core'))} KB`, 32) + 24, 650, `+ /react и /reactive — ${fmtKb(kb('syn-full'))} KB`, { s: 3, size: 32 })
+  b += note(128, 900, 1664, SIZE_NOTE, 0, 0, 24)
+  slide('cost-rules', b, notes(15, 1, 4), { map: [0, 1, 2, 3] })
+}
+// горизонтальные полосы: rows [подпись, KB, hot?]
+function bars(x, y, rows, { labelW = 420, maxW = 1000, rowH = 82, barH = 46, s = 0, size = 30 } = {}) {
+  const max = Math.max(...rows.map((r) => r[1]))
+  let html = ''
+  rows.forEach(([label, v, hot], i) => {
+    const ty = y + i * rowH
+    const w = Math.max(6, Math.round((v / max) * maxW))
+    html += P(x, ty + (barH - size * 1.3) / 2, labelW - 30, label, { 'font-size': size, 'text-align': 'right', color: hot ? C.accent : C.text, 'font-weight': hot ? 700 : 400, 'line-height': 1.3, 'white-space': 'nowrap' }, s)
+    html += DIV(x + labelW, ty, w, barH, { background: hot ? C.accent : C.card, border: `2px solid ${hot ? C.accent : C.line}`, 'border-radius': 8 }, s, 0, 'rise')
+    html += P(x + labelW + w + 18, ty + (barH - size * 1.3) / 2, 160, fmtKb(v), { 'font-size': size, 'font-weight': 700, color: hot ? C.accent : C.text, 'line-height': 1.3, 'font-family': MONO }, s)
+  })
+  return { html, at: (i) => y + i * rowH, rowH, barH }
+}
+{
+  let b = header('Сколько это стоит', 15, 'Только хранилище, без React')
+  const rows = [['zustand/vanilla', kb('zustand-vanilla')], ['redux', kb('redux')], ['RTK', kb('rtk')], ['synapse', kb('syn-memory'), true], ['effector', kb('effector')], ['MobX', kb('mobx')]]
+  const g = bars(128, 290, rows, { s: 1 })
+  b += g.html
+  b += DIV(128 + 60, g.at(0) - 14, 1500, g.rowH + g.barH + 28, { border: `3px solid ${C.accent}`, 'border-radius': 14, background: 'rgba(249,115,22,.06)' }, 2, 0, 'pop')
+  b += note(128, 800, 1664, `Окупается, когда нужно то, что внутри: middleware, обновления в стиле Immer, подписки на конкретные поля. React-хук — ещё +${fmtKb(kb('syn-react-storage') - kb('syn-memory'))} KB.`, 3, 0, 28)
+  b += note(128, 900, 1664, SIZE_NOTE, 0, 0, 24)
+  slide('cost-store', b, notes(15, 5, 8), { map: [0, 1, 2, 3] })
+}
+{
+  let b = header('Сколько это стоит', 15, 'Цена по мере роста приложения')
+  const stacks = [
+    ['synapse', 'одна библиотека', [kb('syn-react-storage'), kb('syn-react-api'), [kb('syn-typical-norx'), kb('syn-typical')]], true],
+    ['zustand', '+ TanStack Query', [kb('zustand'), kb('stack-zustand-rq'), [kb('stack-zustand-rq')]]],
+    ['effector', '+ farfetched', [kb('effector-react'), kb('stack-effector-ff'), [kb('stack-effector-ff')]]],
+    ['RTK', '+ RTK Query · saga / observable', [kb('rtk-react'), kb('stack-rtk-rtkq'), [kb('stack-rtk-saga'), kb('stack-rtk-full')]]],
+    ['MobX', '+ TanStack Query', [kb('mobx-react'), kb('stack-mobx-rq'), [kb('stack-mobx-rq')]]],
+  ]
+  const cols = ['① стор + React', '② + запросы и кэш', '③ + логика и персист']
+  const X0 = 540, CW = 420, Y0 = 330, RH = 104, SC = 6.4 // px на KB
+  cols.forEach((t, c) => { b += P(X0 + c * CW, 262, CW - 20, t, { 'font-size': 28, 'font-weight': 700, color: C.accent }, c + 1) })
+  stacks.forEach(([name, sub, vals, hot], r) => {
+    const y = Y0 + r * RH
+    b += P(128, y - 6, 400, `<b style="color:${hot ? C.accent : C.text}">${name}</b><br><span style="color:${C.muted};font-size:24px">${sub}</span>`, { 'font-size': 30, 'line-height': 1.25 })
+    vals.forEach((v, c) => {
+      const x = X0 + c * CW, s = c + 1
+      const [a, ext] = Array.isArray(v) ? v : [v]
+      const w = Math.max(5, Math.round(a * SC))
+      b += DIV(x, y, w, 36, { background: hot ? C.accent : C.card, border: `2px solid ${hot ? C.accent : C.line}`, 'border-radius': 6 }, s, 0, 'rise')
+      let lx = x + w, label = fmtKb(a)
+      if (ext) {
+        const we = Math.round((ext - a) * SC)
+        b += DIV(x + w, y, we, 36, { background: 'transparent', border: `2px dashed ${hot ? C.accent : C.dim}`, 'border-left': 'none', 'border-radius': '0 6px 6px 0' }, s, 0, 'rise')
+        lx += we; label += ` · ${fmtKb(ext)}`
+      }
+      b += P(lx + 12, y - 2, CW - (lx - x) - 12 + 60, label, { 'font-size': 26, 'font-weight': 700, color: hot ? C.accent : C.text, 'font-family': MONO, 'white-space': 'nowrap', 'line-height': 1.5 }, s)
+    })
+  })
+  b += P(128, 860, 1664, 'На старте — как RTK. Дальше — посередине: дешевле Redux-стеков, дороже zustand + TanStack Query и чуть дороже effector. Но одна библиотека — и без своего связующего кода.', { 'font-size': 28, 'line-height': 1.4, color: C.text, padding: '18px 26px', 'border-radius': 16, background: C.soft, border: `2px solid ${C.accent}` }, 4, 0, 'rise')
+  b += note(128, 1000, 1664, SIZE_NOTE + ' · пунктир: synapse — с RxJS-эффектами, RTK — saga / observable', 0, 0, 24)
+  slide('cost-growth', b, notes(15, 9, 13), { map: [0, 1, 2, 3, 4] })
+}
+{
+  let b = header('Сколько это стоит', 15, 'Кому подойдёт, а кому нет')
+  const no = ['только UI-стейт → zustand или redux', 'только кэш запросов → TanStack Query', 'нужны DevTools, polling, optimistic → TanStack / RTK Query']
+  b += P(128, 280, 800, 'Скорее не нужен, если', { 'font-size': 34, 'font-weight': 700, color: C.muted }, 1)
+  no.forEach((t, i) => { b += P(128, 350 + i * 110, 800, `<span style="color:${C.red}">×</span> ${t}`, { 'font-size': 30, 'line-height': 1.35, padding: '20px 26px', 'border-radius': 16, background: C.card, border: `2px solid ${C.line}` }, 1, 0, 'rise') })
+  b += P(1000, 280, 792, 'Присмотреться, если', { 'font-size': 34, 'font-weight': 700, color: C.accent }, 2)
+  b += P(1000, 350, 792, 'вы всё равно собираете стор + API + бизнес-логику (+ персист, IndexedDB, SSR, вкладки) и хотите одну библиотеку с общими соглашениями', { 'font-size': 32, 'line-height': 1.4, padding: '26px 30px', 'border-radius': 16, background: C.soft, border: `2px solid ${C.accent}` }, 2, 0, 'rise')
+  slide('cost-fit', b, notes(15, 14, 15), { map: [1, 2] })
 }
 {
   let b = glow(258, 350, 200) + logoSvg('end', 128, 220, 260)
-  b += P(128, 520, 1664, 'Дальше — «Сколько стоит synapse-storage»', { 'font-size': 64, 'font-weight': 800, 'line-height': 1.1 }, 0)
-  b += note(128, 680, 1664, 'честное сравнение с Redux, effector, MobX, zustand и TanStack Query · документация · <span style="font-family:JetBrains Mono, monospace;color:#ECECEC">npm install synapse-storage</span>', 0, 0, 32)
-  slide('end', b, notes(14, 6, 6), { map: [0] })
+  b += P(128, 520, 1664, 'Спасибо!', { 'font-size': 80, 'font-weight': 800, 'line-height': 1.1 }, 0)
+  b += note(128, 660, 1664, 'документация и исходники — ссылки в описании · <span style="font-family:JetBrains Mono, monospace;color:#ECECEC">yarn add synapse-storage</span>', 0, 0, 32)
+  b += note(128, 740, 1664, 'цифры пересчитываются: <span style="font-family:JetBrains Mono, monospace;color:#ECECEC">yarn size:full</span> · методика — в репозитории', 0, 0, 28)
+  slide('end', b, notes(15, 16, 16), { map: [0] })
 }
 
 // ─── запись ────────────────────────────────────────────────────────────────
@@ -1070,13 +1167,14 @@ const deck = JSON.parse(readFileSync(deckPath, 'utf8'))
 deck.order = slides.map((s) => s.id)
 deck.cover = 'cover'
 deck.sections = {
-  intro: { description: 'Крючок, обложка, зачем synapse и два слоя', start: 'hook' },
+  intro: { description: 'Обложка, зачем synapse и два слоя', start: 'cover' },
   state: { description: 'State Manager: хранилище, смена хранилища, middleware, React, селекторы', start: 'storage' },
   api: { description: 'ApiClient: создание, эндпоинты, вызовы', start: 'api-client' },
   logic: { description: 'Бизнес-логика: диспетчер, сборка синапса, эффекты', start: 'synapse-intro' },
   ssr: { description: 'SSR: форк на запрос, снапшот, гидрация', start: 'ssr-problem' },
   real: { description: 'Синапсы в реальном проекте', start: 'real-one' },
   outro: { description: 'Что ещё есть и чего нет', start: 'shelf' },
+  cost: { description: 'Сколько это стоит: вес в бандле и сравнение', start: 'cost-rules' },
 }
 writeFileSync(deckPath, JSON.stringify(deck, null, 2) + '\n')
 // таймлайн для видео: шаги диктора и какие клики (build-шаги) они запускают
