@@ -49,7 +49,7 @@ for (const key of keys) {
 }
 
 // Главная и индекс доков тоже должны существовать.
-for (const rel of ['index.html', 'docs/index.html']) {
+for (const rel of ['index.html', 'docs/index.html', 'video/index.html']) {
     if (!fs.existsSync(path.join(BUILD_DIR, rel))) errors.push(`нет пререндер-файла: build/${rel}`)
 }
 

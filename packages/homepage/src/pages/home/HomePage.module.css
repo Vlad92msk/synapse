@@ -136,11 +136,14 @@
   color: #1a1207;
   background: var(--accent-orange);
   cursor: pointer;
+  text-decoration: none;
   transition: background 0.2s ease;
 }
 
 .btnPrimary:hover {
   background: var(--accent-orange-hover);
+  color: #1a1207;
+  text-decoration: none;
 }
 
 .btnGhost {

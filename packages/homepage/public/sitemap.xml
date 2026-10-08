@@ -9,6 +9,14 @@
         <priority>1.0</priority>
     </url>
 
+    <!-- Видеообзор -->
+    <url>
+        <loc>https://synapse-homepage.web.app/video</loc>
+        <lastmod>2026-10-08</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+
     <!-- Документация -->
     <url>
         <loc>https://synapse-homepage.web.app/docs</loc>

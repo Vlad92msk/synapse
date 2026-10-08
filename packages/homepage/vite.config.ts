@@ -30,7 +30,7 @@ const config: SsgUserConfig = {
     dirStyle: 'nested',
     formatting: 'minify',
     // Явно перечисляем, что пререндерить: главная, индекс доков и каждый раздел.
-    includedRoutes: () => Array.from(new Set(['/', '/docs', ...docsRoutes])),
+    includedRoutes: () => Array.from(new Set(['/', '/docs', '/video', ...docsRoutes])),
   },
   ssr: {
     // Бандлим эти пакеты в SSR-сборку, а не оставляем внешними: react-syntax-highlighter
