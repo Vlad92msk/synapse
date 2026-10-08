@@ -75,10 +75,11 @@ export class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {
   readonly loadDetails = this.effect((action$, state$, { dispatcher: d }) =>
     action$.pipe(
       ofType(d.selectPokemon),
-      withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId, (s) => s.api.detailsRequest.status)),
+      withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId)),
       validateMap({
-        validator: ([, [selectedId, detailsStatus]]) => ({
-          conditions: [selectedId !== null, detailsStatus !== 'loading'],
+        validator: ([, [selectedId]]) => ({
+          // без гейта на 'loading': новый выбор должен отменить текущий запрос (switchMap)
+          conditions: [selectedId !== null],
           skipAction: () => d.loadDetails.reset(),
         }),
         loadingAction: () => d.loadDetails.loading(),

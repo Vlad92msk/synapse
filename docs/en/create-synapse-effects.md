@@ -103,10 +103,11 @@ export class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {
   readonly loadDetails = this.effect((action$, state$, { dispatcher: d }) =>
     action$.pipe(
       ofType(d.selectPokemon),
-      withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId, (s) => s.api.detailsRequest.status)),
+      withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId)),
       validateMap({
-        validator: ([, [selectedId, detailsStatus]]) => ({
-          conditions: [selectedId !== null, detailsStatus !== 'loading'],
+        validator: ([, [selectedId]]) => ({
+          // no 'loading' gate: a new selection must cancel the in-flight request (switchMap)
+          conditions: [selectedId !== null],
           skipAction: () => d.loadDetails.reset(),
         }),
         loadingAction: () => d.loadDetails.loading(),
@@ -231,7 +232,10 @@ loading a resource where only the latest result matters — like `loadList`/`loa
 - **`validator`** returns `{ conditions, skipAction }`: `conditions` is an array of boolean gates (all
   must be `true`), otherwise `skipAction` is dispatched and no request is made. In pokemon that's
   "don't refetch while a request is in flight" (`listStatus !== 'loading'`) and "there is something to
-  load" (`selectedId !== null`).
+  load" (`selectedId !== null`). A `'loading'` gate fits when repeating the same request is redundant
+  (`loadList`); where a new trigger changes the parameters (selecting another pokemon) it is harmful: the
+  validator rejects the new trigger, yet `switchMap` still unsubscribes from the current request — the old
+  one is aborted and the new one is never sent.
 - **`loadingAction`** → sets the `loading` status (via the dispatcher's `apiActions` group).
 - **`apiCall`** receives the pipe's value, calls `fromRequest(this.api.X.request(...))`, and inside
   `apiResult` writes the result (`d.applyPokemon...`) + `d.X.success()`.
@@ -242,10 +246,11 @@ loading a resource where only the latest result matters — like `loadList`/`loa
 readonly loadDetails = this.effect((action$, state$, { dispatcher: d }) =>
   action$.pipe(
     ofType(d.selectPokemon),
-    withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId, (s) => s.api.detailsRequest.status)),
+    withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId)),
     validateMap({
-      validator: ([, [selectedId, detailsStatus]]) => ({
-        conditions: [selectedId !== null, detailsStatus !== 'loading'],
+      validator: ([, [selectedId]]) => ({
+        // no 'loading' gate: a new selection must cancel the in-flight request (switchMap)
+        conditions: [selectedId !== null],
         skipAction: () => d.loadDetails.reset(),
       }),
       loadingAction: () => d.loadDetails.loading(),

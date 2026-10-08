@@ -101,10 +101,11 @@ export class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {
   readonly loadDetails = this.effect((action$, state$, { dispatcher: d }) =>
     action$.pipe(
       ofType(d.selectPokemon),
-      withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId, (s) => s.api.detailsRequest.status)),
+      withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId)),
       validateMap({
-        validator: ([, [selectedId, detailsStatus]]) => ({
-          conditions: [selectedId !== null, detailsStatus !== 'loading'],
+        validator: ([, [selectedId]]) => ({
+          // без гейта на 'loading': новый выбор должен отменить текущий запрос (switchMap)
+          conditions: [selectedId !== null],
           skipAction: () => d.loadDetails.reset(),
         }),
         loadingAction: () => d.loadDetails.loading(),
@@ -228,7 +229,9 @@ withLatestFrom(selectorObject(state$, { listStatus: (s) => s.api.listRequest.sta
 - **`validator`** возвращает `{ conditions, skipAction }`: `conditions` — массив булевых гейтов
   (все должны быть `true`), иначе диспатчится `skipAction` и запрос не идёт. В pokemon это
   «не грузим повторно, пока запрос в полёте» (`listStatus !== 'loading'`) и «есть что грузить»
-  (`selectedId !== null`).
+  (`selectedId !== null`). Гейт на `'loading'` уместен, когда повтор того же запроса лишний (`loadList`);
+  там, где новый триггер меняет параметры (выбор другого покемона), он вреден: валидатор отклонит новый
+  триггер, а `switchMap` всё равно отпишется от текущего запроса — старый отменится, новый не уйдёт.
 - **`loadingAction`** → ставит статус `loading` (через `apiActions`-группу диспетчера).
 - **`apiCall`** получает значение пайпа, зовёт `fromRequest(this.api.X.request(...))`, и в `apiResult`
   пишет результат (`d.applyPokemon...`) + `d.X.success()`.
@@ -239,10 +242,11 @@ withLatestFrom(selectorObject(state$, { listStatus: (s) => s.api.listRequest.sta
 readonly loadDetails = this.effect((action$, state$, { dispatcher: d }) =>
   action$.pipe(
     ofType(d.selectPokemon),
-    withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId, (s) => s.api.detailsRequest.status)),
+    withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId)),
     validateMap({
-      validator: ([, [selectedId, detailsStatus]]) => ({
-        conditions: [selectedId !== null, detailsStatus !== 'loading'],
+      validator: ([, [selectedId]]) => ({
+        // без гейта на 'loading': новый выбор должен отменить текущий запрос (switchMap)
+        conditions: [selectedId !== null],
         skipAction: () => d.loadDetails.reset(),
       }),
       loadingAction: () => d.loadDetails.loading(),

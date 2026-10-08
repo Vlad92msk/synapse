@@ -10023,7 +10023,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "import { Observable, withLatestFrom } from 'rxjs'\nimport { Effects, apiResult, fromRequest, ofType, selectorMap, selectorObject, validateMap } from 'synapse-storage/reactive'\n\nimport { mapDetailsResponse, mapListResponse, type PokemonApiEndpoints } from './pokemon.api'\nimport type { PokemonSettings } from './pokemon.settings'\nimport type { PokemonState } from './pokemon.types'\nimport type { PokemonDispatcher } from './pokemon.dispatcher'\n\nexport class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {\n  constructor(\n    private readonly api: PokemonApiEndpoints,\n    private readonly settings$: Observable<PokemonSettings>,\n  ) {\n    super()\n  }\n\n  // loadList (init/idle) → validateMap → loading → API → success/failure\n  readonly loadList = this.effect((action$, state$, { dispatcher: d }) =>\n    action$.pipe(\n      ofType(d.loadList),\n      withLatestFrom(selectorObject(state$, { listStatus: (s) => s.api.listRequest.status }), this.settings$),\n      validateMap({\n        // gate: don't refetch while a request is already in flight\n        validator: ([, { listStatus }]) => ({\n          conditions: [listStatus !== 'loading'],\n          skipAction: () => d.loadList.reset(),\n        }),\n        loadingAction: () => d.loadList.loading(),\n        errorAction: (err) => d.loadList.failure(String(err)),\n        apiCall: ([, , { pageSize }]) =>\n          fromRequest(this.api.getList.request({ limit: pageSize, offset: 0 })).pipe(\n            apiResult((data) => {\n              d.applyPokemonList({ ...mapListResponse(data), append: false })\n              d.loadList.success()\n            }),\n          ),\n      }),\n    ),\n  )\n\n  // selectPokemon → load the details of the selected pokemon\n  readonly loadDetails = this.effect((action$, state$, { dispatcher: d }) =>\n    action$.pipe(\n      ofType(d.selectPokemon),\n      withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId, (s) => s.api.detailsRequest.status)),\n      validateMap({\n        validator: ([, [selectedId, detailsStatus]]) => ({\n          conditions: [selectedId !== null, detailsStatus !== 'loading'],\n          skipAction: () => d.loadDetails.reset(),\n        }),\n        loadingAction: () => d.loadDetails.loading(),\n        errorAction: (err) => d.loadDetails.failure(String(err)),\n        apiCall: ([, [selectedId]]) =>\n          fromRequest(this.api.getDetails.request({ id: selectedId! })).pipe(\n            apiResult((data) => {\n              d.applyPokemonDetails(mapDetailsResponse(data))\n              d.loadDetails.success()\n            }),\n          ),\n      }),\n    ),\n  )\n}",
+                "code": "import { Observable, withLatestFrom } from 'rxjs'\nimport { Effects, apiResult, fromRequest, ofType, selectorMap, selectorObject, validateMap } from 'synapse-storage/reactive'\n\nimport { mapDetailsResponse, mapListResponse, type PokemonApiEndpoints } from './pokemon.api'\nimport type { PokemonSettings } from './pokemon.settings'\nimport type { PokemonState } from './pokemon.types'\nimport type { PokemonDispatcher } from './pokemon.dispatcher'\n\nexport class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {\n  constructor(\n    private readonly api: PokemonApiEndpoints,\n    private readonly settings$: Observable<PokemonSettings>,\n  ) {\n    super()\n  }\n\n  // loadList (init/idle) → validateMap → loading → API → success/failure\n  readonly loadList = this.effect((action$, state$, { dispatcher: d }) =>\n    action$.pipe(\n      ofType(d.loadList),\n      withLatestFrom(selectorObject(state$, { listStatus: (s) => s.api.listRequest.status }), this.settings$),\n      validateMap({\n        // gate: don't refetch while a request is already in flight\n        validator: ([, { listStatus }]) => ({\n          conditions: [listStatus !== 'loading'],\n          skipAction: () => d.loadList.reset(),\n        }),\n        loadingAction: () => d.loadList.loading(),\n        errorAction: (err) => d.loadList.failure(String(err)),\n        apiCall: ([, , { pageSize }]) =>\n          fromRequest(this.api.getList.request({ limit: pageSize, offset: 0 })).pipe(\n            apiResult((data) => {\n              d.applyPokemonList({ ...mapListResponse(data), append: false })\n              d.loadList.success()\n            }),\n          ),\n      }),\n    ),\n  )\n\n  // selectPokemon → load the details of the selected pokemon\n  readonly loadDetails = this.effect((action$, state$, { dispatcher: d }) =>\n    action$.pipe(\n      ofType(d.selectPokemon),\n      withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId)),\n      validateMap({\n        validator: ([, [selectedId]]) => ({\n          // no 'loading' gate: a new selection must cancel the in-flight request (switchMap)\n          conditions: [selectedId !== null],\n          skipAction: () => d.loadDetails.reset(),\n        }),\n        loadingAction: () => d.loadDetails.loading(),\n        errorAction: (err) => d.loadDetails.failure(String(err)),\n        apiCall: ([, [selectedId]]) =>\n          fromRequest(this.api.getDetails.request({ id: selectedId! })).pipe(\n            apiResult((data) => {\n              d.applyPokemonDetails(mapDetailsResponse(data))\n              d.loadDetails.success()\n            }),\n          ),\n      }),\n    ),\n  )\n}",
                 "meta": null
               }
             },
@@ -10624,7 +10624,7 @@
                     {
                       "type": "paragraph",
                       "data": {
-                        "text": "validator returns { conditions, skipAction }: conditions is an array of boolean gates (all\nmust be true), otherwise skipAction is dispatched and no request is made. In pokemon that's\n\"don't refetch while a request is in flight\" (listStatus !== 'loading') and \"there is something to\nload\" (selectedId !== null).",
+                        "text": "validator returns { conditions, skipAction }: conditions is an array of boolean gates (all\nmust be true), otherwise skipAction is dispatched and no request is made. In pokemon that's\n\"don't refetch while a request is in flight\" (listStatus !== 'loading') and \"there is something to\nload\" (selectedId !== null). A 'loading' gate fits when repeating the same request is redundant\n(loadList); where a new trigger changes the parameters (selecting another pokemon) it is harmful: the\nvalidator rejects the new trigger, yet switchMap still unsubscribes from the current request — the old\none is aborted and the new one is never sent.",
                         "formatting": {
                           "bold": [
                             {
@@ -10661,6 +10661,18 @@
                             {
                               "start": 289,
                               "end": 308
+                            },
+                            {
+                              "start": 313,
+                              "end": 322
+                            },
+                            {
+                              "start": 379,
+                              "end": 387
+                            },
+                            {
+                              "start": 519,
+                              "end": 528
                             }
                           ],
                           "links": []
@@ -10809,7 +10821,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "readonly loadDetails = this.effect((action$, state$, { dispatcher: d }) =>\n  action$.pipe(\n    ofType(d.selectPokemon),\n    withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId, (s) => s.api.detailsRequest.status)),\n    validateMap({\n      validator: ([, [selectedId, detailsStatus]]) => ({\n        conditions: [selectedId !== null, detailsStatus !== 'loading'],\n        skipAction: () => d.loadDetails.reset(),\n      }),\n      loadingAction: () => d.loadDetails.loading(),\n      errorAction: (err) => d.loadDetails.failure(String(err)),\n      apiCall: ([, [selectedId]]) =>\n        fromRequest(this.api.getDetails.request({ id: selectedId! })).pipe(\n          apiResult((data) => {\n            d.applyPokemonDetails(mapDetailsResponse(data))\n            d.loadDetails.success()\n          }),\n        ),\n    }),\n  ),\n)",
+                "code": "readonly loadDetails = this.effect((action$, state$, { dispatcher: d }) =>\n  action$.pipe(\n    ofType(d.selectPokemon),\n    withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId)),\n    validateMap({\n      validator: ([, [selectedId]]) => ({\n        // no 'loading' gate: a new selection must cancel the in-flight request (switchMap)\n        conditions: [selectedId !== null],\n        skipAction: () => d.loadDetails.reset(),\n      }),\n      loadingAction: () => d.loadDetails.loading(),\n      errorAction: (err) => d.loadDetails.failure(String(err)),\n      apiCall: ([, [selectedId]]) =>\n        fromRequest(this.api.getDetails.request({ id: selectedId! })).pipe(\n          apiResult((data) => {\n            d.applyPokemonDetails(mapDetailsResponse(data))\n            d.loadDetails.success()\n          }),\n        ),\n    }),\n  ),\n)",
                 "meta": null
               }
             },
@@ -11109,7 +11121,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 408,
+            "wordCount": 460,
             "codeBlocksCount": 2,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -11453,9 +11465,9 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-10-04T12:58:32.481Z",
-        "wordCount": 2179,
-        "readingTime": 11,
+        "lastModified": "2026-10-08T09:11:51.884Z",
+        "wordCount": 2243,
+        "readingTime": 12,
         "sectionsCount": 11,
         "codeBlocksCount": 10
       }
@@ -52070,7 +52082,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "import { Observable, withLatestFrom } from 'rxjs'\nimport { Effects, apiResult, fromRequest, ofType, selectorMap, selectorObject, validateMap } from 'synapse-storage/reactive'\n\nimport { mapDetailsResponse, mapListResponse, type PokemonApiEndpoints } from './pokemon.api'\nimport type { PokemonSettings } from './pokemon.settings'\nimport type { PokemonState } from './pokemon.types'\nimport type { PokemonDispatcher } from './pokemon.dispatcher'\n\nexport class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {\n  constructor(\n    private readonly api: PokemonApiEndpoints,\n    private readonly settings$: Observable<PokemonSettings>,\n  ) {\n    super()\n  }\n\n  // loadList (init/idle) → validateMap → loading → API → success/failure\n  readonly loadList = this.effect((action$, state$, { dispatcher: d }) =>\n    action$.pipe(\n      ofType(d.loadList),\n      withLatestFrom(selectorObject(state$, { listStatus: (s) => s.api.listRequest.status }), this.settings$),\n      validateMap({\n        // гейт: не грузим повторно, пока запрос уже в полёте\n        validator: ([, { listStatus }]) => ({\n          conditions: [listStatus !== 'loading'],\n          skipAction: () => d.loadList.reset(),\n        }),\n        loadingAction: () => d.loadList.loading(),\n        errorAction: (err) => d.loadList.failure(String(err)),\n        apiCall: ([, , { pageSize }]) =>\n          fromRequest(this.api.getList.request({ limit: pageSize, offset: 0 })).pipe(\n            apiResult((data) => {\n              d.applyPokemonList({ ...mapListResponse(data), append: false })\n              d.loadList.success()\n            }),\n          ),\n      }),\n    ),\n  )\n\n  // selectPokemon → загрузка деталей выбранного покемона\n  readonly loadDetails = this.effect((action$, state$, { dispatcher: d }) =>\n    action$.pipe(\n      ofType(d.selectPokemon),\n      withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId, (s) => s.api.detailsRequest.status)),\n      validateMap({\n        validator: ([, [selectedId, detailsStatus]]) => ({\n          conditions: [selectedId !== null, detailsStatus !== 'loading'],\n          skipAction: () => d.loadDetails.reset(),\n        }),\n        loadingAction: () => d.loadDetails.loading(),\n        errorAction: (err) => d.loadDetails.failure(String(err)),\n        apiCall: ([, [selectedId]]) =>\n          fromRequest(this.api.getDetails.request({ id: selectedId! })).pipe(\n            apiResult((data) => {\n              d.applyPokemonDetails(mapDetailsResponse(data))\n              d.loadDetails.success()\n            }),\n          ),\n      }),\n    ),\n  )\n}",
+                "code": "import { Observable, withLatestFrom } from 'rxjs'\nimport { Effects, apiResult, fromRequest, ofType, selectorMap, selectorObject, validateMap } from 'synapse-storage/reactive'\n\nimport { mapDetailsResponse, mapListResponse, type PokemonApiEndpoints } from './pokemon.api'\nimport type { PokemonSettings } from './pokemon.settings'\nimport type { PokemonState } from './pokemon.types'\nimport type { PokemonDispatcher } from './pokemon.dispatcher'\n\nexport class PokemonEffects extends Effects<PokemonState, PokemonDispatcher> {\n  constructor(\n    private readonly api: PokemonApiEndpoints,\n    private readonly settings$: Observable<PokemonSettings>,\n  ) {\n    super()\n  }\n\n  // loadList (init/idle) → validateMap → loading → API → success/failure\n  readonly loadList = this.effect((action$, state$, { dispatcher: d }) =>\n    action$.pipe(\n      ofType(d.loadList),\n      withLatestFrom(selectorObject(state$, { listStatus: (s) => s.api.listRequest.status }), this.settings$),\n      validateMap({\n        // гейт: не грузим повторно, пока запрос уже в полёте\n        validator: ([, { listStatus }]) => ({\n          conditions: [listStatus !== 'loading'],\n          skipAction: () => d.loadList.reset(),\n        }),\n        loadingAction: () => d.loadList.loading(),\n        errorAction: (err) => d.loadList.failure(String(err)),\n        apiCall: ([, , { pageSize }]) =>\n          fromRequest(this.api.getList.request({ limit: pageSize, offset: 0 })).pipe(\n            apiResult((data) => {\n              d.applyPokemonList({ ...mapListResponse(data), append: false })\n              d.loadList.success()\n            }),\n          ),\n      }),\n    ),\n  )\n\n  // selectPokemon → загрузка деталей выбранного покемона\n  readonly loadDetails = this.effect((action$, state$, { dispatcher: d }) =>\n    action$.pipe(\n      ofType(d.selectPokemon),\n      withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId)),\n      validateMap({\n        validator: ([, [selectedId]]) => ({\n          // без гейта на 'loading': новый выбор должен отменить текущий запрос (switchMap)\n          conditions: [selectedId !== null],\n          skipAction: () => d.loadDetails.reset(),\n        }),\n        loadingAction: () => d.loadDetails.loading(),\n        errorAction: (err) => d.loadDetails.failure(String(err)),\n        apiCall: ([, [selectedId]]) =>\n          fromRequest(this.api.getDetails.request({ id: selectedId! })).pipe(\n            apiResult((data) => {\n              d.applyPokemonDetails(mapDetailsResponse(data))\n              d.loadDetails.success()\n            }),\n          ),\n      }),\n    ),\n  )\n}",
                 "meta": null
               }
             },
@@ -52671,7 +52683,7 @@
                     {
                       "type": "paragraph",
                       "data": {
-                        "text": "validator возвращает { conditions, skipAction }: conditions — массив булевых гейтов\n(все должны быть true), иначе диспатчится skipAction и запрос не идёт. В pokemon это\n«не грузим повторно, пока запрос в полёте» (listStatus !== 'loading') и «есть что грузить»\n(selectedId !== null).",
+                        "text": "validator возвращает { conditions, skipAction }: conditions — массив булевых гейтов\n(все должны быть true), иначе диспатчится skipAction и запрос не идёт. В pokemon это\n«не грузим повторно, пока запрос в полёте» (listStatus !== 'loading') и «есть что грузить»\n(selectedId !== null). Гейт на 'loading' уместен, когда повтор того же запроса лишний (loadList);\nтам, где новый триггер меняет параметры (выбор другого покемона), он вреден: валидатор отклонит новый\nтриггер, а switchMap всё равно отпишется от текущего запроса — старый отменится, новый не уйдёт.",
                         "formatting": {
                           "bold": [
                             {
@@ -52708,6 +52720,18 @@
                             {
                               "start": 261,
                               "end": 280
+                            },
+                            {
+                              "start": 291,
+                              "end": 300
+                            },
+                            {
+                              "start": 347,
+                              "end": 355
+                            },
+                            {
+                              "start": 471,
+                              "end": 480
                             }
                           ],
                           "links": []
@@ -52856,7 +52880,7 @@
               "type": "code",
               "data": {
                 "language": "typescript",
-                "code": "readonly loadDetails = this.effect((action$, state$, { dispatcher: d }) =>\n  action$.pipe(\n    ofType(d.selectPokemon),\n    withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId, (s) => s.api.detailsRequest.status)),\n    validateMap({\n      validator: ([, [selectedId, detailsStatus]]) => ({\n        conditions: [selectedId !== null, detailsStatus !== 'loading'],\n        skipAction: () => d.loadDetails.reset(),\n      }),\n      loadingAction: () => d.loadDetails.loading(),\n      errorAction: (err) => d.loadDetails.failure(String(err)),\n      apiCall: ([, [selectedId]]) =>\n        fromRequest(this.api.getDetails.request({ id: selectedId! })).pipe(\n          apiResult((data) => {\n            d.applyPokemonDetails(mapDetailsResponse(data))\n            d.loadDetails.success()\n          }),\n        ),\n    }),\n  ),\n)",
+                "code": "readonly loadDetails = this.effect((action$, state$, { dispatcher: d }) =>\n  action$.pipe(\n    ofType(d.selectPokemon),\n    withLatestFrom(selectorMap(state$, (s) => s.selectedPokemonId)),\n    validateMap({\n      validator: ([, [selectedId]]) => ({\n        // без гейта на 'loading': новый выбор должен отменить текущий запрос (switchMap)\n        conditions: [selectedId !== null],\n        skipAction: () => d.loadDetails.reset(),\n      }),\n      loadingAction: () => d.loadDetails.loading(),\n      errorAction: (err) => d.loadDetails.failure(String(err)),\n      apiCall: ([, [selectedId]]) =>\n        fromRequest(this.api.getDetails.request({ id: selectedId! })).pipe(\n          apiResult((data) => {\n            d.applyPokemonDetails(mapDetailsResponse(data))\n            d.loadDetails.success()\n          }),\n        ),\n    }),\n  ),\n)",
                 "meta": null
               }
             },
@@ -53152,7 +53176,7 @@
             }
           ],
           "metadata": {
-            "wordCount": 359,
+            "wordCount": 399,
             "codeBlocksCount": 2,
             "diagramsCount": 0,
             "tasksCount": 0,
@@ -53496,8 +53520,8 @@
       "features": [],
       "frontMatter": {},
       "metadata": {
-        "lastModified": "2026-10-04T12:58:32.481Z",
-        "wordCount": 1939,
+        "lastModified": "2026-10-08T09:11:51.883Z",
+        "wordCount": 1989,
         "readingTime": 10,
         "sectionsCount": 11,
         "codeBlocksCount": 10
