@@ -89,11 +89,8 @@ export const competitors = [
     '@reduxjs/toolkit': ['configureStore', 'createSlice', 'createAsyncThunk', 'createEntityAdapter', 'createSelector', 'createListenerMiddleware'],
   }),
   s('zustand-vanilla', 'state', 'zustand/vanilla (createStore)', { 'zustand/vanilla': ['createStore'] }),
-  s('jotai-vanilla', 'state', 'jotai/vanilla (atom, createStore)', { 'jotai/vanilla': ['atom', 'createStore'] }),
-  s('valtio-vanilla', 'state', 'valtio/vanilla (proxy, subscribe)', { 'valtio/vanilla': ['proxy', 'subscribe', 'snapshot'] }),
   s('mobx', 'state', 'mobx (makeAutoObservable, autorun, computed)', { mobx: ['makeAutoObservable', 'autorun', 'computed', 'reaction'] }),
   s('effector', 'state', 'effector (createStore, createEvent, createEffect, sample)', { effector: ['createStore', 'createEvent', 'createEffect', 'sample', 'combine'] }),
-  s('reselect', 'state', 'reselect (createSelector)', { reselect: ['createSelector'] }),
 
   // ── State + React ──
   s('redux-react', 'state-react', 'redux + react-redux', { redux: ['legacy_createStore', 'combineReducers'], 'react-redux': ['Provider', 'useSelector', 'useDispatch'] }),
@@ -106,15 +103,9 @@ export const competitors = [
   s('zustand-mw', 'state-react', 'zustand + persist/devtools/subscribeWithSelector/immer-less', {
     zustand: ['create'], 'zustand/middleware': ['persist', 'devtools', 'subscribeWithSelector', 'createJSONStorage'],
   }),
-  s('jotai', 'state-react', 'jotai (atom, useAtom, Provider)', { jotai: ['atom', 'useAtom', 'useAtomValue', 'Provider'] }),
-  s('valtio', 'state-react', 'valtio (proxy, useSnapshot)', { valtio: ['proxy', 'useSnapshot', 'subscribe'] }),
   s('mobx-react', 'state-react', 'mobx + mobx-react-lite', { mobx: ['makeAutoObservable', 'autorun', 'computed'], 'mobx-react-lite': ['observer', 'useLocalObservable'] }),
   s('effector-react', 'state-react', 'effector + effector-react', { effector: ['createStore', 'createEvent', 'createEffect', 'sample'], 'effector-react': ['useUnit', 'Provider'] }),
 
-  // ── Persist ──
-  s('redux-persist', 'persist', 'redux-persist (persistStore, persistReducer, storage)', {
-    'redux-persist': ['persistStore', 'persistReducer'], 'redux-persist/es/storage': ['default'],
-  }),
 
   // ── API / data fetching ──
   s('rtkq', 'api', 'RTK Query (createApi + fetchBaseQuery, без React) + configureStore', {
@@ -127,9 +118,11 @@ export const competitors = [
   s('react-query', 'api', '@tanstack/react-query (QueryClient, useQuery, useMutation)', {
     '@tanstack/react-query': ['QueryClient', 'QueryClientProvider', 'useQuery', 'useMutation'],
   }),
-  s('swr', 'api', 'swr (useSWR + useSWRMutation)', { swr: ['default'], 'swr/mutation': ['default'] }),
-  s('axios', 'api', 'axios', { axios: ['default'] }),
-  s('ky', 'api', 'ky', { ky: ['default'] }),
+
+  s('farfetched', 'api', '@farfetched/core (createJsonQuery, createJsonMutation, cache, retry) + effector', {
+    effector: ['createStore', 'createEvent', 'sample'],
+    '@farfetched/core': ['createJsonQuery', 'createJsonMutation', 'cache', 'retry'],
+  }),
 
   // ── Side effects ──
   s('rxjs-ops', 'effects', `rxjs (Observable, Subject + ${rxOps.length} операторов)`, { rxjs: ['Observable', 'Subject', 'BehaviorSubject', ...rxOps] }),
@@ -143,24 +136,26 @@ export const competitors = [
     '@reduxjs/toolkit': ['configureStore', 'createSlice', 'createSelector'], '@reduxjs/toolkit/query/react': ['createApi', 'fetchBaseQuery'],
     'react-redux': ['Provider', 'useSelector', 'useDispatch'],
   }),
-  s('stack-rtk-full', 'stack', 'RTK + react-redux + RTK Query React + redux-observable + rxjs + redux-persist', {
+  s('stack-rtk-full', 'stack', 'RTK + react-redux + RTK Query React + redux-observable + rxjs', {
     '@reduxjs/toolkit': ['configureStore', 'createSlice', 'createSelector', 'createAsyncThunk', 'createEntityAdapter'],
     '@reduxjs/toolkit/query/react': ['createApi', 'fetchBaseQuery'], 'react-redux': ['Provider', 'useSelector', 'useDispatch'],
     'redux-observable': ['createEpicMiddleware', 'combineEpics', 'ofType'], rxjs: ['Observable', 'Subject', 'BehaviorSubject', ...rxOps],
-    'redux-persist': ['persistStore', 'persistReducer'], 'redux-persist/es/storage': ['default'],
   }),
-  s('stack-rtk-saga', 'stack', 'RTK + react-redux + RTK Query React + redux-saga + redux-persist', {
+  s('stack-rtk-saga', 'stack', 'RTK + react-redux + RTK Query React + redux-saga', {
     '@reduxjs/toolkit': ['configureStore', 'createSlice', 'createSelector'], '@reduxjs/toolkit/query/react': ['createApi', 'fetchBaseQuery'],
     'react-redux': ['Provider', 'useSelector', 'useDispatch'], 'redux-saga': ['default'], 'redux-saga/effects': ['takeLatest', 'call', 'put', 'select'],
-    'redux-persist': ['persistStore', 'persistReducer'], 'redux-persist/es/storage': ['default'],
   }),
   s('stack-zustand-rq', 'stack', 'zustand + middleware + @tanstack/react-query', {
     zustand: ['create'], 'zustand/middleware': ['persist', 'devtools', 'createJSONStorage'],
     '@tanstack/react-query': ['QueryClient', 'QueryClientProvider', 'useQuery', 'useMutation'],
   }),
-  s('stack-zustand-rq-axios', 'stack', 'zustand + middleware + react-query + axios', {
-    zustand: ['create'], 'zustand/middleware': ['persist', 'devtools', 'createJSONStorage'],
-    '@tanstack/react-query': ['QueryClient', 'QueryClientProvider', 'useQuery', 'useMutation'], axios: ['default'],
+  s('stack-effector-ff', 'stack', 'effector + effector-react + @farfetched/core', {
+    effector: ['createStore', 'createEvent', 'createEffect', 'sample', 'combine'], 'effector-react': ['useUnit', 'Provider'],
+    '@farfetched/core': ['createJsonQuery', 'createJsonMutation', 'cache', 'retry'],
+  }),
+  s('stack-effector-rq', 'stack', 'effector + effector-react + @tanstack/react-query', {
+    effector: ['createStore', 'createEvent', 'createEffect', 'sample', 'combine'], 'effector-react': ['useUnit', 'Provider'],
+    '@tanstack/react-query': ['QueryClient', 'QueryClientProvider', 'useQuery', 'useMutation'],
   }),
   s('stack-mobx-rq', 'stack', 'mobx + mobx-react-lite + @tanstack/react-query', {
     mobx: ['makeAutoObservable', 'autorun', 'computed'], 'mobx-react-lite': ['observer'],
@@ -201,15 +196,15 @@ export const toEntrySource = (imports) => {
  */
 export const ladder = [
   { step: 'Стор (без React)', syn: 'syn-memory', comp: ['zustand-vanilla', 'redux', 'rtk', 'effector', 'mobx'] },
-  { step: 'Стор + React', syn: 'syn-react-storage', comp: ['zustand', 'redux-react', 'jotai', 'rtk-react', 'mobx-react'] },
+  { step: 'Стор + React', syn: 'syn-react-storage', comp: ['zustand', 'redux-react', 'rtk-react', 'mobx-react'] },
   { step: 'Стор + селекторы + React', syn: 'syn-react-selector', comp: ['rtk-full-react', 'effector-react'] },
-  { step: 'Персист: localStorage', syn: 'syn-local', comp: ['zustand-mw', 'redux-persist'] },
+  { step: 'Персист: localStorage', syn: 'syn-local', comp: ['zustand-mw'] },
   { step: 'Персист: IndexedDB', syn: 'syn-idb', comp: [] },
-  { step: 'API-клиент + кэш + хуки', syn: 'syn-react-api', comp: ['swr', 'react-query', 'rtkq-react'] },
+  { step: 'API-клиент + кэш + хуки', syn: 'syn-react-api', comp: ['react-query', 'farfetched', 'rtkq-react'] },
   { step: 'Side effects (Dispatcher + Effects)', syn: 'syn-dispatcher-effects', comp: ['redux-saga', 'redux-observable'] },
   { step: 'Бизнес-модуль без rxjs (createSynapse)', syn: 'syn-module-norx', comp: ['rtk-full', 'effector'] },
   { step: 'Бизнес-модуль + эффекты', syn: 'syn-createSynapse', comp: ['stack-zustand-rq', 'stack-mobx-rq'] },
-  { step: 'Приложение без rxjs', syn: 'syn-typical-norx', comp: ['stack-rtk-rtkq', 'stack-zustand-rq'] },
-  { step: 'Типичное приложение (с эффектами)', syn: 'syn-typical', comp: ['stack-rtk-rtkq', 'stack-zustand-rq-axios', 'stack-rtk-saga', 'stack-rtk-full'] },
+  { step: 'Приложение без rxjs', syn: 'syn-typical-norx', comp: ['stack-rtk-rtkq', 'stack-zustand-rq', 'stack-effector-ff', 'stack-effector-rq'] },
+  { step: 'Типичное приложение (с эффектами)', syn: 'syn-typical', comp: ['stack-rtk-rtkq', 'stack-zustand-rq', 'stack-rtk-saga', 'stack-rtk-full'] },
   { step: 'Максимум (весь пакет)', syn: 'syn-full', comp: [] },
 ]

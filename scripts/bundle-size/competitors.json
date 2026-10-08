@@ -1,8 +1,9 @@
 {
-  "date": "2026-10-04T12:59:26.568Z",
+  "date": "2026-10-05T07:34:04.943Z",
   "versions": {
     "@babel/runtime": "7.29.7",
     "@esbuild/darwin-arm64": "0.28.2",
+    "@farfetched/core": "0.15.0",
     "@jridgewell/gen-mapping": "0.3.13",
     "@jridgewell/resolve-uri": "3.1.2",
     "@jridgewell/source-map": "0.3.11",
@@ -289,69 +290,6 @@
       }
     },
     {
-      "id": "jotai-vanilla",
-      "group": "state",
-      "label": "jotai/vanilla (atom, createStore)",
-      "imports": {
-        "jotai/vanilla": [
-          "atom",
-          "createStore"
-        ]
-      },
-      "esbuild": {
-        "min": 5787,
-        "gzip": 2482,
-        "brotli": 2247
-      },
-      "rollup": {
-        "min": 6192,
-        "gzip": 2605,
-        "brotli": 2356
-      },
-      "rolldown": {
-        "min": 5982,
-        "gzip": 2400,
-        "brotli": 2182
-      },
-      "webpack": {
-        "min": 6192,
-        "gzip": 2602,
-        "brotli": 2365
-      }
-    },
-    {
-      "id": "valtio-vanilla",
-      "group": "state",
-      "label": "valtio/vanilla (proxy, subscribe)",
-      "imports": {
-        "valtio/vanilla": [
-          "proxy",
-          "subscribe",
-          "snapshot"
-        ]
-      },
-      "esbuild": {
-        "min": 2972,
-        "gzip": 1316,
-        "brotli": 1211
-      },
-      "rollup": {
-        "min": 2945,
-        "gzip": 1265,
-        "brotli": 1165
-      },
-      "rolldown": {
-        "min": 3054,
-        "gzip": 1282,
-        "brotli": 1178
-      },
-      "webpack": {
-        "min": 2501,
-        "gzip": 1144,
-        "brotli": 1070
-      }
-    },
-    {
       "id": "mobx",
       "group": "state",
       "label": "mobx (makeAutoObservable, autorun, computed)",
@@ -416,36 +354,6 @@
         "min": 18851,
         "gzip": 8360,
         "brotli": 7659
-      }
-    },
-    {
-      "id": "reselect",
-      "group": "state",
-      "label": "reselect (createSelector)",
-      "imports": {
-        "reselect": [
-          "createSelector"
-        ]
-      },
-      "esbuild": {
-        "min": 2815,
-        "gzip": 1270,
-        "brotli": 1139
-      },
-      "rollup": {
-        "min": 2897,
-        "gzip": 1219,
-        "brotli": 1092
-      },
-      "rolldown": {
-        "min": 2809,
-        "gzip": 1213,
-        "brotli": 1093
-      },
-      "webpack": {
-        "min": 2897,
-        "gzip": 1217,
-        "brotli": 1093
       }
     },
     {
@@ -627,71 +535,6 @@
       }
     },
     {
-      "id": "jotai",
-      "group": "state-react",
-      "label": "jotai (atom, useAtom, Provider)",
-      "imports": {
-        "jotai": [
-          "atom",
-          "useAtom",
-          "useAtomValue",
-          "Provider"
-        ]
-      },
-      "esbuild": {
-        "min": 7494,
-        "gzip": 3245,
-        "brotli": 2930
-      },
-      "rollup": {
-        "min": 7836,
-        "gzip": 3279,
-        "brotli": 2969
-      },
-      "rolldown": {
-        "min": 7602,
-        "gzip": 3084,
-        "brotli": 2799
-      },
-      "webpack": {
-        "min": 7846,
-        "gzip": 3277,
-        "brotli": 2963
-      }
-    },
-    {
-      "id": "valtio",
-      "group": "state-react",
-      "label": "valtio (proxy, useSnapshot)",
-      "imports": {
-        "valtio": [
-          "proxy",
-          "useSnapshot",
-          "subscribe"
-        ]
-      },
-      "esbuild": {
-        "min": 5905,
-        "gzip": 2436,
-        "brotli": 2257
-      },
-      "rollup": {
-        "min": 5803,
-        "gzip": 2291,
-        "brotli": 2123
-      },
-      "rolldown": {
-        "min": 5918,
-        "gzip": 2297,
-        "brotli": 2124
-      },
-      "webpack": {
-        "min": 4664,
-        "gzip": 1945,
-        "brotli": 1838
-      }
-    },
-    {
       "id": "mobx-react",
       "group": "state-react",
       "label": "mobx + mobx-react-lite",
@@ -762,40 +605,6 @@
         "min": 23700,
         "gzip": 10102,
         "brotli": 9245
-      }
-    },
-    {
-      "id": "redux-persist",
-      "group": "persist",
-      "label": "redux-persist (persistStore, persistReducer, storage)",
-      "imports": {
-        "redux-persist": [
-          "persistStore",
-          "persistReducer"
-        ],
-        "redux-persist/es/storage": [
-          "default"
-        ]
-      },
-      "esbuild": {
-        "min": 10388,
-        "gzip": 3512,
-        "brotli": 3133
-      },
-      "rollup": {
-        "min": 10088,
-        "gzip": 3249,
-        "brotli": 2919
-      },
-      "rolldown": {
-        "min": 10222,
-        "gzip": 3329,
-        "brotli": 3000
-      },
-      "webpack": {
-        "min": 10195,
-        "gzip": 3288,
-        "brotli": 2952
       }
     },
     {
@@ -935,96 +744,41 @@
       }
     },
     {
-      "id": "swr",
+      "id": "farfetched",
       "group": "api",
-      "label": "swr (useSWR + useSWRMutation)",
+      "label": "@farfetched/core (createJsonQuery, createJsonMutation, cache, retry) + effector",
       "imports": {
-        "swr": [
-          "default"
+        "effector": [
+          "createStore",
+          "createEvent",
+          "sample"
         ],
-        "swr/mutation": [
-          "default"
+        "@farfetched/core": [
+          "createJsonQuery",
+          "createJsonMutation",
+          "cache",
+          "retry"
         ]
       },
       "esbuild": {
-        "min": 15457,
-        "gzip": 6960,
-        "brotli": 6309
+        "min": 48787,
+        "gzip": 18388,
+        "brotli": 16697
       },
       "rollup": {
-        "min": 13691,
-        "gzip": 5905,
-        "brotli": 5383
+        "min": 48655,
+        "gzip": 17619,
+        "brotli": 16025
       },
       "rolldown": {
-        "min": 14627,
-        "gzip": 6413,
-        "brotli": 5795
+        "min": 48421,
+        "gzip": 17676,
+        "brotli": 16061
       },
       "webpack": {
-        "min": 14456,
-        "gzip": 6067,
-        "brotli": 5552
-      }
-    },
-    {
-      "id": "axios",
-      "group": "api",
-      "label": "axios",
-      "imports": {
-        "axios": [
-          "default"
-        ]
-      },
-      "esbuild": {
-        "min": 51045,
-        "gzip": 19497,
-        "brotli": 17769
-      },
-      "rollup": {
-        "min": 50827,
-        "gzip": 18561,
-        "brotli": 16770
-      },
-      "rolldown": {
-        "min": 50262,
-        "gzip": 18588,
-        "brotli": 16876
-      },
-      "webpack": {
-        "min": 51245,
-        "gzip": 18639,
-        "brotli": 16826
-      }
-    },
-    {
-      "id": "ky",
-      "group": "api",
-      "label": "ky",
-      "imports": {
-        "ky": [
-          "default"
-        ]
-      },
-      "esbuild": {
-        "min": 25204,
-        "gzip": 8890,
-        "brotli": 7966
-      },
-      "rollup": {
-        "min": 25153,
-        "gzip": 8594,
-        "brotli": 7670
-      },
-      "rolldown": {
-        "min": 24974,
-        "gzip": 8614,
-        "brotli": 7721
-      },
-      "webpack": {
-        "min": 25159,
-        "gzip": 8593,
-        "brotli": 7674
+        "min": 48737,
+        "gzip": 17668,
+        "brotli": 16067
       }
     },
     {
@@ -1196,7 +950,7 @@
     {
       "id": "stack-rtk-full",
       "group": "stack",
-      "label": "RTK + react-redux + RTK Query React + redux-observable + rxjs + redux-persist",
+      "label": "RTK + react-redux + RTK Query React + redux-observable + rxjs",
       "imports": {
         "@reduxjs/toolkit": [
           "configureStore",
@@ -1232,40 +986,33 @@
           "of",
           "takeUntil",
           "withLatestFrom"
-        ],
-        "redux-persist": [
-          "persistStore",
-          "persistReducer"
-        ],
-        "redux-persist/es/storage": [
-          "default"
         ]
       },
       "esbuild": {
-        "min": 116400,
-        "gzip": 39185,
-        "brotli": 35082
+        "min": 107831,
+        "gzip": 36665,
+        "brotli": 32840
       },
       "rollup": {
-        "min": 111547,
-        "gzip": 35877,
-        "brotli": 32021
+        "min": 103182,
+        "gzip": 33567,
+        "brotli": 30046
       },
       "rolldown": {
-        "min": 114363,
-        "gzip": 36589,
-        "brotli": 32908
+        "min": 105880,
+        "gzip": 34235,
+        "brotli": 30779
       },
       "webpack": {
-        "min": 113742,
-        "gzip": 36281,
-        "brotli": 32412
+        "min": 105341,
+        "gzip": 33964,
+        "brotli": 30364
       }
     },
     {
       "id": "stack-rtk-saga",
       "group": "stack",
-      "label": "RTK + react-redux + RTK Query React + redux-saga + redux-persist",
+      "label": "RTK + react-redux + RTK Query React + redux-saga",
       "imports": {
         "@reduxjs/toolkit": [
           "configureStore",
@@ -1289,34 +1036,27 @@
           "call",
           "put",
           "select"
-        ],
-        "redux-persist": [
-          "persistStore",
-          "persistReducer"
-        ],
-        "redux-persist/es/storage": [
-          "default"
         ]
       },
       "esbuild": {
-        "min": 101184,
-        "gzip": 35492,
-        "brotli": 31933
+        "min": 92615,
+        "gzip": 33007,
+        "brotli": 29746
       },
       "rollup": {
-        "min": 97569,
-        "gzip": 32443,
-        "brotli": 29188
+        "min": 89200,
+        "gzip": 30200,
+        "brotli": 27253
       },
       "rolldown": {
-        "min": 99556,
-        "gzip": 33069,
-        "brotli": 29819
+        "min": 91074,
+        "gzip": 30743,
+        "brotli": 27752
       },
       "webpack": {
-        "min": 98636,
-        "gzip": 32582,
-        "brotli": 29253
+        "min": 90231,
+        "gzip": 30321,
+        "brotli": 27283
       }
     },
     {
@@ -1361,47 +1101,91 @@
       }
     },
     {
-      "id": "stack-zustand-rq-axios",
+      "id": "stack-effector-ff",
       "group": "stack",
-      "label": "zustand + middleware + react-query + axios",
+      "label": "effector + effector-react + @farfetched/core",
       "imports": {
-        "zustand": [
-          "create"
+        "effector": [
+          "createStore",
+          "createEvent",
+          "createEffect",
+          "sample",
+          "combine"
         ],
-        "zustand/middleware": [
-          "persist",
-          "devtools",
-          "createJSONStorage"
+        "effector-react": [
+          "useUnit",
+          "Provider"
+        ],
+        "@farfetched/core": [
+          "createJsonQuery",
+          "createJsonMutation",
+          "cache",
+          "retry"
+        ]
+      },
+      "esbuild": {
+        "min": 54648,
+        "gzip": 20573,
+        "brotli": 18672
+      },
+      "rollup": {
+        "min": 53028,
+        "gzip": 19242,
+        "brotli": 17433
+      },
+      "rolldown": {
+        "min": 54163,
+        "gzip": 19678,
+        "brotli": 17881
+      },
+      "webpack": {
+        "min": 53077,
+        "gzip": 19147,
+        "brotli": 17386
+      }
+    },
+    {
+      "id": "stack-effector-rq",
+      "group": "stack",
+      "label": "effector + effector-react + @tanstack/react-query",
+      "imports": {
+        "effector": [
+          "createStore",
+          "createEvent",
+          "createEffect",
+          "sample",
+          "combine"
+        ],
+        "effector-react": [
+          "useUnit",
+          "Provider"
         ],
         "@tanstack/react-query": [
           "QueryClient",
           "QueryClientProvider",
           "useQuery",
           "useMutation"
-        ],
-        "axios": [
-          "default"
         ]
       },
       "esbuild": {
-        "min": 92592,
-        "gzip": 32103,
-        "brotli": 29027
+        "min": 60360,
+        "gzip": 21151,
+        "brotli": 19177
       },
       "rollup": {
-        "min": 92748,
-        "gzip": 31131,
-        "brotli": 27857
+        "min": 58407,
+        "gzip": 19987,
+        "brotli": 18045
       },
       "rolldown": {
-        "min": 91576,
-        "gzip": 30686,
-        "brotli": 27749
+        "min": 59833,
+        "gzip": 20392,
+        "brotli": 18579
       },
       "webpack": {
-        "min": 92565,
-        "gzip": 31111,
-        "brotli": 27795
+        "min": 58973,
+        "gzip": 20124,
+        "brotli": 18239
       }
     },
     {
